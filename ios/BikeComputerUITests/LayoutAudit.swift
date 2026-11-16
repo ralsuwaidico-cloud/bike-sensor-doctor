@@ -7,6 +7,22 @@ import XCTest
 /// checks the key controls' frames: inside the window, not overlapping each other, at least 44 pt tall, hittable.
 /// Hard failures: key controls. Every other on-screen text outside the window is listed in layout-report.txt.
 final class LayoutAudit: XCTestCase {
+    /// Runs 236–237: three UI failures left no picture of the screen because they failed inside a tap or a query rather
+    /// than inside a checked step. Every recorded failure now carries a screenshot (exported by ios/ci/build.sh as FAIL-…).
+    /// Diagnostic only: it changes no expectation and no pass/fail outcome.
+    private var takingFailureShot = false
+    override func record(_ issue: XCTIssue) {
+        var i = issue
+        if !takingFailureShot {
+            takingFailureShot = true
+            let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            a.name = "FAIL-auto-\(layout)-\(Int(Date().timeIntervalSince1970))"; a.lifetime = .keepAlways
+            i.add(a)
+            takingFailureShot = false
+        }
+        super.record(i)
+    }
+
     override func setUpWithError() throws { continueAfterFailure = true }
 
     private var outDir: String? { let v = ProcessInfo.processInfo.environment["LAYOUT_DIR"] ?? ""; return v.isEmpty ? nil : v }

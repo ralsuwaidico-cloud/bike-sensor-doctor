@@ -202,4 +202,47 @@ final class E1SafetyContractsTests: XCTestCase {
         let s = Store(directory: d, generatePlan: false)
         XCTAssertEqual(s.storage, .ok); XCTAssertEqual(s.rides.count, 1); XCTAssertEqual(s.plan.first { $0.id == doneId }?.done, true)
     }
+
+    // MARK: F4 — "Delete all data" also removes exported copies and diagnostic data (underlying files and settings)
+    func testDeleteAllRemovesExportedCopiesDiagnosticFilesAndDiagnosticHistory() throws {
+        let fm = FileManager.default
+        let s = Store(directory: tmp("del-all"), generatePlan: false)
+        // an exported copy of the athlete's data, as Profile and Account write it
+        let export = fm.temporaryDirectory.appendingPathComponent("cyclift-export-e1test-\(UUID().uuidString).json")
+        try Data("{}".utf8).write(to: export)
+        // an unrelated temporary file, which delete-all has no business touching
+        let unrelated = fm.temporaryDirectory.appendingPathComponent("e1test-unrelated-\(UUID().uuidString).txt")
+        try Data("x".utf8).write(to: unrelated); defer { try? fm.removeItem(at: unrelated) }
+        // a stored BikeComputer diagnostic report, where the app keeps them
+        let appSupport = try XCTUnwrap(fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first)
+        let diagDir = appSupport.appendingPathComponent("Diagnostics", isDirectory: true).appendingPathComponent("e1test-board", isDirectory: true)
+        try fm.createDirectory(at: diagDir, withIntermediateDirectories: true)
+        let report = diagDir.appendingPathComponent("1.txt"); try Data("report".utf8).write(to: report)
+        // diagnostic event and sensor history, and the upload consent
+        let keys = ["cyclift.diagnostics.events.v1", "cyclift.diagnostics.sensordiag.v1", "cyclift.diagnostics.uploadConsent"]
+        for k in keys { UserDefaults.standard.set("e1test", forKey: k) }
+        var hookCalls = 0; s.onDeleteAllData.append { hookCalls += 1 }
+        XCTAssertTrue(fm.fileExists(atPath: export.path) && fm.fileExists(atPath: report.path), "precondition: the files exist before the delete")
+
+        s.resetAll()
+
+        XCTAssertFalse(fm.fileExists(atPath: export.path), "the exported copy is removed")
+        XCTAssertFalse(fm.fileExists(atPath: report.path), "the stored diagnostic report is removed")
+        XCTAssertFalse(fm.fileExists(atPath: appSupport.appendingPathComponent("Diagnostics").path), "the diagnostics folder is removed")
+        for k in keys { XCTAssertNil(UserDefaults.standard.object(forKey: k), "\(k) is cleared") }
+        XCTAssertEqual(hookCalls, 1, "the in-memory diagnostic history and report list are told to clear, once")
+        XCTAssertTrue(fm.fileExists(atPath: unrelated.path), "a file that is not Cyclift's export is left alone")
+    }
+
+    /// "Start again" after an unreadable store is not "Delete all data": it must not run the delete-all clean-up.
+    func testStartAgainKeepingRecoveryFilesDoesNotRunTheDeleteAllCleanUp() throws {
+        let fm = FileManager.default
+        let s = Store(directory: tmp("start-again"), generatePlan: false)
+        let export = fm.temporaryDirectory.appendingPathComponent("cyclift-export-e1test-\(UUID().uuidString).json")
+        try Data("{}".utf8).write(to: export); defer { try? fm.removeItem(at: export) }
+        var hookCalls = 0; s.onDeleteAllData.append { hookCalls += 1 }
+        s.resetAll(keepRecoveryFiles: true)
+        XCTAssertTrue(fm.fileExists(atPath: export.path), "the exported copy is kept")
+        XCTAssertEqual(hookCalls, 0, "the delete-all clean-up did not run")
+    }
 }

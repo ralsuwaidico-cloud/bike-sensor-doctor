@@ -4,6 +4,22 @@ import XCTest
 /// meaningful page; back returns to Home where it was; the top never sits under the status bar and the last card scrolls
 /// fully above the Liquid Dock. Seeded with the LayoutAudit Home stores ("Demo", 8 weeks of rides and lifts).
 final class HomeNavigationTests: XCTestCase {
+    /// Runs 236–237: three UI failures left no picture of the screen because they failed inside a tap or a query rather
+    /// than inside a checked step. Every recorded failure now carries a screenshot (exported by ios/ci/build.sh as FAIL-…).
+    /// Diagnostic only: it changes no expectation and no pass/fail outcome.
+    private var takingFailureShot = false
+    override func record(_ issue: XCTIssue) {
+        var i = issue
+        if !takingFailureShot {
+            takingFailureShot = true
+            let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            a.name = "FAIL-auto-\(home-nav)-\(Int(Date().timeIntervalSince1970))"; a.lifetime = .keepAlways
+            i.add(a)
+            takingFailureShot = false
+        }
+        super.record(i)
+    }
+
     override func setUp() { continueAfterFailure = false }
 
     private func launch(_ state: String = "planned", supersets: Bool? = nil, size: String? = nil, extra: [String] = []) -> XCUIApplication {
