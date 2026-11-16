@@ -1,0 +1,167 @@
+=== layout-small: errors / failures ===
+=== layout-small: full filter ===
+Test Case '-[BikeComputerUITests.PlanLayoutTests testAllSevenDaysAreReachableByVerticalScrolling]' passed (353.483 seconds).
+Test Case '-[BikeComputerUITests.PlanLayoutTests testAScrollThatStartsOnASessionDoesNotOpenIt]' passed (88.461 seconds).
+Test Case '-[BikeComputerUITests.PlanLayoutTests testStripDaysAndChipsFitTheWidthAtEveryTextSize]' passed (445.879 seconds).
+Test Case '-[BikeComputerUITests.PlanLayoutTests testTappingADayOpensThatDayAndTappingASessionOpensThatSession]' passed (230.856 seconds).
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1118.680 (1118.690) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1118.680 (1118.692) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1118.680 (1118.695) seconds
+** TEST EXECUTE SUCCEEDED **
+=== layout-small: last 150 lines ===
+    t =   118.39s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   119.41s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   119.42s         Checking existence of `"homeGreeting" Any`
+    t =   125.96s Find the "homeGreeting" Any
+    t =   127.78s Waiting 8.0s for "Plan" Button to exist
+    t =   128.86s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   128.86s         Checking existence of `"Plan" Button`
+    t =   129.02s Tap "Plan" Button
+    t =   129.02s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   129.04s     Find the "Plan" Button
+    t =   129.16s     Check for interrupting elements affecting "Plan" Button
+    t =   130.13s     Synthesize event
+    t =   130.45s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   130.81s Waiting 10.0s for "planDayStrip" Other to exist
+    t =   131.83s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Other`
+    t =   131.83s         Checking existence of `"planDayStrip" Other`
+    t =   133.61s Checking existence of `"planDay-2" Button`
+    t =   134.98s Find the Window (First Match)
+    t =   135.84s Checking existence of `NavigationBar (First Match)`
+    t =   135.88s Find the NavigationBar (First Match)
+    t =   135.92s Checking existence of `"liquidDock" Any`
+    t =   135.98s Find the "liquidDock" Any
+    t =   136.02s Find the "planDay-2" Button
+    t =   137.70s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.01, 0.62] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.01, 0.38] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   137.70s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   137.79s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   138.20s     Check for interrupting elements affecting "Cyclift" Application
+    t =   138.76s     Synthesize event
+    t =   139.01s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   139.85s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   140.25s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   140.75s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   141.74s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   142.78s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   145.71s Find the Window (First Match)
+    t =   145.79s Checking existence of `NavigationBar (First Match)`
+    t =   145.89s Find the NavigationBar (First Match)
+    t =   145.96s Checking existence of `"liquidDock" Any`
+    t =   146.02s Find the "liquidDock" Any
+    t =   146.12s Find the "planDay-2" Button
+    t =   148.08s Tap "planDay-2" Button
+    t =   148.08s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   148.14s     Find the "planDay-2" Button
+    t =   149.75s     Check for interrupting elements affecting "planDay-2" Button
+    t =   150.82s     Synthesize event
+    t =   151.20s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   152.06s Waiting 8.0s for "homeDayDetail" Any to exist
+    t =   153.15s     Checking `Expect predicate `existsNoRetry == 1` for object "homeDayDetail" Any`
+    t =   153.15s         Checking existence of `"homeDayDetail" Any`
+    t =   153.84s Get all elements bound by index for: Descendants matching type NavigationBar
+    t =   154.80s Find the NavigationBar (Element at index 0)
+    t =   155.50s Find the NavigationBar (Element at index 1)
+    t =   156.38s Tap Button (First Match)
+    t =   156.38s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   156.63s     Find the Button (First Match)
+    t =   156.69s     Check for interrupting elements affecting "BackButton" Button
+    t =   157.09s     Synthesize event
+    t =   157.43s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   158.89s Waiting 8.0s for "planDayStrip" Other to exist
+    t =   159.95s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Other`
+    t =   159.95s         Checking existence of `"planDayStrip" Other`
+    t =   161.67s Find the Window (First Match)
+    t =   161.70s Checking existence of `NavigationBar (First Match)`
+    t =   161.76s Find the NavigationBar (First Match)
+    t =   161.80s Checking existence of `"liquidDock" Any`
+    t =   161.83s Find the "liquidDock" Any
+    t =   161.92s Find the "planDay-2" Button
+    t =   164.09s Find the "planDay-2" Button
+    t =   165.99s Get number of matches for: Elements matching predicate 'identifier BEGINSWITH "planChip-"'
+    t =   166.66s Find the Button (Element at index 0)
+    t =   167.00s Find the "planChip-9BF3E587-29CA-410B-BD3F-9BC44AF5F0B0" Button
+    t =   167.73s Find the "planChip-9BF3E587-29CA-410B-BD3F-9BC44AF5F0B0" Button
+    t =   168.09s Find the "planChip-9BF3E587-29CA-410B-BD3F-9BC44AF5F0B0" Button
+    t =   168.93s Tap "planChip-9BF3E587-29CA-410B-BD3F-9BC44AF5F0B0" Button
+    t =   168.93s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   168.95s     Find the "planChip-9BF3E587-29CA-410B-BD3F-9BC44AF5F0B0" Button
+    t =   170.15s     Check for interrupting elements affecting "planChip-9BF3E587-29CA-410B-BD3F-9BC44AF5F0B0" Button
+    t =   171.74s     Synthesize event
+    t =   173.28s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   175.23s Waiting 8.0s for "Done" Button to exist
+    t =   176.28s     Checking `Expect predicate `existsNoRetry == 1` for object "Done" Button`
+    t =   176.29s         Checking existence of `"Done" Button`
+    t =   177.06s Checking existence of `"homeDayDetail" Any`
+    t =   181.98s Get all elements bound by index for: Descendants matching type StaticText
+    t =   185.25s Find the StaticText (Element at index 0)
+    t =   186.30s Find the StaticText (Element at index 1)
+    t =   187.17s Find the StaticText (Element at index 2)
+    t =   188.15s Find the StaticText (Element at index 3)
+    t =   188.86s Find the StaticText (Element at index 4)
+    t =   189.73s Find the StaticText (Element at index 5)
+    t =   190.21s Find the StaticText (Element at index 6)
+    t =   191.17s Find the StaticText (Element at index 7)
+    t =   192.12s Find the StaticText (Element at index 8)
+    t =   193.16s Find the StaticText (Element at index 9)
+    t =   194.33s Find the StaticText (Element at index 10)
+    t =   195.33s Find the StaticText (Element at index 11)
+    t =   196.87s Find the StaticText (Element at index 12)
+    t =   197.76s Find the StaticText (Element at index 13)
+    t =   198.78s Find the StaticText (Element at index 14)
+    t =   199.74s Find the StaticText (Element at index 15)
+    t =   200.31s Find the StaticText (Element at index 16)
+    t =   201.07s Find the StaticText (Element at index 17)
+    t =   201.92s Find the StaticText (Element at index 18)
+    t =   203.04s Find the StaticText (Element at index 19)
+    t =   203.96s Find the StaticText (Element at index 20)
+    t =   204.84s Find the StaticText (Element at index 21)
+    t =   205.86s Find the StaticText (Element at index 22)
+    t =   206.93s Find the StaticText (Element at index 23)
+    t =   208.01s Find the StaticText (Element at index 24)
+    t =   209.13s Find the StaticText (Element at index 25)
+    t =   210.16s Find the StaticText (Element at index 26)
+    t =   211.07s Find the StaticText (Element at index 27)
+    t =   212.17s Find the StaticText (Element at index 28)
+    t =   213.28s Find the StaticText (Element at index 29)
+    t =   214.23s Find the StaticText (Element at index 30)
+    t =   214.91s Find the StaticText (Element at index 31)
+    t =   215.82s Find the StaticText (Element at index 32)
+    t =   216.20s Find the StaticText (Element at index 33)
+    t =   217.35s Find the StaticText (Element at index 34)
+    t =   218.28s Find the StaticText (Element at index 35)
+    t =   219.22s Find the StaticText (Element at index 36)
+    t =   220.35s Find the StaticText (Element at index 37)
+    t =   221.79s Find the StaticText (Element at index 38)
+    t =   223.33s Find the StaticText (Element at index 39)
+    t =   225.08s Checking existence of `"Done" Button`
+    t =   225.74s Tap "Done" Button
+    t =   225.75s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   226.19s     Find the "Done" Button
+    t =   226.72s     Check for interrupting elements affecting "Done" Button
+    t =   228.00s     Synthesize event
+    t =   228.37s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   229.42s Terminate com.ralsuwaidico.bikecomputer:65346
+    t =   230.51s Tear Down
+Test Case '-[BikeComputerUITests.PlanLayoutTests testTappingADayOpensThatDayAndTappingASessionOpensThatSession]' passed (230.856 seconds).
+Test Suite 'PlanLayoutTests' passed at 2026-11-16 12:08:49.991.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1118.680 (1118.690) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-16 12:08:49.993.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1118.680 (1118.692) seconds
+Test Suite 'Selected tests' passed at 2026-11-16 12:08:49.995.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1118.680 (1118.695) seconds
+2026-11-16 12:09:47.080 xcodebuild[24767:66325] [MT] IDETestOperationsObserverDebug: 1394.070 elapsed -- Testing started completed.
+2026-11-16 12:09:47.084 xcodebuild[24767:66325] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-16 12:09:47.084 xcodebuild[24767:66325] [MT] IDETestOperationsObserverDebug: 1394.070 sec, +1394.070 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-small.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+=== layout-small: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.PlanLayoutTests testAllSevenDaysAreReachableByVerticalScrolling]' passed (353.483 seconds).
+Test Case '-[BikeComputerUITests.PlanLayoutTests testAScrollThatStartsOnASessionDoesNotOpenIt]' passed (88.461 seconds).
+Test Case '-[BikeComputerUITests.PlanLayoutTests testStripDaysAndChipsFitTheWidthAtEveryTextSize]' passed (445.879 seconds).
+Test Case '-[BikeComputerUITests.PlanLayoutTests testTappingADayOpensThatDayAndTappingASessionOpensThatSession]' passed (230.856 seconds).
+=== layout-small: E0-DIAG lines ===
