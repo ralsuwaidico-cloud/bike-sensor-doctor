@@ -1,0 +1,161 @@
+=== layout-standard: errors / failures ===
+=== layout-standard: full filter ===
+Test Case '-[BikeComputerUITests.ThemeScreens testFiveScreensInSixThemes]' passed (340.695 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 340.695 (341.219) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 340.695 (341.220) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 340.695 (341.221) seconds
+** TEST EXECUTE SUCCEEDED **
+=== layout-standard: last 150 lines ===
+    t =   238.83s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   241.04s Waiting 5.0s for "Progress" Button to exist
+    t =   242.09s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =   242.09s         Checking existence of `"Progress" Button`
+    t =   242.24s Tap "Progress" Button
+    t =   242.24s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   242.25s     Find the "Progress" Button
+    t =   242.34s     Check for interrupting elements affecting "Progress" Button
+    t =   242.65s     Synthesize event
+    t =   242.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   245.28s Waiting 5.0s for "Profile" Button to exist
+    t =   246.34s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =   246.34s         Checking existence of `"Profile" Button`
+    t =   246.37s Tap "Profile" Button
+    t =   246.37s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   246.37s     Find the "Profile" Button
+    t =   246.40s     Check for interrupting elements affecting "Profile" Button
+    t =   246.74s     Synthesize event
+    t =   247.05s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   249.46s Terminate com.ralsuwaidico.bikecomputer:29003
+    t =   250.49s Setting appearance mode to Light
+    t =   252.51s     Wait for com.apple.springboard to idle
+    t =   252.54s Open com.ralsuwaidico.bikecomputer
+    t =   252.54s     Launch com.ralsuwaidico.bikecomputer
+2026-11-16 10:55:32.158 xcodebuild[20581:57553] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-16 10:55:32.158 xcodebuild[20581:57553] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =   254.70s         Setting up automation session
+    t =   257.45s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   263.20s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   264.20s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   264.20s         Checking existence of `"homeGreeting" Any`
+    t =   270.87s Find the "homeGreeting" Any
+    t =   280.96s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   280.96s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   280.97s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   281.53s     Check for interrupting elements affecting "Cyclift" Application
+    t =   281.79s     Synthesize event
+    t =   282.22s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   284.29s Waiting 5.0s for "centreButton" Button to exist
+    t =   285.36s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =   285.36s         Checking existence of `"centreButton" Button`
+    t =   285.40s Tap "centreButton" Button
+    t =   285.40s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   285.40s     Find the "centreButton" Button
+    t =   285.43s     Check for interrupting elements affecting "centreButton" Button
+    t =   285.64s     Synthesize event
+    t =   285.93s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   288.21s Waiting 5.0s for "Plan" Button to exist
+    t =   289.24s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   289.24s         Checking existence of `"Plan" Button`
+    t =   289.34s Tap "Plan" Button
+    t =   289.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   289.34s     Find the "Plan" Button
+    t =   289.38s     Check for interrupting elements affecting "Plan" Button
+    t =   289.63s     Synthesize event
+    t =   289.93s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   292.13s Waiting 5.0s for "Progress" Button to exist
+    t =   293.18s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =   293.18s         Checking existence of `"Progress" Button`
+    t =   293.36s Tap "Progress" Button
+    t =   293.36s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   293.36s     Find the "Progress" Button
+    t =   293.40s     Check for interrupting elements affecting "Progress" Button
+    t =   293.69s     Synthesize event
+    t =   293.99s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   296.14s Waiting 5.0s for "Profile" Button to exist
+    t =   297.18s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =   297.18s         Checking existence of `"Profile" Button`
+    t =   297.35s Tap "Profile" Button
+    t =   297.35s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   297.35s     Find the "Profile" Button
+    t =   297.38s     Check for interrupting elements affecting "Profile" Button
+    t =   297.62s     Synthesize event
+    t =   297.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   300.19s Terminate com.ralsuwaidico.bikecomputer:30380
+    t =   301.21s Setting appearance mode to Dark
+    t =   303.23s     Wait for com.apple.springboard to idle
+    t =   303.25s Open com.ralsuwaidico.bikecomputer
+    t =   303.25s     Launch com.ralsuwaidico.bikecomputer
+2026-11-16 10:56:22.740 xcodebuild[20581:57553] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-16 10:56:22.741 xcodebuild[20581:57553] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =   304.75s         Setting up automation session
+    t =   306.95s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   312.01s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   313.04s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   313.04s         Checking existence of `"homeGreeting" Any`
+    t =   314.02s Find the "homeGreeting" Any
+    t =   317.55s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   317.55s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   317.55s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   318.12s     Check for interrupting elements affecting "Cyclift" Application
+    t =   318.42s     Synthesize event
+    t =   318.84s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   321.20s Waiting 5.0s for "centreButton" Button to exist
+    t =   322.24s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =   322.24s         Checking existence of `"centreButton" Button`
+    t =   322.27s Tap "centreButton" Button
+    t =   322.27s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   322.27s     Find the "centreButton" Button
+    t =   322.29s     Check for interrupting elements affecting "centreButton" Button
+    t =   322.53s     Synthesize event
+    t =   322.83s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   325.93s Waiting 5.0s for "Plan" Button to exist
+    t =   326.95s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   326.95s         Checking existence of `"Plan" Button`
+    t =   326.99s Tap "Plan" Button
+    t =   326.99s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   326.99s     Find the "Plan" Button
+    t =   327.09s     Check for interrupting elements affecting "Plan" Button
+    t =   327.40s     Synthesize event
+    t =   327.69s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   329.89s Waiting 5.0s for "Progress" Button to exist
+    t =   330.93s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =   330.93s         Checking existence of `"Progress" Button`
+    t =   330.96s Tap "Progress" Button
+    t =   330.96s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   330.96s     Find the "Progress" Button
+    t =   331.01s     Check for interrupting elements affecting "Progress" Button
+    t =   331.34s     Synthesize event
+    t =   331.64s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   333.83s Waiting 5.0s for "Profile" Button to exist
+    t =   334.87s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =   334.88s         Checking existence of `"Profile" Button`
+    t =   334.97s Tap "Profile" Button
+    t =   334.97s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   334.98s     Find the "Profile" Button
+    t =   335.00s     Check for interrupting elements affecting "Profile" Button
+    t =   335.22s     Synthesize event
+    t =   335.52s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   337.72s Terminate com.ralsuwaidico.bikecomputer:32200
+    t =   338.75s Tear Down
+    t =   338.75s     Setting appearance mode to Light
+    t =   340.77s         Wait for com.apple.springboard to idle
+Test Case '-[BikeComputerUITests.ThemeScreens testFiveScreensInSixThemes]' passed (340.695 seconds).
+Test Suite 'ThemeScreens' passed at 2026-11-16 10:57:00.689.
+	 Executed 1 test, with 0 failures (0 unexpected) in 340.695 (341.219) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-16 10:57:00.690.
+	 Executed 1 test, with 0 failures (0 unexpected) in 340.695 (341.220) seconds
+Test Suite 'Selected tests' passed at 2026-11-16 10:57:00.691.
+	 Executed 1 test, with 0 failures (0 unexpected) in 340.695 (341.221) seconds
+2026-11-16 10:57:36.975 xcodebuild[20581:57553] [MT] IDETestOperationsObserverDebug: 567.148 elapsed -- Testing started completed.
+2026-11-16 10:57:36.976 xcodebuild[20581:57553] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-16 10:57:36.976 xcodebuild[20581:57553] [MT] IDETestOperationsObserverDebug: 567.148 sec, +567.148 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-standard.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+=== layout-standard: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.ThemeScreens testFiveScreensInSixThemes]' passed (340.695 seconds).
+=== layout-standard: E0-DIAG lines ===
