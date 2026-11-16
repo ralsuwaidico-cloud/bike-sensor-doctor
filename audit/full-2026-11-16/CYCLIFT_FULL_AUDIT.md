@@ -1,8 +1,11 @@
 # Cyclift — full project, codebase and CI audit
 
-**Version:** 0.1 · 16 Nov 2026, 23:10 Dubai · Level 2 · Status: Current Draft — for owner review.
+**Version:** 0.2 · 16 Nov 2026, 23:10 Dubai (addendum 23:40) · Level 2 · Status: Current Draft — for owner review.
 **How this was done.** Read from the live GitHub repository `bike-sensor-doctor` (71 branches, 13 workflows), the Actions run list, the CI log branch and the source tree at `ios/lab` commit `679d8cae`. Nothing was merged, deleted, cancelled, uploaded or changed. No new CI run was started.
 **Words used.** *Verified* = I read it in the repository or in a run's own output today. *Simulator* = seen running in an iOS simulator in CI; never a phone. *Hypothesis* and *Recommendation* are marked.
+
+> **Addendum, 23:40 Dubai — Lab run 13 (ID 43920996524, commit `4d7a48fd`) finished after this audit was written: 5 of 7 tests passed.**
+> It changes three statements below. (1) The **new-athlete journey has now completed once** in the simulator: Welcome → seven pages → Blueprint approval → Home → Plan. (2) The **Coach page and conversation have now run**: a rules answer labelled "Rules", an unsupported question answered "AI chat is not connected", and the conversation kept across a relaunch. (3) One new visual defect: on onboarding page 3 the Coach line overlaps the page content. The strength and cycling journeys failed in this run for the known reason (it predates the Log set fix); they are in Lab run 15, still queued. Everything else in this audit stands, including the Coach-card defect and the absence of any full production regression.
 
 ---
 
