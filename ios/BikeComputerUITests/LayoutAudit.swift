@@ -323,11 +323,6 @@ final class LayoutAudit: XCTestCase {
             // confirm the range really changed before going on.
             for _ in 0..<3 {
                 if seg.frame.minY < app.navigationBars.firstMatch.frame.maxY + 4 { drag(app, up: false) }
-                // Run 243 (SE at AX3): the first tap was held long enough by a slow runner that iOS showed its large-text
-                // preview of the range control (the system HUD for small controls at accessibility sizes); the control
-                // beneath was then "not hittable" and the next tap aborted the test. Wait for the HUD to go, then tap.
-                // The expectation is unchanged: the range must end up selected.
-                if !seg.isHittable { sleep(3); if !seg.isHittable { continue } }
                 seg.tap(); sleep(1)
                 if seg.isSelected { return true }
             }
