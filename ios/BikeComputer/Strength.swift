@@ -165,6 +165,25 @@ struct SetEntry: Codable, Identifiable, Equatable {
     var unilateral = false
     var rpe: Int? = nil
     var done = true
+    // Training Hub v1.4 (owner approval of 16 Nov 2026) — ADDITIVE, OPTIONAL. nil = an ordinary set, and every set
+    // written before these fields existed. The older fields keep their exact meaning, so a reader that does not know
+    // these fields never mistakes one of these sets for a loaded set:
+    //   • added weight and assisted sets are `bodyweight` sets with `weightKg == nil`; the extra or the help is ONLY here.
+    //   • a timed set has `reps == 0` and is a `bodyweight` set with `weightKg == nil`; its length is ONLY here.
+    /// The athlete chose not to do this set. Live session only: a skipped set is never `done` and is not saved as a set
+    /// (its exercise records how many were skipped).
+    var skipped: Bool? = nil
+    /// Length of a timed set (a hold), in seconds.
+    var seconds: Int? = nil
+    /// Weight added to bodyweight (a weighted pull-up), in kilograms.
+    var addedKg: Double? = nil
+    /// Help taken off bodyweight (a band or machine), in kilograms.
+    var assistKg: Double? = nil
+    var isSkipped: Bool { skipped == true && !done }
+    /// Waiting to be done: not done and not skipped.
+    var isOpen: Bool { !done && skipped != true }
+    enum Kind: String { case ordinary, timed, added, assisted }
+    var kind: Kind { seconds != nil ? .timed : addedKg != nil ? .added : assistKg != nil ? .assisted : .ordinary }
 
     init(id: UUID = UUID(), reps: Int = 8, weightKg: Double? = nil, bodyweight: Bool = false, unilateral: Bool = false, rpe: Int? = nil, done: Bool = true) {
         self.id = id; self.reps = reps; self.weightKg = weightKg; self.bodyweight = bodyweight; self.unilateral = unilateral; self.rpe = rpe; self.done = done
@@ -178,12 +197,30 @@ struct SetEntry: Codable, Identifiable, Equatable {
         unilateral = try c.decodeIfPresent(Bool.self, forKey: .unilateral) ?? false
         rpe = try c.decodeIfPresent(Int.self, forKey: .rpe)
         done = try c.decodeIfPresent(Bool.self, forKey: .done) ?? true
+        skipped = (try? c.decodeIfPresent(Bool.self, forKey: .skipped)) ?? nil
+        seconds = ((try? c.decodeIfPresent(Int.self, forKey: .seconds)) ?? nil).flatMap { $0 > 0 ? $0 : nil }
+        addedKg = ((try? c.decodeIfPresent(Double.self, forKey: .addedKg)) ?? nil).flatMap { $0 > 0 && $0.isFinite ? $0 : nil }
+        assistKg = ((try? c.decodeIfPresent(Double.self, forKey: .assistKg)) ?? nil).flatMap { $0 > 0 && $0.isFinite ? $0 : nil }
+    }
+    /// Turns this set into another kind, keeping the older fields true to their meaning (see the note above).
+    func converted(to k: Kind, stepKg: Double = 2.5) -> SetEntry {
+        var s = self
+        s.seconds = nil; s.addedKg = nil; s.assistKg = nil
+        switch k {
+        case .ordinary: if s.reps == 0 { s.reps = 8 }
+        case .timed: s.seconds = seconds ?? 30; s.reps = 0; s.bodyweight = true; s.weightKg = nil
+        case .added: s.addedKg = addedKg ?? stepKg; s.bodyweight = true; s.weightKg = nil; if s.reps == 0 { s.reps = 8 }
+        case .assisted: s.assistKg = assistKg ?? stepKg; s.bodyweight = true; s.weightKg = nil; if s.reps == 0 { s.reps = 8 }
+        }
+        return s
     }
     /// Load × reps for progression; bodyweight sets count reps only (weight unknown → not comparable to loaded sets).
     var tonnageKg: Double? { guard !bodyweight, let w = weightKg else { return nil }; return w * Double(reps) * (unilateral ? 2 : 1) }
     var text: String { text(units: .metric) }
     func text(units u: AppSettings.Units) -> String {
-        let w = bodyweight ? "BW" : weightKg.map { WeightFmt.text($0, u) } ?? "—"
+        if let t = seconds { return "\(t) s hold" + (rpe.map { " @\($0)" } ?? "") }
+        var w = bodyweight ? "BW" : weightKg.map { WeightFmt.text($0, u) } ?? "—"
+        if let a = addedKg { w = "BW + \(WeightFmt.text(a, u))" } else if let a = assistKg { w = "BW − \(WeightFmt.text(a, u)) assist" }
         return "\(reps)\(unilateral ? "/side" : "") × \(w)" + (rpe.map { " @\($0)" } ?? "")
     }
 }
@@ -203,6 +240,9 @@ struct ExerciseEntry: Codable, Identifiable, Equatable {
     /// a structured marker instead of matching note text, so a rider's own note never switches the reduction off.
     var returnMark: ReturnMark? = nil
     struct ReturnMark: Codable, Equatable { var at: Date; var note: String }
+    /// Training Hub v1.4: how many planned sets of this exercise the athlete skipped in the saved session. nil = none,
+    /// or a record older than the field. Skipped sets are not in `sets` and are never counted as done.
+    var skippedSets: Int? = nil
 
     init(id: UUID = UUID(), exercise: Exercise, sets: [SetEntry] = [], superset: String? = nil, notes: String = "") {
         self.id = id; exerciseId = exercise.id; name = exercise.name; pattern = exercise.pattern; self.sets = sets; self.superset = superset; self.notes = notes
@@ -218,6 +258,7 @@ struct ExerciseEntry: Codable, Identifiable, Equatable {
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
         restSeconds = try? c.decodeIfPresent(Int.self, forKey: .restSeconds)
         returnMark = try? c.decodeIfPresent(ReturnMark.self, forKey: .returnMark)
+        skippedSets = ((try? c.decodeIfPresent(Int.self, forKey: .skippedSets)) ?? nil).flatMap { $0 > 0 ? $0 : nil }
     }
     var doneSets: [SetEntry] { sets.filter { $0.done } }
     var tonnageKg: Double? { let t = doneSets.compactMap { $0.tonnageKg }; return t.isEmpty ? nil : t.reduce(0, +) }

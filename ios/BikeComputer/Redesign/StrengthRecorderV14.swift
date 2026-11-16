@@ -11,15 +11,19 @@ import SwiftUI
 // NOT BUILT, AND NOT PRETENDED (each is a pending item of the v1.4 approval)
 // • The optional review after saving is Redesign/ReviewV14.swift (three sliders, nothing pre-filled); its storage
 //   limits are written there.
-// • Rounds and a round rest for supersets, a "skipped" set state, added-weight / assisted / timed sets: new data.
-//   A superset's round is told from its set numbers, and rest is each exercise's own prescribed rest.
+// • A stored round-rest value for supersets. The rule used: no rest between the members of a round; after the round,
+//   the longest prescribed rest of its members. (Which value applies is still an open choice of the design.)
+//
+// ADDED WITH THE OWNER'S APPROVAL OF 16 NOV 2026 (optional fields; older records unchanged — see SetEntry)
+// • Skip this set / skip this exercise (never counted as done; remembered as a count when the workout is saved).
+// • Timed sets, added-weight sets and assisted sets, chosen per exercise under ···.
 // • "Save unknown" as a state: the app's save reports success or failure only.
 
 /// Rest and Undo live outside the screen so they survive minimising and coming back (v1.4 correction C). In memory
 /// only: they belong to the running session and end with it.
 @MainActor final class CyRecorderMemory: ObservableObject {
     static let shared = CyRecorderMemory()
-    struct Logged: Equatable { var sessionId: UUID; var entry: Int; var set: Int; var text: String; var number: Int }
+    struct Logged: Equatable { var sessionId: UUID; var entry: Int; var set: Int; var text: String; var number: Int; var skippedSets: [Int] = [] }
     @Published var restEndsAt: Date? = nil
     @Published var lastLogged: Logged? = nil
     func clear() { restEndsAt = nil; lastLogged = nil }
@@ -201,14 +205,25 @@ struct StrengthRecorderV14: View {
     private func values(_ p: NextSet.Pick, _ st: SetEntry) -> some View {
         let layout = dts.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: CySpace.l)) : AnyLayout(HStackLayout(alignment: .top, spacing: 0))
         return layout {
-            valueColumn("REPS", "\(st.reps)", unit: st.unilateral ? "per side" : nil, id: "Reps",
-                        minus: { change(p) { $0.reps = max(1, $0.reps - 1) } }, plus: { change(p) { $0.reps = min(100, $0.reps + 1) } })
-            if st.bodyweight || st.weightKg == nil {
+            if let t = st.seconds {
+                valueColumn("SECONDS", "\(t)", unit: "s hold", id: "Reps",
+                            minus: { change(p) { $0.seconds = max(5, ($0.seconds ?? 30) - 5) } }, plus: { change(p) { $0.seconds = min(600, ($0.seconds ?? 30) + 5) } })
+            } else {
+                valueColumn("REPS", "\(st.reps)", unit: st.unilateral ? "per side" : nil, id: "Reps",
+                            minus: { change(p) { $0.reps = max(1, $0.reps - 1) } }, plus: { change(p) { $0.reps = min(100, $0.reps + 1) } })
+            }
+            if let a = st.addedKg {
+                valueColumn("ADDED WEIGHT", "+" + WeightFmt.number(a, units), unit: WeightFmt.unit(units), id: "Weight",
+                            minus: { change(p) { $0.addedKg = max(step, ($0.addedKg ?? step) - step) } }, plus: { change(p) { $0.addedKg = ($0.addedKg ?? 0) + step } })
+            } else if let a = st.assistKg {
+                valueColumn("ASSISTANCE", "−" + WeightFmt.number(a, units), unit: WeightFmt.unit(units) + " help", id: "Weight",
+                            minus: { change(p) { $0.assistKg = max(step, ($0.assistKg ?? step) - step) } }, plus: { change(p) { $0.assistKg = ($0.assistKg ?? 0) + step } })
+            } else if st.bodyweight || st.weightKg == nil {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("WEIGHT").font(CyFont.overline).tracking(1.2).foregroundStyle(theme.textSecondary)
                     Text("Body").font(.system(size: 56, weight: .heavy, design: .rounded)).foregroundStyle(theme.textPrimary).minimumScaleFactor(0.5).lineLimit(1)
                         .accessibilityIdentifier("recorderWeight")
-                    Text("Bodyweight — no weight to set").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    Text(st.seconds != nil ? "Timed hold — no weight to set" : "Bodyweight — no weight to set").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
@@ -261,10 +276,15 @@ struct StrengthRecorderV14: View {
             }
             .frame(minHeight: CyHit.min)
         } else {
-            Text(e.restSeconds.map { "Rest \(clock($0)) after this set" } ?? "No rest is prescribed for this exercise")
+            Text(plannedRest(e))
                 .font(CyFont.callout).foregroundStyle(theme.textSecondary).frame(minHeight: CyHit.min, alignment: .leading)
                 .accessibilityIdentifier("restPlanned")
         }
+    }
+    private func plannedRest(_ e: ExerciseEntry) -> String {
+        guard let es = store.activeSession?.exercises, let p = NextSet.pick(es) else { return "" }
+        guard let r = NextSet.restAfter(es, logged: p) else { return e.superset != nil ? "No rest inside the round — straight to the next exercise" : "No rest is prescribed for this exercise" }
+        return e.superset != nil ? "Rest \(clock(r)) after this round" : "Rest \(clock(r)) after this set"
     }
     private func restButton(_ t: String, _ label: String, id: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -278,14 +298,14 @@ struct StrengthRecorderV14: View {
     @ViewBuilder private func loggedRow(_ s: StrengthSession) -> some View {
         if let m = memory.lastLogged, m.sessionId == s.id {
             HStack(alignment: .firstTextBaseline) {
-                Text("Logged").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                Text("Set \(m.number) · \(m.text)").font(CyFont.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                Text(m.skippedSets.isEmpty ? "Logged" : "Skipped").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                Text(m.skippedSets.isEmpty ? "Set \(m.number) · \(m.text)" : m.text).font(CyFont.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("recorderLogged")
                 Spacer(minLength: 8)
                 Button("Undo") { undo(m) }
                     .font(CyFont.label.weight(.semibold)).foregroundStyle(theme.accent)
                     .frame(minWidth: CyHit.min, minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
-                    .accessibilityHint("Marks that set as not done again").accessibilityIdentifier("recorderUndo")
+                    .accessibilityHint(m.skippedSets.isEmpty ? "Marks that set as not done again" : "Brings the skipped sets back").accessibilityIdentifier("recorderUndo")
             }
         }
     }
@@ -309,6 +329,16 @@ struct StrengthRecorderV14: View {
             .accessibilityIdentifier("recorderNext")
             Spacer(minLength: 8)
             Menu {
+                if let p = NextSet.pick(es) {
+                    Button { skip(p, wholeExercise: false) } label: { Label("Skip this set", systemImage: "forward.end") }
+                    Button { skip(p, wholeExercise: true) } label: { Label("Skip this exercise", systemImage: "forward.end.alt") }
+                    Menu {
+                        Button("Ordinary reps and weight") { setKind(p, .ordinary) }
+                        Button("Timed hold") { setKind(p, .timed) }
+                        Button("Bodyweight plus added weight") { setKind(p, .added) }
+                        Button("Assisted (band or machine)") { setKind(p, .assisted) }
+                    } label: { Label("This exercise is…", systemImage: "slider.horizontal.3") }
+                }
                 Button { allExercises = true } label: { Label("All exercises · correct a set", systemImage: "list.bullet") }
                 Button(role: .destructive) { confirmDiscard = true } label: { Label("Discard workout", systemImage: "trash") }
             } label: {
@@ -342,12 +372,41 @@ struct StrengthRecorderV14: View {
         }
     }
     private func log(_ s: StrengthSession, _ p: NextSet.Pick, _ e: ExerciseEntry, _ st: SetEntry) {
-        change(p) { $0.done = true }
+        change(p) { $0.done = true; $0.skipped = nil }
         memory.lastLogged = .init(sessionId: s.id, entry: p.entry, set: p.set, text: NextSet.setText(st, units), number: p.set + 1)
-        memory.restEndsAt = e.restSeconds.flatMap { $0 > 0 ? Date().addingTimeInterval(TimeInterval($0)) : nil }
+        let rest = NextSet.restAfter(s.exercises ?? [], logged: p)
+        memory.restEndsAt = rest.flatMap { $0 > 0 ? Date().addingTimeInterval(TimeInterval($0)) : nil }
+    }
+    /// Skips the set on screen, or every set of its exercise that is still waiting. A skipped set is never "done".
+    private func skip(_ p: NextSet.Pick, wholeExercise: Bool) {
+        guard let s = store.activeSession, let es = s.exercises, es.indices.contains(p.entry) else { return }
+        let targets = wholeExercise ? es[p.entry].sets.indices.filter { es[p.entry].sets[$0].isOpen } : [p.set]
+        store.updateActiveSession { x in
+            guard var e = x.exercises, e.indices.contains(p.entry) else { return }
+            for i in targets where e[p.entry].sets.indices.contains(i) { e[p.entry].sets[i].skipped = true }
+            x.exercises = e
+        }
+        memory.restEndsAt = nil
+        memory.lastLogged = .init(sessionId: s.id, entry: p.entry, set: p.set, text: wholeExercise ? "\(es[p.entry].name) · \(targets.count) set\(targets.count == 1 ? "" : "s")" : "\(es[p.entry].name) · set \(p.set + 1)",
+                                  number: p.set + 1, skippedSets: targets)
+    }
+    /// Makes the sets of this exercise that are still waiting timed, added-weight, assisted or ordinary sets.
+    private func setKind(_ p: NextSet.Pick, _ k: SetEntry.Kind) {
+        store.updateActiveSession { x in
+            guard var e = x.exercises, e.indices.contains(p.entry) else { return }
+            for i in e[p.entry].sets.indices where e[p.entry].sets[i].isOpen { e[p.entry].sets[i] = e[p.entry].sets[i].converted(to: k, stepKg: step) }
+            x.exercises = e
+        }
     }
     private func undo(_ m: CyRecorderMemory.Logged) {
-        change(NextSet.Pick(entry: m.entry, set: m.set, label: nil)) { $0.done = false }
+        if m.skippedSets.isEmpty { change(NextSet.Pick(entry: m.entry, set: m.set, label: nil)) { $0.done = false } }
+        else {
+            store.updateActiveSession { x in
+                guard var e = x.exercises, e.indices.contains(m.entry) else { return }
+                for i in m.skippedSets where e[m.entry].sets.indices.contains(i) { e[m.entry].sets[i].skipped = nil }
+                x.exercises = e
+            }
+        }
         memory.clear()
     }
     private func clock(_ s: Int) -> String { let v = max(0, s); return v >= 3600 ? String(format: "%d:%02d:%02d", v / 3600, v / 60 % 60, v % 60) : String(format: "%02d:%02d", v / 60, v % 60) }
@@ -380,7 +439,8 @@ struct StrengthRecorderV14: View {
                         Button(role: .destructive) { store.discardActiveSession(); memory.clear(); finishing = false; dismiss() } label: { Text("Discard — nothing is saved").frame(maxWidth: .infinity, minHeight: CyHit.min) }
                             .buttonStyle(.bordered)
                     } else {
-                        Text(done == total ? "\(done) sets logged" : "\(done) of \(total) sets logged · saved as partial")
+                        let skippedCount = es.reduce(0) { $0 + $1.sets.filter { $0.isSkipped }.count }
+                        Text(done == total ? "\(done) sets logged" : "\(done) of \(total) sets logged" + (skippedCount > 0 ? " · \(skippedCount) skipped" : "") + " · saved as partial")
                             .font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("finishCount")
                         VStack(alignment: .leading, spacing: 8) {
@@ -418,6 +478,15 @@ struct StrengthRecorderV14: View {
         // otherwise the session is still active and `saveFailure` says why: the sheet shows "Not saved"
     }
 
+    private func skippedLine(_ s: StrengthSession) -> String? {
+        let sets = (s.exercises ?? []).reduce(0) { $0 + ($1.skippedSets ?? 0) }
+        let whole = s.skippedExercises ?? []
+        if sets == 0 && whole.isEmpty { return nil }
+        var parts: [String] = []
+        if sets > 0 { parts.append("\(sets) set\(sets == 1 ? "" : "s") skipped") }
+        if !whole.isEmpty { parts.append("skipped entirely: " + whole.joined(separator: ", ")) }
+        return parts.joined(separator: " · ") + ". Skipped sets are not counted as done."
+    }
     private func savedView(_ s: StrengthSession) -> some View {
         VStack(alignment: .leading, spacing: CySpace.l) {
             Spacer()
@@ -426,6 +495,7 @@ struct StrengthRecorderV14: View {
             Text("\(s.customName.isEmpty ? "Strength workout" : s.customName) · \(s.minutes) min · \((s.exercises ?? []).reduce(0) { $0 + $1.sets.count }) sets")
                 .font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("saveSummary")
+            if let sk = skippedLine(s) { Text(sk).font(CyFont.callout).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("saveSkipped") }
             Text("It is in your history and counts in Plan and Progress.").font(CyFont.callout).foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()

@@ -240,7 +240,7 @@ enum TrainingAnalyzer {
             let minutes = max(1, r.durationS / 60)
             let planned = input.plan.first { $0.kind.isRide && cal.isDate($0.date, inSameDayAs: r.start) }
             var s = SessionSignal(sport: .cycling, date: r.start, minutes: minutes, effort: r.checkIn?.effort, performance: r.checkIn?.performance, load: nil, loadSource: nil)
-            s.pain = r.checkIn?.pain ?? .noPain; s.painArea = r.checkIn?.painArea
+            s.pain = r.checkIn?.pain ?? r.review?.pain ?? .noPain; s.painArea = r.checkIn?.painArea ?? r.review?.painArea
             s.plannedMinutes = planned?.minutes; s.plannedKind = planned?.kind
             s.hasHR = r.avgHR != nil; s.hasCheckIn = r.checkIn != nil
             s.notAuthorized = r.startedExternallyDuringHealthHold == true     // E1: still counts for load, fatigue and pain
@@ -255,7 +255,7 @@ enum TrainingAnalyzer {
         for x in input.strength where !x.inProgress && x.date >= horizon && x.date <= now {
             let e = x.checkIn?.effort ?? x.rpe
             var s = SessionSignal(sport: .strength, date: x.date, minutes: max(1, x.minutes), effort: e, performance: x.checkIn?.performance, load: e.map { Double($0 * max(1, x.minutes)) }, loadSource: e == nil ? nil : (x.checkIn != nil ? "check-in effort × minutes" : "session RPE × minutes"))
-            s.pain = x.checkIn?.pain ?? .noPain; s.painArea = x.checkIn?.painArea
+            s.pain = x.checkIn?.pain ?? x.review?.pain ?? .noPain; s.painArea = x.checkIn?.painArea ?? x.review?.painArea
             s.hasCheckIn = x.checkIn != nil; s.legHeavy = x.heavyLegs
             sessions.append(s)
         }
@@ -379,8 +379,16 @@ enum TrainingAnalyzer {
         struct Exposure { var sport: SessionSignal.Sport; var date: Date; var reportedAt: Date; var pain: PainLevel; var area: PainArea?; var patterns: Set<MovementPattern> }
         var exposures: [Exposure] = []
         // review P3-04: a report counts from when it was made (the check-in time), not from when its session started
-        for r in input.rides where !r.demo && r.start <= now { if let c = r.checkIn { exposures.append(Exposure(sport: .cycling, date: r.start, reportedAt: max(r.start, c.at), pain: c.pain, area: c.painArea, patterns: [])) } }
+        // Training Hub v1.4: a partial review is not a check-in, but a pain it REPORTS still counts here (ignoring a pain
+        // report would not be conservative). An unanswered pain question adds nothing: unknown is not "no pain".
+        for r in input.rides where !r.demo && r.start <= now {
+            if let c = r.checkIn { exposures.append(Exposure(sport: .cycling, date: r.start, reportedAt: max(r.start, c.at), pain: c.pain, area: c.painArea, patterns: [])) }
+            else if let v = r.review, let p = v.pain { exposures.append(Exposure(sport: .cycling, date: r.start, reportedAt: max(r.start, v.at), pain: p, area: v.painArea, patterns: [])) }
+        }
         for x in input.strength where !x.inProgress && x.date <= now {
+            if x.checkIn == nil, let v = x.review, let p = v.pain {
+                exposures.append(Exposure(sport: .strength, date: x.date, reportedAt: max(x.date, v.at), pain: p, area: v.painArea, patterns: Self.loadedPatterns(x)))
+            }
             guard let c = x.checkIn else { continue }
             exposures.append(Exposure(sport: .strength, date: x.date, reportedAt: max(x.date, c.at), pain: c.pain, area: c.painArea, patterns: Self.loadedPatterns(x)))
         }

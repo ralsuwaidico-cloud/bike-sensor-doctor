@@ -555,8 +555,8 @@ extension Store {
     /// The most recent completed session of the last 14 days without a rating (check-in or session RPE).
     func latestUnrated(now: Date = Date()) -> HomeCoachItem.CheckInTargetID? {
         let since = now.addingTimeInterval(-14 * 86_400)
-        let r = rides.filter { !$0.demo && $0.start >= since && $0.start <= now && $0.checkIn == nil }.max { $0.start < $1.start }
-        let s = strength.filter { !$0.awaitingReview && !$0.inProgress && $0.date >= since && $0.date <= now && $0.checkIn == nil && $0.rpe == nil }.max { $0.date < $1.date }
+        let r = rides.filter { !$0.demo && $0.start >= since && $0.start <= now && $0.checkIn == nil && $0.review == nil }.max { $0.start < $1.start }
+        let s = strength.filter { !$0.awaitingReview && !$0.inProgress && $0.date >= since && $0.date <= now && $0.checkIn == nil && $0.review == nil && $0.rpe == nil }.max { $0.date < $1.date }
         switch (r, s) {
         case let (r?, s?): return r.start > s.date ? .ride(r.id) : .strength(s.id)
         case let (r?, nil): return .ride(r.id)

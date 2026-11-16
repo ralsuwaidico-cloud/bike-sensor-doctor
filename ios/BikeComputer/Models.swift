@@ -571,6 +571,8 @@ struct RideRecord: Codable, Identifiable, Equatable {
     /// Adaptive coach: the rider's post-ride check-in, and whether the ride's power was verified (nil = unknown →
     /// treated as unverified: never used to progress intensity). Optional, so older files decode unchanged.
     var checkIn: CheckIn? = nil
+    /// Training Hub v1.4: the optional review (see SessionReview). nil = no review, or a record older than the field.
+    var review: SessionReview? = nil
     var powerVerified: Bool? = nil
     /// Checkpoint F slice 3: the planned ride steps at save time (so the saved results page can show target vs actual
     /// later); nil for free rides and for rides saved by earlier builds.
@@ -1203,7 +1205,17 @@ final class Store: ObservableObject {
         s.finishedAt = now
         s.minutes = max(0, (s.elapsedSeconds(now: now) + 30) / 60)
         s.rpe = rpe; s.notes = notes
-        s.exercises = s.exercises?.map { e in var x = e; x.sets = x.sets.filter { $0.done }; return x }.filter { !$0.sets.isEmpty }
+        // Training Hub v1.4: what was skipped is remembered as a count and as names — skipped sets themselves are not
+        // saved as sets, so nothing that reads the history can take one for a set that was done.
+        let fullySkipped = (s.exercises ?? []).filter { e in !e.sets.contains { $0.done } && e.sets.contains { $0.isSkipped } }.map(\.name)
+        s.skippedExercises = fullySkipped.isEmpty ? nil : fullySkipped
+        s.exercises = s.exercises?.map { e in
+            var x = e
+            let n = e.sets.filter { $0.isSkipped }.count
+            x.skippedSets = n > 0 ? n : nil
+            x.sets = x.sets.filter { $0.done }.map { st in var y = st; y.skipped = nil; return y }
+            return x
+        }.filter { !$0.sets.isEmpty }
         if (s.exercises ?? []).isEmpty { s.exercises = nil }
         // E1: clearing the active session and storing the log are ONE write. If it fails, the session is still active
         // (nothing is lost, Save can be tapped again) and nil is returned.

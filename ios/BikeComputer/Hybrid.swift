@@ -64,6 +64,11 @@ struct StrengthSession: Codable, Identifiable, Equatable {
     var pausedAt: Date? = nil
     /// Adaptive coach: the rider's post-session check-in (performance, effort, pain, note). nil = not given.
     var checkIn: CheckIn? = nil
+    /// Training Hub v1.4: the optional review (see SessionReview). nil = no review, or a record older than the field.
+    var review: SessionReview? = nil
+    /// Training Hub v1.4: names of exercises of the plan that were skipped entirely in this session (they have no sets,
+    /// so they are not in `exercises`). nil = none, or a record older than the field. Never counted as done.
+    var skippedExercises: [String]? = nil
     /// Quality release: true = the rider saved this as an extra session (never linked to a planned one); a record a
     /// migration could not vouch for waits for the rider's review (not counted until confirmed); what the migration
     /// changed, with the original values. All stored only when set, so older logs encode as before.
@@ -102,6 +107,8 @@ struct StrengthSession: Codable, Identifiable, Equatable {
         pausedSeconds = (try? c.decodeIfPresent(Int.self, forKey: .pausedSeconds)) ?? 0
         pausedAt = try? c.decodeIfPresent(Date.self, forKey: .pausedAt)
         checkIn = try? c.decodeIfPresent(CheckIn.self, forKey: .checkIn)
+        review = (try? c.decodeIfPresent(SessionReview.self, forKey: .review)) ?? nil
+        skippedExercises = (try? c.decodeIfPresent([String].self, forKey: .skippedExercises)) ?? nil
         unplanned = try? c.decodeIfPresent(Bool.self, forKey: .unplanned)
         needsReview = try? c.decodeIfPresent(Bool.self, forKey: .needsReview)
         migrationNote = try? c.decodeIfPresent(String.self, forKey: .migrationNote)

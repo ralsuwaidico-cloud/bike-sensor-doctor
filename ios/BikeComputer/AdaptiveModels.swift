@@ -46,11 +46,6 @@ struct CheckIn: Codable, Equatable {
     var painArea: PainArea? = nil
     var note: String = ""
     var at: Date = Date()
-    /// Training Hub v1.4 review: how hard the session was meant to feel against how it felt, 1–10. STORED ONLY — no
-    /// engine reads it. Optional and additive: absent in every record written before it existed and whenever the
-    /// athlete leaves it unanswered; never filled in with a default.
-    var intensity: Int? = nil
-
     init(performance: Int, effort: Int, pain: PainLevel = .noPain, painArea: PainArea? = nil, note: String = "", at: Date = Date()) {
         self.performance = min(10, max(1, performance)); self.effort = min(10, max(1, effort))
         self.pain = pain; self.painArea = pain.needsArea ? (painArea ?? .other) : nil; self.note = note; self.at = at
@@ -63,7 +58,6 @@ struct CheckIn: Codable, Equatable {
         painArea = try? c.decodeIfPresent(PainArea.self, forKey: .painArea)
         note = (try? c.decodeIfPresent(String.self, forKey: .note)) ?? ""
         at = (try? c.decodeIfPresent(Date.self, forKey: .at)) ?? Date(timeIntervalSince1970: 0)
-        intensity = (try? c.decodeIfPresent(Int.self, forKey: .intensity)).flatMap { $0 }.map { min(10, max(1, $0)) }
     }
 }
 
@@ -181,6 +175,49 @@ extension Workout {
         return x
     }
     var coachAdjusted: Bool { coachOriginal != nil }
+}
+
+/// Training Hub v1.4 review (owner approval of 16 Nov 2026): three independent values and a pain answer, each of which
+/// may be left unanswered. ADDITIVE and OPTIONAL: stored beside the older `checkIn`, absent in every record written
+/// before it existed.
+///   • nil always means "not answered". It is never read as a value: an unanswered pain question is UNKNOWN, not "no pain".
+///   • Intensity is stored only; no engine reads it.
+///   • A review in which performance, effort and pain are all answered is ALSO a complete check-in (`asCheckIn`) and is
+///     then recorded through the existing check-in path, so the Coach works exactly as before. A partial review is not
+///     a check-in: the Coach treats the session as not assessed. Only a REPORTED pain of a partial review reaches the
+///     Coach's pain rules, because ignoring a pain report would not be conservative.
+struct SessionReview: Codable, Equatable {
+    var intensity: Int? = nil
+    var performance: Int? = nil
+    var effort: Int? = nil
+    /// nil = unknown (not answered). `.noPain` only when the athlete said so.
+    var pain: PainLevel? = nil
+    var painArea: PainArea? = nil
+    var note: String = ""
+    var at: Date = Date()
+
+    init(intensity: Int? = nil, performance: Int? = nil, effort: Int? = nil, pain: PainLevel? = nil, painArea: PainArea? = nil, note: String = "", at: Date = Date()) {
+        func clamp(_ v: Int?) -> Int? { v.map { min(10, max(1, $0)) } }
+        self.intensity = clamp(intensity); self.performance = clamp(performance); self.effort = clamp(effort)
+        self.pain = pain; self.painArea = (pain?.needsArea ?? false) ? (painArea ?? .other) : nil
+        self.note = note; self.at = at
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func value(_ k: CodingKeys) -> Int? { ((try? c.decodeIfPresent(Int.self, forKey: k)) ?? nil).flatMap { (1...10).contains($0) ? $0 : nil } }
+        intensity = value(.intensity); performance = value(.performance); effort = value(.effort)
+        pain = (try? c.decodeIfPresent(PainLevel.self, forKey: .pain)) ?? nil
+        painArea = (try? c.decodeIfPresent(PainArea.self, forKey: .painArea)) ?? nil
+        note = ((try? c.decodeIfPresent(String.self, forKey: .note)) ?? nil) ?? ""
+        at = ((try? c.decodeIfPresent(Date.self, forKey: .at)) ?? nil) ?? Date(timeIntervalSince1970: 0)
+    }
+    /// Nothing answered and nothing written: there is nothing to store.
+    var isEmpty: Bool { intensity == nil && performance == nil && effort == nil && pain == nil && note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    /// The complete check-in this review amounts to — only when performance, effort and pain were all answered.
+    var asCheckIn: CheckIn? {
+        guard let p = performance, let e = effort, let pn = pain else { return nil }
+        return CheckIn(performance: p, effort: e, pain: pn, painArea: painArea, note: note, at: at)
+    }
 }
 
 /// One bounded change to one future session, with the plain "why" and the numbers behind it.

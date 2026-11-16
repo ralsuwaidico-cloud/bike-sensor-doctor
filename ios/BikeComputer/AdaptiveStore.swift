@@ -168,6 +168,26 @@ extension Store {
 
     // MARK: visible and reversible (brief E)
     /// Changes in force on sessions that are still open.
+    /// Training Hub v1.4: stores the optional review of a saved session. An empty review stores nothing. A review that
+    /// answers performance, effort and pain is also a complete check-in and goes through the existing check-in path;
+    /// a partial one is kept as it is, and the Coach is run again only so that a reported pain is taken into account.
+    @discardableResult
+    func recordReview(_ r: SessionReview, strengthId: UUID, now: Date = Date()) -> Bool {
+        guard !r.isEmpty, let i = strength.firstIndex(where: { $0.id == strengthId }) else { return false }
+        strength[i].review = r
+        if let c = r.asCheckIn { _ = recordCheckIn(c, strengthId: strengthId, now: now) }
+        else if r.pain != nil { refreshGeneratedSessions(now: now); _ = runAdaptation(now: now) }
+        return true
+    }
+    @discardableResult
+    func recordReview(_ r: SessionReview, rideId: UUID, now: Date = Date()) -> Bool {
+        guard !r.isEmpty, let i = rides.firstIndex(where: { $0.id == rideId }) else { return false }
+        rides[i].review = r
+        if let c = r.asCheckIn { _ = recordCheckIn(c, rideId: rideId, now: now) }
+        else if r.pain != nil { refreshGeneratedSessions(now: now); _ = runAdaptation(now: now) }
+        return true
+    }
+
     var activeAdaptations: [PlanAdjustment] { adaptations.filter { a in plan.contains { $0.id == a.workoutId && !$0.done } } }
     /// The one Home line: nil when nothing changed and nothing waits for approval.
     var adjustmentLine: String? {
