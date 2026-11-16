@@ -1,0 +1,121 @@
+BikeComputer iOS CI — run 239 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 239 — 2026-11-16 07:46 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 4m32s
+RESULT tests: ok (Executed 726 tests, with 9 tests skipped and 0 failures) · 11m22s
+Total: 11m36s
+
+## smoke
+BikeComputer iOS CI — build 239 — 2026-11-16 08:10 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 12m33s
+RESULT launch smoke (Release): ok (Executed 26 tests, with 6 tests skipped and 0 failures) · 51m53s
+Total: 52m6s
+
+## flows
+BikeComputer iOS CI — build 239 — 2026-11-16 07:58 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 10m47s
+RESULT flows (hub reliability + UI journeys): ok · 52m2s
+Total: 52m15s
+
+## journeys
+BikeComputer iOS CI — build 239 — 2026-11-16 07:46 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 11m26s
+  journey hybrid: ok · recording 2036 KB · 9m26s
+  journey cycling: ok · recording 1477 KB · 6m20s
+  journey strength: ok · recording 1514 KB · 8m18s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 38m37s
+Total: 40m20s
+
+## layout-small
+BikeComputer iOS CI — build 239 — 2026-11-16 07:46 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m45s
+  layout small counts: passed 2 · failed 1 · skipped 0 · screenshots so far 82
+  layout small (L,AX3): FAILED (exit 65) · 38m46s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to unable to perform Swipe left on "planDayStrip" Other: visible frame is empty, which may happen if the element is offscreen. 
+RESULT layout audit: FAILED (83 screenshots)
+Total: 50m52s
+
+## layout-standard
+BikeComputer iOS CI — build 239 — 2026-11-16 07:46 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m40s
+  layout standard counts: passed 1 · failed 0 · skipped 2 · screenshots so far 33
+  layout standard: WARNING — 2 test(s) skipped: testHomeStates testRC2OwnerScreens 
+  layout standard (L,XXXL): ok · 12m16s
+RESULT layout audit: ok (33 screenshots)
+Total: 24m13s
+
+## layout-promax
+BikeComputer iOS CI — build 239 — 2026-11-16 07:46 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m25s
+  layout promax counts: passed 1 · failed 0 · skipped 2 · screenshots so far 13
+  layout promax: WARNING — 2 test(s) skipped: testHomeStates testRC2OwnerScreens 
+  layout promax (L): ok · 6m42s
+RESULT layout audit: ok (13 screenshots)
+Total: 19m23s
+
+## layout-owner
+BikeComputer iOS CI — build 239 — 2026-11-16 08:05 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m57s
+  layout owner counts: passed 2 · failed 0 · skipped 1 · screenshots so far 87
+  layout owner: WARNING — 1 test(s) skipped: testKeyScreensAtTextSizes 
+  layout owner (L,XXXL): ok · 47m58s
+RESULT layout audit: ok (87 screenshots)
+Total: 61m46s
+
+## watch
+BikeComputer iOS CI — build 239 — 2026-11-16 08:27 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11209   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11736   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12258   screenshot ax3 ok large · 11m32s
+Total: 11m39s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+
+GATE flows: ok
+commit 4970c5c77d2ba894583d26cebb29e7853e2624b7  branch ios/e1-safety  job failure
