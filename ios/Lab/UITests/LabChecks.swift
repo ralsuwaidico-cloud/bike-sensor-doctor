@@ -81,6 +81,16 @@ final class LabChecks: XCTestCase {
             app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-2-home-lower")
             let centre = app.buttons["centreButton"].firstMatch
             if centre.waitForExistence(timeout: 5) { centre.tap(); app.settleForScreenshot(2); shot("\(tag)-3-train"); XCTAssertTrue(banner(app), "\(t.id): banner on Train") }
+            if i == 0 {
+                // Training Hub v1.4: the Train ball opens the compact panel first; "All training" expands it into the Hub
+                let panel = app.descendants(matching: .any).matching(identifier: "trainPanel").firstMatch
+                XCTAssertTrue(panel.waitForExistence(timeout: 8), "the compact Train panel opens from the Train ball")
+                XCTAssertTrue(app.staticTexts["trainPanelTitle"].firstMatch.exists, "the panel names today's session or state")
+                let all = app.buttons["trainPanelAll"].firstMatch
+                XCTAssertTrue(all.exists, "All training"); all.tap()
+                XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "trainingHub").firstMatch.waitForExistence(timeout: 8), "All training opens the full Hub")
+                app.settleForScreenshot(2); shot("\(tag)-3b-hub")
+            }
             tab(app, "Plan"); shot("\(tag)-4-plan")
             if i == 0 {
                 // Plan v2.0: the schedule-first screen, fed from the athlete record (Lab: the demo athlete, and it says so)

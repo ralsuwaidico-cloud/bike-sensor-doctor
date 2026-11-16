@@ -21,6 +21,8 @@ struct RootView: View {
     /// Checkpoint C: the Training Hub is a page over the current tab (closing returns to that tab with its scroll
     /// position); the centre button always opens it, a tab tap or Close dismisses it.
     @State private var showHub = false
+    /// Redesign: false = the compact Train panel, true = the full Hub. Reset whenever the Hub opens.
+    @State private var hubExpanded = false
     @State private var lastCentreTap = Date.distantPast
     private let hubLog = Logger(subsystem: "com.ralsuwaidico.bikecomputer", category: "hub")
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -73,9 +75,27 @@ struct RootView: View {
                     // (a Close tapped within ~0.2 s of opening). The hub is now inserted and removed with NO transition and
                     // NO animation at all: its controls have final frames from the first frame and removal is immediate,
                     // whatever the timing of the taps.
+                    if CyProduct.redesign && !hubExpanded {
+                        // Training Hub v1.4: the compact panel first (Shell/CyTrainPanel.swift); "All training" expands it
+                        // into the full Hub below. Same no-animation rule as the Hub (runs 200–206).
+                        ZStack(alignment: .bottom) {
+                            Color.black.opacity(0.45).ignoresSafeArea()
+                                .contentShape(Rectangle()).onTapGesture { closeHub() }
+                                .accessibilityHidden(true)
+                            CyTrainPanel(perform: { a in closeHub(); perform(a) },
+                                         freeRide: { closeHub(); tab = 2 },
+                                         otherSession: { closeHub(); trainSheet = store.todayAction() },
+                                         expand: { var t = Transaction(); t.disablesAnimations = true; withTransaction(t) { hubExpanded = true } },
+                                         close: { closeHub() })
+                                .padding(.bottom, 8)
+                        }
+                        .transition(.identity)
+                        .zIndex(1)
+                    } else {
                     TrainingHubView(perform: perform, openTab: { showHub = false; tab = $0 }, otherSession: { trainSheet = store.todayAction() }, close: { closeHub() })
                         .transition(.identity)
                         .zIndex(1)
+                    }
                 }
             }
             .onChange(of: tab) { _, _ in showHub = false }
@@ -177,7 +197,7 @@ struct RootView: View {
     }
     private func openHub() {
         var t = Transaction(); t.disablesAnimations = true
-        withTransaction(t) { showHub = true }
+        withTransaction(t) { hubExpanded = false; showHub = true }
     }
     private func closeHub() { hubLog.notice("hub Close"); var t = Transaction(); t.disablesAnimations = true; withTransaction(t) { showHub = false } }
 
