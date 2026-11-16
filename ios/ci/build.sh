@@ -495,6 +495,15 @@ case "$STAGE" in
   layout) run_layout ;;
   quick)
     run_unit
+    # COMPILE CHECK ("[ci compile]" in the head commit message, or quick_ui = none): build + unit tests only. Runs 240,
+    # 241 and 245 showed why: on a new branch the quick set is computed from every file changed since the last green
+    # full run, which selects nearly every screen test (the small iPhone at the largest text alone takes over an hour)
+    # and the job is cut off at two hours. A compile check is not a quick pass and is never release evidence.
+    if printf '%s' "${HEAD_MSG:-}" | grep -qF '[ci compile]' || [ "${QUICK_UI:-}" = none ]; then
+      note "COMPILE CHECK — app build and unit tests only; no screen test was run"
+      note "RESULT archive: skipped (compile check)"; note "RESULT upload: skipped (compile check never uploads)"
+      note "Total: $(since $T0)"; exit $STATUS
+    fi
     # QUICK_UI: the UI tests for the screens being changed. Given explicitly (workflow input) it is used as is; otherwise
     # it is computed by tools/ci-targets.py from the files changed since the last green full run (ios/CI_PROCESS.md).
     # Run 126: adding the owner-screens audit and the upgrade smoke to every quick run made it 51 min — targets only.

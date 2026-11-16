@@ -10,7 +10,7 @@ permissions:
   contents: write      # only to add the report and screenshots to the ci-logs branch
 concurrency:
   group: lab-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   lab:
     runs-on: macos-26
@@ -30,19 +30,31 @@ jobs:
           name: lab-out
           path: ios/build/lab-out
           if-no-files-found: ignore
+
+  # Linux, like the main workflow's publish job (Lab 2: the same step on the macOS runner hung on the push)
+  publish:
+    needs: [lab]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lab-out
+          path: lab-out
+        continue-on-error: true
       - name: Publish the report and screenshots to branch ci-logs (lab/run-N)
-        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           N: ${{ github.run_number }}
         run: |
-          [ -d ios/build/lab-out ] || exit 0
-          W=$(mktemp -d); cd "$W"
+          [ -d lab-out ] || exit 0
+          SRC="$PWD/lab-out"; W=$(mktemp -d); cd "$W"
           git init -q && git config user.name "ios-ci" && git config user.email "ios-ci@users.noreply.github.com"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
           D="lab/run-$N"; mkdir -p "$D"
-          cp "$GITHUB_WORKSPACE"/ios/build/lab-out/REPORT.txt "$D/" 2>/dev/null || true
-          cp "$GITHUB_WORKSPACE"/ios/build/lab-out/*.png "$GITHUB_WORKSPACE"/ios/build/lab-out/uitest-tail.txt "$D/" 2>/dev/null || true
+          cp "$SRC"/REPORT.txt "$SRC"/*.png "$SRC"/uitest-tail.txt "$SRC"/plan-layout-measurements.txt "$D/" 2>/dev/null || true
           echo "commit $GITHUB_SHA  branch $GITHUB_REF_NAME" >> "$D/REPORT.txt"
-          git add -A && git commit -q -m "Cyclift Lab run $N" && for i in 1 2 3; do git push -q origin ci-logs && break; git pull -q --rebase origin ci-logs; done
+          git add -A && git commit -q -m "Cyclift Lab run $N"
+          for i in 1 2 3; do git push -q origin ci-logs && break; git fetch -q --depth 1 origin ci-logs && git rebase -q FETCH_HEAD; done
