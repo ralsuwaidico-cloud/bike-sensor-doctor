@@ -140,8 +140,17 @@ struct RootView: View {
         let action = store.todayAction(now: max(Date(), day))
         let copy = RideTabBar.centreCopy(recording: recorder.isActive, action: action)
         let missed = store.homeToday(recorderActive: recorder.isActive).missed != nil
+        #if CYCLIFT_LAB
+        // Cyclift Lab: Navigation v1.2 rev 1.1 (Shell/CyCradleDock.swift). Destinations and the Train routing are the
+        // existing ones; Profile (page 4) is reached from the Home avatar and has no tab.
+        _ = (copy, missed)
+        let ballState: CyTrainBallState = recorder.isActive ? .recording
+            : (store.activeSession.map { .active(max(0, Int(max(Date(), day).timeIntervalSince($0.startedAt ?? Date())))) } ?? .idle)
+        return CyCradleDock(selection: $tab, hubOpen: showHub, ball: ballState, onTrain: centreTapped)
+        #else
         return CyLiquidDock(selection: $tab, state: CyCentreState.from(action: action, recording: recorder.isActive), missed: missed,
                             centreIcon: copy.icon, centreLabel: copy.label, centreHint: copy.hint, onCentre: centreTapped)
+        #endif
     }
 
     /// Checkpoint C (owner-approved prototype §2.2): the centre button always opens the Training Hub, whose card carries
