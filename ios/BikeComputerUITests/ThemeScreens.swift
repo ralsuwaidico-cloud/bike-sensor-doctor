@@ -31,7 +31,11 @@ final class ThemeScreens: XCTestCase {
         for (i, (theme, dark)) in themes.enumerated() {
             XCUIDevice.shared.appearance = dark ? .dark : .light
             let app = XCUIApplication()
-            app.launchEnvironment["BC_UITEST_SEED_JSON"] = LayoutAudit.demoStore()
+            // the demo athlete's own setting is "dark"; here the appearance follows the theme, so the parts of a light theme
+            // that are still drawn with system colours are shown as they would be, not white on white
+            let seed = LayoutAudit.demoStore()
+            XCTAssertTrue(seed.contains("\"appearance\":\"dark\""), "the demo athlete's appearance setting was not found")
+            app.launchEnvironment["BC_UITEST_SEED_JSON"] = seed.replacingOccurrences(of: "\"appearance\":\"dark\"", with: "\"appearance\":\"system\"")
             app.launchEnvironment["BC_UITEST_THEME"] = theme
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryL"]
             app.launch()
