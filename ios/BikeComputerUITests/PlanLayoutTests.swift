@@ -139,8 +139,11 @@ final class PlanLayoutTests: XCTestCase {
             day.tap()
             let page = app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch
             XCTAssertTrue(page.waitForExistence(timeout: 8), "\(size): tapping today's day opens the Day page")
-            let title = app.navigationBars.firstMatch.identifier
-            XCTAssertTrue(title.contains(dayOfMonth(weekday: todayWeekday)), "\(size): the Day page is today's (title '\(title)')")
+            // Run 248: `navigationBars.firstMatch` was another tab's bar ("Progress") — every tab page stays alive. The
+            // Day page's own title is looked for among all bars; the expectation (today's date in the title) is unchanged.
+            let titles = app.navigationBars.allElementsBoundByIndex.map { $0.identifier }
+            let dayNumber = dayOfMonth(weekday: todayWeekday)
+            XCTAssertTrue(titles.contains { $0.contains(dayNumber) && $0 != "Plan" && $0 != "Progress" && $0 != "Profile" }, "\(size): the Day page is today's (bar titles \(titles), expected day \(dayNumber))")
             shot("\(size.lowercased())-3-day-page")
             app.navigationBars.buttons.firstMatch.tap()
             XCTAssertTrue(app.otherElements["planDayStrip"].firstMatch.waitForExistence(timeout: 8), "\(size): back on Plan")
@@ -173,10 +176,11 @@ final class PlanLayoutTests: XCTestCase {
             let app = openPlan(size)
             guard let c = chips(app).first(where: { bringIntoView(app, $0) && $0.isHittable }) else { XCTFail("\(size): no session chip in view"); app.terminate(); continue }
             let before = c.frame
-            let u = usable(app)
-            let up = before.midY > (u.top + u.bottom) / 2          // drag towards the roomier side
+            // Run 248 (owner-size phone, standard text): the drag went DOWN from a chip while the page was already at
+            // its top, where nothing can move, so "did not scroll" said nothing about the chip. The finger now always
+            // moves up, which scrolls a page that is longer than the screen (Plan always is with the demo week).
             let from = c.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            let to = from.withOffset(CGVector(dx: 0, dy: up ? -160 : 160))
+            let to = from.withOffset(CGVector(dx: 0, dy: -160))
             from.press(forDuration: 0.05, thenDragTo: to)
             app.settleForScreenshot(1)
             XCTAssertFalse(app.buttons["Done"].firstMatch.exists, "\(size): a scroll that started on a session opened its sheet")
