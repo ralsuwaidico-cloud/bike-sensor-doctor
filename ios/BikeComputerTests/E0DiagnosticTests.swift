@@ -130,10 +130,12 @@ final class E0DiagnosticTests: XCTestCase {
     /// implies (2 or 3), and nothing else: this is the mechanism behind "expected 5, got 10".
     func testE0_Ride_DeliberateStallProducesExactlyThatManyGapSamples() {
         let loc = LocationService(); let r = RideRecorder.allowedForTests(); r.location = loc
-        XCTAssertTrue(r.start())
-        Thread.sleep(forTimeInterval: 2.6)
-        for i in 0..<5 { loc.injectForTests(fix(i)); r.tick() }
-        diag("ride: stall=2.6s samples=\(r.samples.count) gapSeconds=\(r.gapSeconds)")
+        // run 236: this test took 27.6 s and counted 25 gap seconds. Each step is timed so the next run shows where
+        // the time went (start, the deliberate stall, or the five ticks). No expectation below has changed.
+        let t0 = Date(); XCTAssertTrue(r.start()); let startCost = Date().timeIntervalSince(t0)
+        let t1 = Date(); Thread.sleep(forTimeInterval: 2.6); let sleepCost = Date().timeIntervalSince(t1)
+        let t2 = Date(); for i in 0..<5 { loc.injectForTests(fix(i)); r.tick() }; let tickCost = Date().timeIntervalSince(t2)
+        diag("ride: stall=2.6s samples=\(r.samples.count) gapSeconds=\(r.gapSeconds) start()=\(String(format: "%.3f", startCost))s sleep=\(String(format: "%.3f", sleepCost))s ticks=\(String(format: "%.3f", tickCost))s")
         XCTAssertTrue((2...3).contains(r.gapSeconds), "gap seconds follow the stall: \(r.gapSeconds)")
         XCTAssertEqual(r.samples.count, 5 + r.gapSeconds)
         XCTAssertEqual(r.samples.compactMap(\.lat).count, 5, "no route fix lost")

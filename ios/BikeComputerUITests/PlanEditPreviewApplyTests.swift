@@ -29,7 +29,14 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         // screen, XCUITest's own tap scrolls the menu to it.
         if !edit.tapWhenSettled(timeout: 4) { expect(edit.exists, "Edit menu item present", tag: "edit-present"); edit.tap() }
         let slider = app.sliders["editDuration"].firstMatch
-        XCTAssertTrue(slider.waitForExistence(timeout: 10), "duration slider")
+        let sliderShown = slider.waitForExistence(timeout: 10)
+        if !sliderShown {
+            // run 236: the slider was not found and nothing recorded what was on screen. Evidence only; the expectation
+            // on the next line is unchanged.
+            let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = "FAIL-plan-edit-no-slider"; a.lifetime = .keepAlways; add(a)
+            print("E0-DIAG plan-edit: slider missing · moreMenu=\(more.exists) moreEditType=\(edit.exists) startWorkout=\(app.buttons["startWorkout"].firstMatch.exists) editSave=\(app.buttons["editSave"].firstMatch.exists) sliders=\(app.sliders.count) sheets=\(app.sheets.count)")
+        }
+        XCTAssertTrue(sliderShown, "duration slider")
         let before = slider.value as? String ?? ""
         // run 209: 45 → 45 — the slider's range is 15…180 min, so 0.15 ≈ 40 min sat a few points from the thumb and the
         // step-5 slider did not move. A clearly different position (≈ 80 min); if the value still has not changed the thumb
