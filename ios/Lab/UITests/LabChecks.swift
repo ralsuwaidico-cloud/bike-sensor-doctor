@@ -17,6 +17,11 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(b.waitForExistence(timeout: 8), "tab \(name)")
         if b.exists { b.tap(); app.settleForScreenshot(2) }
     }
+    /// Lab 3 and 4: the chooser was not found by its identifier (an identifier on the banner row replaced it; that one is
+    /// removed). It is now found by identifier or by what it says, whichever iOS exposes.
+    private func chooser(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'labThemeMenu' OR label BEGINSWITH 'Theme' OR label BEGINSWITH 'Close and reopen'")).firstMatch
+    }
     private let themes: [(id: String, title: String)] = [("obsidian", "Obsidian"), ("arctic", "Arctic"), ("ocean", "Ocean"), ("forest", "Forest"), ("sandstone", "Sandstone"), ("highContrast", "High Contrast")]
 
     /// The same five screens in each theme, each from a fresh launch in that theme.
@@ -51,13 +56,13 @@ final class LabChecks: XCTestCase {
         for i in Array(1..<themes.count) + [0] {      // every other theme, then back to the first
             let t = themes[i]
             // Lab 3: the chooser is not exposed as a Button, so it is looked up by its identifier whatever its type
-            let menu = app.descendants(matching: .any).matching(identifier: "labThemeMenu").firstMatch
+            let menu = chooser(app)
             XCTAssertTrue(menu.waitForExistence(timeout: 8), "theme chooser"); menu.tap()
             let choice = app.buttons[t.title].firstMatch
             XCTAssertTrue(choice.waitForExistence(timeout: 5), "choice \(t.title)"); choice.tap()
             app.settleForScreenshot(2)
             XCTAssertEqual(app.state, .runningForeground, "\(t.id): still the same running app")
-            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "labThemeMenu").firstMatch.label.contains(t.title), "\(t.id): the chooser names the theme now shown (\(app.descendants(matching: .any).matching(identifier: "labThemeMenu").firstMatch.label))")
+            XCTAssertTrue(chooser(app).label.contains(t.title), "\(t.id): the chooser names the theme now shown (\(chooser(app).label))")
             XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): Home is shown after the change")
             let now = XCUIScreen.main.screenshot().pngRepresentation
             XCTAssertNotEqual(now, last, "\(t.id): the screen did not change")
@@ -91,5 +96,25 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(again.buttons["onboardingContinue"].firstMatch.waitForExistence(timeout: 30), "relaunch: still Welcome, the demo athlete did not come back")
         XCTAssertFalse(again.waitForHome(name: "Demo", timeout: 3), "the deleted demo athlete must not reappear")
         shot("delete-3-relaunch")
+    }
+
+    /// After the deletion above Lab is empty. "Restore the demo athlete" is an explicit choice: nothing comes back until
+    /// it is chosen AND Lab is reopened; then the demo athlete is there again.
+    func test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked() {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.waitForExistence(timeout: 30), "starts empty (after the deletion test)")
+        let menu = chooser(app)
+        XCTAssertTrue(menu.waitForExistence(timeout: 8), "banner menu"); menu.tap()
+        let restore = app.buttons["Restore the demo athlete"].firstMatch
+        XCTAssertTrue(restore.waitForExistence(timeout: 5), "the restore choice"); restore.tap()
+        app.settleForScreenshot(1)
+        XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.exists, "nothing changes until Lab is reopened")
+        shot("restore-1-asked")
+        app.terminate()
+        let again = XCUIApplication()
+        again.launch()
+        XCTAssertTrue(again.waitForHome(name: "Demo", timeout: 30), "after reopening, the demo athlete is back")
+        shot("restore-2-back")
     }
 }

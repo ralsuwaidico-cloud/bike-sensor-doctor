@@ -85,7 +85,6 @@ struct LabChrome: ViewModifier {
             .foregroundStyle(Color.black)
             .tint(Color.black)
             .background(Color(red: 1, green: 0.84, blue: 0.04).ignoresSafeArea(edges: .top))
-            .accessibilityIdentifier("labBanner")
             content
         }
     }
