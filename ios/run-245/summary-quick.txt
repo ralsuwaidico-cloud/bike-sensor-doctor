@@ -1,0 +1,13 @@
+BikeComputer iOS CI — build 245 — 2026-11-16 09:33 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 6m52s
+RESULT tests: ok (Executed 741 tests, with 9 tests skipped and 0 failures) · 15m9s
+  targets from the files changed since the last green full run fb52ae2
+Quick UI targets: LayoutAudit/testRC2OwnerScreens JourneyTests/testHybridJourney DesignSystemAudit/testGalleryLightAndDark LayoutAudit/testKeyScreensAtTextSizes LaunchSmokeTests LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText RideViewsSmokeTests LaunchSmokeTests/testUpgradeFromBuild36CentreButtonOpensStrengthWorkout AdaptiveSmokeTests/testQuickStrengthLogShowsCheckInThenAdjustments HomeNavigationTests LayoutAudit PlanEditPreviewApplyTests ThemeScreens UITestWaits LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m9s
