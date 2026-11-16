@@ -1,0 +1,13 @@
+BikeComputer iOS CI — build 258 — 2026-11-16 15:56 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+RESULT build (Debug, for testing): ok · 3m35s
+RESULT tests: ok (Executed 726 tests, with 9 tests skipped and 0 failures) · 8m56s
+COMPILE CHECK — app build and unit tests only; no screen test was run
+RESULT archive: skipped (compile check)
+RESULT upload: skipped (compile check never uploads)
+Total: 9m4s
