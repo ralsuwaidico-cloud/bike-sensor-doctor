@@ -1,0 +1,32 @@
+# Cyclift Lab: verifies the App Store Connect entry, then produces an App Store-signed Lab build ONLY to read its
+# entitlements and Info.plist. There is no upload step in this workflow or in tools/lab/sign.sh.
+name: Cyclift Lab — signed build check
+on:
+  push:
+    branches: ["ios/lab"]
+    paths: [".github/workflows/lab-sign.yml", "tools/lab/sign.sh", "tools/lab/SIGN_REQUEST"]
+permissions:
+  contents: read
+concurrency:
+  group: lab-sign
+  cancel-in-progress: false
+jobs:
+  sign:
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+      BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ios/build/spm
+          key: spm-v1-${{ hashFiles('ios/project.yml') }}
+      - name: Apple identifier and app entry
+        run: set -o pipefail; pip3 install --quiet --break-system-packages pyjwt cryptography 2>/dev/null || pip3 install --quiet pyjwt cryptography; python3 tools/lab/register_bundle.py 2>&1 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<e-mail hidden>/g'
+      - name: Signed build and entitlement check (no upload)
+        run: bash tools/lab/sign.sh
