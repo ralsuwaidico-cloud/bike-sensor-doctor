@@ -17,6 +17,45 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(b.waitForExistence(timeout: 8), "tab \(name)")
         if b.exists { b.tap(); app.settleForScreenshot(2) }
     }
+    /// Diagnosis for Lab runs 20–24 (Home v2.3 controls scroll but do not act). Two launches of the same build:
+    /// A — the graph's native touch layer is made readable, so its real frame on screen is recorded next to the chart's
+    ///     and the tapped control's; B — the layer is left out. If the same tap fails in A and works in B, the layer is
+    ///     the cause. Named test0 so it runs first, on a fresh simulator state.
+    func test0HomeTapDiagnosis() throws {
+        func run(_ label: String, _ key: String) {
+            let app = XCUIApplication()
+            app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+            app.launchEnvironment["LAB_THEME"] = "obsidian"
+            app.launchEnvironment[key] = "1"
+            app.launch()
+            XCTAssertTrue(banner(app), "Lab is running (\(label))")
+            guard app.waitForHome(name: "Demo", timeout: 20) else { print("LAB-NOTE diagnosis \(label): Home not shown"); app.terminate(); return }
+            app.settleForScreenshot(2)
+            func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+            let home = el("homeV23"), layer = el("graphTouchLayer"), chart = el("trendsChart"), day = app.buttons["scheduleDay-0"].firstMatch
+            func state() -> String { home.exists ? (home.value as? String ?? "no value") : "not on screen" }
+            print("LAB-NOTE diagnosis \(label): screen \(app.frame.size); touch layer exists \(layer.exists)\(layer.exists ? " frame \(layer.frame)" : ""); chart frame \(chart.exists ? "\(chart.frame)" : "none"); day frame \(day.exists ? "\(day.frame)" : "none")")
+            guard day.exists else { app.terminate(); return }
+            day.tap()
+            let page = el("homeDayDetail")
+            let opened = page.waitForExistence(timeout: 6)
+            print("LAB-NOTE diagnosis \(label): day tap at y \(Int(day.exists ? day.frame.midY : -1)) opened its page: \(opened); Home says: \(state())")
+            if opened { shot("diag-\(label)-day-page"); app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1); _ = app.waitForHome(name: "Demo", timeout: 10) }
+            let ring = el("indicatorConsistency")
+            if ring.exists {
+                ring.tap()
+                let week = el("homeWeekOverview").waitForExistence(timeout: 6)
+                print("LAB-NOTE diagnosis \(label): Consistency tap opened the week page: \(week); Home says: \(state())")
+                if week { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
+            }
+            // after the page has been scrolled to the graph and back: where is the layer now, and does the day still open?
+            if chart.exists { app.reveal(chart, top: 170, bottomMargin: 130); print("LAB-NOTE diagnosis \(label): with the graph on screen — touch layer \(layer.exists ? "\(layer.frame)" : "absent"); chart \(chart.frame)") }
+            app.terminate()
+        }
+        run("A-layer-readable", "CY_DIAG_GRAPH_LAYER")
+        run("B-layer-left-out", "CY_DIAG_NO_GRAPH_TOUCH")
+    }
+
     /// The strip's theme name ("Theme: Ocean").
     private func themeName(_ app: XCUIApplication) -> String { app.staticTexts["labThemeName"].firstMatch.label }
     /// Navigation v1.2 / Profile v2.0: Profile has no tab; the Home avatar opens the one Profile.

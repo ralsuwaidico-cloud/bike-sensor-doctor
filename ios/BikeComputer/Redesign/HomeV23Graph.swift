@@ -297,14 +297,14 @@ struct CyTrendsGraph: View {
                 ZStack(alignment: .topLeading) {
                     // A tap selects a day and a horizontal drag scrubs. The touch layer only claims drags that start
                     // horizontally, so a vertical swipe that starts on the graph scrolls the page as usual.
-                    if !staticRender { GraphTouchLayer { px in
+                    if !staticRender && !CyGraphDiag.noTouchLayer { GraphTouchLayer { px in
                         if let x: Double = proxy.value(atX: px - plot.origin.x) {
                             let i = min(max(Int(x.rounded()), 0), max(count - 1, 0))
                             if selected != i { selected = i }
                         }
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
-                    .accessibilityHidden(true) }
+                    .accessibilityHidden(!CyGraphDiag.exposeLayer) }
                     ForEach(dates) { d in
                         if let px = proxy.position(forX: Double(d.id)), let text = (big && count <= 7 ? Optional(d.short) : d.axisLabel) {
                             Text(text)
@@ -390,6 +390,20 @@ struct CyTrendsGraph: View {
     }
 }
 
+/// Diagnosis switches for the screen tests (simulator only; both off everywhere else). Lab runs 20–24: on Home v2.3 no
+/// control in the upper part of the page runs its action although the page scrolls — the signature of a native view that
+/// lets vertical drags through and takes taps. The graph's touch layer is the only native view on these pages.
+/// `exposeLayer` lets a test read the layer's real frame; `noTouchLayer` leaves the layer out, for an A/B comparison.
+enum CyGraphDiag {
+    #if targetEnvironment(simulator)
+    static let exposeLayer = ProcessInfo.processInfo.environment["CY_DIAG_GRAPH_LAYER"] == "1"
+    static let noTouchLayer = ProcessInfo.processInfo.environment["CY_DIAG_NO_GRAPH_TOUCH"] == "1"
+    #else
+    static let exposeLayer = false
+    static let noTouchLayer = false
+    #endif
+}
+
 /// Touch handling for the graph. UIKit recognisers are used on purpose: a horizontal-only pan is the standard way to
 /// scrub inside a vertically scrolling page without ever trapping the scroll.
 private struct GraphTouchLayer: UIViewRepresentable {
@@ -400,6 +414,7 @@ private struct GraphTouchLayer: UIViewRepresentable {
         let v = UIView()
         v.backgroundColor = .clear
         v.isAccessibilityElement = false
+        if CyGraphDiag.exposeLayer { v.isAccessibilityElement = true; v.accessibilityIdentifier = "graphTouchLayer" }
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
         pan.delegate = context.coordinator
         pan.maximumNumberOfTouches = 1
