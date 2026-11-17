@@ -112,6 +112,8 @@ TEST_RUNNER_LAYOUT_DIR="$OUT" xcodebuild test -project CycliftLab.xcodeproj -sch
 UT=$?
 grep -E "Test Case .*(passed|failed)|error: |Executed [0-9]+ tests" "$OUT/uitest.log" | sed -E 's#.*/ios/##' | sort -u | cut -c1-400 | tee -a "$R"
 say "RESULT Lab screen checks: $([ $UT -eq 0 ] && echo ok || echo FAILED) · $((SECONDS-T))s"; [ $UT -eq 0 ] || FAIL=1
+# measurements the checks print on purpose (dock position, end-of-page clearance, where the Coach card led) go into the report
+grep -E "LAB-NOTE" "$OUT/uitest.log" | sed 's/^.*LAB-NOTE/LAB-NOTE/' | sort -u | head -40 >> "$R" || true
 grep -E "^\s+t = |Test Case|error:" "$OUT/uitest.log" | tail -400 > "$OUT/uitest-tail.txt"; rm "$OUT/uitest.log"
 if [ -n "$P1" ]; then P2=$(phash | tr '\n' ' '); [ "$P1" = "$P2" ] && say "  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data ($P2)" || { say "  FAIL the production app's files changed ($P1 -> $P2)"; FAIL=1; }; fi
 for f in "$OUT"/*.png; do [ -f "$f" ] && sips -Z 1300 "$f" >/dev/null 2>&1; done

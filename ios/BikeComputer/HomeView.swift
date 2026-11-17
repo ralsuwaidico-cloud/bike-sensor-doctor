@@ -77,7 +77,7 @@ struct HomeView: View {
                     // Home v2.3's own compact header, pinned: the avatar is the only way to Profile (Navigation v1.2), so it
                     // must not scroll away. (The prototype scrolled it with the page — a stated difference.)
                     Home21Header(data: v23, onAvatar: { tab = 4 })
-                        .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 6)
+                        .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 6)
                         .background(CyTheme.canvas)
                 } else { homeHeader(dash) }
             }

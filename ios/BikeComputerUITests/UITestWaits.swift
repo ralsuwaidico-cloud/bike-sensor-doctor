@@ -84,6 +84,15 @@ extension XCUIApplication {
             Thread.sleep(forTimeInterval: 0.4)
             n += 1
         }
+        // Lab run 20: a tap sent while the page was still coasting after a drag stopped the scroll instead of pressing the
+        // control. Wait until the element has stopped moving (two equal readings), not for a fixed time.
+        var lastY = e.exists ? e.frame.minY : 0, still = 0, tries = 0
+        while e.exists && still < 2 && tries < 20 {
+            Thread.sleep(forTimeInterval: 0.25)
+            let y = e.frame.minY
+            still = abs(y - lastY) < 0.5 ? still + 1 : 0
+            lastY = y; tries += 1
+        }
         return inBand()
     }
 

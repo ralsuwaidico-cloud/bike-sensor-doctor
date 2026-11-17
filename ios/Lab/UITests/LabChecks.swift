@@ -137,12 +137,16 @@ final class LabChecks: XCTestCase {
             app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-2-home-lower")
             if i == 0 {
                 // Home v2.3 interactions on the athlete's records: a schedule day opens that day; the graph and the metrics are there
-                app.swipeDown(); app.swipeDown(); app.settleForScreenshot(1)
+                app.swipeDown(); app.swipeDown(); app.settleForScreenshot(2)
                 let day = app.buttons["scheduleDay-0"].firstMatch
                 if day.exists {
-                    app.reveal(day); day.tap()
-                    XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch.waitForExistence(timeout: 8), "a schedule day opens that day's page")
-                    app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1)
+                    app.reveal(day); print("LAB-NOTE schedule day frame before the tap: \(day.frame), hittable \(day.isHittable)"); day.tap()
+                    let page = app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch
+                    XCTAssertTrue(page.waitForExistence(timeout: 8), "a schedule day opens that day's page")
+                    if page.exists {
+                        app.settleForScreenshot(1); shot("\(tag)-2a-home-day")
+                        app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1)
+                    }
                     XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "back on Home from the day page")
                 }
                 let chart = app.descendants(matching: .any).matching(identifier: "trendsChart").firstMatch, emptyTrends = app.descendants(matching: .any).matching(identifier: "trendsEmpty").firstMatch
