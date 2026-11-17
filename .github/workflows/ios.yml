@@ -158,7 +158,10 @@ jobs:
           - { job: unit,            stage: unit,   devices: "",         minutes: 60 }
           # 17 Nov 2026: 75 → 110 for the diagnosis of runs 252/266/269 (the suite gained the Plan layout tests); the
           # per-test progress lines decide whether the limit or a hanging test was the cause.
-          - { job: smoke,           stage: smoke,  devices: "",         minutes: 110 }
+          # Run 271 (a4de9d30): the smoke group passed in 93 min (15 min build + 78 min of tests; 33 tests, 0 failures).
+          # 120 min leaves room for a slow runner. A genuine hang no longer hides behind this limit: every smoke test has
+          # its own 15-minute allowance (ios/ci/build.sh), so a stuck test fails by name long before the job limit.
+          - { job: smoke,           stage: smoke,  devices: "",         minutes: 120 }
           # Owner 10 Nov 2026 12:51 — internal TestFlight readiness is separate from production readiness: the "flows"
           # job (hub reliability loops + the long end-to-end UI journeys) still runs on every full run and its result is
           # published, but a failure there does not withhold an INTERNAL build. Gate for internal builds = unit + smoke +
@@ -205,7 +208,9 @@ jobs:
           STAGE: ${{ matrix.stage }}
           LAYOUT_DEVICES: ${{ matrix.devices }}
           BUILD_NUMBER: ${{ github.run_number }}
-          LAYOUT_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.layout_test || 'LayoutAudit' }}
+          # On a push the list is left to ios/ci/build.sh (LayoutAudit on every size; the component gallery audit on the
+          # standard size). Until 17 Nov this line always passed "LayoutAudit", so the gallery audit ran nowhere.
+          LAYOUT_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.layout_test || '' }}
           LAYOUT_SIZES_OVERRIDE: ${{ github.event_name == 'workflow_dispatch' && inputs.sizes || '' }}
         run: ios/ci/build.sh
       - name: Keep logs

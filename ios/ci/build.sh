@@ -283,7 +283,10 @@ run_smoke() {
   # the console as it happens, so a cancelled job still shows which test was running and how long each one took.
   ( while [ ! -f "$OUT/uitest.log" ]; do sleep 2; done; tail -n +1 -F "$OUT/uitest.log" 2>/dev/null | grep --line-buffered -E "Test Case .* (started|passed|failed|skipped)" | sed -u 's/^/SMOKE-PROGRESS /' ) &
   local TP=$!
-  twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests "${SKIP[@]}"
+  # Run 271: the longest smoke test took 9 min 20 s. Each test gets 15 minutes; one that hangs fails by name with
+  # "exceeded execution time allowance" instead of running the whole job into its limit.
+  twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests "${SKIP[@]}" \
+      -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900
   U=$?
   kill $TP 2>/dev/null; pkill -P $TP 2>/dev/null
   digest "$OUT/uitest.log" launch-smoke
@@ -469,7 +472,12 @@ run_layout() {  # the full layout audit on LAYOUT_DEVICES
   for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L" "owner|${OWNER%%|*}|L,XXXL"; do
     IFS='|' read -r LNAME LID LSIZES <<< "$spec"
     case ",$LAYOUT_DEVICES," in *",$LNAME,"*) ;; *) continue;; esac
-    layout_one "$LNAME" "$LID" "$LSIZES" "${LAYOUT_TEST:-LayoutAudit DesignSystemAudit}"   # DesignSystemAudit: the component gallery, light + dark (ios/DESIGN_SYSTEM.md)
+    # No list given (a push): LayoutAudit on every size, and the component gallery audit (DesignSystemAudit, light + dark,
+    # ios/DESIGN_SYSTEM.md) once, on the standard size. Smoke run 271 showed that test skipping there by design; the
+    # workflow used to pass "LayoutAudit" alone, so it ran in no routine job at all.
+    local LT="${LAYOUT_TEST:-}"
+    if [ -z "$LT" ]; then LT="LayoutAudit"; [ "$LNAME" = "standard" ] && LT="LayoutAudit DesignSystemAudit"; fi
+    layout_one "$LNAME" "$LID" "$LSIZES" "$LT"
   done
   layout_finish
 }
