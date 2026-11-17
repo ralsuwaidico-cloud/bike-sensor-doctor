@@ -1,0 +1,15 @@
+BikeComputer iOS CI — run 271 — scope full — jobs: quick=skipped test=success release=skipped testflight=skipped
+
+## smoke
+BikeComputer iOS CI — build 271 — 2026-11-17 09:03 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 15m15s
+RESULT launch smoke (Release): ok (Executed 33 tests, with 7 tests skipped and 0 failures) · 77m41s
+Total: 77m55s
+
+GATE flows: ok
+commit a4de9d30f40ba89b7b302eec507ba8f350029608  branch ios/lab  job failure
