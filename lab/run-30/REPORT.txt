@@ -1,0 +1,81 @@
+RESULT Lab build: ok · 324s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint cfdeb3e0720d17b0 2 
+	 Executed 8 tests, with 7 failures (0 unexpected) in 2204.208 (2204.223) seconds
+	 Executed 8 tests, with 7 failures (0 unexpected) in 2204.208 (2204.225) seconds
+	 Executed 8 tests, with 7 failures (0 unexpected) in 2204.208 (2204.227) seconds
+BikeComputerUITests/UITestWaits.swift:78: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : Failed to get matching snapshot: Timed out while evaluating UI query.
+Lab/UITests/LabChecks.swift:133: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - arctic: on a fresh launch a schedule day opens that day's page at the first tap
+Lab/UITests/LabChecks.swift:133: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - obsidian: on a fresh launch a schedule day opens that day's page at the first tap
+Lab/UITests/LabChecks.swift:166: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - arctic: a schedule day still opens after the Coach card's destination
+Lab/UITests/LabChecks.swift:166: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - obsidian: a schedule day still opens after the Coach card's destination
+Lab/UITests/LabChecks.swift:193: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - obsidian: a schedule day still opens after the Coach page is closed
+Lab/UITests/LabChecks.swift:234: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - a schedule day opens that day's page at the first tap
+Test Case '-[CycliftLabUITests.LabChecks test0HomeNavigationReproduction]' passed (300.396 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' failed (1113.368 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved]' passed (306.007 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing]' passed (54.730 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' passed (230.835 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (64.730 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan]' passed (107.118 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' passed (27.025 seconds).
+RESULT Lab screen checks: FAILED · 2407s
+LAB-NOTE Coach card today leads to: Plan
+LAB-NOTE Consistency tap opens the week page: false
+LAB-NOTE day tap 1 opened nothing; navigation bars 0
+LAB-NOTE dock: ball bottom 34.0 pt above the screen bottom, left 14.0 pt, dock frame (14.0, 758.619873046875, 374.5, 90.76025390625)
+LAB-NOTE Home end of page: last control ends 128.0000000000001 pt above the screen bottom (scrolling inset 128)
+LAB-NOTE probe metricRow-restingHR at y 557: page opened false
+LAB-NOTE probe sleepBar at y 550: page opened false
+LAB-NOTE probe sportCard-endurance at y 440: page opened false
+LAB-NOTE repro [sections 0]: Home body evaluations in the first seconds 2; page presented at first tap not tried (no control with 0 sections); other stages: 2.31 app shell appeared; mode ''
+LAB-NOTE repro [sections 1]: Home body evaluations in the first seconds 2; page presented at first tap false; other stages: 1.70 app shell appeared; mode '' | 24.61 handler: week overview; route list before 0 | 24.61 after the week handler, route list 1
+LAB-NOTE repro [sections 2]: Home body evaluations in the first seconds 2; page presented at first tap false; other stages: 1.63 app shell appeared; mode '' | 21.48 handler: day 0; route list before 0 | 21.48 after the day handler, route list 1
+LAB-NOTE repro [sections 3]: Home body evaluations in the first seconds 2; page presented at first tap false; other stages: 1.62 app shell appeared; mode '' | 20.74 handler: day 0; route list before 0 | 20.74 after the day handler, route list 1
+LAB-NOTE repro [sections 4]: Home body evaluations in the first seconds 2; page presented at first tap false; other stages: 1.78 app shell appeared; mode '' | 21.78 handler: day 0; route list before 0 | 21.78 after the day handler, route list 1
+LAB-NOTE repro [sections 5]: Home body evaluations in the first seconds 2; page presented at first tap false; other stages: 1.63 app shell appeared; mode '' | 20.78 handler: day 0; route list before 0 | 20.79 after the day handler, route list 1
+LAB-NOTE repro [sections 6]: Home body evaluations in the first seconds 2; page presented at first tap false; other stages: 1.74 app shell appeared; mode '' | 20.20 handler: day 0; route list before 0 | 20.20 after the day handler, route list 1
+LAB-NOTE repro [sections 7]: Home body evaluations in the first seconds 2; page presented at first tap false; other stages: 1.81 app shell appeared; mode '' | 22.21 handler: day 0; route list before 0 | 22.21 after the day handler, route list 1
+LAB-NOTE schedule day frame before the tap: (20.0, 311.66666666666663, 51.66666666666666, 54.00000000000006), hittable true
+LAB-NOTE second tap on scheduleDay-0 opens the day page: false
+LAB-NOTE stage [after the Coach card's destination (Plan) and back] arctic: day at y 338 opened its page: false
+LAB-NOTE stage [after the Coach card's destination (Plan) and back] obsidian: day at y 338 opened its page: false
+LAB-NOTE stage [after the Coach page, with a typed question] obsidian: day at y 338 opened its page: false
+LAB-NOTE stage [fresh launch] arctic: day at y 338 opened its page: false
+LAB-NOTE stage [fresh launch] obsidian: day at y 338 opened its page: false
+LAB-NOTE strength journey: 10 sets logged; superset seen: false
+LAB-NOTE tap on the next day (scheduleDay-1) opens a day page: false
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (cfdeb3e0720d17b0 2 )
+RESULT Lab launch in six themes: FAILED
+commit c55d7c1e50bc717721893ef6ca8ce0d8c49b2a82  branch ios/lab
