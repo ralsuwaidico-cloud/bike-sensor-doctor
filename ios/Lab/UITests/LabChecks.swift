@@ -142,7 +142,26 @@ final class LabChecks: XCTestCase {
                 if day.exists {
                     app.reveal(day); print("LAB-NOTE schedule day frame before the tap: \(day.frame), hittable \(day.isHittable)"); day.tap()
                     let page = app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch
-                    XCTAssertTrue(page.waitForExistence(timeout: 8), "a schedule day opens that day's page")
+                    let opened = page.waitForExistence(timeout: 8)
+                    if !opened {
+                        // Lab runs 20 and 21: the day was still, on screen and hittable, and the tap opened nothing. Evidence for the
+                        // cause, gathered without hiding the failure: what the screen shows, whether Home's other pages open,
+                        // and whether a second tap on the same day works.
+                        app.settleForScreenshot(1); shot("\(tag)-2a-day-tap-did-nothing")
+                        print("LAB-NOTE day tap 1 opened nothing; navigation bars \(app.navigationBars.count); sheets \(app.sheets.count); alerts \(app.alerts.count)")
+                        let ring = app.descendants(matching: .any).matching(identifier: "indicatorConsistency").firstMatch
+                        if ring.exists {
+                            app.reveal(ring, top: 170); ring.tap()
+                            let week = app.descendants(matching: .any).matching(identifier: "homeWeekOverview").firstMatch
+                            let ok = week.waitForExistence(timeout: 6)
+                            print("LAB-NOTE Consistency tap opens the week page: \(ok)")
+                            if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
+                        }
+                        let today = app.buttons["scheduleDay-1"].firstMatch
+                        if today.exists { app.reveal(today, top: 170); today.tap(); print("LAB-NOTE tap on the next day (scheduleDay-1) opens a day page: \(page.waitForExistence(timeout: 6))") }
+                        if !page.exists { day.tap(); print("LAB-NOTE second tap on scheduleDay-0 opens the day page: \(page.waitForExistence(timeout: 6))") }
+                    }
+                    XCTAssertTrue(opened, "a schedule day opens that day's page at the first tap")
                     if page.exists {
                         app.settleForScreenshot(1); shot("\(tag)-2a-home-day")
                         app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1)
