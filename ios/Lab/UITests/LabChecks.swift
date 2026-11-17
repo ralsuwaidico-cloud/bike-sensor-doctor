@@ -148,13 +148,24 @@ final class LabChecks: XCTestCase {
                         // cause, gathered without hiding the failure: what the screen shows, whether Home's other pages open,
                         // and whether a second tap on the same day works.
                         app.settleForScreenshot(1); shot("\(tag)-2a-day-tap-did-nothing")
-                        print("LAB-NOTE day tap 1 opened nothing; navigation bars \(app.navigationBars.count); sheets \(app.sheets.count); alerts \(app.alerts.count)")
+                        let home = app.descendants(matching: .any).matching(identifier: "homeV23").firstMatch
+                        func state() -> String { home.exists ? (home.value as? String ?? "no value") : "Home container not found" }
+                        print("LAB-NOTE day tap 1 opened nothing; navigation bars \(app.navigationBars.count); Home says: \(state())")
+                        // the same kind of page from controls at other heights of the screen
+                        for (id, pageId) in [("sportCard-endurance", "homeCyclingSummary"), ("sleepBar", "homeRecovery"), ("metricRow-restingHR", "homeRecovery")] {
+                            let c = app.descendants(matching: .any).matching(identifier: id).firstMatch
+                            guard c.exists else { print("LAB-NOTE probe \(id): not found"); continue }
+                            app.reveal(c, top: 170); let f = c.frame; c.tap()
+                            let ok = app.descendants(matching: .any).matching(identifier: pageId).firstMatch.waitForExistence(timeout: 5) || app.navigationBars.count > 0
+                            print("LAB-NOTE probe \(id) at y \(Int(f.midY)): page opened \(ok); Home says: \(state())")
+                            if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
+                        }
                         let ring = app.descendants(matching: .any).matching(identifier: "indicatorConsistency").firstMatch
                         if ring.exists {
                             app.reveal(ring, top: 170); ring.tap()
                             let week = app.descendants(matching: .any).matching(identifier: "homeWeekOverview").firstMatch
                             let ok = week.waitForExistence(timeout: 6)
-                            print("LAB-NOTE Consistency tap opens the week page: \(ok)")
+                            print("LAB-NOTE Consistency tap opens the week page: \(ok); Home says: \(state())")
                             if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
                         }
                         let today = app.buttons["scheduleDay-1"].firstMatch
