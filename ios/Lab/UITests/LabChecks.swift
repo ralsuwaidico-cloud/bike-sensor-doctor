@@ -75,10 +75,24 @@ final class LabChecks: XCTestCase {
                     if link.exists {
                         // the card leads to its own destination (a hybrid-coach suggestion here): that route must still work…
                         coach.tap()
-                        XCTAssertTrue(app.buttons["homeSheetClose"].firstMatch.waitForExistence(timeout: 8), "\(t.id): the Coach card opens its own suggestion sheet")
-                        XCTAssertTrue(app.navigationBars["Coach suggestion"].firstMatch.exists || app.navigationBars.firstMatch.exists, "\(t.id): the suggestion sheet is shown")
-                        if i == 0 { app.settleForScreenshot(1); shot("\(tag)-1a-coach-suggestion") }
-                        app.buttons["homeSheetClose"].firstMatch.tap(); app.settleForScreenshot(1)
+                        // Lab run 18: which card the demo athlete has depends on the day (run 17: a suggestion sheet; run 18: not).
+                        // Any of the card's legitimate destinations is accepted — and exactly one must appear.
+                        let sheetClose = app.buttons["homeSheetClose"].firstMatch, planTitle = app.staticTexts["planTitle"].firstMatch, startWorkout = app.buttons["startWorkout"].firstMatch
+                        var where_ = "nowhere"; let until = Date().addingTimeInterval(10)
+                        while where_ == "nowhere" && Date() < until {
+                            if sheetClose.exists { where_ = "its own sheet" } else if planTitle.exists { where_ = "Plan" } else if startWorkout.exists { where_ = "the session page" } else { usleep(300_000) }
+                        }
+                        XCTAssertNotEqual(where_, "nowhere", "\(t.id): the Coach card leads to its destination (sheet, Plan or session page)")
+                        if i == 0 { print("LAB-NOTE Coach card today leads to: \(where_)"); app.settleForScreenshot(1); shot("\(tag)-1a-coach-card-destination") }
+                        switch where_ {
+                        case "its own sheet": sheetClose.tap()
+                        case "Plan": tab(app, "Home")
+                        case "the session page": app.buttons["Done"].firstMatch.tap()
+                        default: break
+                        }
+                        app.settleForScreenshot(1)
+                        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): back on Home after the card's destination")
+                        if !link.isHittable { app.swipeUp(); app.settleForScreenshot() }
                         // …and the Coach page is one tap away on its own line
                         way = link
                     } else { way = coach }

@@ -278,8 +278,14 @@ run_smoke() {
   release_products || { note "RESULT launch smoke (Release): FAILED (build)"; STATUS=1; return; }
   warm_release_app
   local SKIP=(-skip-testing:BikeComputerUITests/JourneyTests); for c in $FLOW_CLASSES; do SKIP+=(-skip-testing:BikeComputerUITests/$c); done
+  # Runs 252, 266 and 269 were cancelled at the job's time limit with nothing on the console after the build, so it could
+  # not be told whether a test hung or the suite had simply grown past the limit. Each test's start and result now reaches
+  # the console as it happens, so a cancelled job still shows which test was running and how long each one took.
+  ( while [ ! -f "$OUT/uitest.log" ]; do sleep 2; done; tail -n +1 -F "$OUT/uitest.log" 2>/dev/null | grep --line-buffered -E "Test Case .* (started|passed|failed|skipped)" | sed -u 's/^/SMOKE-PROGRESS /' ) &
+  local TP=$!
   twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests "${SKIP[@]}"
   U=$?
+  kill $TP 2>/dev/null; pkill -P $TP 2>/dev/null
   digest "$OUT/uitest.log" launch-smoke
   if [ $U -ne 0 ]; then retry_launch_failures "$RELEASE_XR" "$SIM" launch-smoke "$OUT/uitest.log"; local R=$?; [ $R -eq 0 ] && U=0; fi
   if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with ([0-9]+ tests? skipped and )?[0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
