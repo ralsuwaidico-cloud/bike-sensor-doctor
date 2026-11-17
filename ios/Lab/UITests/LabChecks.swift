@@ -17,43 +17,41 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(b.waitForExistence(timeout: 8), "tab \(name)")
         if b.exists { b.tap(); app.settleForScreenshot(2) }
     }
-    /// Diagnosis for Lab runs 20–24 (Home v2.3 controls scroll but do not act). Two launches of the same build:
-    /// A — the graph's native touch layer is made readable, so its real frame on screen is recorded next to the chart's
-    ///     and the tapped control's; B — the layer is left out. If the same tap fails in A and works in B, the layer is
-    ///     the cause. Named test0 so it runs first, on a fresh simulator state.
+    /// Diagnosis for Lab runs 20–25 (Home v2.3 controls scroll but do not act; the graph's touch layer was measured on the
+    /// chart and the taps failed without it). With CY_DIAG_TOUCHES=1 the app records, for each touch, the point and the
+    /// chain of views UIKit's hit-test returns. This taps a control that fails and one that works, at known points, and
+    /// prints both chains, so the view that receives the failing touches is named. Runs first, on a fresh demo athlete.
     func test0HomeTapDiagnosis() throws {
-        func run(_ label: String, _ key: String) {
-            let app = XCUIApplication()
-            app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
-            app.launchEnvironment["LAB_THEME"] = "obsidian"
-            app.launchEnvironment[key] = "1"
-            app.launch()
-            XCTAssertTrue(banner(app), "Lab is running (\(label))")
-            guard app.waitForHome(name: "Demo", timeout: 20) else { print("LAB-NOTE diagnosis \(label): Home not shown"); app.terminate(); return }
-            app.settleForScreenshot(2)
-            func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
-            let home = el("homeV23"), layer = el("graphTouchLayer"), chart = el("trendsChart"), day = app.buttons["scheduleDay-0"].firstMatch
-            func state() -> String { home.exists ? (home.value as? String ?? "no value") : "not on screen" }
-            print("LAB-NOTE diagnosis \(label): screen \(app.frame.size); touch layer exists \(layer.exists)\(layer.exists ? " frame \(layer.frame)" : ""); chart frame \(chart.exists ? "\(chart.frame)" : "none"); day frame \(day.exists ? "\(day.frame)" : "none")")
-            guard day.exists else { app.terminate(); return }
-            day.tap()
-            let page = el("homeDayDetail")
-            let opened = page.waitForExistence(timeout: 6)
-            print("LAB-NOTE diagnosis \(label): day tap at y \(Int(day.exists ? day.frame.midY : -1)) opened its page: \(opened); Home says: \(state())")
-            if opened { shot("diag-\(label)-day-page"); app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1); _ = app.waitForHome(name: "Demo", timeout: 10) }
-            let ring = el("indicatorConsistency")
-            if ring.exists {
-                ring.tap()
-                let week = el("homeWeekOverview").waitForExistence(timeout: 6)
-                print("LAB-NOTE diagnosis \(label): Consistency tap opened the week page: \(week); Home says: \(state())")
-                if week { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
-            }
-            // after the page has been scrolled to the graph and back: where is the layer now, and does the day still open?
-            if chart.exists { app.reveal(chart, top: 170, bottomMargin: 130); print("LAB-NOTE diagnosis \(label): with the graph on screen — touch layer \(layer.exists ? "\(layer.frame)" : "absent"); chart \(chart.frame)") }
-            app.terminate()
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launchEnvironment["CY_DIAG_TOUCHES"] = "1"
+        app.launch()
+        XCTAssertTrue(banner(app), "Lab is running")
+        guard app.waitForHome(name: "Demo", timeout: 20) else { print("LAB-NOTE touch: Home not shown"); return }
+        app.settleForScreenshot(2)
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        let probe = el("touchProbe"), home = el("homeV23")
+        print("LAB-NOTE touch: probe element exists \(probe.waitForExistence(timeout: 5))")
+        func state() -> String { home.exists ? (home.value as? String ?? "no value") : "not on screen" }
+        func tapAndReport(_ name: String, _ e: XCUIElement, opens pageId: String?) {
+            guard e.exists else { print("LAB-NOTE touch [\(name)]: control not found"); return }
+            let f = e.frame; e.tap(); Thread.sleep(forTimeInterval: 1.2)
+            var opened = "n/a"
+            if let pageId { opened = "\(el(pageId).waitForExistence(timeout: 4) || app.navigationBars.count > 0 || app.staticTexts["coachTitle"].firstMatch.exists || app.staticTexts["planTitle"].firstMatch.exists)" }
+            print("LAB-NOTE touch [\(name)] frame \(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))x\(Int(f.height)); acted: \(opened); Home says: \(state()); UIKit: \(probe.exists ? probe.label : "probe not found")")
         }
-        run("A-layer-readable", "CY_DIAG_GRAPH_LAYER")
-        run("B-layer-left-out", "CY_DIAG_NO_GRAPH_TOUCH")
+        tapAndReport("schedule day", app.buttons["scheduleDay-0"].firstMatch, opens: "homeDayDetail")
+        if app.navigationBars.count > 0 { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
+        tapAndReport("Consistency ring", el("indicatorConsistency"), opens: "homeWeekOverview")
+        if app.navigationBars.count > 0 { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
+        tapAndReport("Sleep bar", el("sleepBar"), opens: "homeRecovery")
+        if app.navigationBars.count > 0 { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
+        tapAndReport("avatar (works)", app.buttons["homeAvatar"].firstMatch, opens: "profileSectionA")
+        tab(app, "Home")
+        let coach = el("homeCoachAction").exists ? el("homeCoachAction") : el("homeCoachQuiet")
+        tapAndReport("Coach preview (works)", coach, opens: "coachTitle")
+        app.terminate()
     }
 
     /// The strip's theme name ("Theme: Ocean").
