@@ -23,7 +23,12 @@ final class LabChecks: XCTestCase {
     /// the first schedule day each time, and reads the stages the app wrote to a file: handler ran, route list changed,
     /// destination built. The on-screen counter used in runs 23–25 did not update and is no longer used.
     func test0HomeTapDiagnosis() throws {
-        for mode in ["none", "recognizer", "label", "1", "none"] {
+        // Run 27: in every mode the handler ran and then nothing followed — no change of the route list was observed and no
+        // destination was built. (Run 26's "pages opened with the probe on" was this check's own mistake: it accepted a
+        // title that exists on a hidden page.) So the request is lost between the handler and the stack. This run records
+        // the route list before and after the handler, every write the stack makes to it, the state of each navigation
+        // controller, how often Home is redrawn, and — mode "alt" — whether the stack presents a page asked for by a flag.
+        for mode in ["none", "alt"] {
             let file = "/tmp/cy-diag-\(UUID().uuidString).txt"
             let app = XCUIApplication()
             app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
@@ -39,13 +44,16 @@ final class LabChecks: XCTestCase {
             guard day.exists else { print("LAB-NOTE diag [\(mode)]: no schedule day"); app.terminate(); continue }
             day.tap()
             let opened = el("homeDayDetail").waitForExistence(timeout: 5)
+            Thread.sleep(forTimeInterval: 3)
             print("LAB-NOTE diag [\(mode)] day tap: page opened \(opened); stages: \(stages())")
             if opened { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
             let ring = el("indicatorConsistency")
             if ring.exists {
                 ring.tap()
                 let week = el("homeWeekOverview").waitForExistence(timeout: 5)
-                print("LAB-NOTE diag [\(mode)] Consistency tap: page opened \(week); stages: \(stages())")
+                Thread.sleep(forTimeInterval: 3)
+                print("LAB-NOTE diag [\(mode)] Consistency tap: week page \(week); navigation bars \(app.navigationBars.count); stages: \(stages())")
+                shot("diag-\(mode)-after-consistency")
             }
             app.terminate()
             try? FileManager.default.removeItem(atPath: file)

@@ -37,7 +37,9 @@ struct HomeView: View {
         let hrOK = watchOK || hub.deviceStates.values.contains { $0.provides.localizedCaseInsensitiveContains("heart") && $0.state.isConnectedOrBetter }
         let setup = store.homeSetupItems(hrConnected: hrOK)
         let v23: Home21Data? = CyProduct.redesign ? store.homeV23(hrConnected: hrOK) : nil
-        NavigationStack(path: $path) {
+        let _ = CyTouchProbe.bodyTick("Home")
+        // diagnosis only (Shell/CyTouchProbe.swift): when a test asks for the stage file, every write the stack itself makes to the route list is recorded
+        NavigationStack(path: CyTouchProbe.fileOn ? Binding(get: { path }, set: { CyTouchProbe.note("the stack set the route list to \($0.count)"); path = $0 }) : $path) {
             ScrollView {
                 if let v23 {
                     // Home v2.3 (provisional design) on the athlete's own records — Redesign/HomeV23Screen.swift
@@ -112,12 +114,22 @@ struct HomeView: View {
             if !ownPage { actions.onCoachPage = { showCoach = true } }
         }
         actions.onAvatar = { tab = 4 }                                   // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
-        actions.onConsistency = { CyTouchProbe.note("handler: week overview"); path.append(.weekOverview(now)) }
+        actions.onConsistency = {
+            CyTouchProbe.note("handler: week overview; route list before \(path.count)")
+            // diagnosis mode "alt": ask the same stack for a page by its other mechanism (a yes/no flag), to learn whether
+            // the stack can present anything at all
+            if CyTouchProbe.altPush { showAdjustments = true; CyTouchProbe.noteNav("after setting the flag-presented page") }
+            else { path.append(.weekOverview(now)); CyTouchProbe.noteNav("after the week handler, route list \(path.count)") }
+        }
         actions.onMix = { CyTouchProbe.note("handler: week overview"); path.append(.weekOverview(now)) }
         actions.onRecovery = { CyTouchProbe.note("handler: recovery"); path.append(.recovery) }
         actions.onSleep = { CyTouchProbe.note("handler: recovery"); path.append(.recovery) }
         actions.onStep = { s in if s.id == HomeSetupItem.Step.heartRate.rawValue || s.id == HomeSetupItem.Step.health.rawValue { tab = 4 } else { tab = 1 } }
-        actions.onDay = { d in CyTouchProbe.note("handler: day \(d.id)"); if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) } }
+        actions.onDay = { d in
+            CyTouchProbe.note("handler: day \(d.id); route list before \(path.count)")
+            if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) }
+            CyTouchProbe.noteNav("after the day handler, route list \(path.count)")
+        }
         actions.onEndurance = { CyTouchProbe.note("handler: cycling"); path.append(.cycling) }
         actions.onStrength = { CyTouchProbe.note("handler: strength"); path.append(.strength) }
         actions.onTrendsInfo = { showTrendsInfo = true }

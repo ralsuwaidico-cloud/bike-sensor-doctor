@@ -36,6 +36,38 @@ enum CyTouchProbe {
         else { try? line.write(toFile: file, atomically: true, encoding: .utf8) }
     }
 
+    static var fileOn: Bool { !file.isEmpty }
+    static var altPush: Bool { mode == "alt" }
+    private static var bodies = 0
+    /// Counts evaluations of a view's body and writes every 25th, so a rendering storm shows in the file.
+    static func bodyTick(_ name: String) {
+        guard fileOn else { return }
+        bodies += 1
+        if bodies % 25 == 0 { note("\(name) body evaluated \(bodies) times") }
+    }
+    /// Every UIKit navigation controller under the window: how many pages it holds, whether it is on screen, and whether
+    /// a transition is in progress (a push asked for while a transition never finished is dropped by UIKit).
+    static func navState() -> String {
+        guard let root = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap({ $0.windows }).first?.rootViewController else { return "no window" }
+        var out: [String] = []
+        func walk(_ vc: UIViewController) {
+            if let n = vc as? UINavigationController {
+                let f = n.view.convert(n.view.bounds, to: nil)
+                out.append("nav#\(out.count)[pages \(n.viewControllers.count), y \(Int(f.minY)) h \(Int(f.height)), inWindow \(n.view.window != nil), alpha \(String(format: "%.2f", n.view.alpha)), interaction \(n.view.isUserInteractionEnabled), transition \(n.transitionCoordinator != nil), presented \(n.presentedViewController != nil)]")
+            }
+            vc.children.forEach(walk)
+            if let p = vc.presentedViewController, p.presentingViewController === vc { walk(p) }
+        }
+        walk(root)
+        return out.joined(separator: " ")
+    }
+    /// The navigation state now, and again after the next frames have had time to draw.
+    static func noteNav(_ label: String) {
+        guard fileOn else { return }
+        note("\(label): \(navState())")
+        for d in [0.6, 2.5] { DispatchQueue.main.asyncAfter(deadline: .now() + d) { note("\(label) +\(d)s: \(navState())") } }
+    }
+
     static func installIfAsked() {
         note("app shell appeared; mode '\(mode)'")
         guard recogniserOn, !installed else { return }
