@@ -1,0 +1,80 @@
+RESULT Lab build: ok · 331s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint cffdbbdede87f903 2 
+	 Executed 8 tests, with 7 failures (0 unexpected) in 2225.824 (2225.840) seconds
+	 Executed 8 tests, with 7 failures (0 unexpected) in 2225.824 (2225.841) seconds
+	 Executed 8 tests, with 7 failures (0 unexpected) in 2225.824 (2225.844) seconds
+Lab/UITests/LabChecks.swift:128: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - arctic: on a fresh launch a schedule day opens that day's page at the first tap
+Lab/UITests/LabChecks.swift:128: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - obsidian: on a fresh launch a schedule day opens that day's page at the first tap
+Lab/UITests/LabChecks.swift:161: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - arctic: a schedule day still opens after the Coach card's destination
+Lab/UITests/LabChecks.swift:161: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - obsidian: a schedule day still opens after the Coach card's destination
+Lab/UITests/LabChecks.swift:188: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - arctic: a schedule day still opens after the Coach page is closed
+Lab/UITests/LabChecks.swift:188: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - obsidian: a schedule day still opens after the Coach page is closed
+Lab/UITests/LabChecks.swift:229: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - a schedule day opens that day's page at the first tap
+Test Case '-[CycliftLabUITests.LabChecks test0HomeTapDiagnosis]' passed (148.678 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' failed (1393.655 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved]' passed (236.164 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing]' passed (42.681 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' passed (207.605 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (77.630 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan]' passed (97.511 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' passed (21.899 seconds).
+RESULT Lab screen checks: FAILED · 2414s
+LAB-NOTE Coach card today leads to: Plan
+LAB-NOTE Consistency tap opens the week page: false; Home says: pages 0 · requests 0
+LAB-NOTE day tap 1 opened nothing; navigation bars 0; Home says: pages 0 · requests 0
+LAB-NOTE dock: ball bottom 34.0 pt above the screen bottom, left 14.0 pt, dock frame (14.0, 758.619873046875, 374.5, 90.76025390625)
+LAB-NOTE Home end of page: last control ends 128.0000000000001 pt above the screen bottom (scrolling inset 128)
+LAB-NOTE probe metricRow-restingHR at y 555: page opened false; Home says: pages 0 · requests 0
+LAB-NOTE probe sleepBar at y 550: page opened false; Home says: pages 0 · requests 0
+LAB-NOTE probe sportCard-endurance at y 440: page opened false; Home says: pages 0 · requests 0
+LAB-NOTE schedule day frame before the tap: (20.0, 311.66666666666663, 51.66666666666666, 54.00000000000006), hittable true
+LAB-NOTE second tap on scheduleDay-0 opens the day page: false
+LAB-NOTE stage [after the Coach card's destination (Plan) and back] arctic: day at y 338 opened its page: false; Home says: pages 0 · requests 0
+LAB-NOTE stage [after the Coach card's destination (Plan) and back] obsidian: day at y 338 opened its page: false; Home says: pages 0 · requests 0
+LAB-NOTE stage [after the Coach page, nothing typed] arctic: day at y 338 opened its page: false; Home says: pages 0 · requests 0
+LAB-NOTE stage [after the Coach page, with a typed question] obsidian: day at y 338 opened its page: false; Home says: pages 0 · requests 0
+LAB-NOTE stage [fresh launch] arctic: day at y 338 opened its page: false; Home says: pages 0 · requests 0
+LAB-NOTE stage [fresh launch] obsidian: day at y 338 opened its page: false; Home says: pages 0 · requests 0
+LAB-NOTE strength journey: 10 sets logged; superset seen: false
+LAB-NOTE tap on the next day (scheduleDay-1) opens a day page: false
+LAB-NOTE touch [avatar (works)] frame 338,114 44x44; acted: true; Home says: pages 0 · requests 0; UIKit: touch (360,136) -> PlatformGroupContainer[0,164 402x1350] < HostingScrollView[0,106 402x768]{UIScrollViewDelayedTouchesBeganGestureRecognizer,UIScrollViewPanGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIHoverGestureRecognizer,_UIDragAutoScrollGestureRecognizer,_UIPressGestureRecognizer} < PlatformContainer[0,106 402x768] < HostingView[0,106 402x768]{UIKitHoverGestureRecognizer} < UIViewControllerWrapperView[0,106 402x768] < UINavigationTransitionView[0,106 402x768] < UILayoutContainerView[0,106 402x768]{_UIParallaxTransitionPanGestureRecognizer,_UIParallaxTransitionPanGestureRecognizer}<UIKitNavigationController> < UIKitPlatformViewHost<PlatformViewControllerRepresentableAdaptor<NavigationStackRepresentable>>[0,106 402x768] < _UIHostingView<ModifiedContent<AnyView, RootModifier>>[0,0 402x874]{UIKitHoverGestureRecognizer}
+LAB-NOTE touch [Coach preview (works)] frame 20,609 362x82; acted: true; Home says: pages 0 · requests 0; UIKit: touch (201,651) -> PlatformGroupContainer[0,164 402x1350] < HostingScrollView[0,106 402x768]{UIScrollViewDelayedTouchesBeganGestureRecognizer,UIScrollViewPanGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIHoverGestureRecognizer,_UIDragAutoScrollGestureRecognizer,_UIPressGestureRecognizer} < PlatformContainer[0,106 402x768] < HostingView[0,106 402x768]{UIKitHoverGestureRecognizer} < UIViewControllerWrapperView[0,106 402x768] < UINavigationTransitionView[0,106 402x768] < UILayoutContainerView[0,106 402x768]{_UIParallaxTransitionPanGestureRecognizer,_UIParallaxTransitionPanGestureRecognizer}<UIKitNavigationController> < UIKitPlatformViewHost<PlatformViewControllerRepresentableAdaptor<NavigationStackRepresentable>>[0,106 402x768] < _UIHostingView<ModifiedContent<AnyView, RootModifier>>[0,0 402x874]{UIKitHoverGestureRecognizer}
+LAB-NOTE touch [Consistency ring] frame 20,172 115x115; acted: true; Home says: pages 0 · requests 0; UIKit: touch (77,229) -> PlatformGroupContainer[0,164 402x1350] < HostingScrollView[0,106 402x768]{UIScrollViewDelayedTouchesBeganGestureRecognizer,UIScrollViewPanGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIHoverGestureRecognizer,_UIDragAutoScrollGestureRecognizer,_UIPressGestureRecognizer} < PlatformContainer[0,106 402x768] < HostingView[0,106 402x768]{UIKitHoverGestureRecognizer} < UIViewControllerWrapperView[0,106 402x768] < UINavigationTransitionView[0,106 402x768] < UILayoutContainerView[0,106 402x768]{_UIParallaxTransitionPanGestureRecognizer,_UIParallaxTransitionPanGestureRecognizer}<UIKitNavigationController> < UIKitPlatformViewHost<PlatformViewControllerRepresentableAdaptor<NavigationStackRepresentable>>[0,106 402x768] < _UIHostingView<ModifiedContent<AnyView, RootModifier>>[0,0 402x874]{UIKitHoverGestureRecognizer}
+LAB-NOTE touch [schedule day] frame 20,311 51x54; acted: true; Home says: pages 0 · requests 0; UIKit: touch (45,338) -> PlatformGroupContainer[0,164 402x1350] < HostingScrollView[0,106 402x768]{UIScrollViewDelayedTouchesBeganGestureRecognizer,UIScrollViewPanGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIHoverGestureRecognizer,_UIDragAutoScrollGestureRecognizer,_UIPressGestureRecognizer} < PlatformContainer[0,106 402x768] < HostingView[0,106 402x768]{UIKitHoverGestureRecognizer} < UIViewControllerWrapperView[0,106 402x768] < UINavigationTransitionView[0,106 402x768] < UILayoutContainerView[0,106 402x768]{_UIParallaxTransitionPanGestureRecognizer,_UIParallaxTransitionPanGestureRecognizer}<UIKitNavigationController> < UIKitPlatformViewHost<PlatformViewControllerRepresentableAdaptor<NavigationStackRepresentable>>[0,106 402x768] < _UIHostingView<ModifiedContent<AnyView, RootModifier>>[0,0 402x874]{UIKitHoverGestureRecognizer}
+LAB-NOTE touch [Sleep bar] frame 20,515 362x70; acted: true; Home says: pages 0 · requests 0; UIKit: touch (201,550) -> PlatformGroupContainer[0,164 402x1350] < HostingScrollView[0,106 402x768]{UIScrollViewDelayedTouchesBeganGestureRecognizer,UIScrollViewPanGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIScrollViewKnobLongPressGestureRecognizer,UIHoverGestureRecognizer,_UIDragAutoScrollGestureRecognizer,_UIPressGestureRecognizer} < PlatformContainer[0,106 402x768] < HostingView[0,106 402x768]{UIKitHoverGestureRecognizer} < UIViewControllerWrapperView[0,106 402x768] < UINavigationTransitionView[0,106 402x768] < UILayoutContainerView[0,106 402x768]{_UIParallaxTransitionPanGestureRecognizer,_UIParallaxTransitionPanGestureRecognizer}<UIKitNavigationController> < UIKitPlatformViewHost<PlatformViewControllerRepresentableAdaptor<NavigationStackRepresentable>>[0,106 402x768] < _UIHostingView<ModifiedContent<AnyView, RootModifier>>[0,0 402x874]{UIKitHoverGestureRecognizer}
+LAB-NOTE touch: probe element exists true
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (cffdbbdede87f903 2 )
+RESULT Lab launch in six themes: FAILED
+commit 2f59584abc56ddae45d3508be9811c8c88c73281  branch ios/lab
