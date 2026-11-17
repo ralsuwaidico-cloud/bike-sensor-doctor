@@ -1,0 +1,9 @@
+Bundle IDs and capabilities:
+  bundle ID com.ralsuwaidico.bikecomputer: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer: already enabled
+  bundle ID com.ralsuwaidico.bikecomputer.watchkitapp: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer.watchkitapp: already enabled
+App Store Connect app record: found
+::warning::Could not create the internal TestFlight group (HTTP 409): ENTITY_ERROR.RELATIONSHIP.INVALID: 6826587802. It can be created by hand in App Store Connect > TestFlight > Internal Testing.
+  TestFlight internal group 'Internal QA': already exists
+  TestFlight external group: prepared, not enabled (ASC_EXTERNAL_ENABLE is not 1) — nothing done
