@@ -17,41 +17,39 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(b.waitForExistence(timeout: 8), "tab \(name)")
         if b.exists { b.tap(); app.settleForScreenshot(2) }
     }
-    /// Diagnosis for Lab runs 20–25 (Home v2.3 controls scroll but do not act; the graph's touch layer was measured on the
-    /// chart and the taps failed without it). With CY_DIAG_TOUCHES=1 the app records, for each touch, the point and the
-    /// chain of views UIKit's hit-test returns. This taps a control that fails and one that works, at known points, and
-    /// prints both chains, so the view that receives the failing touches is named. Runs first, on a fresh demo athlete.
+    /// Diagnosis for Lab runs 20–26. Run 26: with the touch probe on, the same Home taps opened their pages; run 25, same
+    /// check without it, they did not. The probe has two parts (a window recogniser; a text element redrawn 2.5 times a
+    /// second), so this launches the same build four times — neither, recogniser only, text element only, both — taps
+    /// the first schedule day each time, and reads the stages the app wrote to a file: handler ran, route list changed,
+    /// destination built. The on-screen counter used in runs 23–25 did not update and is no longer used.
     func test0HomeTapDiagnosis() throws {
-        let app = XCUIApplication()
-        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
-        app.launchEnvironment["LAB_THEME"] = "obsidian"
-        app.launchEnvironment["CY_DIAG_TOUCHES"] = "1"
-        app.launch()
-        XCTAssertTrue(banner(app), "Lab is running")
-        guard app.waitForHome(name: "Demo", timeout: 20) else { print("LAB-NOTE touch: Home not shown"); return }
-        app.settleForScreenshot(2)
-        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
-        let probe = el("touchProbe"), home = el("homeV23")
-        print("LAB-NOTE touch: probe element exists \(probe.waitForExistence(timeout: 5))")
-        func state() -> String { home.exists ? (home.value as? String ?? "no value") : "not on screen" }
-        func tapAndReport(_ name: String, _ e: XCUIElement, opens pageId: String?) {
-            guard e.exists else { print("LAB-NOTE touch [\(name)]: control not found"); return }
-            let f = e.frame; e.tap(); Thread.sleep(forTimeInterval: 1.2)
-            var opened = "n/a"
-            if let pageId { opened = "\(el(pageId).waitForExistence(timeout: 4) || app.navigationBars.count > 0 || app.staticTexts["coachTitle"].firstMatch.exists || app.staticTexts["planTitle"].firstMatch.exists)" }
-            print("LAB-NOTE touch [\(name)] frame \(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))x\(Int(f.height)); acted: \(opened); Home says: \(state()); UIKit: \(probe.exists ? probe.label : "probe not found")")
+        for mode in ["none", "recognizer", "label", "1", "none"] {
+            let file = "/tmp/cy-diag-\(UUID().uuidString).txt"
+            let app = XCUIApplication()
+            app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+            app.launchEnvironment["LAB_THEME"] = "obsidian"
+            app.launchEnvironment["CY_DIAG_FILE"] = file
+            if mode != "none" { app.launchEnvironment["CY_DIAG_TOUCHES"] = mode }
+            app.launch()
+            guard banner(app), app.waitForHome(name: "Demo", timeout: 20) else { print("LAB-NOTE diag [\(mode)]: Home not shown"); app.terminate(); continue }
+            app.settleForScreenshot(2)
+            func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+            func stages() -> String { ((try? String(contentsOfFile: file, encoding: .utf8)) ?? "file not readable").split(separator: "\n").joined(separator: " | ") }
+            let day = app.buttons["scheduleDay-0"].firstMatch
+            guard day.exists else { print("LAB-NOTE diag [\(mode)]: no schedule day"); app.terminate(); continue }
+            day.tap()
+            let opened = el("homeDayDetail").waitForExistence(timeout: 5)
+            print("LAB-NOTE diag [\(mode)] day tap: page opened \(opened); stages: \(stages())")
+            if opened { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
+            let ring = el("indicatorConsistency")
+            if ring.exists {
+                ring.tap()
+                let week = el("homeWeekOverview").waitForExistence(timeout: 5)
+                print("LAB-NOTE diag [\(mode)] Consistency tap: page opened \(week); stages: \(stages())")
+            }
+            app.terminate()
+            try? FileManager.default.removeItem(atPath: file)
         }
-        tapAndReport("schedule day", app.buttons["scheduleDay-0"].firstMatch, opens: "homeDayDetail")
-        if app.navigationBars.count > 0 { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
-        tapAndReport("Consistency ring", el("indicatorConsistency"), opens: "homeWeekOverview")
-        if app.navigationBars.count > 0 { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
-        tapAndReport("Sleep bar", el("sleepBar"), opens: "homeRecovery")
-        if app.navigationBars.count > 0 { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
-        tapAndReport("avatar (works)", app.buttons["homeAvatar"].firstMatch, opens: "profileSectionA")
-        tab(app, "Home")
-        let coach = el("homeCoachAction").exists ? el("homeCoachAction") : el("homeCoachQuiet")
-        tapAndReport("Coach preview (works)", coach, opens: "coachTitle")
-        app.terminate()
     }
 
     /// The strip's theme name ("Theme: Ocean").
@@ -121,7 +119,7 @@ final class LabChecks: XCTestCase {
                 app.reveal(day, top: 170); let f = day.frame; day.tap()
                 let page = app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch
                 let ok = page.waitForExistence(timeout: 6)
-                print("LAB-NOTE stage [\(stage)] \(t.id): day at y \(Int(f.midY)) opened its page: \(ok); Home says: \(home.exists ? (home.value as? String ?? "no value") : "not on screen")")
+                print("LAB-NOTE stage [\(stage)] \(t.id): day at y \(Int(f.midY)) opened its page: \(ok)")
                 if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1); _ = app.waitForHome(name: "Demo", timeout: 10) }
                 return ok
             }
@@ -204,14 +202,14 @@ final class LabChecks: XCTestCase {
                         app.settleForScreenshot(1); shot("\(tag)-2a-day-tap-did-nothing")
                         let home = app.descendants(matching: .any).matching(identifier: "homeV23").firstMatch
                         func state() -> String { home.exists ? (home.value as? String ?? "no value") : "Home container not found" }
-                        print("LAB-NOTE day tap 1 opened nothing; navigation bars \(app.navigationBars.count); Home says: \(state())")
+                        print("LAB-NOTE day tap 1 opened nothing; navigation bars \(app.navigationBars.count)")
                         // the same kind of page from controls at other heights of the screen
                         for (id, pageId) in [("sportCard-endurance", "homeCyclingSummary"), ("sleepBar", "homeRecovery"), ("metricRow-restingHR", "homeRecovery")] {
                             let c = app.descendants(matching: .any).matching(identifier: id).firstMatch
                             guard c.exists else { print("LAB-NOTE probe \(id): not found"); continue }
                             app.reveal(c, top: 170); let f = c.frame; c.tap()
                             let ok = app.descendants(matching: .any).matching(identifier: pageId).firstMatch.waitForExistence(timeout: 5) || app.navigationBars.count > 0
-                            print("LAB-NOTE probe \(id) at y \(Int(f.midY)): page opened \(ok); Home says: \(state())")
+                            print("LAB-NOTE probe \(id) at y \(Int(f.midY)): page opened \(ok)")
                             if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
                         }
                         let ring = app.descendants(matching: .any).matching(identifier: "indicatorConsistency").firstMatch
@@ -219,7 +217,7 @@ final class LabChecks: XCTestCase {
                             app.reveal(ring, top: 170); ring.tap()
                             let week = app.descendants(matching: .any).matching(identifier: "homeWeekOverview").firstMatch
                             let ok = week.waitForExistence(timeout: 6)
-                            print("LAB-NOTE Consistency tap opens the week page: \(ok); Home says: \(state())")
+                            print("LAB-NOTE Consistency tap opens the week page: \(ok)")
                             if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
                         }
                         let today = app.buttons["scheduleDay-1"].firstMatch

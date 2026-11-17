@@ -24,10 +24,6 @@ struct HomeView: View {
     @State private var showAdjustments = false
     @State private var showCoach = false
     @State private var showTrendsInfo = false
-    /// How many times a Home v2.3 control asked for a page. Read by the screen tests together with the number of pages
-    /// open ("pages 1 · requests 1" on the Home container), so a tap that opens nothing can be told apart: the control
-    /// was never pressed, the request was lost, or the page was not presented (Lab runs 20–22).
-    @State private var v23Requests = 0
     /// Profile Quick Menu (6 Nov addendum): one Bool, so repeated taps can never stack menus.
     @State private var showMenu = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -86,9 +82,9 @@ struct HomeView: View {
                 } else { homeHeader(dash) }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: HomeRoute.self) { route in destination(route) }
+            .navigationDestination(for: HomeRoute.self) { route in let _ = CyTouchProbe.note("destination built for a route"); destination(route) }
             .onChange(of: tab) { _, _ in showMenu = false }           // the menu never survives a tab change
-            .onChange(of: path) { _, _ in showMenu = false }
+            .onChange(of: path) { _, p in showMenu = false; CyTouchProbe.note("route list changed: \(p.count) open") }
             .navigationDestination(isPresented: $showAdjustments) { AdjustmentsView() }
             .sheet(item: $prescription) { w in HomePrescriptionSheet(workout: w) }
             .sheet(item: $coachSheet) { s in coachSheetView(s) }
@@ -116,14 +112,14 @@ struct HomeView: View {
             if !ownPage { actions.onCoachPage = { showCoach = true } }
         }
         actions.onAvatar = { tab = 4 }                                   // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
-        actions.onConsistency = { v23Requests += 1; path.append(.weekOverview(now)) }
-        actions.onMix = { v23Requests += 1; path.append(.weekOverview(now)) }
-        actions.onRecovery = { v23Requests += 1; path.append(.recovery) }
-        actions.onSleep = { v23Requests += 1; path.append(.recovery) }
+        actions.onConsistency = { CyTouchProbe.note("handler: week overview"); path.append(.weekOverview(now)) }
+        actions.onMix = { CyTouchProbe.note("handler: week overview"); path.append(.weekOverview(now)) }
+        actions.onRecovery = { CyTouchProbe.note("handler: recovery"); path.append(.recovery) }
+        actions.onSleep = { CyTouchProbe.note("handler: recovery"); path.append(.recovery) }
         actions.onStep = { s in if s.id == HomeSetupItem.Step.heartRate.rawValue || s.id == HomeSetupItem.Step.health.rawValue { tab = 4 } else { tab = 1 } }
-        actions.onDay = { d in v23Requests += 1; if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) } }
-        actions.onEndurance = { v23Requests += 1; path.append(.cycling) }
-        actions.onStrength = { v23Requests += 1; path.append(.strength) }
+        actions.onDay = { d in CyTouchProbe.note("handler: day \(d.id)"); if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) } }
+        actions.onEndurance = { CyTouchProbe.note("handler: cycling"); path.append(.cycling) }
+        actions.onStrength = { CyTouchProbe.note("handler: strength"); path.append(.strength) }
         actions.onTrendsInfo = { showTrendsInfo = true }
         actions.onGraphDay = { d, _ in
             let count = data.graph.first(where: { $0.dates.contains(d) })?.dates.count ?? 7
@@ -149,7 +145,6 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("homeV23")
-        .accessibilityValue("pages \(path.count) · requests \(v23Requests)")
     }
 
     private func homeHeader(_ dash: HomeDashboard) -> some View {

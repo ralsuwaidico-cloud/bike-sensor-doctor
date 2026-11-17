@@ -10,16 +10,35 @@ import UIKit.UIGestureRecognizerSubclass
 // and shows the last record in a text element ("touchProbe") a test can read. It never changes where a touch goes: the
 // recogniser fails at once and neither cancels nor delays touches.
 enum CyTouchProbe {
+    // Lab run 26: with the probe on, the same taps DID open their pages; in run 25, same check without the probe, they did
+    // not. The probe has two parts, so each can now be switched on alone: CY_DIAG_TOUCHES = "recognizer" (the window
+    // recogniser only), "label" (the redrawn text element only), "1" (both). And because the on-screen counter read by the
+    // tests turned out not to update, the stages are written to a file the test names (CY_DIAG_FILE): the handler ran,
+    // the route list changed, the destination was built.
     #if targetEnvironment(simulator)
-    static let isOn = ProcessInfo.processInfo.environment["CY_DIAG_TOUCHES"] == "1"
+    private static let mode = ProcessInfo.processInfo.environment["CY_DIAG_TOUCHES"] ?? ""
+    private static let file = ProcessInfo.processInfo.environment["CY_DIAG_FILE"] ?? ""
     #else
-    static let isOn = false
+    private static let mode = ""
+    private static let file = ""
     #endif
+    static var recogniserOn: Bool { mode == "1" || mode == "recognizer" }
+    static var isOn: Bool { mode == "1" || mode == "label" }          // the text element
     static var last = "no touch yet"
     private static var installed = false
+    private static let started = Date()
+
+    /// One line per stage, appended to the file the test named. Does nothing unless a test asked for it on a simulator.
+    static func note(_ s: String) {
+        guard !file.isEmpty else { return }
+        let line = String(format: "%.2f ", Date().timeIntervalSince(started)) + s + "\n"
+        if let h = FileHandle(forWritingAtPath: file) { h.seekToEndOfFile(); h.write(Data(line.utf8)); try? h.close() }
+        else { try? line.write(toFile: file, atomically: true, encoding: .utf8) }
+    }
 
     static func installIfAsked() {
-        guard isOn, !installed else { return }
+        note("app shell appeared; mode '\(mode)'")
+        guard recogniserOn, !installed else { return }
         guard let w = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap({ $0.windows }).first else { return }
         let g = Recorder(target: nil, action: nil)
         g.cancelsTouchesInView = false; g.delaysTouchesBegan = false; g.delaysTouchesEnded = false
@@ -49,6 +68,7 @@ enum CyTouchProbe {
             if let t = touches.first, let w = view as? UIWindow {
                 let p = t.location(in: w)
                 CyTouchProbe.last = "touch (\(Int(p.x)),\(Int(p.y))) -> " + CyTouchProbe.describe(w.hitTest(p, with: event))
+                CyTouchProbe.note("touch began at (\(Int(p.x)),\(Int(p.y)))")
             }
             state = .failed
         }
