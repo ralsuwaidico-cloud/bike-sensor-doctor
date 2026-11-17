@@ -154,7 +154,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20).padding(.top, CySpace.s)
             }
-            Home21Content(data: data, coach: coach, showsHeader: false, actions: actions)
+            Home21Content(data: data, coach: coach, showsHeader: false, actions: actions, diagLimit: CyTouchProbe.homeSectionLimit)
         }
         // Navigation v1.2 (F7, C2): with the shell's scroll margin this ends the page 128 pt (110 pt without a home
         // indicator) above the bottom of the screen. Content may pass behind the dock while scrolling — that is the

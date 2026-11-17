@@ -37,6 +37,9 @@ enum CyTouchProbe {
     }
 
     static var fileOn: Bool { !file.isEmpty }
+    /// "v23-N" in CY_DIAG_HOME: Home v2.3 with only its first N sections (1 indicators, 2 schedule, 3 sport cards,
+    /// 4 sleep, 5 Coach, 6 trend graph, 7 key metrics). 99 otherwise.
+    static var homeSectionLimit: Int { homeVariant.hasPrefix("v23-") ? (Int(homeVariant.dropFirst(4)) ?? 99) : 99 }
     /// Minimal reproduction (run 28 showed the route list is written and kept, yet Home is not redrawn and nothing is
     /// presented). CY_DIAG_HOME swaps what Home's own navigation stack shows, keeping the stack, its route list and its
     /// destinations exactly as they are: "bare" = one button that asks for the Recovery page and nothing else;

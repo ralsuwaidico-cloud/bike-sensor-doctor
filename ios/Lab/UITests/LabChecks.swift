@@ -25,32 +25,35 @@ final class LabChecks: XCTestCase {
     /// previous dashboard; Home v2.3. "Presented" means the pushed page's back button is on screen and can be tapped —
     /// not that an identifier exists somewhere.
     func test0HomeNavigationReproduction() throws {
-        for variant in ["bare", "bareHeader", "legacy", "v23"] {
+        // Run 29: with one bare button, with the v2.3 header, and with the previous dashboard the page is presented and Home
+        // is redrawn about once a second; with Home v2.3 Home's body is evaluated twice at launch and never again, so no
+        // later state is ever shown. The cause is therefore inside Home v2.3's content. This run shows its first N
+        // sections (0 = none … 7 = all): the first N at which Home stops being redrawn names the section.
+        for variant in ["v23-0", "v23-1", "v23-2", "v23-3", "v23-4", "v23-5", "v23-6", "v23"] {
             let file = "/tmp/cy-diag-\(UUID().uuidString).txt"
             let app = XCUIApplication()
             app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
             app.launchEnvironment["LAB_THEME"] = "obsidian"
             app.launchEnvironment["CY_DIAG_FILE"] = file
             if variant != "v23" { app.launchEnvironment["CY_DIAG_HOME"] = variant }
+            let sections = variant == "v23" ? 7 : (Int(variant.dropFirst(4)) ?? -1)
             app.launch()
             guard banner(app), app.buttons["centreButton"].firstMatch.waitForExistence(timeout: 20) else { print("LAB-NOTE repro [\(variant)]: app not shown"); app.terminate(); continue }
             app.settleForScreenshot(2)
             func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
             func stages() -> String { ((try? String(contentsOfFile: file, encoding: .utf8)) ?? "file not readable").split(separator: "\n").joined(separator: " | ") }
-            let control: XCUIElement
-            switch variant {
-            case "bare", "bareHeader": control = el("diagPush")
-            case "legacy": control = el("homeRecovery")
-            default: control = app.buttons["scheduleDay-0"].firstMatch
+            // is Home being redrawn? count its body evaluations over eight idle seconds (the shell's one-second timer redraws a healthy Home)
+            Thread.sleep(forTimeInterval: 8)
+            let evaluations = stages().components(separatedBy: "Home body evaluation").count - 1
+            var presented = "not tried (no control with \(sections) sections)"
+            let control = sections >= 2 ? app.buttons["scheduleDay-0"].firstMatch : el("indicatorConsistency")
+            if sections >= 1, control.waitForExistence(timeout: 5) {
+                control.tap()
+                let back = app.navigationBars.buttons.firstMatch
+                presented = "\(back.waitForExistence(timeout: 6) && back.isHittable)"
             }
-            guard control.waitForExistence(timeout: 8) else { print("LAB-NOTE repro [\(variant)]: control not found"); shot("repro-\(variant)-no-control"); app.terminate(); continue }
-            if variant == "legacy" { app.reveal(control, top: 200) }
-            control.tap()
-            let back = app.navigationBars.buttons.firstMatch
-            let presented = back.waitForExistence(timeout: 6) && back.isHittable
-            Thread.sleep(forTimeInterval: 1.5)
-            shot("repro-\(variant)-after-tap")
-            print("LAB-NOTE repro [\(variant)]: page presented (back button on screen) \(presented); stages: \(stages())")
+            let tail = stages().components(separatedBy: " | ").filter { !$0.contains("body evaluation") }.joined(separator: " | ")
+            print("LAB-NOTE repro [sections \(sections)]: Home body evaluations in the first seconds \(evaluations); page presented at first tap \(presented); other stages: \(tail)")
             app.terminate()
             try? FileManager.default.removeItem(atPath: file)
         }
