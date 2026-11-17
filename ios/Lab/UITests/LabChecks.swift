@@ -74,6 +74,21 @@ final class LabChecks: XCTestCase {
                 XCTAssertFalse((rec.value as? String ?? "").contains("%"), "Recovery never shows a percentage (\(rec.value ?? ""))")
             }
             app.settleForScreenshot(2); shot("\(tag)-1-home")
+            // Lab run 23: after the Coach steps below, no Home control that opens a page ran its action ("requests 0"), at any
+            // height of the screen, while the Coach card and the Coach page link — tapped earlier — did work. This probe taps
+            // the first schedule day at named stages, so the step after which Home stops responding is identified.
+            func dayOpens(_ stage: String) -> Bool {
+                let day = app.buttons["scheduleDay-0"].firstMatch
+                let home = app.descendants(matching: .any).matching(identifier: "homeV23").firstMatch
+                guard day.exists else { print("LAB-NOTE stage [\(stage)]: no schedule day on Home"); return false }
+                app.reveal(day, top: 170); let f = day.frame; day.tap()
+                let page = app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch
+                let ok = page.waitForExistence(timeout: 6)
+                print("LAB-NOTE stage [\(stage)] \(t.id): day at y \(Int(f.midY)) opened its page: \(ok); Home says: \(home.exists ? (home.value as? String ?? "no value") : "not on screen")")
+                if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1); _ = app.waitForHome(name: "Demo", timeout: 10) }
+                return ok
+            }
+            if i < 2 { XCTAssertTrue(dayOpens("fresh launch"), "\(t.id): on a fresh launch a schedule day opens that day's page at the first tap") }
             // Lab run 11: the card is one accessibility element of its own and is not reported as a button
             let coach = app.descendants(matching: .any).matching(identifier: "homeCoachAction").firstMatch
             if coach.exists { XCTAssertTrue(coach.label.hasPrefix("Demo, rule-based, not AI."), "\(t.id): the Coach card says it is demo and not AI (\(coach.label))") }
@@ -106,6 +121,7 @@ final class LabChecks: XCTestCase {
                         }
                         app.settleForScreenshot(1)
                         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): back on Home after the card's destination")
+                        XCTAssertTrue(dayOpens("after the Coach card's destination (\(where_)) and back"), "\(t.id): a schedule day still opens after the Coach card's destination")
                         app.reveal(link); app.settleForScreenshot()
                         // …and the Coach page is one tap away on its own line
                         way = link
@@ -132,6 +148,7 @@ final class LabChecks: XCTestCase {
                     app.settleForScreenshot(2); shot("\(tag)-1b-coach")
                     app.buttons["coachClose"].firstMatch.tap(); app.settleForScreenshot(2)
                     XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): closing the Coach page returns to Home")
+                    XCTAssertTrue(dayOpens(i == 0 ? "after the Coach page, with a typed question" : "after the Coach page, nothing typed"), "\(t.id): a schedule day still opens after the Coach page is closed")
                 }
             }
             app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-2-home-lower")
