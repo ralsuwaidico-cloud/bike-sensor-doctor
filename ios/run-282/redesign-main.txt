@@ -1,0 +1,172 @@
+=== redesign-main: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/RedesignMainTests.swift:120: error: -[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp] : XCTAssertTrue failed - required: in the redesigned main app the first tap on a schedule day presents that day's page
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' failed (174.584 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== redesign-main: full filter ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/RedesignMainTests.swift:120: error: -[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp] : XCTAssertTrue failed - required: in the redesigned main app the first tap on a schedule day presents that day's page
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' failed (174.584 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.467 seconds).
+Test Suite 'RedesignMainTests' failed at 2026-11-17 22:10:44.638.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 182.050 (182.053) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-17 22:10:44.638.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 182.050 (182.054) seconds
+Test Suite 'Selected tests' failed at 2026-11-17 22:10:44.638.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 182.050 (182.055) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== redesign-main: last 150 lines ===
+    t =    83.61s     Checking `Expect predicate `existsNoRetry == 1` for object "sleepBar" Any`
+    t =    83.62s         Checking existence of `"sleepBar" Any`
+    t =    85.12s Waiting 10.0s for "metricRow-restingHR" Any to exist
+    t =    86.15s     Checking `Expect predicate `existsNoRetry == 1` for object "metricRow-restingHR" Any`
+    t =    86.15s         Checking existence of `"metricRow-restingHR" Any`
+    t =    87.51s Checking existence of `"cyHeroRing" Any`
+    t =    92.01s Find the "indicatorConsistency" Any
+    t =    94.34s Find the "indicatorRecovery" Any
+    t =    97.19s Checking existence of `"homeCoachOpen" Button`
+    t =    99.85s Waiting 10.0s for "homeCoachOpen" Button to exist
+    t =   100.88s     Checking `Expect predicate `existsNoRetry == 1` for object "homeCoachOpen" Button`
+    t =   100.88s         Checking existence of `"homeCoachOpen" Button`
+    t =   103.36s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   104.08s Checking existence of `"homeCoachOpen" Button`
+    t =   105.74s Checking existence of `"homeCoachOpen" Button`
+    t =   107.52s Find the "homeCoachOpen" Button
+    t =   108.65s Find the "homeCoachOpen" Button
+    t =   109.96s Find the "homeCoachOpen" Button
+    t =   111.00s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] -> (0.0, -200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   111.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   111.21s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   111.53s     Check for interrupting elements affecting "Cyclift" Application
+    t =   111.97s     Synthesize event
+    t =   111.97s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   112.14s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   112.30s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   112.44s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   113.04s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   113.94s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   116.01s Checking existence of `"homeCoachOpen" Button`
+    t =   116.79s Checking existence of `"homeCoachOpen" Button`
+    t =   118.15s Find the "homeCoachOpen" Button
+    t =   119.35s Find the "homeCoachOpen" Button
+    t =   120.56s Checking existence of `"homeCoachOpen" Button`
+    t =   121.58s Find the "homeCoachOpen" Button
+    t =   122.95s Checking existence of `"homeCoachOpen" Button`
+    t =   124.47s Find the "homeCoachOpen" Button
+    t =   125.61s Checking existence of `"homeCoachOpen" Button`
+    t =   126.87s Find the "homeCoachOpen" Button
+    t =   127.79s Checking existence of `"homeCoachOpen" Button`
+    t =   128.64s Checking existence of `"homeCoachOpen" Button`
+    t =   129.60s Find the "homeCoachOpen" Button
+    t =   130.62s Find the "homeCoachOpen" Button
+    t =   131.27s Tap "homeCoachOpen" Button
+    t =   131.27s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   131.27s     Find the "homeCoachOpen" Button
+    t =   131.71s     Check for interrupting elements affecting "homeCoachOpen" Button
+    t =   132.03s     Synthesize event
+    t =   132.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   132.70s Waiting 6.0s for "coachTitle" StaticText to exist
+    t =   133.78s     Checking `Expect predicate `existsNoRetry == 1` for object "coachTitle" StaticText`
+    t =   133.79s         Checking existence of `"coachTitle" StaticText`
+    t =   133.88s Waiting 10.0s for "coachTitle" StaticText to exist
+    t =   134.90s     Checking `Expect predicate `existsNoRetry == 1` for object "coachTitle" StaticText`
+    t =   134.90s         Checking existence of `"coachTitle" StaticText`
+    t =   134.95s Checking existence of `"DEMO DATA" StaticText`
+    t =   136.39s Waiting 10.0s for "coachAsk-week" Button to exist
+    t =   137.41s     Checking `Expect predicate `existsNoRetry == 1` for object "coachAsk-week" Button`
+    t =   137.42s         Checking existence of `"coachAsk-week" Button`
+    t =   137.66s Tap "coachAsk-week" Button
+    t =   137.66s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   137.90s     Find the "coachAsk-week" Button
+    t =   138.20s     Check for interrupting elements affecting "coachAsk-week" Button
+    t =   138.59s     Synthesize event
+    t =   138.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   138.93s Waiting 10.0s for Any (First Match) to exist
+    t =   139.97s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   139.97s         Checking existence of `Any (First Match)`
+    t =   140.30s Tap "coachClose" Button
+    t =   140.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   140.30s     Find the "coachClose" Button
+    t =   140.45s     Check for interrupting elements affecting "coachClose" Button
+    t =   140.98s     Synthesize event
+    t =   141.29s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   141.31s Terminate com.ralsuwaidico.bikecomputer:96327
+    t =   142.35s Open com.ralsuwaidico.bikecomputer
+    t =   142.35s     Launch com.ralsuwaidico.bikecomputer
+2026-11-17 22:10:04.999 xcodebuild[95684:252233] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-17 22:10:05.000 xcodebuild[95684:252233] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =   143.94s         Setting up automation session
+    t =   146.58s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   151.38s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   152.42s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   152.42s         Checking existence of `"homeGreeting" Any`
+    t =   152.90s Find the "homeGreeting" Any
+    t =   153.44s Checking existence of `"onboardingContinue" Button`
+    t =   154.45s Waiting 10.0s for "cradleDock" Any to exist
+    t =   155.48s     Checking `Expect predicate `existsNoRetry == 1` for object "cradleDock" Any`
+    t =   155.48s         Checking existence of `"cradleDock" Any`
+    t =   155.52s Waiting 10.0s for "scheduleDay-0" Button to exist
+    t =   156.55s     Checking `Expect predicate `existsNoRetry == 1` for object "scheduleDay-0" Button`
+    t =   156.55s         Checking existence of `"scheduleDay-0" Button`
+    t =   157.05s Tap "scheduleDay-0" Button
+    t =   157.05s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   157.06s     Find the "scheduleDay-0" Button
+    t =   157.53s     Check for interrupting elements affecting "scheduleDay-0" Button
+    t =   157.83s     Synthesize event
+    t =   158.13s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   158.14s Waiting 8.0s for "homeDayDetail" Any to exist
+    t =   159.22s     Checking `Expect predicate `existsNoRetry == 1` for object "homeDayDetail" Any`
+    t =   159.22s         Checking existence of `"homeDayDetail" Any`
+    t =   161.26s         Capturing element debug description
+    t =   162.20s     Checking `Expect predicate `existsNoRetry == 1` for object "homeDayDetail" Any`
+    t =   162.20s         Checking existence of `"homeDayDetail" Any`
+    t =   165.03s         Capturing element debug description
+    t =   165.14s     Checking `Expect predicate `existsNoRetry == 1` for object "homeDayDetail" Any`
+    t =   165.14s         Checking existence of `"homeDayDetail" Any`
+    t =   166.40s         Capturing element debug description
+    t =   166.40s     Checking existence of `"homeDayDetail" Any`
+    t =   172.58s Collecting debug information to assist test failure triage
+    t =   172.58s     Requesting snapshot of accessibility hierarchy for app with pid 1828
+REDESIGN-NOTE main app, redesign on: schedule day presented its page at the first tap: false
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/RedesignMainTests.swift:120: error: -[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp] : XCTAssertTrue failed - required: in the redesigned main app the first tap on a schedule day presents that day's page
+    t =   174.28s Tear Down
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' failed (174.584 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' started.
+    t =     0.00s Start Test at 2026-11-17 22:10:37.171
+    t =     0.07s Set Up
+    t =     0.07s Open com.ralsuwaidico.bikecomputer
+    t =     0.07s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.07s         Terminate com.ralsuwaidico.bikecomputer:1828
+2026-11-17 22:10:38.319 xcodebuild[95684:252233] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-17 22:10:38.319 xcodebuild[95684:252233] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     1.91s         Setting up automation session
+    t =     4.02s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =     6.00s Waiting 40.0s for "onboardingContinue" Button to exist
+    t =     7.03s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingContinue" Button`
+    t =     7.03s         Checking existence of `"onboardingContinue" Button`
+    t =     7.10s Checking existence of `"onboardingV34" Any`
+    t =     7.25s Tear Down
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.467 seconds).
+Test Suite 'RedesignMainTests' failed at 2026-11-17 22:10:44.638.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 182.050 (182.053) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-17 22:10:44.638.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 182.050 (182.054) seconds
+Test Suite 'Selected tests' failed at 2026-11-17 22:10:44.638.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 182.050 (182.055) seconds
+2026-11-17 22:11:21.983 xcodebuild[95684:252233] [MT] IDETestOperationsObserverDebug: 225.279 elapsed -- Testing started completed.
+2026-11-17 22:11:21.984 xcodebuild[95684:252233] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-17 22:11:21.984 xcodebuild[95684:252233] [MT] IDETestOperationsObserverDebug: 225.279 sec, +225.279 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-dvxoxhcygkecqrctquiofmkslkoy/Logs/Test/Test-BikeComputer-2026.11.17_22-07-30-+0000.xcresult
+
+Failing tests:
+	RedesignMainTests.testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp()
+
+** TEST EXECUTE FAILED **
+
+Testing started
+=== redesign-main: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' failed (174.584 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.467 seconds).
+=== redesign-main: E0-DIAG lines ===

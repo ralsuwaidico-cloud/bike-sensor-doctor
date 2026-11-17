@@ -1,0 +1,23 @@
+BikeComputer iOS CI — run 282 — scope full — jobs: quick=skipped test=abandoned release=skipped testflight=skipped
+
+## journeys
+BikeComputer iOS CI — build 282 — 2026-11-17 21:14 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+RESULT build (Release, for testing): ok · 17m51s
+  journey-hybrid: launch-infrastructure failure only (BikeComputerUITests.JourneyTests/testHybridJourney) — attempt 1 kept as journey-hybrid-launchfail; rebooting the simulator and retrying those tests once
+  journey-hybrid: attempt 2 (BikeComputerUITests.JourneyTests/testHybridJourney): passed — both attempts are in the logs
+  journey hybrid: ok · recording 9 KB · 18m4s
+  journey cycling: ok · recording 1441 KB · 6m3s
+  journey strength: ok · recording 1286 KB · 5m41s
+RESULT redesigned main app (switch on, real services, test athlete): FAILED (exit 65, passed 1) · 3m59s
+RESULT journey (recorded): FAILED — JourneyTests hybrid, cycling, strength · 56m36s
+Total: 56m50s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+
+GATE flows: ok
+commit 0609088f6e8bed3195d5180ceaecd78fb451230d  branch ios/lab  job failure

@@ -1,0 +1,116 @@
+=== journey-hybrid: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:37: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to launch <XCUIApplicationImpl: 0x102c5e200 com.ralsuwaidico.bikecomputer at /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator/BikeComputer.app> via Xcode: Timed out while launching application via Xcode.
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (68.341 seconds).
+} (error = Error Domain=FBSOpenApplicationServiceErrorDomain Code=1 "Simulator device failed to launch com.ralsuwaidico.bikecomputer." UserInfo={NSLocalizedDescription=Simulator device failed to launch com.ralsuwaidico.bikecomputer., NSUnderlyingError=0x93ebf4210 {Error Domain=FBSOpenApplicationServiceErrorDomain Code=1 "The request to open "com.ralsuwaidico.bikecomputer" failed." UserInfo={BSErrorCodeDescription=RequestDenied, NSLocalizedDescription=The request to open "com.ralsuwaidico.bikecomputer" failed., NSUnderlyingError=0x93ebf5b90 {Error Domain=FBProcessExit Code=64 "The process failed to launch." UserInfo={NSUnderlyingError=0x93ebf5c80 {Error Domain=RBSRequestErrorDomain Code=5 "Launch failed." UserInfo=0x93e4b49c0 (not displayed)}, BSErrorCodeDescription=launch-failed, NSLocalizedFailureReason=The process failed to launch.}}, FBSOpenApplicationRequestID=0x14c, NSLocalizedFailureReason=The request was denied by service delegate (SBMainWorkspace).}}, NSLocalizedFailureReason=The request was denied by service delegate (SBMainWorkspace)., FBSOpenApplicationRequestID=0x14c, SimCallingSelector=launchApplicationWithID:options:pid:error:, BSErrorCodeDescription=RequestDenied})
+Failing tests:
+** TEST EXECUTE FAILED **
+=== journey-hybrid: full filter ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:37: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to launch <XCUIApplicationImpl: 0x102c5e200 com.ralsuwaidico.bikecomputer at /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator/BikeComputer.app> via Xcode: Timed out while launching application via Xcode.
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (68.341 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-17 21:40:13.634.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 74.582 (74.593) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-17 21:40:13.636.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 74.582 (74.596) seconds
+Test Suite 'Selected tests' failed at 2026-11-17 21:40:13.637.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 74.582 (74.655) seconds
+} (error = Error Domain=FBSOpenApplicationServiceErrorDomain Code=1 "Simulator device failed to launch com.ralsuwaidico.bikecomputer." UserInfo={NSLocalizedDescription=Simulator device failed to launch com.ralsuwaidico.bikecomputer., NSUnderlyingError=0x93ebf4210 {Error Domain=FBSOpenApplicationServiceErrorDomain Code=1 "The request to open "com.ralsuwaidico.bikecomputer" failed." UserInfo={BSErrorCodeDescription=RequestDenied, NSLocalizedDescription=The request to open "com.ralsuwaidico.bikecomputer" failed., NSUnderlyingError=0x93ebf5b90 {Error Domain=FBProcessExit Code=64 "The process failed to launch." UserInfo={NSUnderlyingError=0x93ebf5c80 {Error Domain=RBSRequestErrorDomain Code=5 "Launch failed." UserInfo=0x93e4b49c0 (not displayed)}, BSErrorCodeDescription=launch-failed, NSLocalizedFailureReason=The process failed to launch.}}, FBSOpenApplicationRequestID=0x14c, NSLocalizedFailureReason=The request was denied by service delegate (SBMainWorkspace).}}, NSLocalizedFailureReason=The request was denied by service delegate (SBMainWorkspace)., FBSOpenApplicationRequestID=0x14c, SimCallingSelector=launchApplicationWithID:options:pid:error:, BSErrorCodeDescription=RequestDenied})
+Failing tests:
+** TEST EXECUTE FAILED **
+=== journey-hybrid: last 150 lines ===
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/BikeComputer_iphonesimulator26.5-arm64-x86_64.xctestrun -destination id=CDC7077E-2206-4FEC-B03A-52EB15B2CAD4 "-only-testing:BikeComputerUITests/JourneyTests"
+
+2026-11-17 21:38:00.921 xcodebuild[37687:99847] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-17 21:38:01.139 xcodebuild[37687:99847] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:CDC7077E-2206-4FEC-B03A-52EB15B2CAD4, OS:26.5, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:CDC7077E-2206-4FEC-B03A-52EB15B2CAD4, OS:26.5, name:iPhone 17 Pro }
+2026-11-17 21:38:15.961 xcodebuild[37687:99847] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-17 21:38:39.721071+0000 BikeComputerUITests-Runner[39241:103559] [Default] Running tests...
+2026-11-17 21:38:39.899239+0000 BikeComputerUITests-Runner[39241:104675] [General] Failed to send CA Event for app launch measurements for ca_event_type: 0 event_name: com.apple.app_launch_measurement.FirstFramePresentationMetric
+2026-11-17 21:38:39.942223+0000 BikeComputerUITests-Runner[39241:104676] [General] Failed to send CA Event for app launch measurements for ca_event_type: 1 event_name: com.apple.app_launch_measurement.ExtendedLaunchMetrics
+objc[39241]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x106c00310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x106c88398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-11-17 21:38:58.983.
+Test Suite 'BikeComputerUITests.xctest' started at 2026-11-17 21:38:59.041.
+Test Suite 'JourneyTests' started at 2026-11-17 21:38:59.041.
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' started.
+    t =     0.00s Start Test at 2026-11-17 21:38:59.045
+    t =     0.52s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testCyclingJourney] : Test skipped - persona cycling not selected
+    t =     0.65s Tear Down
+2026-11-17 21:40:13.421 xcodebuild[37687:99847] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-17 21:40:13.424 xcodebuild[37687:99847] [MT] IDELaunchParametersSnapshot: no debugger version
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' skipped (2.213 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' started.
+    t =     0.00s Start Test at 2026-11-17 21:39:01.263
+    t =     0.04s Set Up
+    t =     0.05s Open com.ralsuwaidico.bikecomputer
+    t =     0.05s     Launch com.ralsuwaidico.bikecomputer
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:37: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to launch <XCUIApplicationImpl: 0x102c5e200 com.ralsuwaidico.bikecomputer at /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator/BikeComputer.app> via Xcode: Timed out while launching application via Xcode.
+    t =    67.34s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (68.341 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' started.
+    t =     0.00s Start Test at 2026-11-17 21:40:09.605
+    t =     0.10s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testStrengthJourney] : Test skipped - persona strength not selected
+    t =     0.15s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' skipped (4.028 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-17 21:40:13.634.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 74.582 (74.593) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-17 21:40:13.636.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 74.582 (74.596) seconds
+Test Suite 'Selected tests' failed at 2026-11-17 21:40:13.637.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 74.582 (74.655) seconds
+2026-11-17 21:40:28.707 xcodebuild[37687:107923]  iOSSimulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4: Failed to launch app with identifier: com.ralsuwaidico.bikecomputer and options: {
+    "activate_suspended" = 0;
+    arguments =     (
+    );
+    binpref = arm64;
+    environment =     {
+        "APP_DISTRIBUTOR_ID_OVERRIDE" = "com.apple.AppStore";
+        "BC_UITEST_RESET" = 1;
+        "CA_ASSERT_MAIN_THREAD_TRANSACTIONS" = 0;
+        "CA_DEBUG_TRANSACTIONS" = 0;
+        "DYLD_FRAMEWORK_PATH" = "/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator:/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator/PackageFrameworks";
+        "DYLD_INSERT_LIBRARIES" = "/Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/usr/lib/libMainThreadChecker.dylib:/usr/lib/libRPAC.dylib:/usr/lib/libRPAC.dylib";
+        "DYLD_LIBRARY_PATH" = "/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator";
+        "LLVM_PROFILE_FILE" = "/dev/null";
+        NSUnbufferedIO = YES;
+        "OS_ACTIVITY_DT_MODE" = YES;
+        "OS_ACTIVITY_MODE" = info;
+        "PERFC_ENABLE_EXTENDED_DIAGNOSTIC_FORMAT" = 1;
+        "PERFC_ENABLE_PROFILE_MODE" = 1;
+        "PERFC_RESET_INSERT_LIBRARIES" = 1;
+        "PERFC_SUPPRESS_SYSTEM_REPORTS" = 1;
+        "SWIFT_BACKTRACE" = "enable=no";
+        TERM = dumb;
+        "XCODE_SCHEME_NAME" = BikeComputer;
+        "__XCODE_BUILT_PRODUCTS_DIR_PATHS" = "/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator";
+        "__XPC_DYLD_FRAMEWORK_PATH" = "/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator";
+        "__XPC_DYLD_LIBRARY_PATH" = "/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator";
+        "__XPC_LLVM_PROFILE_FILE" = "/dev/null";
+    };
+    stderr = "/dev/ttys001";
+    stdout = "/dev/ttys001";
+    "terminate_running_process" = 1;
+    "wait_for_debugger" = 1;
+} (error = Error Domain=FBSOpenApplicationServiceErrorDomain Code=1 "Simulator device failed to launch com.ralsuwaidico.bikecomputer." UserInfo={NSLocalizedDescription=Simulator device failed to launch com.ralsuwaidico.bikecomputer., NSUnderlyingError=0x93ebf4210 {Error Domain=FBSOpenApplicationServiceErrorDomain Code=1 "The request to open "com.ralsuwaidico.bikecomputer" failed." UserInfo={BSErrorCodeDescription=RequestDenied, NSLocalizedDescription=The request to open "com.ralsuwaidico.bikecomputer" failed., NSUnderlyingError=0x93ebf5b90 {Error Domain=FBProcessExit Code=64 "The process failed to launch." UserInfo={NSUnderlyingError=0x93ebf5c80 {Error Domain=RBSRequestErrorDomain Code=5 "Launch failed." UserInfo=0x93e4b49c0 (not displayed)}, BSErrorCodeDescription=launch-failed, NSLocalizedFailureReason=The process failed to launch.}}, FBSOpenApplicationRequestID=0x14c, NSLocalizedFailureReason=The request was denied by service delegate (SBMainWorkspace).}}, NSLocalizedFailureReason=The request was denied by service delegate (SBMainWorkspace)., FBSOpenApplicationRequestID=0x14c, SimCallingSelector=launchApplicationWithID:options:pid:error:, BSErrorCodeDescription=RequestDenied})
+2026-11-17 21:41:36.925 xcodebuild[37687:99847] [MT] IDETestOperationsObserverDebug: 200.762 elapsed -- Testing started completed.
+2026-11-17 21:41:36.926 xcodebuild[37687:99847] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-17 21:41:36.926 xcodebuild[37687:99847] [MT] IDETestOperationsObserverDebug: 200.762 sec, +200.762 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-fwwdilsmatnswqdtljfdnzrpxqyk/Logs/Test/Test-BikeComputer-2026.11.17_21-38-01-+0000.xcresult
+
+Failing tests:
+	JourneyTests.testHybridJourney()
+
+** TEST EXECUTE FAILED **
+
+Testing started
+=== journey-hybrid: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' skipped (2.213 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (68.341 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' skipped (4.028 seconds).
+=== journey-hybrid: E0-DIAG lines ===
