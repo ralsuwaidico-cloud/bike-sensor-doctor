@@ -24,6 +24,8 @@ struct RootView: View {
     /// Redesign: false = the compact Train panel, true = the full Hub. Reset whenever the Hub opens.
     @State private var hubExpanded = false
     @State private var cyclingDemo = false
+    /// The device's bottom safe-area inset, read from the window (Navigation v1.2 places the dock from the screen's bottom edge).
+    @State private var deviceBottom: CGFloat = 34
     @State private var lastCentreTap = Date.distantPast
     private let hubLog = Logger(subsystem: "com.ralsuwaidico.bikecomputer", category: "hub")
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -106,7 +108,15 @@ struct RootView: View {
             // centre button's routing and its labels are unchanged.
             // Checkpoint F (owner 7 Nov, RA-01): while a ride is being recorded or paused the Ride screen owns the bottom of
             // the display — the dock is removed (not just hidden) so the coach card and the controls are never covered.
-            .safeAreaInset(edge: .bottom, spacing: 0) { if !rideOwnsBottom { dock.padding(.bottom, 8) } }
+            // Navigation v1.2 (sheet F1): in the redesign the Train ball sits 34 pt above the bottom of the screen (16 pt
+            // without a home indicator); it was 18 pt too high. The production dock keeps its 8 pt.
+            .safeAreaInset(edge: .bottom, spacing: 0) { if !rideOwnsBottom { dock.padding(.bottom, CyProduct.redesign ? CyCradleMetrics.dockBottomPadding(deviceBottomInset: deviceBottom) : 8) } }
+            .task {
+                guard CyProduct.redesign else { return }
+                deviceBottom = CyCradleMetrics.deviceBottomInset
+                try? await Task.sleep(nanoseconds: 400_000_000)          // the window's insets can settle after the first frame
+                deviceBottom = CyCradleMetrics.deviceBottomInset
+            }
             // Run 157: a page whose content lives in its own NavigationStack (Plan, Progress, Profile, Home) does not take
             // the inset above for its scroll content, so Plan's last row ended under the dock. Scroll-content margins
             // reach every scroll view in the subtree; Ride (no scroll view) is placed by the safe-area inset.

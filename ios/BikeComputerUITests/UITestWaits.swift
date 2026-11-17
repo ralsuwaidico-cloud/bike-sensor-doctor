@@ -68,6 +68,25 @@ extension XCUIApplication {
         navigationBars[title].waitForExistence(timeout: timeout) || staticTexts[title].firstMatch.waitForExistence(timeout: 1)
     }
 
+    /// Brings an element of a scrolling page into the clear band of the screen — below a pinned header and above the
+    /// floating dock — with short drags, so the next tap lands on it and not on the header or the dock in front of it.
+    /// (Home v2.3 is one long page; a full `swipeUp` can carry an element under the pinned header.) Returns whether the
+    /// element ended inside the band.
+    @discardableResult
+    func reveal(_ e: XCUIElement, top: CGFloat = 200, bottomMargin: CGFloat = 150) -> Bool {
+        let bottom = frame.height - bottomMargin
+        func inBand() -> Bool { e.exists && e.frame.minY >= top && e.frame.maxY <= bottom }
+        var n = 0
+        while e.exists && !inBand() && n < 10 {
+            let dy: CGFloat = e.frame.maxY > bottom ? -200 : 200          // negative: the page moves up
+            let start = coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: dy)))
+            Thread.sleep(forTimeInterval: 0.4)
+            n += 1
+        }
+        return inBand()
+    }
+
     /// Short pause before a screenshot so animations and charts have finished drawing. Screenshots only — never used to
     /// wait for an element (use `waitForExistence` / `waitUntilSettled` for that).
     func settleForScreenshot(_ seconds: TimeInterval = 1) {

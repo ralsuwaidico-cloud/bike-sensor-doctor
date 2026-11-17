@@ -58,6 +58,20 @@ final class LabChecks: XCTestCase {
                 let ball = app.buttons["centreButton"].firstMatch, home = dock.buttons["Home"].firstMatch
                 XCTAssertTrue(ball.exists && ball.frame.maxX <= home.frame.minX + 1, "the Train ball is left of Home (\(ball.frame) / \(home.frame))")
                 XCTAssertEqual(ball.frame.width, 72, accuracy: 1, "Train ball is 72 pt"); XCTAssertEqual(ball.frame.height, 72, accuracy: 1)
+                // Navigation v1.2, sheet F1 / specification §1: the ball's bottom edge is 34 pt above the bottom of the screen
+                // on a phone with a home indicator, 16 pt without one; the ball starts 14 pt from the left edge.
+                let below = app.frame.height - ball.frame.maxY
+                print("LAB-NOTE dock: ball bottom \(below) pt above the screen bottom, left \(ball.frame.minX) pt, dock frame \(dock.frame)")
+                XCTAssertTrue(abs(below - 34) <= 1.5 || abs(below - 16) <= 1.5, "the Train ball sits 34 pt (16 pt without a home indicator) above the bottom of the screen, as in F1 — it is \(below) pt")
+                XCTAssertEqual(ball.frame.minX, 14, accuracy: 1, "the Train ball starts 14 pt from the left edge")
+                // Home v2.3 (provisional design): the prototype's sections are all there, on the demo athlete's records
+                for id in ["homeV23", "indicatorConsistency", "indicatorMix", "indicatorRecovery", "sleepBar", "metricRow-restingHR"] {
+                    XCTAssertTrue(app.descendants(matching: .any).matching(identifier: id).firstMatch.waitForExistence(timeout: 8), "Home v2.3 shows \(id)")
+                }
+                XCTAssertTrue(app.buttons["scheduleDay-0"].firstMatch.exists || app.descendants(matching: .any).matching(identifier: "scheduleEmpty").firstMatch.exists, "Home v2.3 shows the week's schedule (or says nothing is planned)")
+                XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "cyHeroRing").firstMatch.exists, "the previous dashboard is not shown in the redesign")
+                let rec = app.descendants(matching: .any).matching(identifier: "indicatorRecovery").firstMatch
+                XCTAssertFalse((rec.value as? String ?? "").contains("%"), "Recovery never shows a percentage (\(rec.value ?? ""))")
             }
             app.settleForScreenshot(2); shot("\(tag)-1-home")
             // Lab run 11: the card is one accessibility element of its own and is not reported as a button
@@ -71,7 +85,7 @@ final class LabChecks: XCTestCase {
                 if !(coach.exists || quiet.exists) { app.terminate(); continue }
                 var way = quiet
                 if coach.exists {
-                    if !coach.isHittable { app.swipeUp(); app.settleForScreenshot() }
+                    app.reveal(coach); app.settleForScreenshot()
                     if link.exists {
                         // the card leads to its own destination (a hybrid-coach suggestion here): that route must still work…
                         coach.tap()
@@ -92,13 +106,13 @@ final class LabChecks: XCTestCase {
                         }
                         app.settleForScreenshot(1)
                         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): back on Home after the card's destination")
-                        if !link.isHittable { app.swipeUp(); app.settleForScreenshot() }
+                        app.reveal(link); app.settleForScreenshot()
                         // …and the Coach page is one tap away on its own line
                         way = link
                     } else { way = coach }
                 }
                 do {
-                    if !way.isHittable { app.swipeUp(); app.settleForScreenshot() }
+                    app.reveal(way); app.settleForScreenshot()
                     way.tap()
                     XCTAssertTrue(app.staticTexts["coachTitle"].firstMatch.waitForExistence(timeout: 8), "\(t.id): the Coach page opens")
                     XCTAssertTrue(app.staticTexts["coachRulesNote"].firstMatch.exists, "\(t.id): the Coach page says it follows rules and is not an AI chat")
@@ -121,6 +135,33 @@ final class LabChecks: XCTestCase {
                 }
             }
             app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-2-home-lower")
+            if i == 0 {
+                // Home v2.3 interactions on the athlete's records: a schedule day opens that day; the graph and the metrics are there
+                app.swipeDown(); app.swipeDown(); app.settleForScreenshot(1)
+                let day = app.buttons["scheduleDay-0"].firstMatch
+                if day.exists {
+                    app.reveal(day); day.tap()
+                    XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch.waitForExistence(timeout: 8), "a schedule day opens that day's page")
+                    app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1)
+                    XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "back on Home from the day page")
+                }
+                let chart = app.descendants(matching: .any).matching(identifier: "trendsChart").firstMatch, emptyTrends = app.descendants(matching: .any).matching(identifier: "trendsEmpty").firstMatch
+                XCTAssertTrue(chart.exists || emptyTrends.exists, "Home v2.3 shows the trend graph or says there is nothing recorded")
+                if chart.exists { app.reveal(chart, top: 170, bottomMargin: 130); app.settleForScreenshot(1); shot("\(tag)-2b-home-trends") }
+                // Navigation v1.2, C1 / C2: at the end of the page the last control is clear of the cradle (the dock's highest
+                // point is 115 pt above the bottom of the screen with a home indicator, 97 pt without; clearance at least 12 pt)
+                for _ in 0..<4 { app.swipeUp() }
+                app.settleForScreenshot(1); shot("\(tag)-2c-home-end")
+                let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'metricRow-'"))
+                let last = rows.element(boundBy: max(0, rows.count - 1))
+                XCTAssertTrue(last.exists, "the Key metrics rows are the end of Home v2.3")
+                let ball = app.buttons["centreButton"].firstMatch
+                let indicator = abs((app.frame.height - ball.frame.maxY) - 34) <= 1.5
+                let lastAbove = app.frame.height - last.frame.maxY
+                print("LAB-NOTE Home end of page: last control ends \(lastAbove) pt above the screen bottom (scrolling inset \(indicator ? 128 : 110))")
+                XCTAssertGreaterThanOrEqual(lastAbove, (indicator ? 115.1 : 97.1) + 12 - 1, "at the end of Home the last control is at least 12 pt above the cradle (it ends \(lastAbove) pt above the screen bottom)")
+                app.swipeDown(); app.swipeDown(); app.swipeDown(); app.settleForScreenshot(1)
+            }
             let centre = app.buttons["centreButton"].firstMatch
             XCTAssertTrue(centre.waitForExistence(timeout: 5), "\(t.id): the Train ball")     // required: no silent skip
             centre.tap(); app.settleForScreenshot(2); shot("\(tag)-3-train"); XCTAssertTrue(banner(app), "\(t.id): banner on Train")

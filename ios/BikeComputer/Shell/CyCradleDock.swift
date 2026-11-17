@@ -24,6 +24,28 @@ enum CyCradleMetrics {
     static let sideMargin: CGFloat = 14
     static let height: CGFloat = 92
     static let regionHeight: CGFloat = 48
+
+    // Position on the screen (final visual specification §1, sheet F1): the ball's bottom edge is 34 pt above the bottom
+    // of the screen on phones with a home indicator and 16 pt on phones without one (capsule bottom 42 / 24 pt).
+    // The ball is 72 pt in a 92 pt frame, so 10 pt of the frame lies below the ball.
+    static let ballBottomWithIndicator: CGFloat = 34
+    static let ballBottomWithoutIndicator: CGFloat = 16
+    /// The bottom safe-area inset of the device (the home-indicator zone); 0 on phones without one. 34 until a window exists.
+    static var deviceBottomInset: CGFloat {
+        let w = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first
+        return w?.safeAreaInsets.bottom ?? 34
+    }
+    /// Padding under the dock's frame when it is placed as a bottom safe-area inset. Negative on home-indicator phones:
+    /// the frame's empty 10 pt below the ball reaches into the indicator zone so the ball sits where F1 draws it.
+    static func dockBottomPadding(deviceBottomInset s: CGFloat) -> CGFloat {
+        let frameBelowBall = (height - ball) / 2
+        return s > 0 ? ballBottomWithIndicator - frameBelowBall - s : ballBottomWithoutIndicator - frameBelowBall
+    }
+    /// Scrolling inset from the bottom of the screen (C2): 128 pt with a home indicator, 110 pt without.
+    static func scrollInset(deviceBottomInset s: CGFloat) -> CGFloat { s > 0 ? 128 : 110 }
+    /// What a redesigned page adds under its last item so the page ends at the scrolling inset. The shell already gives
+    /// every scroll view 80 pt of bottom margin above the device's own bottom inset (ContentView).
+    static var pageEndPadding: CGFloat { let s = deviceBottomInset; return max(0, scrollInset(deviceBottomInset: s) - 80 - s) }
 }
 
 /// The capsule with its cradle: one continuous outline. Local coordinates: the ball's centre is (36, height / 2).

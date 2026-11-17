@@ -23,6 +23,7 @@ struct HomeView: View {
     @State private var coachSheet: HomeCoachSheet? = nil
     @State private var showAdjustments = false
     @State private var showCoach = false
+    @State private var showTrendsInfo = false
     /// Profile Quick Menu (6 Nov addendum): one Bool, so repeated taps can never stack menus.
     @State private var showMenu = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -35,8 +36,13 @@ struct HomeView: View {
         let watchOK = hub.deviceState("watch")?.isConnectedOrBetter ?? false
         let hrOK = watchOK || hub.deviceStates.values.contains { $0.provides.localizedCaseInsensitiveContains("heart") && $0.state.isConnectedOrBetter }
         let setup = store.homeSetupItems(hrConnected: hrOK)
+        let v23: Home21Data? = CyProduct.redesign ? store.homeV23(hrConnected: hrOK) : nil
         NavigationStack(path: $path) {
             ScrollView {
+                if let v23 {
+                    // Home v2.3 (provisional design) on the athlete's own records — Redesign/HomeV23Screen.swift
+                    homeV23(v23, h)
+                } else {
                 VStack(alignment: .leading, spacing: CyTheme.sp3) {
                     banner
                     if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
@@ -52,6 +58,7 @@ struct HomeView: View {
                 .padding(.bottom, CyTheme.dockClearance)
                 .frame(maxWidth: CyTheme.maxContentWidth + 2 * CyTheme.margin)
                 .frame(maxWidth: .infinity)
+                }
             }
             .background(CyTheme.canvas)
             .overlay {
@@ -65,7 +72,15 @@ struct HomeView: View {
             }
             // B1 (6 Nov; run 172): Home's own header, pinned inside the safe area (below the status bar on every
             // device) — the date and a real 44 × 44 pt avatar button (the system bar reported 36 pt at large text)
-            .safeAreaInset(edge: .top, spacing: 0) { homeHeader(dash) }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let v23 {
+                    // Home v2.3's own compact header, pinned: the avatar is the only way to Profile (Navigation v1.2), so it
+                    // must not scroll away. (The prototype scrolled it with the page — a stated difference.)
+                    Home21Header(data: v23, onAvatar: { tab = 4 })
+                        .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 6)
+                        .background(CyTheme.canvas)
+                } else { homeHeader(dash) }
+            }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: HomeRoute.self) { route in destination(route) }
             .onChange(of: tab) { _, _ in showMenu = false }           // the menu never survives a tab change
@@ -74,7 +89,62 @@ struct HomeView: View {
             .sheet(item: $prescription) { w in HomePrescriptionSheet(workout: w) }
             .sheet(item: $coachSheet) { s in coachSheetView(s) }
             .sheet(isPresented: $showCoach) { CoachTimelineScreen(onClose: { showCoach = false }).cyThemeRoot() }
+            .sheet(isPresented: $showTrendsInfo) { HomeTrendsInfoSheet(close: { showTrendsInfo = false }).presentationDetents([.medium, .large]).cyThemeRoot() }
         }
+    }
+
+    // MARK: Home v2.3 (redesign only) — the prototype's screen on this athlete's records; every tap goes to a page that already exists
+    private func homeV23(_ data: Home21Data, _ h: HomeToday) -> some View {
+        let item = h.showCoach ? store.homeCoach() : nil
+        let now = Date()
+        let monday = TrainingLedger.monday(of: now)
+        var coach = Home21Coach(isShown: !recorder.isActive)
+        var actions = Home21Actions()
+        actions.onCoach = { showCoach = true }
+        if let c = item {
+            let ownPage = c.opensCoachPageInRedesign
+            let decision: Bool
+            switch c.source { case .adaptiveProposal, .hybridProposal, .ftp: decision = true; default: decision = false }
+            coach = Home21Coach(model: CyCoachPreviewModel(text: c.title, needsDecision: decision),
+                                identifier: "homeCoachAction", spokenPrefix: CycliftLab.isLab ? "Demo, rule-based, not AI. " : "",
+                                hint: ownPage ? "Opens the Coach page" : "Opens \(c.actionLabel ?? "details")")
+            actions.onCoach = { coachTapped(c) }
+            if !ownPage { actions.onCoachPage = { showCoach = true } }
+        }
+        actions.onAvatar = { tab = 4 }                                   // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
+        actions.onConsistency = { path.append(.weekOverview(now)) }
+        actions.onMix = { path.append(.weekOverview(now)) }
+        actions.onRecovery = { path.append(.recovery) }
+        actions.onSleep = { path.append(.recovery) }
+        actions.onStep = { s in if s.id == HomeSetupItem.Step.heartRate.rawValue || s.id == HomeSetupItem.Step.health.rawValue { tab = 4 } else { tab = 1 } }
+        actions.onDay = { d in if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) } }
+        actions.onEndurance = { path.append(.cycling) }
+        actions.onStrength = { path.append(.strength) }
+        actions.onTrendsInfo = { showTrendsInfo = true }
+        actions.onGraphDay = { d, _ in
+            let count = data.graph.first(where: { $0.dates.contains(d) })?.dates.count ?? 7
+            path.append(.day(HomeV23Builder.date(ofColumn: d.id, count: count, now: now, calendar: .current)))
+        }
+        actions.onMetric = { m in if m.id == "ftp" { tab = 3 } else { path.append(.recovery) } }
+        let showLines = diag.unseenCrash != nil || h.caution != nil || (sync.state == .needsConfirmation && store.today?.kind.isRide == true)
+        return VStack(alignment: .leading, spacing: CySpace.m) {
+            if showLines {
+                VStack(alignment: .leading, spacing: CySpace.s) {
+                    banner
+                    if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
+                }
+                .padding(.horizontal, 20).padding(.top, CySpace.s)
+            }
+            Home21Content(data: data, coach: coach, showsHeader: false, actions: actions)
+        }
+        // Navigation v1.2 (F7, C2): with the shell's scroll margin this ends the page 128 pt (110 pt without a home
+        // indicator) above the bottom of the screen. Content may pass behind the dock while scrolling — that is the
+        // approved behaviour — and the last control scrolls clear of the cradle's arms.
+        .padding(.bottom, CyCradleMetrics.pageEndPadding)
+        .frame(maxWidth: CyTheme.maxContentWidth + 2 * CyTheme.margin)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("homeV23")
     }
 
     private func homeHeader(_ dash: HomeDashboard) -> some View {

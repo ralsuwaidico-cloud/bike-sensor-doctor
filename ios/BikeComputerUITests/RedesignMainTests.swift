@@ -77,13 +77,19 @@ final class RedesignMainTests: XCTestCase {
         XCTAssertTrue(app.waitForHome(name: "Sam", timeout: 10), "required: back on Home")
         // Coach: the page opens and answers from this athlete's real record by rules
         let quiet = el(app, "homeCoachQuiet"), link = app.buttons["homeCoachOpen"].firstMatch, card = el(app, "homeCoachAction")
-        var n = 0; while !(quiet.exists || link.exists || card.exists) && n < 4 { app.swipeUp(); n += 1 }
+        // Home v2.3 (provisional design) on this athlete's real records: the prototype's sections, never the previous dashboard
+        for id in ["homeV23", "indicatorConsistency", "indicatorMix", "indicatorRecovery", "scheduleDay-0", "sleepBar", "metricRow-restingHR"] { must(el(app, id), "Home v2.3: \(id)") }
+        XCTAssertFalse(el(app, "cyHeroRing").exists, "the previous dashboard is not shown when the redesign is on")
+        let consistency = el(app, "indicatorConsistency")
+        let cv = consistency.value as? String ?? ""
+        XCTAssertTrue(cv.contains("0 of") || cv.contains("Nothing planned"), "Consistency counts this athlete's own planned sessions, none done yet (\(cv))")
+        XCTAssertFalse((el(app, "indicatorRecovery").value as? String ?? "").contains("%"), "Recovery shows no percentage")
         let way = link.exists ? link : (quiet.exists ? quiet : card)
-        must(way, "a way into the Coach page from Home"); if !way.isHittable { app.swipeUp() }; way.tap()
+        must(way, "a way into the Coach page from Home"); app.reveal(way); shot("8b-home-coach"); way.tap()
         if !app.staticTexts["coachTitle"].firstMatch.waitForExistence(timeout: 6) {
             // the card led to its own destination (allowed); the Coach page must then be reachable by its link
             let close = app.buttons["homeSheetClose"].firstMatch; if close.exists { close.tap() }
-            must(link, "the Coach page link beside a card that leads elsewhere"); link.tap()
+            must(link, "the Coach page link beside a card that leads elsewhere"); app.reveal(link); link.tap()
         }
         must(app.staticTexts["coachTitle"].firstMatch, "the Coach page")
         XCTAssertFalse(app.staticTexts["DEMO DATA"].firstMatch.exists, "the main app's Coach page is not labelled as demo data")
