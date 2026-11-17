@@ -41,6 +41,10 @@ on:
         type: choice
         options: [full, quick, ui]
         default: full
+      only:
+        description: "full scope: run ONLY these test jobs (comma list of unit,smoke,flows,journeys,layout-small,layout-standard,layout-promax,layout-owner,watch). Empty = all. A run limited this way never archives or uploads."
+        type: string
+        default: ""
       devices:
         description: "Layout audit devices (comma list of small,standard,promax,owner)"
         type: string
@@ -173,8 +177,11 @@ jobs:
         env:
           SCOPE: ${{ needs.mode.outputs.scope }}
           DEVS: ${{ inputs.devices }}
+          ONLY: ${{ inputs.only }}
         run: |
           run=true
+          # focused rerun of named jobs (17 Nov 2026): closes gaps without repeating the whole suite
+          if [ -n "$ONLY" ]; then case ",$ONLY," in *",${{ matrix.job }},"*) ;; *) run=false;; esac; fi
           if [ "$SCOPE" = ui ]; then
             case "${{ matrix.stage }}" in
               layout) case ",${DEVS:-small,standard,promax,owner}," in *",${{ matrix.devices }},"*) ;; *) run=false;; esac ;;
@@ -212,7 +219,8 @@ jobs:
 
   release:
     needs: [apple, mode, test]
-    if: needs.mode.outputs.scope == 'full' && needs.test.result == 'success'
+    # never after a focused rerun (inputs.only): its skipped jobs report success without having tested anything
+    if: needs.mode.outputs.scope == 'full' && needs.test.result == 'success' && inputs.only == ''
     runs-on: macos-26
     timeout-minutes: 75
     outputs:

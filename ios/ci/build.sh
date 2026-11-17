@@ -186,6 +186,15 @@ run_journeys() {
   local U=0
   warm_release_app
   for persona in hybrid cycling strength; do record_journey "$persona" || U=1; done
+  # Main Development configuration (owner, 17 Nov 2026): the SAME build of the main app, run once more with the
+  # redesign switched on by its simulator-only test setting. No second build, no other app.
+  local RT=$SECONDS
+  TEST_RUNNER_LAYOUT_DIR="$LAYOUT" twb "$RELEASE_XR" "$SIM" "$OUT/redesign-main.log" -only-testing:BikeComputerUITests/RedesignMainTests
+  local RM=$?
+  digest "$OUT/redesign-main.log" "redesign-main"
+  local RN; RN=$(grep -E "Test Case .*RedesignMainTests.* passed" "$OUT/redesign-main.log" | sort -u | wc -l | tr -d ' ')
+  if [ $RM -eq 0 ] && [ "$RN" -ge 1 ]; then note "RESULT redesigned main app (switch on, real services, test athlete): ok · $RN test(s) · $(since $RT)"
+  else note "RESULT redesigned main app (switch on, real services, test athlete): FAILED (exit $RM, passed $RN) · $(since $RT)"; U=1; fi
   note "RESULT journey (recorded): $([ $U -eq 0 ] && echo ok || echo FAILED) — JourneyTests hybrid, cycling, strength · $(since $TS)"
   [ $U -eq 0 ] || STATUS=1
 }
