@@ -29,14 +29,18 @@ final class LabChecks: XCTestCase {
         // is redrawn about once a second; with Home v2.3 Home's body is evaluated twice at launch and never again, so no
         // later state is ever shown. The cause is therefore inside Home v2.3's content. This run shows its first N
         // sections (0 = none … 7 = all): the first N at which Home stops being redrawn names the section.
-        for variant in ["v23-0", "v23-1", "v23-2", "v23-3", "v23-4", "v23-5", "v23-6", "v23"] {
+        // Run 30: Home is evaluated twice and never again with 0, 1, … 7 sections alike — the cause is not a section but
+        // the wrapper Home v2.3 sits in. Variants of that wrapper: "oldpad" = as it was (asks the window for its bottom
+        // inset while the body is evaluated); "v23" = the inset handed down by the shell instead; "plain" = the content
+        // without the wrapper's modifiers; "nocontain" = without the container marking.
+        for variant in ["v23-oldpad", "v23", "v23-plain", "v23-nocontain", "v23-stub", "v23-stub2"] {
             let file = "/tmp/cy-diag-\(UUID().uuidString).txt"
             let app = XCUIApplication()
             app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
             app.launchEnvironment["LAB_THEME"] = "obsidian"
             app.launchEnvironment["CY_DIAG_FILE"] = file
             if variant != "v23" { app.launchEnvironment["CY_DIAG_HOME"] = variant }
-            let sections = variant == "v23" ? 7 : (Int(variant.dropFirst(4)) ?? -1)
+            let sections = 7
             app.launch()
             guard banner(app), app.buttons["centreButton"].firstMatch.waitForExistence(timeout: 20) else { print("LAB-NOTE repro [\(variant)]: app not shown"); app.terminate(); continue }
             app.settleForScreenshot(2)
@@ -47,13 +51,14 @@ final class LabChecks: XCTestCase {
             let evaluations = stages().components(separatedBy: "Home body evaluation").count - 1
             var presented = "not tried (no control with \(sections) sections)"
             let control = sections >= 2 ? app.buttons["scheduleDay-0"].firstMatch : el("indicatorConsistency")
-            if sections >= 1, control.waitForExistence(timeout: 5) {
+            if !variant.contains("stub"), control.waitForExistence(timeout: 5) {
                 control.tap()
                 let back = app.navigationBars.buttons.firstMatch
                 presented = "\(back.waitForExistence(timeout: 6) && back.isHittable)"
             }
             let tail = stages().components(separatedBy: " | ").filter { !$0.contains("body evaluation") }.joined(separator: " | ")
-            print("LAB-NOTE repro [sections \(sections)]: Home body evaluations in the first seconds \(evaluations); page presented at first tap \(presented); other stages: \(tail)")
+            print("LAB-NOTE repro [\(variant)]: Home body evaluations in the first seconds \(evaluations); page presented at first tap \(presented); other stages: \(tail)")
+            shot("repro-\(variant)-after-tap")
             app.terminate()
             try? FileManager.default.removeItem(atPath: file)
         }

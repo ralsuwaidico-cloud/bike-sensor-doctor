@@ -111,6 +111,7 @@ struct RootView: View {
             // Navigation v1.2 (sheet F1): in the redesign the Train ball sits 34 pt above the bottom of the screen (16 pt
             // without a home indicator); it was 18 pt too high. The production dock keeps its 8 pt.
             .safeAreaInset(edge: .bottom, spacing: 0) { if !rideOwnsBottom { dock.padding(.bottom, CyProduct.redesign ? CyCradleMetrics.dockBottomPadding(deviceBottomInset: deviceBottom) : 8) } }
+            .environment(\.cyDeviceBottomInset, deviceBottom)
             .overlay(alignment: .topLeading) { if CyTouchProbe.isOn { CyTouchProbeLabel() } }      // diagnosis only (Shell/CyTouchProbe.swift)
             .task {
                 CyTouchProbe.installIfAsked()

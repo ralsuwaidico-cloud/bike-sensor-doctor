@@ -45,7 +45,17 @@ enum CyCradleMetrics {
     static func scrollInset(deviceBottomInset s: CGFloat) -> CGFloat { s > 0 ? 128 : 110 }
     /// What a redesigned page adds under its last item so the page ends at the scrolling inset. The shell already gives
     /// every scroll view 80 pt of bottom margin above the device's own bottom inset (ContentView).
-    static var pageEndPadding: CGFloat { let s = deviceBottomInset; return max(0, scrollInset(deviceBottomInset: s) - 80 - s) }
+    static func pageEndPadding(deviceBottomInset s: CGFloat) -> CGFloat { max(0, scrollInset(deviceBottomInset: s) - 80 - s) }
+}
+
+/// The device's bottom inset, read once by the shell outside any view's body (ContentView's task) and handed down.
+/// A page must not ask the window for it while its body is being evaluated (see HomeView, Lab runs 29–31).
+private struct CyDeviceBottomInsetKey: EnvironmentKey { static let defaultValue: CGFloat = 34 }
+extension EnvironmentValues {
+    var cyDeviceBottomInset: CGFloat {
+        get { self[CyDeviceBottomInsetKey.self] }
+        set { self[CyDeviceBottomInsetKey.self] = newValue }
+    }
 }
 
 /// The capsule with its cradle: one continuous outline. Local coordinates: the ball's centre is (36, height / 2).

@@ -27,6 +27,7 @@ struct HomeView: View {
     /// Profile Quick Menu (6 Nov addendum): one Bool, so repeated taps can never stack menus.
     @State private var showMenu = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.cyDeviceBottomInset) private var deviceBottomInset
 
     var body: some View {
         // Checkpoint C (owner 5 Nov): the Premium Home Dashboard. Today's execution card and its actions live in the
@@ -105,7 +106,10 @@ struct HomeView: View {
     }
 
     // MARK: Home v2.3 (redesign only) — the prototype's screen on this athlete's records; every tap goes to a page that already exists
-    private func homeV23(_ data: Home21Data, _ h: HomeToday) -> some View {
+    private func homeV23(_ data: Home21Data, _ h: HomeToday) -> AnyView {
+        // reproduction brackets: "stub" returns before anything in this function runs; "stub2" (below) after all of it has
+        // run but without showing Home v2.3's views
+        if CyTouchProbe.homeVariant == "v23-stub" { return AnyView(Text("stub").frame(maxWidth: .infinity, minHeight: 200).accessibilityIdentifier("diagStub")) }
         let item = h.showCoach ? store.homeCoach() : nil
         let now = Date()
         let monday = TrainingLedger.monday(of: now)
@@ -146,7 +150,17 @@ struct HomeView: View {
         }
         actions.onMetric = { m in if m.id == "ftp" { tab = 3 } else { path.append(.recovery) } }
         let showLines = diag.unseenCrash != nil || h.caution != nil || (sync.state == .needsConfirmation && store.today?.kind.isRide == true)
-        return VStack(alignment: .leading, spacing: CySpace.m) {
+        // Reproduction variants (Shell/CyTouchProbe.swift; "" on every normal launch). Run 30: Home stops being redrawn
+        // even with no v2.3 section shown, so the cause is in this wrapper, not in a section. "oldpad" restores the one
+        // thing here that is not plain SwiftUI — asking the window for its bottom inset while the body is evaluated;
+        // "plain" shows the content without this wrapper's own modifiers; "nocontain" drops only the container marking.
+        let variant = CyTouchProbe.homeVariant
+        let endPadding: CGFloat = variant == "v23-oldpad"
+            ? CyCradleMetrics.pageEndPadding(deviceBottomInset: CyCradleMetrics.deviceBottomInset)
+            : CyCradleMetrics.pageEndPadding(deviceBottomInset: deviceBottomInset)
+        if variant == "v23-stub2" { return AnyView(Text("stub 2, \(data.name), \(coach.identifier), \(showLines ? 1 : 0), \(Int(endPadding))").frame(maxWidth: .infinity, minHeight: 200).accessibilityIdentifier("diagStub")) }
+        if variant == "v23-plain" { return AnyView(Home21Content(data: data, coach: coach, showsHeader: false, actions: actions)) }
+        let page = VStack(alignment: .leading, spacing: CySpace.m) {
             if showLines {
                 VStack(alignment: .leading, spacing: CySpace.s) {
                     banner
@@ -159,11 +173,13 @@ struct HomeView: View {
         // Navigation v1.2 (F7, C2): with the shell's scroll margin this ends the page 128 pt (110 pt without a home
         // indicator) above the bottom of the screen. Content may pass behind the dock while scrolling — that is the
         // approved behaviour — and the last control scrolls clear of the cradle's arms.
-        .padding(.bottom, CyCradleMetrics.pageEndPadding)
+        .padding(.bottom, endPadding)
         .frame(maxWidth: CyTheme.maxContentWidth + 2 * CyTheme.margin)
         .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("homeV23")
+        if variant == "v23-nocontain" { return AnyView(page) }
+        return AnyView(page
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("homeV23"))
     }
 
     private func homeHeader(_ dash: HomeDashboard) -> some View {
