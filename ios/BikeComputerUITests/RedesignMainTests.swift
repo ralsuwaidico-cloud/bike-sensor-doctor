@@ -107,6 +107,17 @@ final class RedesignMainTests: XCTestCase {
         XCTAssertTrue(again.waitForHome(name: "Sam", timeout: 30), "required: after a relaunch the athlete and plan are still there")
         XCTAssertFalse(again.buttons["onboardingContinue"].firstMatch.exists, "onboarding does not return")
         must(el(again, "cradleDock"), "the redesigned dock after relaunch")
+        // Home navigation in the main app with the redesign on (the Lab runs 20–28 defect: the handler runs, the page never
+        // appears). Required here too: the first tap on a schedule day presents that day's page — the page itself is on
+        // screen and its back button can be tapped, not merely an identifier that exists somewhere.
+        let day = again.buttons["scheduleDay-0"].firstMatch
+        must(day, "Home v2.3 schedule day after relaunch")
+        day.tap()
+        let page = el(again, "homeDayDetail"), back = again.navigationBars.buttons.firstMatch
+        let presented = page.waitForExistence(timeout: 8) && back.waitForExistence(timeout: 4) && back.isHittable
+        print("REDESIGN-NOTE main app, redesign on: schedule day presented its page at the first tap: \(presented)")
+        shot("9-home-day-after-first-tap")
+        XCTAssertTrue(presented, "required: in the redesigned main app the first tap on a schedule day presents that day's page")
     }
 
     /// With the setting absent the same build shows the existing interface: the redesign is not on by default.

@@ -17,44 +17,40 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(b.waitForExistence(timeout: 8), "tab \(name)")
         if b.exists { b.tap(); app.settleForScreenshot(2) }
     }
-    /// Diagnosis for Lab runs 20–26. Run 26: with the touch probe on, the same Home taps opened their pages; run 25, same
-    /// check without it, they did not. The probe has two parts (a window recogniser; a text element redrawn 2.5 times a
-    /// second), so this launches the same build four times — neither, recogniser only, text element only, both — taps
-    /// the first schedule day each time, and reads the stages the app wrote to a file: handler ran, route list changed,
-    /// destination built. The on-screen counter used in runs 23–25 did not update and is no longer used.
-    func test0HomeTapDiagnosis() throws {
-        // Run 27: in every mode the handler ran and then nothing followed — no change of the route list was observed and no
-        // destination was built. (Run 26's "pages opened with the probe on" was this check's own mistake: it accepted a
-        // title that exists on a hidden page.) So the request is lost between the handler and the stack. This run records
-        // the route list before and after the handler, every write the stack makes to it, the state of each navigation
-        // controller, how often Home is redrawn, and — mode "alt" — whether the stack presents a page asked for by a flag.
-        for mode in ["none", "alt"] {
+    /// Minimal reproduction for the Home navigation defect (Lab runs 20–28). Run 28, from the app's own stage file: the
+    /// handler writes the route list (0 → 1 → 2) and the list keeps the value, but Home is not redrawn (its change
+    /// observer never runs), no destination is built, every navigation controller stays at one page, and a page asked
+    /// for by a flag does not appear either. So the stack does not react to its own state. This keeps Home's stack, route
+    /// list and destinations and swaps only what the stack shows: one bare button; the same with the v2.3 header; the
+    /// previous dashboard; Home v2.3. "Presented" means the pushed page's back button is on screen and can be tapped —
+    /// not that an identifier exists somewhere.
+    func test0HomeNavigationReproduction() throws {
+        for variant in ["bare", "bareHeader", "legacy", "v23"] {
             let file = "/tmp/cy-diag-\(UUID().uuidString).txt"
             let app = XCUIApplication()
             app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
             app.launchEnvironment["LAB_THEME"] = "obsidian"
             app.launchEnvironment["CY_DIAG_FILE"] = file
-            if mode != "none" { app.launchEnvironment["CY_DIAG_TOUCHES"] = mode }
+            if variant != "v23" { app.launchEnvironment["CY_DIAG_HOME"] = variant }
             app.launch()
-            guard banner(app), app.waitForHome(name: "Demo", timeout: 20) else { print("LAB-NOTE diag [\(mode)]: Home not shown"); app.terminate(); continue }
+            guard banner(app), app.buttons["centreButton"].firstMatch.waitForExistence(timeout: 20) else { print("LAB-NOTE repro [\(variant)]: app not shown"); app.terminate(); continue }
             app.settleForScreenshot(2)
             func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
             func stages() -> String { ((try? String(contentsOfFile: file, encoding: .utf8)) ?? "file not readable").split(separator: "\n").joined(separator: " | ") }
-            let day = app.buttons["scheduleDay-0"].firstMatch
-            guard day.exists else { print("LAB-NOTE diag [\(mode)]: no schedule day"); app.terminate(); continue }
-            day.tap()
-            let opened = el("homeDayDetail").waitForExistence(timeout: 5)
-            Thread.sleep(forTimeInterval: 3)
-            print("LAB-NOTE diag [\(mode)] day tap: page opened \(opened); stages: \(stages())")
-            if opened { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
-            let ring = el("indicatorConsistency")
-            if ring.exists {
-                ring.tap()
-                let week = el("homeWeekOverview").waitForExistence(timeout: 5)
-                Thread.sleep(forTimeInterval: 3)
-                print("LAB-NOTE diag [\(mode)] Consistency tap: week page \(week); navigation bars \(app.navigationBars.count); stages: \(stages())")
-                shot("diag-\(mode)-after-consistency")
+            let control: XCUIElement
+            switch variant {
+            case "bare", "bareHeader": control = el("diagPush")
+            case "legacy": control = el("homeRecovery")
+            default: control = app.buttons["scheduleDay-0"].firstMatch
             }
+            guard control.waitForExistence(timeout: 8) else { print("LAB-NOTE repro [\(variant)]: control not found"); shot("repro-\(variant)-no-control"); app.terminate(); continue }
+            if variant == "legacy" { app.reveal(control, top: 200) }
+            control.tap()
+            let back = app.navigationBars.buttons.firstMatch
+            let presented = back.waitForExistence(timeout: 6) && back.isHittable
+            Thread.sleep(forTimeInterval: 1.5)
+            shot("repro-\(variant)-after-tap")
+            print("LAB-NOTE repro [\(variant)]: page presented (back button on screen) \(presented); stages: \(stages())")
             app.terminate()
             try? FileManager.default.removeItem(atPath: file)
         }

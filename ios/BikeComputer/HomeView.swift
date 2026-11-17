@@ -38,10 +38,18 @@ struct HomeView: View {
         let setup = store.homeSetupItems(hrConnected: hrOK)
         let v23: Home21Data? = CyProduct.redesign ? store.homeV23(hrConnected: hrOK) : nil
         let _ = CyTouchProbe.bodyTick("Home")
-        // diagnosis only (Shell/CyTouchProbe.swift): when a test asks for the stage file, every write the stack itself makes to the route list is recorded
-        NavigationStack(path: CyTouchProbe.fileOn ? Binding(get: { path }, set: { CyTouchProbe.note("the stack set the route list to \($0.count)"); path = $0 }) : $path) {
+        let variant = CyTouchProbe.homeVariant            // "" except in the screen tests' reproduction (Shell/CyTouchProbe.swift)
+        NavigationStack(path: $path) {
             ScrollView {
-                if let v23 {
+                if variant == "bare" || variant == "bareHeader" {
+                    Button("Open the test page") {
+                        CyTouchProbe.note("bare handler; route list before \(path.count)")
+                        path.append(.recovery)
+                        CyTouchProbe.note("bare handler; route list after \(path.count)")
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 60).padding(.top, 60)
+                    .accessibilityIdentifier("diagPush")
+                } else if let v23, variant != "legacy" {
                     // Home v2.3 (provisional design) on the athlete's own records — Redesign/HomeV23Screen.swift
                     homeV23(v23, h)
                 } else {
@@ -75,7 +83,8 @@ struct HomeView: View {
             // B1 (6 Nov; run 172): Home's own header, pinned inside the safe area (below the status bar on every
             // device) — the date and a real 44 × 44 pt avatar button (the system bar reported 36 pt at large text)
             .safeAreaInset(edge: .top, spacing: 0) {
-                if let v23 {
+                if variant == "bare" { EmptyView() }
+                else if let v23, variant != "legacy" {
                     // Home v2.3's own compact header, pinned: the avatar is the only way to Profile (Navigation v1.2), so it
                     // must not scroll away. (The prototype scrolled it with the page — a stated difference.)
                     Home21Header(data: v23, onAvatar: { tab = 4 })
@@ -116,10 +125,8 @@ struct HomeView: View {
         actions.onAvatar = { tab = 4 }                                   // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
         actions.onConsistency = {
             CyTouchProbe.note("handler: week overview; route list before \(path.count)")
-            // diagnosis mode "alt": ask the same stack for a page by its other mechanism (a yes/no flag), to learn whether
-            // the stack can present anything at all
-            if CyTouchProbe.altPush { showAdjustments = true; CyTouchProbe.noteNav("after setting the flag-presented page") }
-            else { path.append(.weekOverview(now)); CyTouchProbe.noteNav("after the week handler, route list \(path.count)") }
+            path.append(.weekOverview(now))
+            CyTouchProbe.note("after the week handler, route list \(path.count)")
         }
         actions.onMix = { CyTouchProbe.note("handler: week overview"); path.append(.weekOverview(now)) }
         actions.onRecovery = { CyTouchProbe.note("handler: recovery"); path.append(.recovery) }
@@ -128,7 +135,7 @@ struct HomeView: View {
         actions.onDay = { d in
             CyTouchProbe.note("handler: day \(d.id); route list before \(path.count)")
             if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) }
-            CyTouchProbe.noteNav("after the day handler, route list \(path.count)")
+            CyTouchProbe.note("after the day handler, route list \(path.count)")
         }
         actions.onEndurance = { CyTouchProbe.note("handler: cycling"); path.append(.cycling) }
         actions.onStrength = { CyTouchProbe.note("handler: strength"); path.append(.strength) }

@@ -37,13 +37,22 @@ enum CyTouchProbe {
     }
 
     static var fileOn: Bool { !file.isEmpty }
-    static var altPush: Bool { mode == "alt" }
+    /// Minimal reproduction (run 28 showed the route list is written and kept, yet Home is not redrawn and nothing is
+    /// presented). CY_DIAG_HOME swaps what Home's own navigation stack shows, keeping the stack, its route list and its
+    /// destinations exactly as they are: "bare" = one button that asks for the Recovery page and nothing else;
+    /// "bareHeader" = the same with Home v2.3's pinned header; "legacy" = the previous dashboard; unset = Home v2.3.
+    #if targetEnvironment(simulator)
+    static let homeVariant = ProcessInfo.processInfo.environment["CY_DIAG_HOME"] ?? ""
+    #else
+    static let homeVariant = ""
+    #endif
     private static var bodies = 0
-    /// Counts evaluations of a view's body and writes every 25th, so a rendering storm shows in the file.
+    /// Records each of the first 40 evaluations of a view's body, then every 25th: whether the view is redrawn after a
+    /// state change, and whether it is being redrawn in a storm.
     static func bodyTick(_ name: String) {
         guard fileOn else { return }
         bodies += 1
-        if bodies % 25 == 0 { note("\(name) body evaluated \(bodies) times") }
+        if bodies <= 40 || bodies % 25 == 0 { note("\(name) body evaluation #\(bodies)") }
     }
     /// Every UIKit navigation controller under the window: how many pages it holds, whether it is on screen, and whether
     /// a transition is in progress (a push asked for while a transition never finished is dropped by UIKit).
