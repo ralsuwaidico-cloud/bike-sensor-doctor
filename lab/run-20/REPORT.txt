@@ -1,0 +1,50 @@
+RESULT Lab build: ok · 371s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  FAIL Follow iOS: screenshots missing or identical
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint fc864a069f558f30 2 
+	 Executed 7 tests, with 2 failures (0 unexpected) in 1046.717 (1046.732) seconds
+	 Executed 7 tests, with 2 failures (0 unexpected) in 1046.717 (1046.735) seconds
+	 Executed 7 tests, with 2 failures (0 unexpected) in 1046.717 (1046.738) seconds
+Lab/UITests/LabChecks.swift:144: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - a schedule day opens that day's page
+Lab/UITests/LabChecks.swift:145: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : Failed to tap Button (First Match): No matches found for first query match sequence: `Descendants matching type NavigationBar` -> `Descendants matching type Button`, given input App element pid: 65345
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' failed (267.687 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved]' passed (254.869 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing]' passed (49.811 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' passed (239.450 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (86.243 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan]' passed (120.174 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' passed (28.482 seconds).
+RESULT Lab screen checks: FAILED · 1268s
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (fc864a069f558f30 2 )
+RESULT Lab launch in six themes: FAILED
+commit 2f36edf18a604c5513f76762b3998f2240284c3a  branch ios/lab
