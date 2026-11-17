@@ -1,0 +1,51 @@
+RESULT Lab build: ok · 313s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint e0e0260438a59b80 2 
+	 Executed 7 tests, with 3 failures (0 unexpected) in 813.875 (813.889) seconds
+	 Executed 7 tests, with 3 failures (0 unexpected) in 813.875 (813.891) seconds
+	 Executed 7 tests, with 3 failures (0 unexpected) in 813.875 (813.893) seconds
+Lab/UITests/LabChecks.swift:78: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - obsidian: the Coach card opens its own suggestion sheet
+Lab/UITests/LabChecks.swift:79: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : XCTAssertTrue failed - obsidian: the suggestion sheet is shown
+Lab/UITests/LabChecks.swift:81: error: -[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes] : Failed to tap "homeSheetClose" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"homeSheetClose" IN identifiers'`, given input App element pid: 57640
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' failed (74.402 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved]' passed (253.429 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing]' passed (50.625 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' passed (222.634 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (72.670 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan]' passed (108.711 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' passed (31.405 seconds).
+RESULT Lab screen checks: FAILED · 981s
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (e0e0260438a59b80 2 )
+RESULT Lab launch in six themes: FAILED
+commit 3626373dca2d43439165340191b4648df870ed9a  branch ios/lab
