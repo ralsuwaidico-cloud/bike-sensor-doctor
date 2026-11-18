@@ -1,0 +1,300 @@
+    t =    49.28s     Check for interrupting elements affecting "Plan" Button
+    t =    50.54s     Synthesize event
+    t =    51.04s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    53.36s Waiting 8.0s for "planCoachRow" Any to exist
+    t =    54.43s     Checking `Expect predicate `existsNoRetry == 1` for object "planCoachRow" Any`
+    t =    54.43s         Checking existence of `"planCoachRow" Any`
+    t =    61.29s Find the "planCoachRow" Any
+    t =    64.16s Find the "planCoachRow" Other
+    t =    66.68s Find the "planCoachRow" Other
+    t =    68.01s Find the "planCoachRow" Other
+    t =    69.90s Tap "planCoachRow" Other
+    t =    69.90s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    70.16s     Find the "planCoachRow" Other
+    t =    71.62s     Check for interrupting elements affecting "planCoachRow" Other
+    t =    72.90s     Synthesize event
+    t =    73.24s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    73.73s Waiting 8.0s for "coachTimeline" Any to exist
+    t =    74.78s     Checking `Expect predicate `existsNoRetry == 1` for object "coachTimeline" Any`
+    t =    74.79s         Checking existence of `"coachTimeline" Any`
+    t =    74.88s Get number of matches for: Elements matching predicate 'identifier BEGINSWITH "coachEntry-" AND label CONTAINS "Goblet squat"'
+    t =    75.42s Waiting 8.0s for Any (First Match) to exist
+    t =    76.49s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =    76.49s         Checking existence of `Any (First Match)`
+    t =    76.59s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    76.82s Checking existence of `Any (First Match)`
+    t =    76.95s Checking existence of `Any (First Match)`
+    t =    77.21s Find the Any (First Match)
+    t =    77.33s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    77.47s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    77.64s Press Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] -> (0.0, -200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =    77.64s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    77.65s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    77.83s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    78.41s     Synthesize event
+    t =    78.42s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    78.61s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    78.80s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    79.26s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    79.78s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    81.02s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    81.81s Checking existence of `"coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button`
+    t =    81.97s Checking existence of `"coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button`
+    t =    82.35s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    82.70s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    83.21s Checking existence of `"coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button`
+    t =    83.29s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    83.36s Checking existence of `"coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button`
+    t =    83.70s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    84.26s Checking existence of `"coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button`
+    t =    84.62s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    85.23s Checking existence of `"coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button`
+    t =    85.28s Checking existence of `"coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button`
+    t =    85.35s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    85.44s Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    85.50s Checking existence of `Any (First Match)`
+    t =    85.76s Tap "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    85.76s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    85.76s     Find the "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    86.16s     Check for interrupting elements affecting "coachNotNow-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" Button
+    t =    86.52s     Synthesize event
+    t =    86.88s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    88.15s Waiting 8.0s for Any (First Match) to exist
+    t =    89.20s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =    89.20s         Checking existence of `Any (First Match)`
+    t =    89.34s Find the Any (First Match)
+    t =    89.45s Get number of matches for: Elements matching predicate 'identifier BEGINSWITH "coachNotNow-"'
+    t =    89.61s Checking existence of `Any (First Match)`
+    t =    89.83s Tap "coachClose" Any
+    t =    89.83s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    89.83s     Find the "coachClose" Any
+    t =    89.91s     Check for interrupting elements affecting "coachClose" Button
+    t =    90.44s     Synthesize event
+    t =    90.76s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    93.27s Terminate com.ralsuwaidico.cycliftlab:19086
+    t =    94.30s Open com.ralsuwaidico.cycliftlab
+    t =    94.30s     Launch com.ralsuwaidico.cycliftlab
+    t =    97.48s         Setting up automation session
+    t =   109.84s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   118.95s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   119.95s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   119.95s         Checking existence of `"homeGreeting" Any`
+    t =   120.66s Find the "homeGreeting" Any
+    t =   121.58s Waiting 8.0s for "Plan" Button to exist
+    t =   122.61s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   122.61s         Checking existence of `"Plan" Button`
+    t =   123.01s Checking existence of `"Plan" Button`
+    t =   123.11s Tap "Plan" Button
+    t =   123.11s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   123.12s     Find the "Plan" Button
+    t =   123.24s     Check for interrupting elements affecting "Plan" Button
+    t =   123.79s     Synthesize event
+    t =   124.15s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   126.26s Waiting 8.0s for "planCoachRow" Any to exist
+    t =   127.26s     Checking `Expect predicate `existsNoRetry == 1` for object "planCoachRow" Any`
+    t =   127.26s         Checking existence of `"planCoachRow" Any`
+    t =   128.66s Find the "planCoachRow" Any
+    t =   130.38s Find the "planCoachRow" Other
+    t =   131.78s Tap "planCoachRow" Other
+    t =   131.78s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   131.97s     Find the "planCoachRow" Other
+    t =   133.07s     Check for interrupting elements affecting "planCoachRow" Other
+    t =   134.09s     Synthesize event
+    t =   134.43s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   134.45s Waiting 8.0s for "coachTimeline" Any to exist
+    t =   135.50s     Checking `Expect predicate `existsNoRetry == 1` for object "coachTimeline" Any`
+    t =   135.50s         Checking existence of `"coachTimeline" Any`
+    t =   135.61s Waiting 8.0s for Any (First Match) to exist
+    t =   136.65s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   136.65s         Checking existence of `Any (First Match)`
+    t =   137.02s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   137.30s Checking existence of `Any (First Match)`
+    t =   137.68s Checking existence of `Any (First Match)`
+    t =   138.03s Find the Any (First Match)
+    t =   138.29s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   138.96s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   139.08s Press Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] -> (0.0, -200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   139.08s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   139.09s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   139.31s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =   139.90s     Synthesize event
+    t =   139.90s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   140.14s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   140.33s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   140.81s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   140.99s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   141.99s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   142.82s Checking existence of `"coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText`
+    t =   142.89s Checking existence of `"coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText`
+    t =   142.98s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   143.09s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   143.26s Checking existence of `"coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText`
+    t =   143.32s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   143.44s Checking existence of `"coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText`
+    t =   143.78s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   143.92s Checking existence of `"coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText`
+    t =   144.26s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   144.44s Checking existence of `"coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText`
+    t =   144.49s Checking existence of `"coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText`
+    t =   144.74s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   144.85s Find the "coachPostponed-prop-hold|B4DC8739-3312-4BA0-BE6E-75096AF10DD9|weight:ex-003" StaticText
+    t =   145.20s Waiting 8.0s for Any (First Match) to exist
+    t =   146.24s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   146.24s         Checking existence of `Any (First Match)`
+    t =   148.69s         Capturing element debug description
+    t =   149.21s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   149.21s         Checking existence of `Any (First Match)`
+    t =   151.98s         Capturing element debug description
+    t =   152.30s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   152.30s         Checking existence of `Any (First Match)`
+    t =   153.46s         Capturing element debug description
+    t =   153.46s     Checking existence of `Any (First Match)`
+    t =   158.33s Collecting debug information to assist test failure triage
+    t =   158.33s     Requesting snapshot of accessibility hierarchy for app with pid 21742
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Lab/UITests/LabChecks.swift:728: error: -[CycliftLabUITests.LabChecks test2eCoachNotNowKeepsTheSuggestionOpen] : XCTAssertTrue failed - required: the postponed suggestion can be reviewed later
+    t =   160.66s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   161.01s Checking existence of `Any (First Match)`
+    t =   161.52s Checking existence of `Any (First Match)`
+    t =   162.62s Checking existence of `Any (First Match)`
+    t =   163.57s Checking existence of `Any (First Match)`
+    t =   164.37s Tap Any (First Match)
+    t =   164.37s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   164.62s     Find the Any (First Match)
+    t =   166.99s         Find the Any (First Match) (retry 1)
+    t =   168.80s         Find the Any (First Match) (retry 2)
+    t =   169.55s Requesting snapshot of accessibility hierarchy for app with pid 21742
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Lab/UITests/LabChecks.swift:729: error: -[CycliftLabUITests.LabChecks test2eCoachNotNowKeepsTheSuggestionOpen] : Failed to tap Any (First Match): No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate 'identifier BEGINSWITH "coachOpen-hold"'`, given input App element pid: 21742
+    t =   170.44s Tear Down
+Test Case '-[CycliftLabUITests.LabChecks test2eCoachNotNowKeepsTheSuggestionOpen]' failed (170.999 seconds).
+Test Case '-[CycliftLabUITests.LabFast testOpenSuggestion]' started.
+    t =     0.00s Start Test at 2026-11-18 21:47:28.680
+    t =     0.10s Set Up
+    t =     0.11s Open com.ralsuwaidico.cycliftlab
+    t =     0.11s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.11s         Terminate com.ralsuwaidico.cycliftlab:21742
+    t =     2.33s         Setting up automation session
+    t =     6.16s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    11.88s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    12.90s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    12.90s         Checking existence of `"homeGreeting" Any`
+    t =    13.53s Find the "homeGreeting" Any
+    t =    13.86s Waiting 8.0s for "Plan" Button to exist
+    t =    14.89s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =    14.89s         Checking existence of `"Plan" Button`
+    t =    15.38s Checking existence of `"Plan" Button`
+    t =    15.44s Tap "Plan" Button
+    t =    15.44s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    15.45s     Find the "Plan" Button
+    t =    15.55s     Check for interrupting elements affecting "Plan" Button
+    t =    16.15s     Synthesize event
+    t =    16.49s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    17.55s Waiting 8.0s for "planCoachRow" Any to exist
+    t =    18.57s     Checking `Expect predicate `existsNoRetry == 1` for object "planCoachRow" Any`
+    t =    18.57s         Checking existence of `"planCoachRow" Any`
+    t =    19.49s Find the "planCoachRow" Any
+    t =    20.29s Find the "planCoachRow" Other
+    t =    21.43s Tap "planCoachRow" Other
+    t =    21.43s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    21.44s     Find the "planCoachRow" Other
+    t =    22.35s     Check for interrupting elements affecting "planCoachRow" Other
+    t =    23.33s     Synthesize event
+    t =    23.75s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    24.30s Waiting 8.0s for "coachTimeline" Any to exist
+    t =    25.34s     Checking `Expect predicate `existsNoRetry == 1` for object "coachTimeline" Any`
+    t =    25.35s         Checking existence of `"coachTimeline" Any`
+    t =    25.42s Waiting 8.0s for Any (First Match) to exist
+    t =    26.45s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =    26.45s         Checking existence of `Any (First Match)`
+    t =    26.50s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    26.65s Checking existence of `Any (First Match)`
+    t =    26.69s Checking existence of `Any (First Match)`
+    t =    26.75s Find the Any (First Match)
+    t =    26.83s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    27.06s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    27.18s Press Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] -> (0.0, -200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =    27.18s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    27.19s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    27.35s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    27.57s     Synthesize event
+    t =    27.57s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    27.75s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    28.31s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    28.50s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    28.66s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    29.57s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    30.60s Checking existence of `"coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button`
+    t =    30.71s Checking existence of `"coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button`
+    t =    30.78s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    31.08s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    31.20s Checking existence of `"coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button`
+    t =    31.25s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    31.40s Checking existence of `"coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button`
+    t =    31.75s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    32.36s Checking existence of `"coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button`
+    t =    32.72s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    33.22s Checking existence of `"coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button`
+    t =    33.30s Checking existence of `"coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button`
+    t =    33.45s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    33.57s Find the "coachNotNow-prop-hold|308E0C44-C6D0-4B5A-9135-FEF5C2C2752F|weight:ex-003" Button
+    t =    33.89s Tear Down
+Test Case '-[CycliftLabUITests.LabFast testOpenSuggestion]' passed (34.182 seconds).
+Test Case '-[CycliftLabUITests.LabFast testScreens]' started.
+    t =     0.00s Start Test at 2026-11-18 21:48:02.864
+    t =     0.06s Set Up
+    t =     0.06s Open com.ralsuwaidico.cycliftlab
+    t =     0.06s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.06s         Terminate com.ralsuwaidico.cycliftlab:24460
+    t =     2.44s         Setting up automation session
+    t =     6.42s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    12.94s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    13.95s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    13.95s         Checking existence of `"homeGreeting" Any`
+    t =    14.78s Find the "homeGreeting" Any
+    t =    15.58s Waiting 10.0s for "CYCLIFT LAB · DEMO DATA" StaticText to exist
+    t =    16.59s     Checking `Expect predicate `existsNoRetry == 1` for object "CYCLIFT LAB · DEMO DATA" StaticText`
+    t =    16.59s         Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =    16.83s Waiting 8.0s for "Plan" Button to exist
+    t =    17.84s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =    17.84s         Checking existence of `"Plan" Button`
+    t =    17.92s Checking existence of `"Plan" Button`
+    t =    18.01s Tap "Plan" Button
+    t =    18.01s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    18.30s     Find the "Plan" Button
+    t =    18.39s     Check for interrupting elements affecting "Plan" Button
+    t =    18.67s     Synthesize event
+    t =    18.97s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    19.99s Waiting 8.0s for "planTitle" StaticText to exist
+    t =    21.01s     Checking `Expect predicate `existsNoRetry == 1` for object "planTitle" StaticText`
+    t =    21.02s         Checking existence of `"planTitle" StaticText`
+    t =    21.41s Checking existence of `"planDayHeader" StaticText`
+    t =    22.29s Checking existence of `"planCoachRow" Any`
+    t =    23.16s Tap "planCoachRow" Any
+    t =    23.16s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    23.47s     Find the "planCoachRow" Any
+    t =    24.80s     Check for interrupting elements affecting "planCoachRow" Other
+    t =    25.65s     Synthesize event
+    t =    26.01s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    26.51s Waiting 8.0s for "coachTimeline" Any to exist
+    t =    27.54s     Checking `Expect predicate `existsNoRetry == 1` for object "coachTimeline" Any`
+    t =    27.55s         Checking existence of `"coachTimeline" Any`
+    t =    27.86s Tap "coachClose" Button
+    t =    27.86s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    27.87s     Find the "coachClose" Button
+    t =    27.90s     Check for interrupting elements affecting "coachClose" Button
+    t =    28.47s     Synthesize event
+    t =    28.80s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    30.46s Waiting 8.0s for "Progress" Button to exist
+    t =    31.51s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =    31.52s         Checking existence of `"Progress" Button`
+    t =    31.60s Checking existence of `"Progress" Button`
+    t =    31.68s Tap "Progress" Button
+    t =    31.68s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    31.69s     Find the "Progress" Button
+    t =    31.81s     Check for interrupting elements affecting "Progress" Button
+    t =    32.40s     Synthesize event
+    t =    32.76s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    33.79s Waiting 8.0s for "evolutionTrack" Any to exist
+    t =    34.87s     Checking `Expect predicate `existsNoRetry == 1` for object "evolutionTrack" Any`
+    t =    34.87s         Checking existence of `"evolutionTrack" Any`
+    t =    39.03s Tear Down
+Test Case '-[CycliftLabUITests.LabFast testScreens]' passed (39.344 seconds).

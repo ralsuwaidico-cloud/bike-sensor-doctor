@@ -1,0 +1,21 @@
+FAST focused Lab check — selected: LabFast/testScreens LabFast/testOpenSuggestion LabChecks/test2eCoachNotNowKeepsTheSuggestionOpen
+TIME setup: 169s
+RESULT build (app + screen checks, once): ok
+TIME build: 661s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 6s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 73.527 (73.529) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 244.525 (244.531) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 244.525 (244.532) seconds
+Lab/UITests/LabChecks.swift:728: error: -[CycliftLabUITests.LabChecks test2eCoachNotNowKeepsTheSuggestionOpen] : XCTAssertTrue failed - required: the postponed suggestion can be reviewed later
+Lab/UITests/LabChecks.swift:729: error: -[CycliftLabUITests.LabChecks test2eCoachNotNowKeepsTheSuggestionOpen] : Failed to tap Any (First Match): No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate 'identifier BEGINSWITH "coachOpen-hold"'`, given input App element pid: 21742
+Test Case '-[CycliftLabUITests.LabChecks test2eCoachNotNowKeepsTheSuggestionOpen]' failed (170.999 seconds).
+Test Case '-[CycliftLabUITests.LabFast testOpenSuggestion]' passed (34.182 seconds).
+Test Case '-[CycliftLabUITests.LabFast testScreens]' passed (39.344 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 367s
+LAB-NOTE not-now after reopening plan row: Coach Notes: Not trained in 4 weeks of detailed logs: hinge, single-leg, core.. Open
+LAB-NOTE not-now first plan row: Coach Suggests: Goblet squat: 25 kg → 26 kg per hand?. Review
+TIME total on the Mac: 1206s
+commit 9c6acff9df1b06f57517a11efaf53be920605e90  branch ios/lab
