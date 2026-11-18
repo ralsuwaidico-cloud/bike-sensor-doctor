@@ -539,7 +539,7 @@ final class LabChecks: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
         app.launchEnvironment["LAB_THEME"] = "obsidian"
-        app.launchEnvironment["BC_UITEST_SAVE_UNCONFIRMED"] = "2"     // the first two read-back checks answer "not confirmed"
+        app.launchEnvironment["BC_UITEST_SAVE_UNCONFIRMED"] = "2"     // the read-back after Save, and the first read of "Check again", answer "the file does not hold it"
         app.launch()
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
         func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
@@ -556,11 +556,11 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(el("saveUnconfirmed").waitForExistence(timeout: 10), "required: 'Save not confirmed'")
         XCTAssertFalse(el("saveConfirmed").exists, "not shown as Saved"); XCTAssertFalse(el("saveFailed").exists, "and not shown as a failure")
         let check = app.buttons["saveCheckAgain"].firstMatch
-        check.tap()        // still not confirmed: said so, nothing else changes
-        XCTAssertTrue(el("unconfirmedChecks").waitForExistence(timeout: 5), "the page says it checked again: still not confirmed")
-        XCTAssertFalse(el("saveConfirmed").exists)
-        shot("save-6-checked-again")
-        check.tap()        // now the read-back finds the workout
+        // (Changed expectation, Lab 39: the test expected a second "not confirmed" here. That was written before "Check again"
+        // gained its recovery: when the file can be read and does not hold the workout, the same record is written again and
+        // read back. So one tap is enough — the test's old expectation, not the app, was wrong.)
+        shot("save-6-not-confirmed")
+        check.tap()        // reads: not there → writes the same record again → reads: found
         XCTAssertTrue(el("saveConfirmed").waitForExistence(timeout: 10), "required: Saved once the check finds the workout")
         XCTAssertTrue(el("savedPlan").label.contains("Marked done · partial"), el("savedPlan").label)
         XCTAssertTrue(el("saveSummary").label.contains("1 of "), "what was saved: \(el("saveSummary").label)")
