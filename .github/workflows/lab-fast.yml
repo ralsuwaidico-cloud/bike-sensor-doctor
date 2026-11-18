@@ -1,0 +1,59 @@
+# CYCLIFT LAB — FAST focused check for routine screen work. Builds the Lab app once and runs only the screen checks
+# named on the first line of tools/lab/FAST_REQUEST, keeping their screenshots (branch ci-logs, lab-fast/run-N).
+# Never signs, never uploads. It does not replace the full "Cyclift Lab" run, which stays the integration/release gate.
+# Started by a push that changes tools/lab/FAST_REQUEST (push app changes first with [skip ci], then the request).
+name: Cyclift Lab — fast check
+on:
+  push:
+    branches: ["ios/lab"]
+    paths: ["tools/lab/FAST_REQUEST", ".github/workflows/lab-fast.yml", "ios/ci/lab-fast.sh"]
+permissions:
+  contents: write      # only to add the report and screenshots to the ci-logs branch
+concurrency:
+  group: lab-fast      # its own group: it can never cancel the full Lab run, the signed-build check or an upload
+  cancel-in-progress: true      # a newer fast request replaces an older fast request only
+jobs:
+  fast:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ios/build/spm
+          key: spm-v1-${{ hashFiles('ios/project.yml') }}
+      - name: Build once, run the selected screen checks
+        run: bash ios/ci/lab-fast.sh "$(head -1 tools/lab/FAST_REQUEST)"
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-fast-out
+          path: ios/build/lab-out
+          if-no-files-found: ignore
+  publish:
+    needs: [fast]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lab-fast-out
+          path: lab-out
+        continue-on-error: true
+      - name: Publish the report and screenshots to branch ci-logs (lab-fast/run-N)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.run_number }}
+        run: |
+          [ -d lab-out ] || exit 0
+          SRC="$PWD/lab-out"; W=$(mktemp -d); cd "$W"
+          git init -q && git config user.name "ios-ci" && git config user.email "ios-ci@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
+          D="lab-fast/run-$N"; mkdir -p "$D"
+          cp "$SRC"/REPORT.txt "$SRC"/*.png "$SRC"/uitest-tail.txt "$SRC"/build-tail.log "$D/" 2>/dev/null || true
+          echo "commit $GITHUB_SHA  branch $GITHUB_REF_NAME" >> "$D/REPORT.txt"
+          git add -A && git commit -q -m "Cyclift Lab fast check $N"
+          for i in 1 2 3; do git push -q origin ci-logs && break; git fetch -q --depth 1 origin ci-logs && git rebase -q FETCH_HEAD; done

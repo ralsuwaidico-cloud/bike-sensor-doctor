@@ -108,7 +108,7 @@ else say "  FAIL the production app did not build for the side-by-side check"; g
 xcodegen generate --spec project-lab.yml >> "$OUT/xcodegen.txt" 2>&1
 T=$SECONDS
 TEST_RUNNER_LAYOUT_DIR="$OUT" xcodebuild test -project CycliftLab.xcodeproj -scheme CycliftLab -configuration Debug -destination "id=$SIM" \
-  -derivedDataPath build/lab-dd -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO > "$OUT/uitest.log" 2>&1
+  -derivedDataPath build/lab-dd -clonedSourcePackagesDirPath build/spm -skip-testing:CycliftLabUITests/LabFast CODE_SIGNING_ALLOWED=NO > "$OUT/uitest.log" 2>&1
 UT=$?
 grep -E "Test Case .*(passed|failed)|error: |Executed [0-9]+ tests" "$OUT/uitest.log" | sed -E 's#.*/ios/##' | sort -u | cut -c1-400 | tee -a "$R"
 say "RESULT Lab screen checks: $([ $UT -eq 0 ] && echo ok || echo FAILED) · $((SECONDS-T))s"; [ $UT -eq 0 ] || FAIL=1
