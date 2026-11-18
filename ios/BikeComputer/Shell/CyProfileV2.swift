@@ -188,12 +188,12 @@ struct CyProfileAthlete: View {
     var body: some View {
         CyProfilePage(title: "Athlete Profile", purpose: "Who you are as an athlete.") {
             CyProfileRows {
-                CyProfileRow(title: "Personal details", summary: store.profile.name.isEmpty ? "Name not set" : store.profile.name, id: "profilePersonal") { PersonalPage() }
+                CyProfileRow(title: "Personal details", summary: store.profile.name.isEmpty ? "Name not set" : store.profile.name, id: "profilePersonal") { CyProfilePersonalDetails() }
                 CyProfileRow(title: "My activities", summary: "Choosing activities is designed, not in the app yet", kind: .notAvailable, id: "profileActivities")
-                CyProfileRow(title: "Athlete type", summary: ProfileText.mode(store.profile.trainingMode), id: "profileType") { TypeExperiencePage() }
-                CyProfileRow(title: "Experience", summary: experienceLine, id: "profileExperience") { TypeExperiencePage() }
+                CyProfileRow(title: "Athlete type", summary: ProfileText.mode(store.profile.trainingMode), id: "profileType") { CyProfileTypeExperience() }
+                CyProfileRow(title: "Experience", summary: experienceLine, id: "profileExperience") { CyProfileTypeExperience() }
                 if store.profile.trainingMode == .hybrid {
-                    CyProfileRow(title: "Hybrid balance", summary: store.profile.priority.title, id: "profileBalance") { TypeExperiencePage() }
+                    CyProfileRow(title: "Hybrid balance", summary: store.profile.priority.title, id: "profileBalance") { CyProfileTypeExperience() }
                 }
             }
         }

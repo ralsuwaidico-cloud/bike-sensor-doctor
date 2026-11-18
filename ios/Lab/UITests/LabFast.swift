@@ -64,4 +64,34 @@ final class LabFast: XCTestCase {
         _ = app.reveal(notNow)
         shot("6-coach-open-suggestion")
     }
+
+    /// Profile sheet P03: Athlete Profile, Personal details (edit the name, Save lights, the name is stored) and
+    /// Type & experience (the four controls; Save stays unlit until something changes).
+    func testProfileAthletePages() {
+        let app = launch()
+        let avatar = app.buttons["homeAvatar"].firstMatch
+        XCTAssertTrue(avatar.waitForExistence(timeout: 8), "required: the Home avatar"); avatar.tap(); app.settleForScreenshot(1)
+        let a = el(app, "profileSectionA")
+        XCTAssertTrue(a.waitForExistence(timeout: 8), "required: Profile landing"); a.tap(); app.settleForScreenshot(1)
+        shot("p03-A-athlete-profile")
+        let personal = el(app, "profilePersonal")
+        XCTAssertTrue(personal.waitForExistence(timeout: 8), "required: Personal details row"); personal.tap(); app.settleForScreenshot(1)
+        let name = app.textFields["personalName"].firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 8), "required: the name field")
+        XCTAssertTrue(el(app, "personalDOB").exists, "required: date of birth"); XCTAssertTrue(app.textFields["personalWeight"].firstMatch.exists, "required: weight")
+        let save = app.buttons["personalSave"].firstMatch
+        XCTAssertTrue(save.exists, "required: Save in the bar"); XCTAssertFalse(save.isEnabled, "Save is unlit until something changes")
+        shot("p03-A1-personal-details")
+        name.tap(); name.typeText(" Lab")
+        XCTAssertTrue(save.isEnabled, "required: Save lights after a change")
+        shot("p03-A1-personal-details-changed")
+        save.tap(); app.settleForScreenshot(1)
+        XCTAssertTrue(personal.waitForExistence(timeout: 8), "required: back on Athlete Profile after Save")
+        XCTAssertTrue(personal.label.contains("Demo Lab"), "required: the saved name is shown (\(personal.label))")
+        let type = el(app, "profileType")
+        XCTAssertTrue(type.waitForExistence(timeout: 8), "required: Athlete type row"); type.tap(); app.settleForScreenshot(1)
+        for id in ["typeMode", "typeBalance", "typeRiding", "typeLifting"] { XCTAssertTrue(el(app, id).waitForExistence(timeout: 8), "required: \(id)") }
+        XCTAssertFalse(app.buttons["typeSave"].firstMatch.isEnabled, "Save is unlit until something changes")
+        shot("p03-A3-type-experience")
+    }
 }
