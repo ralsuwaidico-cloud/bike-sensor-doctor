@@ -1,0 +1,163 @@
+=== redesign-main: errors / failures ===
+=== redesign-main: full filter ===
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' passed (279.335 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.438 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 286.773 (286.777) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 286.773 (286.778) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 286.773 (286.780) seconds
+** TEST EXECUTE SUCCEEDED **
+=== redesign-main: last 150 lines ===
+    t =   231.23s Checking existence of `"indicatorConsistency" Button`
+    t =   231.86s Find the "indicatorConsistency" Button
+    t =   232.50s Find the "indicatorConsistency" Button
+    t =   233.12s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] -> (0.0, 200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   233.12s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   233.13s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   233.24s     Check for interrupting elements affecting "Cyclift" Application
+    t =   233.45s     Synthesize event
+    t =   233.45s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   233.55s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   233.65s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   233.74s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   233.84s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   234.64s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   235.46s Checking existence of `"indicatorConsistency" Button`
+    t =   236.16s Checking existence of `"indicatorConsistency" Button`
+    t =   236.85s Find the "indicatorConsistency" Button
+    t =   237.67s Find the "indicatorConsistency" Button
+    t =   238.45s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] -> (0.0, 200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   238.45s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   238.47s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   238.60s     Check for interrupting elements affecting "Cyclift" Application
+    t =   238.77s     Synthesize event
+    t =   238.78s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   238.90s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   239.02s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   239.13s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   239.25s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   240.10s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   240.93s Checking existence of `"indicatorConsistency" Button`
+    t =   241.56s Checking existence of `"indicatorConsistency" Button`
+    t =   242.20s Find the "indicatorConsistency" Button
+    t =   242.87s Find the "indicatorConsistency" Button
+    t =   243.53s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] -> (0.0, 200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   243.53s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   243.53s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   243.65s     Check for interrupting elements affecting "Cyclift" Application
+    t =   243.78s     Synthesize event
+    t =   243.78s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   243.93s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   244.04s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   244.15s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   244.33s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   245.14s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   245.96s Checking existence of `"indicatorConsistency" Button`
+    t =   246.55s Checking existence of `"indicatorConsistency" Button`
+    t =   247.15s Find the "indicatorConsistency" Button
+    t =   247.74s Find the "indicatorConsistency" Button
+    t =   248.40s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] -> (0.0, 200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   248.40s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   248.40s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   248.51s     Check for interrupting elements affecting "Cyclift" Application
+    t =   248.63s     Synthesize event
+    t =   248.63s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   248.73s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   248.83s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   248.94s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   249.05s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   249.86s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   250.72s Checking existence of `"indicatorConsistency" Button`
+    t =   251.73s Checking existence of `"indicatorConsistency" Button`
+    t =   252.75s Find the "indicatorConsistency" Button
+    t =   253.51s Find the "indicatorConsistency" Button
+    t =   254.45s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.55] -> (0.0, 200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   254.45s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   254.45s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   254.60s     Check for interrupting elements affecting "Cyclift" Application
+    t =   254.79s     Synthesize event
+    t =   254.79s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   254.93s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   255.07s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   255.21s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   255.49s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   256.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   257.16s Checking existence of `"indicatorConsistency" Button`
+    t =   258.30s Checking existence of `"indicatorConsistency" Button`
+    t =   260.03s Find the "indicatorConsistency" Button
+    t =   261.26s Checking existence of `"indicatorConsistency" Button`
+    t =   262.09s Find the "indicatorConsistency" Button
+    t =   262.79s Checking existence of `"indicatorConsistency" Button`
+    t =   263.68s Find the "indicatorConsistency" Button
+    t =   264.58s Checking existence of `"indicatorConsistency" Button`
+    t =   265.44s Find the "indicatorConsistency" Button
+    t =   266.08s Checking existence of `"indicatorConsistency" Button`
+    t =   266.74s Checking existence of `"indicatorConsistency" Button`
+    t =   267.77s Find the "indicatorConsistency" Button
+    t =   268.83s Tap "indicatorConsistency" Button
+    t =   268.83s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   269.05s     Find the "indicatorConsistency" Button
+    t =   269.80s     Check for interrupting elements affecting "indicatorConsistency" Button
+    t =   270.24s     Synthesize event
+    t =   270.54s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   270.96s Waiting 8.0s for "homeWeekOverview" Any to exist
+    t =   271.98s     Checking `Expect predicate `existsNoRetry == 1` for object "homeWeekOverview" Any`
+    t =   271.98s         Checking existence of `"homeWeekOverview" Any`
+    t =   272.16s Waiting 4.0s for Button (First Match) to exist
+    t =   273.19s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =   273.20s         Checking existence of `Button (First Match)`
+    t =   273.25s Find the "homeWeekOverview" Any
+    t =   273.49s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   273.61s Find the "homeWeekOverview" ScrollView
+    t =   273.76s Find the Button (First Match)
+    t =   273.85s Checking existence of `"indicatorConsistency" Button`
+REDESIGN-NOTE main app, redesign on: Consistency presented the week page at the first tap: true
+    t =   274.82s Waiting 4.0s for Button (First Match) to exist
+    t =   275.84s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =   275.84s         Checking existence of `Button (First Match)`
+    t =   275.89s Find the Button (First Match)
+    t =   275.94s Tap "BackButton" Button
+    t =   275.94s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   275.94s     Find the "BackButton" Button
+    t =   275.99s     Check for interrupting elements affecting "BackButton" Button
+    t =   276.13s     Synthesize event
+    t =   276.45s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   277.33s Checking existence of `"indicatorConsistency" Button`
+    t =   278.00s Find the "indicatorConsistency" Button
+    t =   278.92s Tear Down
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' passed (279.335 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' started.
+    t =     0.00s Start Test at 2026-11-18 04:36:25.410
+    t =     0.07s Set Up
+    t =     0.07s Open com.ralsuwaidico.bikecomputer
+    t =     0.07s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.07s         Terminate com.ralsuwaidico.bikecomputer:91343
+2026-11-18 04:36:26.592 xcodebuild[85113:224150] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-18 04:36:26.593 xcodebuild[85113:224150] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     1.99s         Setting up automation session
+    t =     3.95s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =     5.98s Waiting 40.0s for "onboardingContinue" Button to exist
+    t =     7.01s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingContinue" Button`
+    t =     7.01s         Checking existence of `"onboardingContinue" Button`
+    t =     7.09s Checking existence of `"onboardingV34" Any`
+    t =     7.21s Tear Down
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.438 seconds).
+Test Suite 'RedesignMainTests' passed at 2026-11-18 04:36:32.847.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 286.773 (286.777) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-18 04:36:32.847.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 286.773 (286.778) seconds
+Test Suite 'Selected tests' passed at 2026-11-18 04:36:32.848.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 286.773 (286.780) seconds
+2026-11-18 04:36:51.272 xcodebuild[85113:224150] [MT] IDETestOperationsObserverDebug: 314.863 elapsed -- Testing started completed.
+2026-11-18 04:36:51.273 xcodebuild[85113:224150] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-18 04:36:51.273 xcodebuild[85113:224150] [MT] IDETestOperationsObserverDebug: 314.863 sec, +314.863 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-fqfxnecbtnljzpffwcqozofvqdml/Logs/Test/Test-BikeComputer-2026.11.18_04-31-30-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+=== redesign-main: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' passed (279.335 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.438 seconds).
+=== redesign-main: E0-DIAG lines ===
