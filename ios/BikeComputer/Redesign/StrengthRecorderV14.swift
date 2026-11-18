@@ -46,6 +46,7 @@ struct StrengthRecorderV14: View {
     /// Unknown: the store accepted the save, but reading the file back did not find the workout (06f X7).
     @State private var unconfirmed: StrengthSession? = nil
     @State private var checks = 0
+    @State private var lastCheck: SaveCheck? = nil
     /// After a confirmed save: the saved session, shown until the athlete leaves or opens the optional review.
     @State private var saved: StrengthSession? = nil
     @State private var review = false
@@ -505,22 +506,32 @@ struct StrengthRecorderV14: View {
                 store.saveFailure = "This save was made to fail by a test. Nothing was written."
             } else if let s = store.finishActiveSession(rpe: nil, notes: "") {
                 memory.clear(); pausedByFinish = false
-                if store.strengthSaveCheck(s.id) == .confirmed { saved = s; finishing = false } else { checks = 0; unconfirmed = s }
+                let check = store.strengthSaveCheck(s.id)
+                if check == .confirmed { saved = s; finishing = false } else { checks = 0; lastCheck = check; unconfirmed = s }
             }
             // otherwise the session is still active and `saveFailure` says why: the page shows "Not saved yet"
             saving = false
         }
     }
-    /// "Check again" only reads. It can confirm the save; it cannot create a record.
+    /// "Check again" reads first. An unreadable file is inconclusive (not a failure): it is only read again. A file that
+    /// could be read and does not hold the workout is written again from the store's current state — the same record,
+    /// the same identifier — and read back. Neither path can create a second workout.
     private func checkAgain(_ s: StrengthSession) {
         checks += 1
-        if store.strengthSaveCheck(s.id) == .confirmed { saved = s; unconfirmed = nil; finishing = false }
+        var result = store.strengthSaveCheck(s.id)
+        if result == .notOnDisk, store.writeAgain() { result = store.strengthSaveCheck(s.id) }
+        lastCheck = result
+        if result == .confirmed { saved = s; unconfirmed = nil; finishing = false }
     }
     private func unconfirmedPage(_ s: StrengthSession) -> some View {
         let f = savedSummary
         var rows = [CyFinishRow(label: "Sets", value: (f?.setsText ?? "\((s.exercises ?? []).reduce(0) { $0 + $1.sets.count })") + " · kept", id: "unconfirmedSets")]
         if s.workoutId != nil { rows.append(CyFinishRow(label: "Plan", value: "Not confirmed", id: "unconfirmedPlan")) }
-        if checks > 0 { rows.append(CyFinishRow(label: "Checked again", value: "\(checks) time\(checks == 1 ? "" : "s") · still not confirmed", id: "unconfirmedChecks")) }
+        if checks > 0 {
+            let why = lastCheck == .unreadable ? "the file could not be read" : "the file does not hold it yet"
+            rows.append(CyFinishRow(label: "Checked again", value: "\(checks) time\(checks == 1 ? "" : "s") · \(why)", id: "unconfirmedChecks"))
+        }
+        // The workout is in the app and is not lost: it stays in this app's history and is written with the next save.
         return CyFinishPage(title: "Save not confirmed", titleID: "saveUnconfirmed",
                             message: "Cyclift could not confirm that the workout was saved. It is kept here until that is known.",
                             rows: rows, primary: "Check again", primaryID: "saveCheckAgain", onPrimary: { checkAgain(s) },

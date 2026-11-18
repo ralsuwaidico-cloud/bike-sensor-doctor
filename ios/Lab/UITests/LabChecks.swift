@@ -83,6 +83,7 @@ final class LabChecks: XCTestCase {
 
     /// The same five screens in each theme, each from a fresh launch in that theme.
     func test1FiveScreensInSixThemes() {
+        var sawNotNow = false
         for (i, t) in themes.enumerated() {
             let app = XCUIApplication()
             app.launchEnvironment["LAB_THEME"] = t.id
@@ -174,6 +175,7 @@ final class LabChecks: XCTestCase {
                             XCTAssertTrue(said.waitForExistence(timeout: 5), "required: Not now is recorded and said on the card")
                             XCTAssertFalse(notNow.exists, "a postponed suggestion offers Review only")
                             print("LAB-NOTE coach Not now: \(said.label)"); shot("\(tag)-1b2-coach-postponed")
+                            sawNotNow = true
                         } else { print("LAB-NOTE coach Not now: the demo athlete has no open suggestion, so the button was not on screen (logic tests cover the record)") }
                         app.buttons["coachTabAsk"].firstMatch.tap()
                         XCTAssertTrue(app.staticTexts["coachAskNote"].firstMatch.waitForExistence(timeout: 5), "required: Ask says its answers come from fixed rules, with no AI model")
@@ -185,7 +187,17 @@ final class LabChecks: XCTestCase {
                         app.buttons["coachSend"].firstMatch.tap()
                         XCTAssertTrue(entry("AI chat is not connected yet").waitForExistence(timeout: 8), "a question the rules cannot answer says AI chat is not connected")
                         app.settleForScreenshot(2); shot("\(tag)-1c-coach-chat")
-                    } else { app.settleForScreenshot(2); shot("\(tag)-1b-coach") }
+                    } else {
+                        if i == 1 && sawNotNow {
+                            // this is a new launch of the app: the postponement made in the first launch is still there, and the suggestion can still be reviewed
+                            let said = app.staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH 'coachPostponed-'")).firstMatch
+                            XCTAssertTrue(said.waitForExistence(timeout: 5), "required: Not now is still recorded after a relaunch")
+                            XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'coachOpen-'")).firstMatch.exists, "required: a postponed suggestion can still be reviewed")
+                            XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'coachNotNow-'")).firstMatch.exists, "it is not offered as new again")
+                            print("LAB-NOTE coach Not now after relaunch: \(said.label)")
+                        }
+                        app.settleForScreenshot(2); shot("\(tag)-1b-coach")
+                    }
                     app.buttons["coachClose"].firstMatch.tap(); app.settleForScreenshot(2)
                     XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): closing the Coach page returns to Home")
                 }
@@ -505,15 +517,8 @@ final class LabChecks: XCTestCase {
         XCTAssertFalse(el("saveConfirmed").exists, "an unconfirmed save is never shown as Saved")
         XCTAssertTrue(el("unconfirmedSets").label.contains("kept"), el("unconfirmedSets").label)
         shot("save-4-not-confirmed")
-        app.buttons["saveCheckAgain"].firstMatch.tap()
-        // X5 — confirmed from the file on the phone
-        XCTAssertTrue(el("saveConfirmed").waitForExistence(timeout: 10), "required: Saved once the check confirms")
-        XCTAssertTrue(el("saveSummary").label.contains("1 of "), "what was saved: \(el("saveSummary").label)")
-        XCTAssertTrue(el("savedPlan").label.contains("Marked done · partial"), el("savedPlan").label)
-        print("LAB-NOTE save lifecycle: nothing logged → partial → not saved → not confirmed → saved (\(el("saveSummary").label))")
-        shot("save-5-saved")
-        app.buttons["saveDone"].firstMatch.tap()
-        // one workout, once: after a relaunch (no failure switches) today's session is done and not offered again
+        // The app closes while the save is still "not confirmed". After a relaunch (no failure switches, no fresh demo):
+        // the workout is there once, nothing is in progress, and today's session is not offered again.
         app.terminate()
         app.launchEnvironment["LAB_FRESH_DEMO"] = nil; app.launchEnvironment["BC_UITEST_SAVE_FAIL"] = nil; app.launchEnvironment["BC_UITEST_SAVE_UNCONFIRMED"] = nil
         app.launch()
@@ -521,7 +526,50 @@ final class LabChecks: XCTestCase {
         app.buttons["centreButton"].firstMatch.tap()
         XCTAssertTrue(el("trainPanel").waitForExistence(timeout: 8))
         let again = app.buttons["trainPanelPrimary"].firstMatch
-        XCTAssertFalse(again.exists && (again.label.hasPrefix("Start") || again.label.hasPrefix("Resume")), "after the retry and a relaunch the session is saved once and nothing is in progress (\(again.exists ? again.label : "no button"))")
+        XCTAssertFalse(again.exists && (again.label.hasPrefix("Start") || again.label.hasPrefix("Resume")), "after the failed save, the retry and a restart during the uncertain save, the session is saved once and nothing is in progress (\(again.exists ? again.label : "no button"))")
+        print("LAB-NOTE save lifecycle with restart: nothing logged → partial → not saved → not confirmed → app closed → relaunch: saved once; panel offers '\(again.exists ? again.label : "nothing to start")'")
+        shot("save-5-after-restart")
+    }
+
+    /// "Check again" (06f X7 → X5): a save the read-back did not confirm is checked again, the existing workout is found,
+    /// and only then is "Saved" shown. Nothing is written twice.
+    func test2b4CheckAgainFindsTheSavedWorkout() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launchEnvironment["BC_UITEST_SAVE_UNCONFIRMED"] = "2"     // the first two read-back checks answer "not confirmed"
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        app.buttons["centreButton"].firstMatch.tap()
+        let primary = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertTrue(primary.waitForExistence(timeout: 8)); primary.tap()
+        let start = app.buttons["startWorkout"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 10)); start.tap()
+        let log = el("logSet"); XCTAssertTrue(log.waitForExistence(timeout: 10), "the recorder"); log.tap()
+        XCTAssertTrue(el("recorderLogged").waitForExistence(timeout: 5))
+        app.buttons["finishWorkout"].firstMatch.tap()
+        let save = app.buttons["saveWorkout"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 8)); save.tap()
+        XCTAssertTrue(el("saveUnconfirmed").waitForExistence(timeout: 10), "required: 'Save not confirmed'")
+        XCTAssertFalse(el("saveConfirmed").exists, "not shown as Saved"); XCTAssertFalse(el("saveFailed").exists, "and not shown as a failure")
+        let check = app.buttons["saveCheckAgain"].firstMatch
+        check.tap()        // still not confirmed: said so, nothing else changes
+        XCTAssertTrue(el("unconfirmedChecks").waitForExistence(timeout: 5), "the page says it checked again: still not confirmed")
+        XCTAssertFalse(el("saveConfirmed").exists)
+        shot("save-6-checked-again")
+        check.tap()        // now the read-back finds the workout
+        XCTAssertTrue(el("saveConfirmed").waitForExistence(timeout: 10), "required: Saved once the check finds the workout")
+        XCTAssertTrue(el("savedPlan").label.contains("Marked done · partial"), el("savedPlan").label)
+        XCTAssertTrue(el("saveSummary").label.contains("1 of "), "what was saved: \(el("saveSummary").label)")
+        shot("save-7-saved-after-check")
+        app.buttons["saveDone"].firstMatch.tap()
+        app.terminate(); app.launchEnvironment["LAB_FRESH_DEMO"] = nil; app.launchEnvironment["BC_UITEST_SAVE_UNCONFIRMED"] = nil; app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        app.buttons["centreButton"].firstMatch.tap()
+        XCTAssertTrue(el("trainPanel").waitForExistence(timeout: 8))
+        let again = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertFalse(again.exists && (again.label.hasPrefix("Start") || again.label.hasPrefix("Resume")), "saved once: not offered again after a relaunch (\(again.exists ? again.label : "no button"))")
     }
 
     /// A real superset on the preparation screen and in the recorder (sheets 01a J2 and 04b). The demo athlete says they

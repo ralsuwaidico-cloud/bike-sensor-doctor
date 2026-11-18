@@ -132,4 +132,36 @@ final class FinishReviewTests: XCTestCase {
         try Data(#"{"strength":[]}"#.utf8).write(to: file); XCTAssertEqual(store.strengthSaveCheck(saved.id), .notOnDisk)
         try FileManager.default.removeItem(at: file); XCTAssertEqual(store.strengthSaveCheck(saved.id), .unreadable)
     }
+
+    /// The six outcomes of the save lifecycle at the level of the store (owner directive, 18 Nov 2026).
+    func testRestartRetryAndWriteAgainNeverLoseOrDuplicateTheWorkout() throws {
+        let file = { (d: URL) in d.appendingPathComponent("store.json") }
+        // 1. The app closes BEFORE Save (or after a failed save, which writes nothing): the session and its sets are still
+        //    there after a restart, and saving then produces exactly one workout.
+        let d1 = tmp("restart-before"); var a: Store? = Store(directory: d1, generatePlan: false)
+        start(a!); let active = try XCTUnwrap(a!.activeSession); a = nil
+        let b = Store(directory: d1, generatePlan: false)
+        XCTAssertEqual(b.activeSession?.id, active.id, "the part-logged session survives the restart")
+        XCTAssertEqual(b.activeSession?.exercises?.first?.doneSets.count, 2, "with its logged sets"); XCTAssertTrue(b.strength.isEmpty, "nothing was saved")
+        let saved = try XCTUnwrap(b.finishActiveSession(rpe: nil, notes: ""))
+        XCTAssertEqual(b.strength.count, 1); XCTAssertNil(b.activeSession); XCTAssertEqual(b.strengthSaveCheck(saved.id), .confirmed)
+        // 2. The app closes AFTER the write, while the screen still said "not confirmed": a new launch finds the workout
+        //    once, nothing in progress, and "Check again" locates it.
+        let c = Store(directory: d1, generatePlan: false)
+        XCTAssertEqual(c.strength.map(\.id), [saved.id]); XCTAssertNil(c.activeSession); XCTAssertEqual(c.strengthSaveCheck(saved.id), .confirmed)
+        XCTAssertNil(c.finishActiveSession(rpe: nil, notes: ""), "there is nothing left to save again"); XCTAssertEqual(c.strength.count, 1)
+        // 3. The write happened but the file read back does not hold the workout: writing again stores the SAME record
+        //    (same identifier) and the check then confirms it. One workout in memory, one on disk, one after a relaunch.
+        try Data(#"{"strength":[]}"#.utf8).write(to: file(d1))
+        XCTAssertEqual(c.strengthSaveCheck(saved.id), .notOnDisk)
+        XCTAssertTrue(c.writeAgain()); XCTAssertEqual(c.strengthSaveCheck(saved.id), .confirmed); XCTAssertEqual(c.strength.count, 1)
+        XCTAssertTrue(c.writeAgain()); XCTAssertTrue(c.writeAgain(), "writing again any number of times adds nothing")
+        let e = Store(directory: d1, generatePlan: false)
+        XCTAssertEqual(e.strength.map(\.id), [saved.id], "exactly one record after the retries and a relaunch")
+        XCTAssertEqual(e.strength.first?.exercises?.first?.sets.count, 2, "the two logged sets, and only those")
+        // 4. An inconclusive read-back (the file cannot be read just now) is not a failure and not a confirmation; the
+        //    workout stays in the app's history untouched.
+        try Data("not json".utf8).write(to: file(d1))
+        XCTAssertEqual(e.strengthSaveCheck(saved.id), .unreadable); XCTAssertEqual(e.strength.count, 1)
+    }
 }

@@ -1768,6 +1768,17 @@ final class Store: ObservableObject {
         } catch { lastSaveError = error.localizedDescription }
     }
 
+    /// Writes the store's CURRENT state to the file again — the same records with the same identifiers, nothing added.
+    /// The recovery action when a read-back did not find a workout the store holds (Training Hub v1.4 "Save not
+    /// confirmed"). It cannot create a record; it is refused, like every write, when the store is not writable.
+    @discardableResult
+    func writeAgain() -> Bool {
+        guard storage.isWritable, txDepth == 0 else { return false }
+        let before = persistCount
+        persist()
+        return persistCount != before && lastSaveError == nil
+    }
+
     // MARK: E1 — durable saves and recovery
     /// Runs a save as ONE write and reports whether it reached storage. `body` returns false when it refuses the record
     /// (duplicate, demo…): nothing is written and nothing is reported. When `body` accepted the record but the write
