@@ -1,6 +1,6 @@
 # Cyclift Lab — feature tracker (redesign in the shared app)
 
-**Version:** 0.3 · 18 Nov 2026 · Level 3 · Status: Current Draft, kept short on purpose.
+**Version:** 0.4 · 18 Nov 2026 · Level 3 · Status: Current Draft, kept short on purpose.
 One codebase: every item below is shared code behind the redesign switch (on in Cyclift Lab; on in the main app only in controlled CI; off in production).
 Evidence words: **compiled** = built in CI · **ran** = seen running in the iOS simulator (run named) · **visually compared** = screenshot set beside its reference · nothing here is physical-device tested, and nothing is visually approved by the owner unless it says so.
 Governing instructions: Master Project Instructions v3.0. The repository has no CLAUDE.md.
@@ -91,3 +91,22 @@ CI changes of 17 Nov (c6d594bc, not yet exercised by a full run): smoke job limi
 | Arabic (right-to-left, localisation) | Not started — required for the complete product |
 | Data import / recovery | Not started — required before production if export is presented as a backup |
 | Main-app coverage of strength recorder, review, cycling with the redesign on | Missing |
+
+## 8. Lab TestFlight builds and real-device feedback
+
+| Build | Commit | Uploaded | State |
+|---|---|---|---|
+| 0.1.0 (3) | 59e2f033 | 16 Nov 2026 | Superseded |
+| 0.1.0 (4) | 8ba4f4e1 | 18 Nov 2026 (owner approval 13:22 Dubai; signed-build check 3 passed; upload run 2) | Internal testers only. Installed on the owner's iPhone |
+
+Owner's iPhone review of build 4 (18 Nov 2026, physical device). Corrections are on the development branch and are NOT in build 4; none is confirmed until seen running and shown to the owner.
+
+| # | Feedback | Correction on the branch | Seen running |
+|---|---|---|---|
+| 1 | The yellow Lab band dominates every screen | One compact yellow tag on the app's own background (96e4c33c); isolation unchanged | Not yet |
+| 2 | The dock overlaps or obscures content (Home, Progress) | Page fades into its background 12 pt above the dock and is not visible beneath it; Progress end-of-page checked against the dock (96e4c33c) | Not yet |
+| 3 | Home v2.3 needs visual refinement and approval | Still provisional; no change made | — |
+| 4 | Plan is larger and more colourful than B1 | Add a goal, one-line Coach row, no rest-day dash (80ce5347, seen in Lab 34 and 39). Whether that answers "larger and more colourful" is for the owner to judge on the next build | Lab 34, 39 |
+| 5 | Progress must have its full structure | v2.3 sections on real records (74daaeb9, seen in Lab 39); Next evolution and the Evolution timeline still absent — stage criteria not approved | Lab 39 |
+
+No further TestFlight upload without separate authorization.
