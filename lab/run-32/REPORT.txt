@@ -1,0 +1,61 @@
+RESULT Lab build: ok · 309s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint 009b2c3b10a1a73f 2 
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2101.009 (2101.029) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2101.009 (2101.031) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2101.009 (2101.039) seconds
+Test Case '-[CycliftLabUITests.LabChecks test0HomeControlsPresentTheirPages]' passed (687.611 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' passed (800.474 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved]' passed (216.756 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing]' passed (42.097 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' passed (180.084 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (57.635 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan]' passed (89.832 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' passed (26.521 seconds).
+RESULT Lab screen checks: ok · 2272s
+LAB-NOTE Coach card today leads to: Plan
+LAB-NOTE dock: ball bottom 34.0 pt above the screen bottom, left 14.0 pt, dock frame (14.0, 758.619873046875, 374.5, 90.76025390625)
+LAB-NOTE Home end of page: last control ends 128.0000000000001 pt above the screen bottom (scrolling inset 128)
+LAB-NOTE Home navigation: a Key metrics row presented its page at the first tap: true
+LAB-NOTE Home navigation: the Consistency ring presented its page at the first tap: true
+LAB-NOTE Home navigation: the Endurance card presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day, again after returning presented its page at the first tap: true
+LAB-NOTE Home navigation: the Recovery indicator presented its page at the first tap: true
+LAB-NOTE Home navigation: the Sleep bar presented its page at the first tap: true
+LAB-NOTE Home navigation: the Strength card presented its page at the first tap: true
+LAB-NOTE strength journey: 10 sets logged; superset seen: false
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (009b2c3b10a1a73f 2 )
+RESULT Lab launch in six themes: ok
+commit e91e38be146f872a797b78b6435971209f3cec09  branch ios/lab
