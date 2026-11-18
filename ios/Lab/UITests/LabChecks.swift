@@ -724,7 +724,7 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(still.waitForExistence(timeout: 8), "required: the postponed suggestion is still open and still marked after reopening")
         _ = app.reveal(still)
         shot("notnow-3-after-reopen")
-        let review = starting("coachOpen-hold").firstMatch
+        let review = starting("coachOpen-prop-hold").firstMatch
         XCTAssertTrue(review.waitForExistence(timeout: 8), "required: the postponed suggestion can be reviewed later")
         _ = app.reveal(review); review.tap()
         let accept = app.buttons["proposalAccept"].firstMatch
