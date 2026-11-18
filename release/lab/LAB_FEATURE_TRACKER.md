@@ -1,6 +1,6 @@
 # Cyclift Lab — feature tracker (redesign in the shared app)
 
-**Version:** 0.2 · 18 Nov 2026 · Level 3 · Status: Current Draft, kept short on purpose.
+**Version:** 0.3 · 18 Nov 2026 · Level 3 · Status: Current Draft, kept short on purpose.
 One codebase: every item below is shared code behind the redesign switch (on in Cyclift Lab; on in the main app only in controlled CI; off in production).
 Evidence words: **compiled** = built in CI · **ran** = seen running in the iOS simulator (run named) · **visually compared** = screenshot set beside its reference · nothing here is physical-device tested, and nothing is visually approved by the owner unless it says so.
 Governing instructions: Master Project Instructions v3.0. The repository has no CLAUDE.md.
@@ -12,9 +12,9 @@ Governing instructions: Master Project Instructions v3.0. The repository has no 
 | Navigation v1.2 rev 1.1 (dock) | Sheet F1, final visual specification | Ran. Measured by test: ball bottom 34.0 pt, left 14.0 pt, ball 72 pt, silhouette 90.8 pt. Was 18 pt too high before Batch 1. Visually compared with F1 | e91e38be · Lab 32 | Content passes behind the dock while scrolling, as sheet F7 allows; owner asked for no content showing beneath it — decision open |
 | Home v2.3 | Prototype source (proto/ui-lab). PROVISIONAL: no picture reference, not approved | Ran on the athlete's own records in Lab and in the redesigned main app. Every control presents its page at the first tap (day, Consistency, Recovery, Endurance, Strength, Sleep, Key metrics; again after returning). End of page 128.0 pt | e91e38be · Lab 32 (8/8); iOS 286 redesigned main app ok | Differences in section 6. Awaits owner's visual review |
 | Profile v2.0 (six sections) | Sheets P01–P10 | Ran; theme switching passes. Inner pages still the existing ones | Lab 32 | Batch 5 |
-| Plan v2.0 | Sheets B1, B2 | Ran (this week). Close to B1; differences: week header shows "This week" not the date range, no "Add a goal" control, no exercise count/bars on session cards | Lab 32 | Batch 2 |
+| Plan v2.0 | Sheets B1, B2 | Ran; visually compared with B1 (Obsidian). Week named by its dates; session cards show length · exercise count (or ride structure) and structure bars from the prescription. Remaining differences: no "Add a goal" control on the goal card (a chevron instead); the Coach row wraps to two lines; rest days show a dash under the date (not on the sheet); strength bars are one height (the plan holds no per-exercise intensity). Not owner-approved | Lab 33 (8ba4f4e1) | Owner visual review; "Add a goal" |
 | Training Hub compact panel → full Hub | v1.4 sheets 06b, 06c | Ran; panel and expansion checks pass | Lab 32 | — |
-| Strength preparation | v1.4 sheet 01a (J2), G3 | NOT built: the existing session sheet is shown | — | Batch 2 |
+| Strength preparation | v1.4 sheet 01a (J2), G3 | Built and ran: opens from the Train panel for a session that can start now; Start, minimise → Resume, finish all exercised in the Lab journey. Visually compared with J2: composition matches. Differences: a "More" button (top right, not on the sheet) opens the existing session page; equipment words are the library's ("dumbbell"); the demo session's name repeats "Strength"; a superset group has not been seen on screen (demo session has none; covered by logic tests only). Other states (done, skipped, later day, no routine, health hold) keep the existing page. Not owner-approved | Lab 33 (8ba4f4e1) | Owner visual review; decide on "More" |
 | Strength recorder v1.4 | v1.4 sheets 04a–04c | Ran: journey logs 10 sets, saves, survives relaunch. Superset not seen on screen | Lab 32 | Visual comparison; superset on screen |
 | Finish / save | v1.4 sheets 06e, 06f | Ran, but the layout is not the approved one | Lab 32 | Batch 3 |
 | Review (three optional values, pain unknown ≠ none) | v1.4 sheet 06a | Ran, but the layout is not the approved one | Lab 32 | Batch 3 |
@@ -61,6 +61,10 @@ No fully verified E1 commit. Open: Progress large-text preview bubble; cancelled
 | e91e38be | Lab 32 | 8/8 including first-tap Home navigation | — |
 | e91e38be | iOS 286 (journeys + smoke) | Redesigned main app (2 tests); production hybrid, cycling, strength journeys; 31 of 33 smoke tests incl. 8 of 9 production Home navigation tests | 2 smoke tests failed to START (simulator: "Timed out while launching application", "Failed to get background assertion"). Being rerun alone |
 | e91e38be | iOS 287, logic 131 | Compile, 809 unit tests; Linux logic tests | — |
+| e91e38be | iOS 288 (the two smoke tests alone) | Both passed on small and standard simulators. Supports a simulator launch failure in 286; the cause of those two launch failures is not known | — |
+| 8ba4f4e1 | Lab 33 | 8/8 incl. the strength journey through the v1.4 preparation screen and first-tap Home navigation | — |
+| 8ba4f4e1 | iOS 290 (journeys) | Redesigned main app (2 tests); production hybrid, cycling, strength journeys | — |
+| 8ba4f4e1 | logic 132 | Linux logic tests incl. 3 new preparation-row tests | iOS 289 (compile + 809 Mac unit tests) was CANCELLED, not failed: the full Mac unit suite has not run on this commit (the app did build in Lab 33 and iOS 290) |
 
 CI changes of 17 Nov (c6d594bc, not yet exercised by a full run): smoke job limit 120 min with a 15-minute limit per test; the design gallery audit, which ran in no routine job, now runs on the standard-size layout job. Five Plan/Home smoke tests take 3–9 minutes each — optimisation deferred.
 
