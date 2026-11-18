@@ -15,6 +15,7 @@ struct ProgressTabView: View {
     @State private var metric: TrendMetric = .riding
     @State private var range: ChartRange = .w8
     @State private var positioned = false
+    @State private var route: String? = nil
     @Environment(\.dynamicTypeSize) private var dts
     /// Two years of weeks (cheap: one ledger pass per week).
     private let historyWeeks = 104
@@ -31,9 +32,27 @@ struct ProgressTabView: View {
         let riding = TrendChartMath.buckets(ledger, riding: true, weeks: historyWeeks, now: Date())
         let lifting = TrendChartMath.buckets(ledger, riding: false, weeks: historyWeeks, now: Date())
         if CyProduct.redesign {
-            // Approved compact hero over the same analysis (one page, one set of figures).
-            ProgressScreen(sample: .notEvaluated) { proxy in analysis(riding: riding, lifting: lifting, proxy: proxy) }
-                .onAppear(perform: position)
+            // Approved compact hero over the Progress v2.3 sections (sheet PH4). The app's full analysis — the same views
+            // and figures as before — is one tap away under "Detailed analytics"; the session history under "Records & history".
+            ProgressScreen(sample: .notEvaluated, route: $route, destination: { name in
+                switch name {
+                case "analytics":
+                    return AnyView(ScrollViewReader { proxy in
+                        ScrollView { analysis(riding: riding, lifting: lifting, proxy: proxy, history: false).padding(16).padding(.bottom, 120) }
+                    }
+                    .background(CyTheme.sysPage).navigationTitle("Detailed analytics").navigationBarTitleDisplayMode(.inline)
+                    .accessibilityElement(children: .contain).accessibilityIdentifier("progressAnalyticsPage"))
+                case "history":
+                    return AnyView(ScrollView { sessions.padding(16).padding(.bottom, 120) }
+                        .background(CyTheme.sysPage).navigationTitle("Records & history").navigationBarTitleDisplayMode(.inline)
+                        .accessibilityElement(children: .contain).accessibilityIdentifier("progressHistoryPage"))
+                default: return nil
+                }
+            }) { _ in
+                ProgressV23Sections(model: development(riding: riding, lifting: lifting), units: store.settings.units, showAnalytics: !metrics.isEmpty,
+                                    onAnalytics: { route = "analytics" }, onHistory: { route = "history" })
+            }
+            .onAppear(perform: position)
         } else {
             NavigationStack {
                 ScrollViewReader { proxy in
@@ -47,8 +66,22 @@ struct ProgressTabView: View {
     }
     private func position() { if !positioned { positioned = true; if !showRiding && showLifting { metric = .strength } } }
 
+    /// Progress v2.3: the development figures, from the same weekly buckets, lift summaries and ride analytics as the analysis.
+    private func development(riding: [WeekBucket], lifting: [WeekBucket]) -> ProgressDevelopment {
+        let units = store.settings.units
+        var d = ProgressDevelopment()
+        d.endurance = ProgressDevelopment.endurance(riding, best20: ProgressGlance.best20Trend(store.rides), show: showRiding)
+        if showLifting { d.strength = ProgressDevelopment.strength(store.liftSummaries()) { AdaptationExplainer.kg($0, units) } }
+        d.consistency = ProgressDevelopment.consistency(riding: showRiding ? riding : [], lifting: showLifting ? lifting : [])
+        if showRiding {
+            let z = ProgressDevelopment.zones(ProgressAnalytics.cycling(rides: store.rides, period: .quarter, ftpW: store.profile.ftpKnown ? store.profile.ftpW : nil, hrZones: store.profile.hrZones))
+            d.zones = z.zones; d.zonesMissing = z.missing
+        }
+        return d
+    }
+
     /// The analysis itself: the same views and figures in both shells.
-    private func analysis(riding: [WeekBucket], lifting: [WeekBucket], proxy: ScrollViewProxy) -> some View {
+    private func analysis(riding: [WeekBucket], lifting: [WeekBucket], proxy: ScrollViewProxy, history: Bool = true) -> some View {
         VStack(spacing: DS.m) {
             if !metrics.isEmpty { glance(riding: riding, lifting: lifting, proxy: proxy) }
             if !metrics.isEmpty {
@@ -59,7 +92,7 @@ struct ProgressTabView: View {
             if showRiding { ftpCard.id("ftp") }
             if showLifting { StrengthProgressCard() }
             CheckpointsCard(showRiding: showRiding, showLifting: showLifting)
-            sessions
+            if history { sessions }
         }
     }
 

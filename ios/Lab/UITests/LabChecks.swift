@@ -245,7 +245,22 @@ final class LabChecks: XCTestCase {
                 XCTAssertTrue(track.waitForExistence(timeout: 8), "Progress shows the Evolution Track")
                 XCTAssertFalse(app.staticTexts["heroGeneration"].firstMatch.exists, "no stage may be shown: there is no approved stage evaluation")
                 XCTAssertTrue(track.label.contains("No generation yet"), "the track says no stage is evaluated (\(track.label))")
+                // Progress v2.3 (sheet PH4): open sections with the athlete's own figures; the full analysis and the history are one tap away
+                func pe(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+                XCTAssertTrue(pe("progressV23").exists, "required: the v2.3 sections under the hero")
+                for s in ["progressEndurance", "progressStrengthDevelopment", "progressConsistency"] { XCTAssertTrue(pe(s).exists, "required: \(s) (the demo athlete rides and lifts)") }
+                print("LAB-NOTE progress: \(pe("progressEndurance").label.prefix(140)) | \(pe("progressStrengthDevelopment").label.prefix(140)) | \(pe("progressConsistency").label.prefix(80)) | zones: \(pe("progressZones").exists ? String(pe("progressZones").label.prefix(80)) : (pe("progressZonesMissing").exists ? pe("progressZonesMissing").label : "absent"))")
                 app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-5b-progress-lower")
+                app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-5c-progress-end")
+                let analytics = app.buttons["progressOpenAnalytics"].firstMatch
+                XCTAssertTrue(analytics.waitForExistence(timeout: 5), "required: Detailed analytics"); app.reveal(analytics); analytics.tap()
+                XCTAssertTrue(pe("progressAnalyticsPage").waitForExistence(timeout: 8), "Detailed analytics opens the app's full analysis"); app.settleForScreenshot(1); shot("\(tag)-5d-progress-analytics")
+                app.navigationBars.buttons.firstMatch.tap()
+                let history = app.buttons["progressOpenHistory"].firstMatch
+                XCTAssertTrue(history.waitForExistence(timeout: 8), "required: Records & history"); app.reveal(history); history.tap()
+                XCTAssertTrue(pe("progressHistoryPage").waitForExistence(timeout: 8), "Records & history opens the session history"); shot("\(tag)-5e-progress-history")
+                app.navigationBars.buttons.firstMatch.tap()
+                XCTAssertTrue(history.waitForExistence(timeout: 8), "back on Progress")
             }
             XCTAssertTrue(openProfile(app), "\(t.id): Profile opens from the Home avatar"); shot("\(tag)-6-profile"); XCTAssertTrue(banner(app), "\(t.id): banner on Profile")
             app.terminate()
@@ -538,6 +553,42 @@ final class LabChecks: XCTestCase {
         }
         XCTAssertTrue(el("recorderOverline").label.hasPrefix("SUPERSET"), "the recorder reaches the superset: \(el("recorderOverline").label)")
         shot("superset-2-recorder")
+    }
+
+    /// Profile v2.0: every section page and the pages behind it, as pictures for the comparison with sheets P03–P08.
+    /// Each row named here is required to exist and to open a page with a way back.
+    func test2dProfileSectionsAndTheirPagesOpen() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        XCTAssertTrue(openProfile(app), "Profile opens from the Home avatar")
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        func back() { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
+        let pages: [(section: String, name: String, rows: [String])] = [
+            ("profileSectionA", "athlete", ["profilePersonal", "profileType"]),
+            ("profileSectionB", "setup", ["profileEquipment", "profilePreferences", "profileHealthSafety", "profileGoal", "profileWeek"]),
+            ("profileSectionC", "performance", ["profileHR", "profileFTP"]),
+            ("profileSectionD", "devices", []),
+            ("profileSectionE", "preferences", ["profileAppearance", "profileUnits", "profileCoach"]),
+            ("profileSectionF", "data", ["profileSettings", "profileHelp"]),
+        ]
+        for p in pages {
+            let s = el(p.section)
+            XCTAssertTrue(s.waitForExistence(timeout: 8), "required: \(p.section)"); app.reveal(s); s.tap(); app.settleForScreenshot(1)
+            shot("profile-\(p.name)")
+            for r in p.rows {
+                let row = el(r)
+                XCTAssertTrue(row.waitForExistence(timeout: 8), "required: \(r) on \(p.name)"); app.reveal(row); row.tap(); app.settleForScreenshot(1)
+                XCTAssertFalse(row.isHittable, "\(r) opens its page")
+                shot("profile-\(p.name)-\(r)")
+                back()
+                XCTAssertTrue(row.waitForExistence(timeout: 8), "back from \(r)")
+            }
+            back()
+        }
+        XCTAssertTrue(el("profileSectionA").waitForExistence(timeout: 8), "back on the Profile landing page")
     }
 
     /// The cycling screen in Lab is a labelled demonstration: the v1.4 layout and lifecycle, simulated figures, nothing saved.

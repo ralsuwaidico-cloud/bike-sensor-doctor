@@ -332,10 +332,17 @@ struct ProgressScreen<Analysis: View>: View {
     @State private var path: [String] = []
     @State private var anchorOffset: CGFloat = 0
 
+    /// A page the content asks for by name (the host sets it; this screen pushes it and clears it).
+    var route: Binding<String?> = .constant(nil)
+    /// The host's own pages by name; nil = the Athlete Evolution page.
+    var destination: (String) -> AnyView? = { _ in nil }
+
     init(sample: ProgressSample, bottomInset: CGFloat = 0, launchScroll: String? = nil, forceReduceMotion: Bool = false,
-         showProbe: Bool = false, @ViewBuilder analysis: @escaping (ScrollViewProxy) -> Analysis) {
+         showProbe: Bool = false, route: Binding<String?> = .constant(nil), destination: @escaping (String) -> AnyView? = { _ in nil },
+         @ViewBuilder analysis: @escaping (ScrollViewProxy) -> Analysis) {
         self.sample = sample; self.bottomInset = bottomInset; self.launchScroll = launchScroll
         self.forceReduceMotion = forceReduceMotion; self.showProbe = showProbe; self.analysis = analysis
+        self.route = route; self.destination = destination
     }
 
     private let space = "progressRoot"
@@ -350,9 +357,10 @@ struct ProgressScreen<Analysis: View>: View {
             }
             .navigationTitle("Progress")
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: String.self) { _ in
-                EvolutionDetailsPage(sample: sample, bottomInset: bottomInset)
+            .navigationDestination(for: String.self) { name in
+                if let page = destination(name) { page } else { EvolutionDetailsPage(sample: sample, bottomInset: bottomInset) }
             }
+            .onChange(of: route.wrappedValue) { _, r in if let r { path.append(r); route.wrappedValue = nil } }
         }
     }
 
