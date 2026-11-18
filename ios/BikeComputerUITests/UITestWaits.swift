@@ -77,7 +77,7 @@ extension XCUIApplication {
         let bottom = frame.height - bottomMargin
         func inBand() -> Bool { e.exists && e.frame.minY >= top && e.frame.maxY <= bottom }
         var n = 0
-        while e.exists && !inBand() && n < 10 {
+        while e.exists && !inBand() && n < 18 {
             let dy: CGFloat = e.frame.maxY > bottom ? -200 : 200          // negative: the page moves up
             let start = coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
             start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: dy)))
@@ -94,6 +94,30 @@ extension XCUIApplication {
             lastY = y; tries += 1
         }
         return inBand()
+    }
+
+    /// Taps a control and reports whether the page it should open is actually PRESENTED: the page's own element is on
+    /// screen, the pushed page's back button is on screen and can be tapped, and the control that was tapped is no longer
+    /// reachable underneath. An identifier that merely exists somewhere (pages that are kept alive but hidden have them
+    /// too) is not accepted — that mistake produced a false "pages opened" in Lab run 26.
+    func tapPresents(_ control: XCUIElement, page pageId: String, timeout: TimeInterval = 8) -> Bool {
+        guard control.waitForExistence(timeout: 6) else { return false }
+        reveal(control, top: 170)
+        control.tap()
+        let page = descendants(matching: .any).matching(identifier: pageId).firstMatch
+        let back = navigationBars.buttons.firstMatch
+        guard page.waitForExistence(timeout: timeout), back.waitForExistence(timeout: 4) else { return false }
+        let onScreen = !page.frame.isEmpty && frame.intersects(page.frame)
+        return onScreen && back.isHittable && !(control.exists && control.isHittable)
+    }
+    /// Leaves a pushed page by its back button and reports whether the given element of the page underneath is reachable again.
+    func backReveals(_ underneath: XCUIElement) -> Bool {
+        let back = navigationBars.buttons.firstMatch
+        guard back.waitForExistence(timeout: 4), back.isHittable else { return false }
+        back.tap()
+        let until = Date().addingTimeInterval(6)
+        while Date() < until { if underneath.exists && underneath.isHittable { return true }; Thread.sleep(forTimeInterval: 0.3) }
+        return false
     }
 
     /// Short pause before a screenshot so animations and charts have finished drawing. Screenshots only — never used to

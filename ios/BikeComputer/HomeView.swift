@@ -38,19 +38,9 @@ struct HomeView: View {
         let hrOK = watchOK || hub.deviceStates.values.contains { $0.provides.localizedCaseInsensitiveContains("heart") && $0.state.isConnectedOrBetter }
         let setup = store.homeSetupItems(hrConnected: hrOK)
         let v23: Home21Data? = CyProduct.redesign ? store.homeV23(hrConnected: hrOK) : nil
-        let _ = CyTouchProbe.bodyTick("Home")
-        let variant = CyTouchProbe.homeVariant            // "" except in the screen tests' reproduction (Shell/CyTouchProbe.swift)
         NavigationStack(path: $path) {
             ScrollView {
-                if variant == "bare" || variant == "bareHeader" {
-                    Button("Open the test page") {
-                        CyTouchProbe.note("bare handler; route list before \(path.count)")
-                        path.append(.recovery)
-                        CyTouchProbe.note("bare handler; route list after \(path.count)")
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 60).padding(.top, 60)
-                    .accessibilityIdentifier("diagPush")
-                } else if let v23, variant != "legacy" {
+                if let v23 {
                     // Home v2.3 (provisional design) on the athlete's own records — Redesign/HomeV23Screen.swift
                     homeV23(v23, h)
                 } else {
@@ -84,8 +74,7 @@ struct HomeView: View {
             // B1 (6 Nov; run 172): Home's own header, pinned inside the safe area (below the status bar on every
             // device) — the date and a real 44 × 44 pt avatar button (the system bar reported 36 pt at large text)
             .safeAreaInset(edge: .top, spacing: 0) {
-                if variant == "bare" { EmptyView() }
-                else if let v23, variant != "legacy" {
+                if let v23 {
                     // Home v2.3's own compact header, pinned: the avatar is the only way to Profile (Navigation v1.2), so it
                     // must not scroll away. (The prototype scrolled it with the page — a stated difference.)
                     Home21Header(data: v23, onAvatar: { tab = 4 })
@@ -94,9 +83,9 @@ struct HomeView: View {
                 } else { homeHeader(dash) }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: HomeRoute.self) { route in let _ = CyTouchProbe.note("destination built for a route"); destination(route) }
+            .navigationDestination(for: HomeRoute.self) { route in destination(route) }
             .onChange(of: tab) { _, _ in showMenu = false }           // the menu never survives a tab change
-            .onChange(of: path) { _, p in showMenu = false; CyTouchProbe.note("route list changed: \(p.count) open") }
+            .onChange(of: path) { _, _ in showMenu = false }
             .navigationDestination(isPresented: $showAdjustments) { AdjustmentsView() }
             .sheet(item: $prescription) { w in HomePrescriptionSheet(workout: w) }
             .sheet(item: $coachSheet) { s in coachSheetView(s) }
@@ -106,10 +95,7 @@ struct HomeView: View {
     }
 
     // MARK: Home v2.3 (redesign only) — the prototype's screen on this athlete's records; every tap goes to a page that already exists
-    private func homeV23(_ data: Home21Data, _ h: HomeToday) -> AnyView {
-        // reproduction brackets: "stub" returns before anything in this function runs; "stub2" (below) after all of it has
-        // run but without showing Home v2.3's views
-        if CyTouchProbe.homeVariant == "v23-stub" { return AnyView(Text("stub").frame(maxWidth: .infinity, minHeight: 200).accessibilityIdentifier("diagStub")) }
+    private func homeV23(_ data: Home21Data, _ h: HomeToday) -> some View {
         let item = h.showCoach ? store.homeCoach() : nil
         let now = Date()
         let monday = TrainingLedger.monday(of: now)
@@ -127,22 +113,14 @@ struct HomeView: View {
             if !ownPage { actions.onCoachPage = { showCoach = true } }
         }
         actions.onAvatar = { tab = 4 }                                   // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
-        actions.onConsistency = {
-            CyTouchProbe.note("handler: week overview; route list before \(path.count)")
-            path.append(.weekOverview(now))
-            CyTouchProbe.note("after the week handler, route list \(path.count)")
-        }
-        actions.onMix = { CyTouchProbe.note("handler: week overview"); path.append(.weekOverview(now)) }
-        actions.onRecovery = { CyTouchProbe.note("handler: recovery"); path.append(.recovery) }
-        actions.onSleep = { CyTouchProbe.note("handler: recovery"); path.append(.recovery) }
+        actions.onConsistency = { path.append(.weekOverview(now)) }
+        actions.onMix = { path.append(.weekOverview(now)) }
+        actions.onRecovery = { path.append(.recovery) }
+        actions.onSleep = { path.append(.recovery) }
         actions.onStep = { s in if s.id == HomeSetupItem.Step.heartRate.rawValue || s.id == HomeSetupItem.Step.health.rawValue { tab = 4 } else { tab = 1 } }
-        actions.onDay = { d in
-            CyTouchProbe.note("handler: day \(d.id); route list before \(path.count)")
-            if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) }
-            CyTouchProbe.note("after the day handler, route list \(path.count)")
-        }
-        actions.onEndurance = { CyTouchProbe.note("handler: cycling"); path.append(.cycling) }
-        actions.onStrength = { CyTouchProbe.note("handler: strength"); path.append(.strength) }
+        actions.onDay = { d in if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) } }
+        actions.onEndurance = { path.append(.cycling) }
+        actions.onStrength = { path.append(.strength) }
         actions.onTrendsInfo = { showTrendsInfo = true }
         actions.onGraphDay = { d, _ in
             let count = data.graph.first(where: { $0.dates.contains(d) })?.dates.count ?? 7
@@ -150,17 +128,14 @@ struct HomeView: View {
         }
         actions.onMetric = { m in if m.id == "ftp" { tab = 3 } else { path.append(.recovery) } }
         let showLines = diag.unseenCrash != nil || h.caution != nil || (sync.state == .needsConfirmation && store.today?.kind.isRide == true)
-        // Reproduction variants (Shell/CyTouchProbe.swift; "" on every normal launch). Run 30: Home stops being redrawn
-        // even with no v2.3 section shown, so the cause is in this wrapper, not in a section. "oldpad" restores the one
-        // thing here that is not plain SwiftUI — asking the window for its bottom inset while the body is evaluated;
-        // "plain" shows the content without this wrapper's own modifiers; "nocontain" drops only the container marking.
-        let variant = CyTouchProbe.homeVariant
-        let endPadding: CGFloat = variant == "v23-oldpad"
-            ? CyCradleMetrics.pageEndPadding(deviceBottomInset: CyCradleMetrics.deviceBottomInset)
-            : CyCradleMetrics.pageEndPadding(deviceBottomInset: deviceBottomInset)
-        if variant == "v23-stub2" { return AnyView(Text("stub 2, \(data.name), \(coach.identifier), \(showLines ? 1 : 0), \(Int(endPadding))").frame(maxWidth: .infinity, minHeight: 200).accessibilityIdentifier("diagStub")) }
-        if variant == "v23-plain" { return AnyView(Home21Content(data: data, coach: coach, showsHeader: false, actions: actions)) }
-        let page = VStack(alignment: .leading, spacing: CySpace.m) {
+        // The end-of-page padding uses the device's bottom inset, which the shell reads outside rendering and hands down
+        // (ContentView). It must NOT be read from the window here. Lab runs 20–31: this function used to ask
+        // UIApplication's window for its safe-area inset while Home's body was being evaluated; from then on SwiftUI never
+        // evaluated Home's body again, so no later state was ever shown — a tapped day wrote the route list and no page
+        // appeared. Demonstrated in run 31: with the window lookup restored Home was evaluated twice and froze; with the
+        // handed-down value it was evaluated about once a second and the page was presented.
+        let endPadding = CyCradleMetrics.pageEndPadding(deviceBottomInset: deviceBottomInset)
+        return VStack(alignment: .leading, spacing: CySpace.m) {
             if showLines {
                 VStack(alignment: .leading, spacing: CySpace.s) {
                     banner
@@ -168,7 +143,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20).padding(.top, CySpace.s)
             }
-            Home21Content(data: data, coach: coach, showsHeader: false, actions: actions, diagLimit: CyTouchProbe.homeSectionLimit)
+            Home21Content(data: data, coach: coach, showsHeader: false, actions: actions)
         }
         // Navigation v1.2 (F7, C2): with the shell's scroll margin this ends the page 128 pt (110 pt without a home
         // indicator) above the bottom of the screen. Content may pass behind the dock while scrolling — that is the
@@ -176,10 +151,8 @@ struct HomeView: View {
         .padding(.bottom, endPadding)
         .frame(maxWidth: CyTheme.maxContentWidth + 2 * CyTheme.margin)
         .frame(maxWidth: .infinity)
-        if variant == "v23-nocontain" { return AnyView(page) }
-        return AnyView(page
-            .accessibilityElement(children: .contain)
-            .accessibilityIdentifier("homeV23"))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("homeV23")
     }
 
     private func homeHeader(_ dash: HomeDashboard) -> some View {

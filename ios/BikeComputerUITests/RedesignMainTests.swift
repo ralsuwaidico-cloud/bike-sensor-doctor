@@ -112,12 +112,16 @@ final class RedesignMainTests: XCTestCase {
         // screen and its back button can be tapped, not merely an identifier that exists somewhere.
         let day = again.buttons["scheduleDay-0"].firstMatch
         must(day, "Home v2.3 schedule day after relaunch")
-        day.tap()
-        let page = el(again, "homeDayDetail"), back = again.navigationBars.buttons.firstMatch
-        let presented = page.waitForExistence(timeout: 8) && back.waitForExistence(timeout: 4) && back.isHittable
-        print("REDESIGN-NOTE main app, redesign on: schedule day presented its page at the first tap: \(presented)")
+        let dayOK = again.tapPresents(day, page: "homeDayDetail")
+        print("REDESIGN-NOTE main app, redesign on: schedule day presented its page at the first tap: \(dayOK)")
         shot("9-home-day-after-first-tap")
-        XCTAssertTrue(presented, "required: in the redesigned main app the first tap on a schedule day presents that day's page")
+        XCTAssertTrue(dayOK, "required: in the redesigned main app the first tap on a schedule day presents that day's page")
+        XCTAssertTrue(again.backReveals(day), "required: back from the day page returns to Home")
+        let ring = el(again, "indicatorConsistency")
+        let weekOK = again.tapPresents(ring, page: "homeWeekOverview")
+        print("REDESIGN-NOTE main app, redesign on: Consistency presented the week page at the first tap: \(weekOK)")
+        XCTAssertTrue(weekOK, "required: in the redesigned main app the Consistency ring presents the week page")
+        XCTAssertTrue(again.backReveals(ring), "required: back from the week page returns to Home")
     }
 
     /// With the setting absent the same build shows the existing interface: the redesign is not on by default.

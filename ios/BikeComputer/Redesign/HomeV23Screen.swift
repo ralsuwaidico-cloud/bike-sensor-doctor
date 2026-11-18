@@ -48,23 +48,20 @@ struct Home21Content: View {
     /// false when the host pins the header above the scroll view (the app does: the avatar is the only way to Profile).
     var showsHeader: Bool = true
     var actions = Home21Actions()
-    /// Reproduction only (Shell/CyTouchProbe.swift): show the first N sections, to find the one after which Home stops
-    /// being redrawn (Lab run 29). 99 = all, which is every normal launch.
-    var diagLimit: Int = 99
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: CySpace.xl) {
             if showsHeader { Home21Header(data: data, isLoading: isLoading, showSampleTag: showSampleTag, onAvatar: actions.onAvatar).id("top") }
-            if diagLimit >= 1 { CyIndicatorRow(consistency: (data.consistency.fraction, data.consistency.text, data.consistency.caption),
+            CyIndicatorRow(consistency: (data.consistency.fraction, data.consistency.text, data.consistency.caption),
                            mix: data.mix, recovery: data.recovery, isLoading: isLoading,
-                           onConsistency: actions.onConsistency, onMix: actions.onMix, onRecovery: actions.onRecovery) }
+                           onConsistency: actions.onConsistency, onMix: actions.onMix, onRecovery: actions.onRecovery)
             if data.requiredOpen && !isLoading { CySetupBanner(steps: data.steps, onStep: actions.onStep) }
-            if diagLimit >= 2 { CyCompactSchedule(days: data.days, isLoading: isLoading, onDay: actions.onDay) }
-            if diagLimit >= 3 { sportCards.id("cards") }
-            if diagLimit >= 4 { CySleepBar(model: isLoading ? nil : data.sleep, onOpen: actions.onSleep) }
-            if coach.isShown && diagLimit >= 5 {
+            CyCompactSchedule(days: data.days, isLoading: isLoading, onDay: actions.onDay)
+            sportCards.id("cards")
+            CySleepBar(model: isLoading ? nil : data.sleep, onOpen: actions.onSleep)
+            if coach.isShown {
                 VStack(alignment: .trailing, spacing: 0) {
                     CyCoachPreview(model: isLoading ? nil : coach.model, emptyText: data.coachEmpty, isLoading: isLoading,
                                    identifier: coach.identifier, spokenPrefix: coach.spokenPrefix, hint: coach.hint, onOpen: actions.onCoach)
@@ -81,13 +78,11 @@ struct Home21Content: View {
                 }
                 .id("coach")
             }
-            if diagLimit >= 6 { CyTrendsGraph(ranges: data.graph, isLoading: isLoading, emptyText: data.graph.isEmpty ? (data.trendsEmpty ?? "Nothing recorded yet.") : nil,
+            CyTrendsGraph(ranges: data.graph, isLoading: isLoading, emptyText: data.graph.isEmpty ? (data.trendsEmpty ?? "Nothing recorded yet.") : nil,
                           isSample: showSampleTag, onInfo: actions.onTrendsInfo, onDay: actions.onGraphDay)
-                .id("trends") }
-            if diagLimit >= 7 {
-                CyMetricGrid(tiles: data.metrics, isLoading: isLoading, style: metricStyle, onTile: actions.onMetric)
-                    .id("metrics")
-            }
+                .id("trends")
+            CyMetricGrid(tiles: data.metrics, isLoading: isLoading, style: metricStyle, onTile: actions.onMetric)
+                .id("metrics")
             if !data.requiredOpen && !isLoading { CySetupBanner(steps: data.steps, onStep: actions.onStep) }
         }
         .padding(.horizontal, 20)

@@ -17,51 +17,45 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(b.waitForExistence(timeout: 8), "tab \(name)")
         if b.exists { b.tap(); app.settleForScreenshot(2) }
     }
-    /// Minimal reproduction for the Home navigation defect (Lab runs 20–28). Run 28, from the app's own stage file: the
-    /// handler writes the route list (0 → 1 → 2) and the list keeps the value, but Home is not redrawn (its change
-    /// observer never runs), no destination is built, every navigation controller stays at one page, and a page asked
-    /// for by a flag does not appear either. So the stack does not react to its own state. This keeps Home's stack, route
-    /// list and destinations and swaps only what the stack shows: one bare button; the same with the v2.3 header; the
-    /// previous dashboard; Home v2.3. "Presented" means the pushed page's back button is on screen and can be tapped —
-    /// not that an identifier exists somewhere.
-    func test0HomeNavigationReproduction() throws {
-        // Run 29: with one bare button, with the v2.3 header, and with the previous dashboard the page is presented and Home
-        // is redrawn about once a second; with Home v2.3 Home's body is evaluated twice at launch and never again, so no
-        // later state is ever shown. The cause is therefore inside Home v2.3's content. This run shows its first N
-        // sections (0 = none … 7 = all): the first N at which Home stops being redrawn names the section.
-        // Run 30: Home is evaluated twice and never again with 0, 1, … 7 sections alike — the cause is not a section but
-        // the wrapper Home v2.3 sits in. Variants of that wrapper: "oldpad" = as it was (asks the window for its bottom
-        // inset while the body is evaluated); "v23" = the inset handed down by the shell instead; "plain" = the content
-        // without the wrapper's modifiers; "nocontain" = without the container marking.
-        for variant in ["v23-oldpad", "v23", "v23-plain", "v23-nocontain", "v23-stub", "v23-stub2"] {
-            let file = "/tmp/cy-diag-\(UUID().uuidString).txt"
-            let app = XCUIApplication()
-            app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
-            app.launchEnvironment["LAB_THEME"] = "obsidian"
-            app.launchEnvironment["CY_DIAG_FILE"] = file
-            if variant != "v23" { app.launchEnvironment["CY_DIAG_HOME"] = variant }
-            let sections = 7
-            app.launch()
-            guard banner(app), app.buttons["centreButton"].firstMatch.waitForExistence(timeout: 20) else { print("LAB-NOTE repro [\(variant)]: app not shown"); app.terminate(); continue }
-            app.settleForScreenshot(2)
-            func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
-            func stages() -> String { ((try? String(contentsOfFile: file, encoding: .utf8)) ?? "file not readable").split(separator: "\n").joined(separator: " | ") }
-            // is Home being redrawn? count its body evaluations over eight idle seconds (the shell's one-second timer redraws a healthy Home)
-            Thread.sleep(forTimeInterval: 8)
-            let evaluations = stages().components(separatedBy: "Home body evaluation").count - 1
-            var presented = "not tried (no control with \(sections) sections)"
-            let control = sections >= 2 ? app.buttons["scheduleDay-0"].firstMatch : el("indicatorConsistency")
-            if !variant.contains("stub"), control.waitForExistence(timeout: 5) {
-                control.tap()
-                let back = app.navigationBars.buttons.firstMatch
-                presented = "\(back.waitForExistence(timeout: 6) && back.isHittable)"
-            }
-            let tail = stages().components(separatedBy: " | ").filter { !$0.contains("body evaluation") }.joined(separator: " | ")
-            print("LAB-NOTE repro [\(variant)]: Home body evaluations in the first seconds \(evaluations); page presented at first tap \(presented); other stages: \(tail)")
-            shot("repro-\(variant)-after-tap")
-            app.terminate()
-            try? FileManager.default.removeItem(atPath: file)
+    /// Home v2.3 controls open their pages at the first tap, and the pages are really presented (see `tapPresents`).
+    /// The regression check for the defect of Lab runs 20–31: Home asked the window for its bottom inset while its body
+    /// was being evaluated, was never redrawn again, and so no tapped control ever showed its page — while every handler
+    /// ran. Each page is opened, left, and the next one opened, so "navigate again after returning" is covered too.
+    func test0HomeControlsPresentTheirPages() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launch()
+        XCTAssertTrue(banner(app), "Lab is running")
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 20), "Home is shown")
+        app.settleForScreenshot(2)
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        let day = app.buttons["scheduleDay-0"].firstMatch
+        let steps: [(String, XCUIElement, String)] = [
+            ("the first schedule day", day, "homeDayDetail"),
+            ("the Consistency ring", el("indicatorConsistency"), "homeWeekOverview"),
+            ("the Recovery indicator", el("indicatorRecovery"), "homeRecoveryPage"),
+            ("the Endurance card", el("sportCard-endurance"), "homeCyclingSummary"),
+            ("the Strength card", el("sportCard-strength"), "homeStrengthSummary"),
+            ("the Sleep bar", el("sleepBar"), "homeRecoveryPage"),
+            ("a Key metrics row", el("metricRow-restingHR"), "homeRecoveryPage"),
+            ("the first schedule day, again after returning", day, "homeDayDetail")]
+        for (n, (what, control, page)) in steps.enumerated() {
+            let ok = app.tapPresents(control, page: page)
+            print("LAB-NOTE Home navigation: \(what) presented its page at the first tap: \(ok)")
+            XCTAssertTrue(ok, "required: \(what) presents its page (\(page)) at the first tap")
+            if n == 0 || n == 3 { app.settleForScreenshot(1); shot("home-nav-\(n)-\(page)") }
+            XCTAssertTrue(app.backReveals(control), "required: back from \(page) returns to Home, with \(what) reachable again")
         }
+        // the two interactions that are not pushed pages still work afterwards
+        let coach = el("homeCoachAction").exists ? el("homeCoachAction") : el("homeCoachQuiet")
+        XCTAssertTrue(coach.waitForExistence(timeout: 6), "the Coach preview is on Home"); app.reveal(coach)
+        XCTAssertTrue(coach.isHittable, "the Coach preview can be tapped after the page visits")
+        let avatar = app.buttons["homeAvatar"].firstMatch
+        XCTAssertTrue(avatar.isHittable, "the avatar can be tapped"); avatar.tap()
+        let profile = el("profileSectionA")
+        XCTAssertTrue(profile.waitForExistence(timeout: 8) && profile.isHittable, "required: the avatar shows Profile")
+        app.terminate()
     }
 
     /// The strip's theme name ("Theme: Ocean").
@@ -121,21 +115,6 @@ final class LabChecks: XCTestCase {
                 XCTAssertFalse((rec.value as? String ?? "").contains("%"), "Recovery never shows a percentage (\(rec.value ?? ""))")
             }
             app.settleForScreenshot(2); shot("\(tag)-1-home")
-            // Lab run 23: after the Coach steps below, no Home control that opens a page ran its action ("requests 0"), at any
-            // height of the screen, while the Coach card and the Coach page link — tapped earlier — did work. This probe taps
-            // the first schedule day at named stages, so the step after which Home stops responding is identified.
-            func dayOpens(_ stage: String) -> Bool {
-                let day = app.buttons["scheduleDay-0"].firstMatch
-                let home = app.descendants(matching: .any).matching(identifier: "homeV23").firstMatch
-                guard day.exists else { print("LAB-NOTE stage [\(stage)]: no schedule day on Home"); return false }
-                app.reveal(day, top: 170); let f = day.frame; day.tap()
-                let page = app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch
-                let ok = page.waitForExistence(timeout: 6)
-                print("LAB-NOTE stage [\(stage)] \(t.id): day at y \(Int(f.midY)) opened its page: \(ok)")
-                if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1); _ = app.waitForHome(name: "Demo", timeout: 10) }
-                return ok
-            }
-            if i < 2 { XCTAssertTrue(dayOpens("fresh launch"), "\(t.id): on a fresh launch a schedule day opens that day's page at the first tap") }
             // Lab run 11: the card is one accessibility element of its own and is not reported as a button
             let coach = app.descendants(matching: .any).matching(identifier: "homeCoachAction").firstMatch
             if coach.exists { XCTAssertTrue(coach.label.hasPrefix("Demo, rule-based, not AI."), "\(t.id): the Coach card says it is demo and not AI (\(coach.label))") }
@@ -168,7 +147,6 @@ final class LabChecks: XCTestCase {
                         }
                         app.settleForScreenshot(1)
                         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): back on Home after the card's destination")
-                        XCTAssertTrue(dayOpens("after the Coach card's destination (\(where_)) and back"), "\(t.id): a schedule day still opens after the Coach card's destination")
                         app.reveal(link); app.settleForScreenshot()
                         // …and the Coach page is one tap away on its own line
                         way = link
@@ -195,54 +173,17 @@ final class LabChecks: XCTestCase {
                     app.settleForScreenshot(2); shot("\(tag)-1b-coach")
                     app.buttons["coachClose"].firstMatch.tap(); app.settleForScreenshot(2)
                     XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): closing the Coach page returns to Home")
-                    XCTAssertTrue(dayOpens(i == 0 ? "after the Coach page, with a typed question" : "after the Coach page, nothing typed"), "\(t.id): a schedule day still opens after the Coach page is closed")
                 }
             }
             app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-2-home-lower")
             if i == 0 {
                 // Home v2.3 interactions on the athlete's records: a schedule day opens that day; the graph and the metrics are there
                 app.swipeDown(); app.swipeDown(); app.settleForScreenshot(2)
+                // after the Coach steps above (a tab round trip, a sheet, typing): a schedule day still presents its page
                 let day = app.buttons["scheduleDay-0"].firstMatch
-                if day.exists {
-                    app.reveal(day); print("LAB-NOTE schedule day frame before the tap: \(day.frame), hittable \(day.isHittable)"); day.tap()
-                    let page = app.descendants(matching: .any).matching(identifier: "homeDayDetail").firstMatch
-                    let opened = page.waitForExistence(timeout: 8)
-                    if !opened {
-                        // Lab runs 20 and 21: the day was still, on screen and hittable, and the tap opened nothing. Evidence for the
-                        // cause, gathered without hiding the failure: what the screen shows, whether Home's other pages open,
-                        // and whether a second tap on the same day works.
-                        app.settleForScreenshot(1); shot("\(tag)-2a-day-tap-did-nothing")
-                        let home = app.descendants(matching: .any).matching(identifier: "homeV23").firstMatch
-                        func state() -> String { home.exists ? (home.value as? String ?? "no value") : "Home container not found" }
-                        print("LAB-NOTE day tap 1 opened nothing; navigation bars \(app.navigationBars.count)")
-                        // the same kind of page from controls at other heights of the screen
-                        for (id, pageId) in [("sportCard-endurance", "homeCyclingSummary"), ("sleepBar", "homeRecovery"), ("metricRow-restingHR", "homeRecovery")] {
-                            let c = app.descendants(matching: .any).matching(identifier: id).firstMatch
-                            guard c.exists else { print("LAB-NOTE probe \(id): not found"); continue }
-                            app.reveal(c, top: 170); let f = c.frame; c.tap()
-                            let ok = app.descendants(matching: .any).matching(identifier: pageId).firstMatch.waitForExistence(timeout: 5) || app.navigationBars.count > 0
-                            print("LAB-NOTE probe \(id) at y \(Int(f.midY)): page opened \(ok)")
-                            if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
-                        }
-                        let ring = app.descendants(matching: .any).matching(identifier: "indicatorConsistency").firstMatch
-                        if ring.exists {
-                            app.reveal(ring, top: 170); ring.tap()
-                            let week = app.descendants(matching: .any).matching(identifier: "homeWeekOverview").firstMatch
-                            let ok = week.waitForExistence(timeout: 6)
-                            print("LAB-NOTE Consistency tap opens the week page: \(ok)")
-                            if ok { app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1) }
-                        }
-                        let today = app.buttons["scheduleDay-1"].firstMatch
-                        if today.exists { app.reveal(today, top: 170); today.tap(); print("LAB-NOTE tap on the next day (scheduleDay-1) opens a day page: \(page.waitForExistence(timeout: 6))") }
-                        if !page.exists { day.tap(); print("LAB-NOTE second tap on scheduleDay-0 opens the day page: \(page.waitForExistence(timeout: 6))") }
-                    }
-                    XCTAssertTrue(opened, "a schedule day opens that day's page at the first tap")
-                    if page.exists {
-                        app.settleForScreenshot(1); shot("\(tag)-2a-home-day")
-                        app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1)
-                    }
-                    XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "back on Home from the day page")
-                }
+                XCTAssertTrue(app.tapPresents(day, page: "homeDayDetail"), "required: after the Coach steps a schedule day presents that day's page at the first tap")
+                app.settleForScreenshot(1); shot("\(tag)-2a-home-day")
+                XCTAssertTrue(app.backReveals(day), "required: back from the day page returns to Home")
                 let chart = app.descendants(matching: .any).matching(identifier: "trendsChart").firstMatch, emptyTrends = app.descendants(matching: .any).matching(identifier: "trendsEmpty").firstMatch
                 XCTAssertTrue(chart.exists || emptyTrends.exists, "Home v2.3 shows the trend graph or says there is nothing recorded")
                 if chart.exists { app.reveal(chart, top: 170, bottomMargin: 130); app.settleForScreenshot(1); shot("\(tag)-2b-home-trends") }

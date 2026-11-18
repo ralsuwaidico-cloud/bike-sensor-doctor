@@ -31,6 +31,8 @@ enum CyCradleMetrics {
     static let ballBottomWithIndicator: CGFloat = 34
     static let ballBottomWithoutIndicator: CGFloat = 16
     /// The bottom safe-area inset of the device (the home-indicator zone); 0 on phones without one. 34 until a window exists.
+    /// NEVER call this while a view's body is being evaluated: asking the window for its insets during rendering left Home
+    /// permanently un-redrawn (Lab runs 20–31). The shell reads it in a task and hands it down as `\.cyDeviceBottomInset`.
     static var deviceBottomInset: CGFloat {
         let w = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first
         return w?.safeAreaInsets.bottom ?? 34
