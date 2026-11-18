@@ -1,0 +1,5 @@
+BikeComputer iOS CI — build 293 — 2026-11-18 08:56 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
