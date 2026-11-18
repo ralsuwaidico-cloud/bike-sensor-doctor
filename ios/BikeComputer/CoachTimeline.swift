@@ -34,7 +34,7 @@ enum CyCoachEntryKind: String, Equatable {
 }
 
 struct CyCoachEntry: Identifiable, Equatable {
-    enum Opens: Equatable { case proposal(String), adjustments }
+    enum Opens: Equatable { case proposal(String), adjustments, hybrid(String), ftp }
     let id: String
     let at: Date
     let author: CyCoachAuthor
@@ -63,6 +63,22 @@ enum CoachTimeline {
         var closed: [Closed] = []
         /// The conversation, as stored.
         var chat: [CoachChatMessage] = []
+        /// The one item the Home card and the Plan row are showing now (Store.homeCoach). When it is not already one of
+        /// the records above it is listed too, so the three places never disagree.
+        var current: HomeCoachItem? = nil
+    }
+
+    /// The Home / Plan item as a timeline entry. nil when the timeline already holds it (a proposal of the adaptation
+    /// engine, an applied change). A proposal of the hybrid coach keeps its own approval sheet; the FTP suggestion keeps
+    /// its own sheet; a finding, an insight or the rating prompt is a note with no decision.
+    static func currentEntry(_ c: HomeCoachItem, at: Date) -> CyCoachEntry? {
+        switch c.source {
+        case .adaptiveProposal, .adjustment: return nil
+        case .hybridProposal(let id): return CyCoachEntry(id: "hyb-\(id)", at: at, author: .coach, kind: .proposal, text: c.plainTitle, detail: c.evidence, opens: .hybrid(id))
+        case .ftp: return CyCoachEntry(id: "ftp", at: at, author: .coach, kind: .recommendation, text: c.plainTitle, detail: c.evidence, opens: .ftp)
+        case .gap: return CyCoachEntry(id: "now-gap", at: at, author: .coach, kind: .observation, text: c.plainTitle, detail: c.evidence)
+        case .revise, .insight, .rate: return CyCoachEntry(id: "now-note", at: at, author: .coach, kind: .recommendation, text: c.plainTitle, detail: c.evidence)
+        }
     }
     /// One answered proposal: what was proposed, the check, and the athlete's decision with its time.
     struct Closed: Equatable {
@@ -95,6 +111,7 @@ enum CoachTimeline {
             out.append(CyCoachEntry(id: "prop-\(p.id)", at: raised, author: .coach, kind: p.adjustments.isEmpty ? .recommendation : .proposal,
                                     text: p.text, detail: p.why, opens: .proposal(p.id), check: i.checks[p.id]))
         }
+        if let c = i.current, let e = currentEntry(c, at: raised) { out.append(e) }
         for c in i.closed {
             out.append(CyCoachEntry(id: "closed-\(c.id)", at: c.at, author: .athlete, kind: .decision, text: "\(c.approved ? "Approved" : "Declined"): \(c.text)",
                                     detail: c.why, check: c.check, chip: CoachSource.athlete.chip))

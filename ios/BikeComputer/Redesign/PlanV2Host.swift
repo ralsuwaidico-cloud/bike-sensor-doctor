@@ -42,10 +42,13 @@ enum PlanV2Adapter {
         }
         let trainingDays = avail.days.filter { $0.activity != .rest }.count
         let this = store.planWeekSummary(weekOf: now, now: now, recorderActive: recorderActive, calendar: cal)
+        let coach = store.homeCoach(now: now)
         return PlanData(goalTitle: p.effectiveGoals.isEmpty ? nil : ProfileText.goals(p),
                         goalDetail: "\(ProfileText.mode(p.trainingMode)) · \(trainingDays) training day\(trainingDays == 1 ? "" : "s") a week",
                         weeks: weeks,
-                        suggestion: store.homeCoach(now: now)?.title,
+                        suggestion: coach?.plainTitle,
+                        suggestionHeading: coach?.planHeading ?? "COACH SUGGESTS",
+                        suggestionAction: coach?.planAction ?? "Review",
                         recurring: recurring,
                         availability: this.minutesLine,
                         availabilityWarning: nil,
@@ -102,6 +105,7 @@ struct PlanV2Host: View {
     @State private var selected: Workout?
     @State private var addOn: Date?
     @State private var page: Page?
+    @State private var showCoach = false
 
     var body: some View {
         NavigationStack {
@@ -110,6 +114,8 @@ struct PlanV2Host: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .sheet(item: $selected) { w in if w.kind == .strength { StrengthWorkoutScreen(workoutId: w.id) } else { WorkoutDetail(workout: w) } }
                 .sheet(item: $addOn) { d in AddWorkoutSheet(date: d) }
+                // the Coach row opens the one Coach page, where the same item stands with its own action
+                .fullScreenCover(isPresented: $showCoach) { CoachTimelineScreen(backTitle: "Plan", onClose: { showCoach = false }).cyThemeRoot() }
                 .sheet(item: $page) { p in
                     NavigationStack {
                         Group {
@@ -139,7 +145,7 @@ struct PlanV2Host: View {
         case "Add a goal", "Set a goal", "Goal & Program": page = .goal; return true
         case "Routines": page = .routines; return true
         case "Availability & preferences": page = .availability; return true
-        case "Coach proposal": page = .adjustments; return true
+        case "Coach proposal": showCoach = true; return true
         default:
             if r.weekday != nil { page = .availability; return true }       // a Recurring Plan row: the existing week editor
             return false                                                    // e.g. Plan history

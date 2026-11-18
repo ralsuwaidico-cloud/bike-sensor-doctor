@@ -248,6 +248,26 @@ final class LabChecks: XCTestCase {
                 let note = app.staticTexts["planSampleNote"].firstMatch
                 XCTAssertTrue(note.exists && note.label.contains("demo athlete"), "Plan says the data is the demo athlete's")
                 XCTAssertTrue(app.staticTexts["planDayHeader"].firstMatch.exists, "today's day is selected")
+                // One Coach item for Home, Plan and the Coach page (18 Nov 2026): what the Plan row says must stand on the
+                // Coach page it opens, and the row may call it a suggestion to review only when a decision is waiting.
+                let row = app.descendants(matching: .any).matching(identifier: "planCoachRow").firstMatch
+                if row.exists {
+                    let said = row.label
+                    print("LAB-NOTE plan coach row: \(said)")
+                    row.tap()
+                    XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "coachTimeline").firstMatch.waitForExistence(timeout: 8), "required: the Plan row opens the Coach page")
+                    let core = said.components(separatedBy: ": ").dropFirst().joined(separator: ": ").components(separatedBy: ". ").first ?? ""
+                    let key = String(core.prefix(24))
+                    let entries = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'coachEntry-' AND label CONTAINS %@", key))
+                    XCTAssertGreaterThan(entries.count, 0, "required: the Coach page lists what the Plan row showed (\(key))")
+                    let waiting = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'coachOpen-'")).count
+                    if said.hasPrefix("Coach Suggests") { XCTAssertGreaterThan(waiting, 0, "required: a suggestion to review has its Review control on the Coach page") }
+                    print("LAB-NOTE plan coach row on the Coach page: \(entries.count) matching entr\(entries.count == 1 ? "y" : "ies"); controls to open: \(waiting)")
+                    shot("\(tag)-4a-plan-coach-page")
+                    XCTAssertEqual(app.buttons["coachClose"].firstMatch.label, "Back to Plan")
+                    app.buttons["coachClose"].firstMatch.tap(); app.settleForScreenshot(2)
+                    XCTAssertTrue(app.staticTexts["planTitle"].firstMatch.waitForExistence(timeout: 8), "required: back on Plan")
+                } else { print("LAB-NOTE plan coach row: none shown") }
                 app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-4b-plan-lower")
             }
             tab(app, "Progress"); shot("\(tag)-5-progress")

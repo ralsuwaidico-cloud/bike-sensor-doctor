@@ -309,6 +309,22 @@ struct HomeCoachItem: Equatable {
     var opensCoachPageInRedesign: Bool { HomeCoachItem.route(for: source, redesign: true) == .coachPage }
     var source: Source
     var title: String
+    /// The athlete is asked to decide something: a plan proposal (either coach engine) or the FTP suggestion.
+    /// A finding, an applied change, an insight or the rating prompt asks for no decision.
+    var needsDecision: Bool {
+        switch source { case .adaptiveProposal, .hybridProposal, .ftp: return true; default: return false }
+    }
+    /// The title without the card's own "Coach suggests: " lead-in (the Plan row and the Coach page have their own heading).
+    var plainTitle: String { title.hasPrefix("Coach suggests: ") ? String(title.dropFirst("Coach suggests: ".count)) : title }
+    /// Heading and action of the Plan row for this item. Only something that waits for a decision is called a
+    /// suggestion to review (18 Nov 2026: a finding was shown as "Coach suggests · Review" and opened the list of
+    /// applied changes, where it was not).
+    var planHeading: String {
+        if needsDecision { return "COACH SUGGESTS" }
+        if case .adjustment = source { return "COACH CHANGED" }
+        return "COACH NOTES"
+    }
+    var planAction: String { needsDecision ? "Review" : "Open" }
     /// The engine's own reason, first sentence only (N2: no invented counts).
     var evidence: String?
     var actionLabel: String?

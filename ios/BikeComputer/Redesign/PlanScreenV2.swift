@@ -75,6 +75,9 @@ struct PlanData {
     var goalDetail: String
     var weeks: [PlanWeek]
     var suggestion: String?
+    /// Heading and action of the Coach row, from the item itself (HomeCoachItem.planHeading / .planAction).
+    var suggestionHeading: String = "COACH SUGGESTS"
+    var suggestionAction: String = "Review"
     var recurring: [PlanRecurringRow]
     var availability: String              // plain summary of the time available and planned
     var availabilityWarning: String?      // plain sentence naming the conflict, when there is one
@@ -226,9 +229,8 @@ struct PlanScreen: View {
         .overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: theme.borderWidth))
     }
     private var programFill: LinearGradient {
-        theme.usesGradients
-            ? LinearGradient(colors: [theme.accent.opacity(theme.isDark ? 0.22 : 0.10), theme.surface.opacity(0)], startPoint: .leading, endPoint: UnitPoint(x: 0.7, y: 0.5))
-            : LinearGradient(colors: [theme.surface, theme.surface], startPoint: .leading, endPoint: .trailing)
+        // Owner's decision of 18 Nov 2026 (iPhone review): no decorative tint on the goal card.
+        LinearGradient(colors: [theme.surface, theme.surface], startPoint: .leading, endPoint: .trailing)
     }
 
     private var selector: some View {
@@ -339,7 +341,7 @@ struct PlanScreen: View {
                     .frame(width: 44, height: 44)
                     .background(circleFill(on: on))
                     .overlay(Circle().strokeBorder(circleStroke(d, on: on), lineWidth: d.isToday && !on ? 1.5 : 1))
-                    .shadow(color: on && theme.usesGradients ? theme.endurance.opacity(0.55) : Color.clear, radius: 8, x: 0, y: 4)
+                    .shadow(color: on && theme.usesGradients ? theme.endurance.opacity(0.28) : Color.clear, radius: 5, x: 0, y: 2)
                 marks(d).frame(height: 8)
             }
             .frame(maxWidth: .infinity).contentShape(Rectangle())
@@ -400,12 +402,12 @@ struct PlanScreen: View {
             HStack(spacing: CySpace.s) {
                 Image(systemName: "sparkles").font(.footnote).foregroundStyle(theme.accent).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("COACH SUGGESTS").font(.system(size: 9.5, weight: .semibold)).tracking(0.4).foregroundStyle(theme.textSecondary)
+                    Text(data.suggestionHeading).font(.system(size: 9.5, weight: .semibold)).tracking(0.4).foregroundStyle(theme.textSecondary)
                     Text(text).font(.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary)
                         .lineLimit(large ? 4 : 1).minimumScaleFactor(large ? 1 : 0.85).truncationMode(.tail)
                 }
                 Spacer(minLength: CySpace.xs)
-                Text("Review").font(.footnote.weight(.bold)).foregroundStyle(theme.accent)
+                Text(data.suggestionAction).font(.footnote.weight(.bold)).foregroundStyle(theme.accent)
                 Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(theme.accent).accessibilityHidden(true)
             }
             .padding(.horizontal, CySpace.m).padding(.vertical, 5).frame(minHeight: 44)
@@ -415,7 +417,8 @@ struct PlanScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Coach suggests: \(text). Review")
+        .accessibilityLabel("\(data.suggestionHeading.capitalized): \(text). \(data.suggestionAction)")
+        .accessibilityHint("Opens the Coach page")
         .accessibilityIdentifier("planCoachRow")
     }
 
@@ -560,9 +563,7 @@ struct PlanScreen: View {
         let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
         if isRest {
             shape.fill(Color.clear)
-        } else if theme.usesGradients {
-            shape.fill(theme.surface).overlay(shape.fill(LinearGradient(colors: [tint.opacity(theme.isDark ? 0.22 : 0.14), tint.opacity(0)], startPoint: .leading, endPoint: UnitPoint(x: 0.55, y: 0.5))))
-        } else {
+        } else {   // flat, like the session cards
             shape.fill(theme.surface)
         }
     }
@@ -617,7 +618,7 @@ struct PlanSessionCard: View {
                     status
                 }
                 Text(session.detail).font(.caption).foregroundStyle(theme.textSecondary).lineLimit(3).fixedSize(horizontal: false, vertical: true)
-                if !session.structure.isEmpty && !missed { PlanStructureBar(segments: session.structure, tint: tint) }
+                if !session.structure.isEmpty && !missed { PlanStructureBar(segments: session.structure, tint: tint, width: 150, height: 10) }
                 if let link = session.link {
                     Text("↳ " + link).font(.caption.weight(.medium)).foregroundStyle(theme.textPrimary).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 }
@@ -636,27 +637,29 @@ struct PlanSessionCard: View {
             .accessibilityLabel("More actions for \(session.title)")
             .accessibilityIdentifier("planSessionMore-\(session.id)")
         }
-        .padding(.leading, CySpace.m).padding(.vertical, CySpace.m).padding(.trailing, 2)
-        .frame(minHeight: 72)
+        .padding(.leading, CySpace.m).padding(.vertical, 9).padding(.trailing, 2)
+        .frame(minHeight: 60)
         .background(fill)
         .overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(stroke, style: StrokeStyle(lineWidth: 1, dash: missed ? [5, 4] : [])))
-        .shadow(color: Color.black.opacity(theme.usesGradients && !missed ? (theme.isDark ? 0.22 : 0.08) : 0), radius: 9, x: 0, y: 5)
     }
 
     @ViewBuilder private var badge: some View {
         let icon = Image(systemName: session.discipline.icon).font(.callout.weight(.semibold))
         if missed {
-            icon.foregroundStyle(theme.textSecondary).frame(width: 40, height: 40)
+            icon.foregroundStyle(theme.textSecondary).frame(width: 34, height: 34)
                 .overlay(badgeShape.strokeBorder(theme.textSecondary, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
                 .accessibilityHidden(true)
         } else {
-            icon.foregroundStyle(theme.isDark ? theme.background : theme.surface).frame(width: 40, height: 40)
-                .background(badgeShape.fill(tint))
+            // Owner's decision of 18 Nov 2026: a restrained sport-coloured accent (coloured symbol on a quiet tile),
+            // not a filled colour tile. Sheet B1 draws a filled tile; this differs from B1 by that decision.
+            icon.foregroundStyle(tint).frame(width: 34, height: 34)
+                .background(badgeShape.fill(theme.surface2))
+                .overlay(badgeShape.strokeBorder(theme.id == .highContrast ? theme.border : Color.clear, lineWidth: 1))
                 .accessibilityHidden(true)
         }
     }
     private var badgeShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: session.discipline == .endurance ? 20 : 12, style: .continuous)
+        RoundedRectangle(cornerRadius: session.discipline == .endurance ? 17 : 10, style: .continuous)
     }
 
     @ViewBuilder private var status: some View {
@@ -678,9 +681,7 @@ struct PlanSessionCard: View {
         let shape = RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous)
         if missed {
             shape.fill(Color.clear)
-        } else if theme.usesGradients {
-            shape.fill(theme.surface).overlay(shape.fill(LinearGradient(colors: [tint.opacity(theme.isDark ? 0.26 : 0.16), tint.opacity(0)], startPoint: .leading, endPoint: UnitPoint(x: 0.62, y: 0.5))))
-        } else {
+        } else {   // flat: no colour wash across the card (owner's decision of 18 Nov 2026)
             shape.fill(theme.surface)
         }
     }
@@ -812,19 +813,9 @@ struct PlanStructureBar: View {
 
 // MARK: - Backdrop
 
-/// Two soft discipline-coloured glows behind the header (direction B). Flat background in High Contrast.
+/// The Plan page background. Sheet B1 draws two soft coloured glows behind the header; the owner asked for them to be
+/// removed after reviewing build 4 on his iPhone (18 Nov 2026), so the page is flat in every theme.
 struct PlanBackdrop: View {
     @Environment(\.cyTheme) private var theme
-    var body: some View {
-        ZStack {
-            theme.background
-            if theme.usesGradients {
-                RadialGradient(colors: [theme.endurance.opacity(theme.isDark ? 0.26 : 0.16), theme.endurance.opacity(0)],
-                               center: UnitPoint(x: 0.9, y: 0), startRadius: 0, endRadius: 380)
-                RadialGradient(colors: [theme.strength.opacity(theme.isDark ? 0.16 : 0.10), theme.strength.opacity(0)],
-                               center: UnitPoint(x: 0, y: 0.06), startRadius: 0, endRadius: 300)
-            }
-        }
-        .accessibilityHidden(true)
-    }
+    var body: some View { theme.background.accessibilityHidden(true) }
 }

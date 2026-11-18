@@ -104,9 +104,7 @@ struct HomeView: View {
         actions.onCoach = { showCoach = true }
         if let c = item {
             let ownPage = c.opensCoachPageInRedesign
-            let decision: Bool
-            switch c.source { case .adaptiveProposal, .hybridProposal, .ftp: decision = true; default: decision = false }
-            coach = Home21Coach(model: CyCoachPreviewModel(text: c.title, needsDecision: decision),
+            coach = Home21Coach(model: CyCoachPreviewModel(text: c.title, needsDecision: c.needsDecision),
                                 identifier: "homeCoachAction", spokenPrefix: CycliftLab.isLab ? "Demo, rule-based, not AI. " : "",
                                 hint: ownPage ? "Opens the Coach page" : "Opens \(c.actionLabel ?? "details")")
             actions.onCoach = { coachTapped(c) }

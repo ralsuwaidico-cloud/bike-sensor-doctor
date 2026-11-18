@@ -19,12 +19,16 @@ import SwiftUI
 
 struct CoachTimelineScreen: View {
     @EnvironmentObject private var store: Store
+    /// Where the back control returns to ("Home", or "Plan" when opened from the Plan row).
+    var backTitle: String = "Home"
     let onClose: () -> Void
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
     @EnvironmentObject private var recorder: RideRecorder
     @StateObject private var center = CoachCenter()
     @State private var proposal: PreviewRefString?
+    @State private var hybridProposal: PreviewRefString?
+    @State private var showFTP = false
     @State private var showAdjustments = false
     @State private var draft = ""
     @State private var tab = 0
@@ -32,7 +36,8 @@ struct CoachTimelineScreen: View {
 
     private var entries: [CyCoachEntry] {
         CoachTimeline.entries(.init(summary: store.lastAdaptation, proposals: store.adaptiveProposals, applied: store.activeAdaptations,
-                                    accepted: store.appliedProposals, now: Date(), checks: center.checks, closed: center.closed, chat: center.messages))
+                                    accepted: store.appliedProposals, now: Date(), checks: center.checks, closed: center.closed, chat: center.messages,
+                                    current: store.homeCoach()))
     }
 
     var body: some View {
@@ -48,6 +53,8 @@ struct CoachTimelineScreen: View {
         .onAppear { center.attach(directory: store.dir); center.sync(store) }
         // the athlete's decision is made in the existing sheet; when it closes, read what was decided and record it
         .sheet(item: $proposal, onDismiss: { center.sync(store) }) { p in HomeProposalSheet(adaptiveId: p.id, hybridId: nil).cyThemeRoot() }
+        .sheet(item: $hybridProposal) { p in HomeProposalSheet(adaptiveId: nil, hybridId: p.id).cyThemeRoot() }
+        .sheet(isPresented: $showFTP) { HomeFTPSheet().cyThemeRoot() }
         .sheet(isPresented: $showAdjustments, onDismiss: { center.sync(store) }) {
             NavigationStack {
                 AdjustmentsView()
@@ -68,12 +75,12 @@ struct CoachTimelineScreen: View {
                 Button(action: onClose) {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold))
-                        Text("Home").font(.system(.body))
+                        Text(backTitle).font(.system(.body))
                     }
                     .foregroundStyle(theme.accent)
                     .frame(minWidth: CyHit.min, minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).accessibilityLabel("Back to Home").accessibilityIdentifier("coachClose")
+                .buttonStyle(.plain).accessibilityLabel("Back to \(backTitle)").accessibilityIdentifier("coachClose")
                 Spacer(minLength: 0)
                 if CycliftLab.isLab { tag("DEMO DATA", theme.warning) }
             }
@@ -309,6 +316,8 @@ struct CoachTimelineScreen: View {
         switch e.opens {
         case .proposal: return e.kind == .proposal ? "Review and decide" : "Details"
         case .adjustments: return e.kind == .outcome ? "Undo · See the change" : "Open adjustments"
+        case .hybrid: return "Review and decide"
+        case .ftp: return "Review"
         case nil: return ""
         }
     }
@@ -316,6 +325,8 @@ struct CoachTimelineScreen: View {
         switch o {
         case .proposal(let id): if store.adaptiveProposals.contains(where: { $0.id == id }) { proposal = PreviewRefString(id: id) }
         case .adjustments: showAdjustments = true
+        case .hybrid(let id): hybridProposal = PreviewRefString(id: id)
+        case .ftp: showFTP = true
         }
     }
 

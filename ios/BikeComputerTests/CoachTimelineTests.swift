@@ -38,6 +38,28 @@ final class CoachTimelineTests: XCTestCase {
         XCTAssertEqual(e.count, 8)
     }
 
+    /// 18 Nov 2026: Plan showed "Coach suggests · Review" for a finding the Coach page did not list, and Review opened
+    /// the list of applied changes. One item now feeds Home, Plan and the Coach page.
+    func testTheItemShownOnHomeAndPlanIsAlsoOnTheCoachPage() {
+        let gap = HomeCoachItem(source: .gap, title: "Not trained in 4 weeks of detailed logs: hinge.", evidence: "estimate", actionLabel: "Open Plan")
+        XCTAssertFalse(gap.needsDecision); XCTAssertEqual(gap.planHeading, "COACH NOTES"); XCTAssertEqual(gap.planAction, "Open")
+        var e = CoachTimeline.entries(.init(summary: nil, proposals: [], applied: [], accepted: [], now: at(10, 12), current: gap))
+        XCTAssertEqual(e.map(\.kind), [.observation]); XCTAssertEqual(e[0].text, gap.title); XCTAssertNil(e[0].opens, "a finding asks for no decision")
+
+        let hyb = HomeCoachItem(source: .hybridProposal("p1"), title: "Coach suggests: Move Friday's ride", evidence: "Two hard days in a row.", actionLabel: "Accept")
+        XCTAssertTrue(hyb.needsDecision); XCTAssertEqual(hyb.planHeading, "COACH SUGGESTS"); XCTAssertEqual(hyb.planAction, "Review")
+        XCTAssertEqual(hyb.plainTitle, "Move Friday's ride")
+        e = CoachTimeline.entries(.init(summary: nil, proposals: [], applied: [], accepted: [], now: at(10, 12), current: hyb))
+        XCTAssertEqual(e.map(\.kind), [.proposal]); XCTAssertEqual(e[0].opens, .hybrid("p1"), "its own approval sheet stays reachable")
+
+        // a proposal of the adaptation engine is already a record: it is not listed twice
+        let p = AdaptiveProposal(id: "split", reason: .split, text: "Consider an upper/lower split.", why: "Four strength days.")
+        let own = HomeCoachItem(source: .adaptiveProposal("split"), title: "Coach suggests: \(p.text)", evidence: nil, actionLabel: "Details")
+        e = CoachTimeline.entries(.init(summary: nil, proposals: [p], applied: [], accepted: [], now: at(10, 12), current: own))
+        XCTAssertEqual(e.count, 1)
+        XCTAssertEqual(HomeCoachItem(source: .adjustment(UUID()), title: "x", evidence: nil, actionLabel: nil).planHeading, "COACH CHANGED")
+    }
+
     func testProposalWithoutAnAnalysisStandsAtNow() {
         let p = AdaptiveProposal(id: "p", reason: .budget, text: "Lengthen Sunday's ride by 10 min?", why: "Within your budget.", adjustments: [adjustment(workout(), created: at(10, 7))])
         let e = CoachTimeline.entries(.init(summary: nil, proposals: [p], applied: [], accepted: [], now: at(10, 12)))
