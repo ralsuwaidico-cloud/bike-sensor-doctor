@@ -1,0 +1,9 @@
+BikeComputer iOS CI — build 295 — 2026-11-18 09:01 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+RESULT build (Debug, for testing): FAILED (exit 65) · 5m4s — closure containing a declaration cannot be used with result builder 'ViewBuilder' 
+RESULT tests: FAILED (build)
+Total: 6m25s

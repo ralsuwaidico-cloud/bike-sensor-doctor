@@ -1,0 +1,28 @@
+BikeComputer iOS CI — run 295 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 295 — 2026-11-18 09:01 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+RESULT build (Debug, for testing): FAILED (exit 65) · 5m4s — closure containing a declaration cannot be used with result builder 'ViewBuilder' 
+RESULT tests: FAILED (build)
+Total: 6m25s
+
+## journeys
+BikeComputer iOS CI — build 295 — 2026-11-18 09:01 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): FAILED (exit 65) · 4m58s — closure containing a declaration cannot be used with result builder 'ViewBuilder' 
+RESULT journey (recorded): FAILED (build)
+Total: 5m11s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+
+GATE flows: ok
+commit 71d979cc6063767cebcfe61ca31653705ef58902  branch ios/lab  job failure
