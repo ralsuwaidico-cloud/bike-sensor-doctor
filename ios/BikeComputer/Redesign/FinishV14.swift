@@ -55,8 +55,7 @@ struct CyFactRows: View {
                     Text(r.value).font(.system(.callout, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary)
                         .multilineTextAlignment(dts.isAccessibilitySize ? .leading : .trailing).fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)      // 44 pt rows as drawn on 06e (Lab 34: they were 56)
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier(r.id)
                 if i < rows.count - 1 { Rectangle().fill(theme.separator).frame(height: 1) }

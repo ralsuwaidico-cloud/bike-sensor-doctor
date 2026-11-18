@@ -163,10 +163,10 @@ struct ReviewV14: View {
                 Rectangle().fill(theme.separator).frame(height: 1)
                 Button { coachOpen = true } label: {
                     HStack(spacing: CySpace.s) {
-                        Text(dts.isAccessibilitySize ? "For your Coach" : "Anything your Coach should know?").font(.system(.callout, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary)
-                            .lineLimit(2).minimumScaleFactor(0.85).multilineTextAlignment(.leading)
+                        Text(dts.isAccessibilitySize ? "For your Coach" : "Anything your Coach should know?").font(.system(.subheadline, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary)
+                            .lineLimit(dts.isAccessibilitySize ? 2 : 1).minimumScaleFactor(0.8).multilineTextAlignment(.leading)      // one line, as on 06a R1 (Lab 34: it wrapped)
                         Spacer(minLength: CySpace.s)
-                        if !dts.isAccessibilitySize { Text("Optional").font(.system(.callout)).foregroundStyle(theme.textSecondary) }
+                        if !dts.isAccessibilitySize { Text("Optional").font(.system(.subheadline)).foregroundStyle(theme.textSecondary).fixedSize() }
                         Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(theme.textSecondary).accessibilityHidden(true)
                     }
                     .frame(minHeight: 56).contentShape(Rectangle())
@@ -338,10 +338,15 @@ struct CyReviewSlider: View {
         }
     }
 
-    private var number: some View {
-        Text(value.map(String.init) ?? "–").font(.system(size: 42, weight: .heavy, design: .rounded)).monospacedDigit()
-            .foregroundStyle(value == nil ? theme.textSecondary : theme.textPrimary)
-            .accessibilityIdentifier("review\(id)Value")
+    /// The value, or — while unanswered — the short thick bar drawn on 06a (spoken and read by tests as "–").
+    @ViewBuilder private var number: some View {
+        if let v = value {
+            Text(String(v)).font(.system(size: 42, weight: .heavy, design: .rounded)).monospacedDigit().foregroundStyle(theme.textPrimary)
+                .accessibilityIdentifier("review\(id)Value")
+        } else {
+            RoundedRectangle(cornerRadius: 1.5).fill(theme.textSecondary).frame(width: 24, height: 5).frame(height: 50)
+                .accessibilityElement().accessibilityLabel("–").accessibilityIdentifier("review\(id)Value")
+        }
     }
 
     /// A wide pill: empty with ten marks until answered, then filled from the bottom to the value with a handle on top.

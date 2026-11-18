@@ -259,18 +259,18 @@ final class LabChecks: XCTestCase {
                 XCTAssertTrue(track.label.contains("No generation yet"), "the track says no stage is evaluated (\(track.label))")
                 // Progress v2.3 (sheet PH4): open sections with the athlete's own figures; the full analysis and the history are one tap away
                 func pe(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
-                XCTAssertTrue(pe("progressV23").exists, "required: the v2.3 sections under the hero")
+                XCTAssertTrue(pe("progressDevelopmentIntro").exists, "required: the v2.3 sections under the hero")
                 for s in ["progressEndurance", "progressStrengthDevelopment", "progressConsistency"] { XCTAssertTrue(pe(s).exists, "required: \(s) (the demo athlete rides and lifts)") }
                 print("LAB-NOTE progress: \(pe("progressEndurance").label.prefix(140)) | \(pe("progressStrengthDevelopment").label.prefix(140)) | \(pe("progressConsistency").label.prefix(80)) | zones: \(pe("progressZones").exists ? String(pe("progressZones").label.prefix(80)) : (pe("progressZonesMissing").exists ? pe("progressZonesMissing").label : "absent"))")
                 app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-5b-progress-lower")
                 app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-5c-progress-end")
                 let analytics = app.buttons["progressOpenAnalytics"].firstMatch
                 XCTAssertTrue(analytics.waitForExistence(timeout: 5), "required: Detailed analytics"); app.reveal(analytics); analytics.tap()
-                XCTAssertTrue(pe("progressAnalyticsPage").waitForExistence(timeout: 8), "Detailed analytics opens the app's full analysis"); app.settleForScreenshot(1); shot("\(tag)-5d-progress-analytics")
+                XCTAssertTrue(app.navigationBars["Detailed analytics"].firstMatch.waitForExistence(timeout: 8), "Detailed analytics opens the app's full analysis"); app.settleForScreenshot(1); shot("\(tag)-5d-progress-analytics")
                 app.navigationBars.buttons.firstMatch.tap()
                 let history = app.buttons["progressOpenHistory"].firstMatch
                 XCTAssertTrue(history.waitForExistence(timeout: 8), "required: Records & history"); app.reveal(history); history.tap()
-                XCTAssertTrue(pe("progressHistoryPage").waitForExistence(timeout: 8), "Records & history opens the session history"); shot("\(tag)-5e-progress-history")
+                XCTAssertTrue(app.navigationBars["Records & history"].firstMatch.waitForExistence(timeout: 8), "Records & history opens the session history"); shot("\(tag)-5e-progress-history")
                 app.navigationBars.buttons.firstMatch.tap()
                 XCTAssertTrue(history.waitForExistence(timeout: 8), "back on Progress")
             }
@@ -392,7 +392,9 @@ final class LabChecks: XCTestCase {
         shot("strength-6-all-done"); finish.tap()
         // Finish — sheet 06e X1: a page of its own (not a sheet), the clock paused, Save and Back to workout at the bottom
         let save = app.buttons["saveWorkout"].firstMatch
-        XCTAssertTrue(el("finishV14").waitForExistence(timeout: 8), "required: the v1.4 Finish page")
+        // (Changed check, Lab 34: the page's own container name "finishV14" is not exposed because the recorder around it is one
+        // named container — every control on the page was found and passed. The page is now recognised by its own first line.)
+        XCTAssertTrue(el("finishOverline").waitForExistence(timeout: 8), "required: the v1.4 Finish page")
         XCTAssertTrue(save.waitForExistence(timeout: 5) && save.isHittable, "required: Save is on screen"); XCTAssertEqual(save.label, "Save")
         XCTAssertTrue(el("finishOverline").label.hasPrefix("Strength · paused while you decide"), "says the session is paused: \(el("finishOverline").label)")
         XCTAssertEqual(el("finishCount").label, "Complete", "every set was logged")

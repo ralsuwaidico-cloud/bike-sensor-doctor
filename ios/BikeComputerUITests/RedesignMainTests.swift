@@ -161,7 +161,7 @@ final class RedesignMainTests: XCTestCase {
             if log.exists { log.tap() }; taps += 1
         }
         must(finish, "Finish after the last set (\(taps) sets logged)", timeout: 5); finish.tap()
-        must(el(app, "finishV14"), "the v1.4 Finish page")
+        must(el(app, "finishOverline"), "the v1.4 Finish page")      // run 296: the page container's own name is not exposed inside the recorder; its first line is
         XCTAssertEqual(el(app, "finishCount").label, "Complete"); XCTAssertTrue(el(app, "finishPlan").label.contains("Will be marked done"), el(app, "finishPlan").label)
         XCTAssertFalse(el(app, "finishOverline").label.contains("DEMO"), "no demo label in the main app")
         let save = app.buttons["saveWorkout"].firstMatch; must(save, "Save"); shot("s3-finish"); save.tap()
