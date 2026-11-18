@@ -29,8 +29,51 @@ struct StrengthWorkoutScreen: View {
     enum DetailTarget { case new, edit(StrengthSession) }
 
     private var workout: Workout? { store.plan.first { $0.id == workoutId } }
+    /// Redesign: the athlete asked for the full session page (More on the preparation screen).
+    @State private var showFullPage = false
+    @State private var recorderFromPrepare = false
+
+    /// Training Hub v1.4: a session that can be started now — open today, with exercises, training allowed, no other
+    /// session running — opens on the approved preparation screen. Every other state (done, skipped, a later day, no
+    /// routine, a health hold, another session in progress) keeps the existing page, which explains that state.
+    private func prepares(_ w: Workout) -> [ExerciseEntry]? {
+        guard CyProduct.redesign, !showFullPage else { return nil }
+        // while the recorder opened from the preparation screen is on screen, that screen stays underneath it: the session
+        // finishing (or being saved) must not swap the page that is presenting the recorder
+        if recorderFromPrepare { let e = store.plannedEntries(for: w); if !e.isEmpty { return e } }
+        let st = store.status(w)
+        guard !st.isCompleted, st != .skipped, !store.isFuture(w), !store.isRoutineRemoved(w) else { return nil }
+        guard store.profile.readiness.trainingAllowed || store.activeSession?.workoutId == w.id else { return nil }
+        guard store.activeSession == nil || store.activeSession?.workoutId == w.id else { return nil }
+        let entries = store.plannedEntries(for: w)
+        return entries.isEmpty ? nil : entries
+    }
 
     var body: some View {
+        if let w = workout, let entries = prepares(w) {
+            let routine = store.routine(for: w)
+            StrengthPrepareV14(
+                overline: StrengthPrepare.overline(date: w.date),
+                title: routine?.name ?? w.displayTitle,
+                summary: StrengthPrepare.summary(minutes: w.minutes, equipment: StrengthPrepare.equipment(entries, library: store.allExercises), known: true),
+                groups: StrengthPrepare.groups(entries),
+                startLabel: store.activeSession?.workoutId == w.id ? "Resume" : "Start",
+                onBack: { dismiss() },
+                onMore: { showFullPage = true },
+                onStart: {
+                    // the same two lines as the existing page's Start (startControls below): one session, then the recorder
+                    if store.activeSession == nil { _ = store.startStrengthSession(for: w, template: store.routine(for: w), entries: entries) }
+                    recorderFromPrepare = true; showSession = true
+                })
+                .fullScreenCover(isPresented: $showSession, onDismiss: { recorderFromPrepare = false }) { StrengthSessionView() }
+                .onAppear { if store.activeSession != nil, store.activeSession?.workoutId == workoutId { recorderFromPrepare = true; showSession = true } }
+                .cyThemeRoot()
+        } else {
+            fullPage
+        }
+    }
+
+    private var fullPage: some View {
         NavigationStack {
             Group {
                 if let w = workout { content(w) } else { ContentUnavailableView("Session removed", systemImage: "calendar.badge.minus") }

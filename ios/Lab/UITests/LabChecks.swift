@@ -142,7 +142,9 @@ final class LabChecks: XCTestCase {
                         switch where_ {
                         case "its own sheet": sheetClose.tap()
                         case "Plan": tab(app, "Home")
-                        case "the session page": app.buttons["Done"].firstMatch.tap()
+                        case "the session page":       // v1.4 preparation screen (Back) or, for a session that cannot start, the existing page (Done)
+                            let back = app.buttons["prepareBack"].firstMatch
+                            if back.exists { back.tap() } else { app.buttons["Done"].firstMatch.tap() }
                         default: break
                         }
                         app.settleForScreenshot(1)
@@ -277,10 +279,31 @@ final class LabChecks: XCTestCase {
         app.buttons["centreButton"].firstMatch.tap()
         let primary = app.buttons["trainPanelPrimary"].firstMatch
         XCTAssertTrue(primary.waitForExistence(timeout: 8), "the panel offers today's session"); shot("strength-0-panel"); primary.tap()
+        // Training Hub v1.4, sheet 01a "J2 Prepare": the approved preparation screen, not the previous session sheet
+        XCTAssertTrue(el("strengthPrepareV14").waitForExistence(timeout: 10), "required: the v1.4 preparation screen opens from the Train panel")
         let start = app.buttons["startWorkout"].firstMatch
-        XCTAssertTrue(start.waitForExistence(timeout: 10), "the session's preparation screen")
-        var n = 0; while !start.isHittable && n < 6 { app.swipeUp(); n += 1 }
-        shot("strength-1-prepare"); start.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 5) && start.isHittable, "required: Start is on screen without scrolling")
+        XCTAssertEqual(start.label, "Start")
+        XCTAssertTrue(el("prepareOverline").label.hasPrefix("Strength · planned"), "says what and when: \(el("prepareOverline").label)")
+        XCTAssertFalse(el("prepareTitle").label.isEmpty, "the session's name")
+        XCTAssertTrue(el("prepareSummary").label.hasPrefix("About "), "planned length and equipment: \(el("prepareSummary").label)")
+        let rows = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'prepareRow-'"))
+        XCTAssertGreaterThan(rows.count, 0, "required: the exercises are listed in order")
+        print("LAB-NOTE preparation: '\(el("prepareTitle").label)' · \(el("prepareSummary").label) · \(rows.count) exercises listed; first: \(rows.firstMatch.label)")
+        XCTAssertFalse(el("moreMenu").exists, "the previous session sheet is not what is shown")
+        shot("strength-1-prepare")
+        // nothing is lost: More opens the existing session page (adjust sets, swap, routine, move, skip, quick log)
+        app.buttons["prepareMore"].firstMatch.tap()
+        XCTAssertTrue(el("moreMenu").waitForExistence(timeout: 8), "required: More opens the existing session page with its options")
+        print("LAB-NOTE full session page from More: Adjust sets \(app.buttons["Adjust sets"].firstMatch.exists ? "is offered" : "is NOT visible without scrolling")")
+        shot("strength-1b-full-page")
+        app.buttons["Done"].firstMatch.tap(); app.settleForScreenshot(1)
+        // and from the panel again: the preparation screen, then Start
+        if !app.buttons["trainPanelPrimary"].firstMatch.exists { app.buttons["centreButton"].firstMatch.tap() }
+        XCTAssertTrue(primary.waitForExistence(timeout: 8), "the panel offers today's session again"); primary.tap()
+        XCTAssertTrue(el("strengthPrepareV14").waitForExistence(timeout: 10), "the preparation screen again")
+        XCTAssertTrue(start.waitForExistence(timeout: 5) && start.isHittable, "Start again")
+        start.tap()
         XCTAssertTrue(el("strengthRecorderV14").waitForExistence(timeout: 10), "the v1.4 recorder opens")
         XCTAssertTrue(el("recorderExercise").exists && el("recorderSet").exists && el("recorderReps").exists, "exercise, set and reps are shown")
         XCTAssertTrue(el("recorderNext").exists, "the next exercise is always visible")
@@ -308,7 +331,7 @@ final class LabChecks: XCTestCase {
         app.buttons["recorderMinimise"].firstMatch.tap()
         XCTAssertTrue(start.waitForExistence(timeout: 10), "minimising returns to the session's page; the workout keeps running")
         XCTAssertTrue(start.label.contains("Resume"), "the page offers Resume (\(start.label))")
-        n = 0; while !start.isHittable && n < 6 { app.swipeUp(); n += 1 }
+        XCTAssertTrue(el("strengthPrepareV14").exists && start.isHittable, "required: the preparation screen is the page underneath, with Resume on screen")
         start.tap()
         XCTAssertTrue(el("recorderLogged").waitForExistence(timeout: 10), "after returning, the logged set and Undo are still shown")
         // pause and resume

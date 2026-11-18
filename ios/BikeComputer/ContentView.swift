@@ -127,7 +127,10 @@ struct RootView: View {
         .ignoresSafeArea(.keyboard)
         .tint(BC.accent)
         .sheet(item: $trainSheet) { a in TrainNowSheet(action: a, openRide: { tab = 2 }, openStrength: { strengthWorkout = $0.id }) }
-        .sheet(item: $strengthWorkout) { id in StrengthWorkoutScreen(workoutId: id) }
+        // Training Hub v1.4 (sheet 01a J2): from the Train button the preparation screen is a full page in the redesign;
+        // the existing interface keeps its sheet.
+        .sheet(item: CyProduct.redesign ? Binding<UUID?>.constant(nil) : $strengthWorkout) { id in StrengthWorkoutScreen(workoutId: id) }
+        .fullScreenCover(item: CyProduct.redesign ? $strengthWorkout : Binding<UUID?>.constant(nil)) { id in StrengthWorkoutScreen(workoutId: id) }
         .fullScreenCover(isPresented: $resumeSession) { StrengthSessionView() }
         .fullScreenCover(isPresented: $cyclingDemo) { CyclingDemoRide().cyThemeRoot() }
         .sheet(item: $homeSheet) { a in homeSheetView(a) }

@@ -16,12 +16,14 @@ enum PlanV2Adapter {
             let sum = store.planWeekSummary(weekOf: anchor, now: now, recorderActive: recorderActive, calendar: cal)
             let days: [PlanV2Day] = sum.timeline.map { d in
                 PlanV2Day(id: cal.component(.day, from: d.date), weekday: full.string(from: d.date), short: d.shortName, month: month.string(from: d.date),
-                          isToday: d.isToday, isRest: d.rest, sessions: d.beforePlan ? [] : d.chips.map(session), date: cal.startOfDay(for: d.date))
+                          isToday: d.isToday, isRest: d.rest, sessions: d.beforePlan ? [] : d.chips.map { session($0, store: store) }, date: cal.startOfDay(for: d.date))
             }
+            // Sheet B1: the week is named by its dates ("16–22 Nov"; "30 Nov – 6 Dec" across two months), this week included.
             let title: String
-            if off == 0 { title = "This week" }
-            else if let a = sum.timeline.first?.date, let b = sum.timeline.last?.date { title = "\(range.string(from: a)) – \(range.string(from: b))" }
-            else { title = off < 0 ? "Last week" : "Next week" }
+            if let a = sum.timeline.first?.date, let b = sum.timeline.last?.date {
+                let sameMonth = cal.component(.month, from: a) == cal.component(.month, from: b)
+                title = sameMonth ? "\(cal.component(.day, from: a))–\(range.string(from: b))" : "\(range.string(from: a)) – \(range.string(from: b))"
+            } else { title = off == 0 ? "This week" : (off < 0 ? "Last week" : "Next week") }
             weeks.append(PlanWeek(id: off, title: title, days: days))
         }
         let p = store.profile
@@ -51,9 +53,34 @@ enum PlanV2Adapter {
                         note: CycliftLab.isLab ? "Cyclift Lab · demo athlete" : nil)
     }
 
-    private static func session(_ c: PlanChip) -> PlanSession {
+    /// What a planned session consists of, from its own prescription (sheets B1 / B2: "30 min · 5 exercises", "1 h 15 min
+    /// · Zone 2", and a bar per part). Rides: the engine's short structure text and one bar per ride step, as wide as
+    /// its minutes and as tall as its effort. Strength: the number of planned exercises and one bar per exercise, as wide
+    /// as its number of sets — all the same height, because the plan holds no intensity for an exercise and none is
+    /// invented. A session without a prescription (recorded only, or no routine assigned) gets neither.
+    static func prescription(_ w: Workout, store: Store) -> (text: String, structure: [PlanSegment]) {
+        if w.kind == .strength {
+            let entries = store.plannedEntries(for: w)
+            guard !entries.isEmpty else { return ("", []) }
+            return ("\(entries.count) exercise\(entries.count == 1 ? "" : "s")", entries.map { PlanSegment(weight: Double(max($0.sets.count, 1)), level: 0.6) })
+        }
+        guard w.kind.isRide else { return ("", []) }
+        let segs = w.rideSteps.filter { $0.minutes > 0 }.map { s -> PlanSegment in
+            // effort 1–10 from the engine's own RPE range for the step
+            PlanSegment(weight: Double(s.minutes), level: min(1, max(0.15, Double(s.rpe.lowerBound + s.rpe.upperBound) / 2 / 9)))
+        }
+        return (w.structureText, segs)
+    }
+
+    private static func session(_ c: PlanChip, store: Store) -> PlanSession {
         // a recorded session with no planned session behind it carries no planned length: say what it is instead of nothing
         var detail = c.minutes > 0 ? Fmt.duration(minutes: c.minutes) : (c.workoutId == nil ? "Recorded · not in the plan" : "")
+        var structure: [PlanSegment] = []
+        if let id = c.workoutId, let w = store.plan.first(where: { $0.id == id }) {
+            let p = prescription(w, store: store)
+            if !p.text.isEmpty { detail += detail.isEmpty ? p.text : " · \(p.text)" }
+            structure = p.structure
+        }
         let status: PlanStatus
         switch c.mark {
         case .planned: status = .planned
@@ -63,7 +90,7 @@ enum PlanV2Adapter {
         case .missed: status = .missed
         case .skipped: status = .skipped
         }
-        return PlanSession(id: c.workoutId?.uuidString ?? c.id, discipline: c.sport == .strength ? .strength : .endurance, title: c.title, detail: detail, status: status)
+        return PlanSession(id: c.workoutId?.uuidString ?? c.id, discipline: c.sport == .strength ? .strength : .endurance, title: c.title, detail: detail, status: status, structure: structure)
     }
 }
 
