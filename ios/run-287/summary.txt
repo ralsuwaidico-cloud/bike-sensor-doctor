@@ -1,0 +1,17 @@
+BikeComputer iOS CI — run 287 — scope quick — jobs: quick=success test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 287 — 2026-11-18 00:54 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+RESULT build (Debug, for testing): ok · 5m46s
+RESULT tests: ok (Executed 809 tests, with 2 tests skipped and 0 failures) · 11m46s
+COMPILE CHECK — app build and unit tests only; no screen test was run
+RESULT archive: skipped (compile check)
+RESULT upload: skipped (compile check never uploads)
+Total: 11m58s
+commit e91e38be146f872a797b78b6435971209f3cec09  branch ios/lab  job success
