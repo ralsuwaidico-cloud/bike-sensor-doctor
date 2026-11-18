@@ -249,7 +249,7 @@ private struct RangeBar: View {
             let a = lo - pad, b = hi + pad
             let inset: CGFloat = 46
             let w = max(g.size.width - inset * 2, 1)
-            func x(_ v: Double) -> CGFloat { inset + w * CGFloat((v - a) / (b - a)) }
+            let x: (Double) -> CGFloat = { v in inset + w * CGFloat((v - a) / (b - a)) }
             let y = g.size.height / 2
             ZStack {
                 Path { p in p.move(to: CGPoint(x: 0, y: y)); p.addLine(to: CGPoint(x: g.size.width, y: y)) }.stroke(track, lineWidth: 1)
