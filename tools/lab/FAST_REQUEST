@@ -1,2 +1,2 @@
-LabFast/testScreens LabFast/testOpenSuggestion LabChecks/test2eCoachNotNowKeepsTheSuggestionOpen
-First fast run: the four main screens, the open-suggestion fixture and the Not now check (19 Nov 2026).
+LabFast/testProfileAthletePages LabChecks/test2eCoachNotNowKeepsTheSuggestionOpen
+Fast run 2: Profile P03 pages and the Not now check after its identifier fix (19 Nov 2026).
