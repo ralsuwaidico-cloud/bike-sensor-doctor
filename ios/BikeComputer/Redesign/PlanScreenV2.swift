@@ -817,6 +817,8 @@ struct PlanStructureBar: View {
 // MARK: - Backdrop
 
 /// Two soft discipline-coloured glows behind the header (direction B). Flat background in High Contrast.
+/// Reach measured on sheet B1 (19 Nov 2026): the cool glow fades out about 280 pt below the top of the screen and the warm
+/// one about 270 pt. The app drew them to 380 pt and 345 pt, a third further than the sheet, so the radii follow B1 now.
 struct PlanBackdrop: View {
     @Environment(\.cyTheme) private var theme
     var body: some View {
@@ -824,9 +826,9 @@ struct PlanBackdrop: View {
             theme.background
             if theme.usesGradients {
                 RadialGradient(colors: [theme.endurance.opacity(theme.isDark ? 0.26 : 0.16), theme.endurance.opacity(0)],
-                               center: UnitPoint(x: 0.9, y: 0), startRadius: 0, endRadius: 380)
+                               center: UnitPoint(x: 0.9, y: 0), startRadius: 0, endRadius: 285)
                 RadialGradient(colors: [theme.strength.opacity(theme.isDark ? 0.16 : 0.10), theme.strength.opacity(0)],
-                               center: UnitPoint(x: 0, y: 0.06), startRadius: 0, endRadius: 300)
+                               center: UnitPoint(x: 0, y: 0.06), startRadius: 0, endRadius: 225)
             }
         }
         .accessibilityHidden(true)
