@@ -1,25 +1,27 @@
 # Cyclift Lab — feature tracker (redesign in the shared app)
 
-**Version:** 0.1 · 16 Nov 2026 · Level 3 · Status: Current Draft, kept short on purpose.
-One codebase: every item below is shared code behind the redesign switch (on in Cyclift Lab, off in production).
-Evidence words: **compiled** = built in CI · **ran** = seen running in the iOS simulator (Lab run named) · nothing here is physical-device tested.
+**Version:** 0.2 · 18 Nov 2026 · Level 3 · Status: Current Draft, kept short on purpose.
+One codebase: every item below is shared code behind the redesign switch (on in Cyclift Lab; on in the main app only in controlled CI; off in production).
+Evidence words: **compiled** = built in CI · **ran** = seen running in the iOS simulator (run named) · **visually compared** = screenshot set beside its reference · nothing here is physical-device tested, and nothing is visually approved by the owner unless it says so.
+Governing instructions: Master Project Instructions v3.0. The repository has no CLAUDE.md.
 
 ## 1. Screens
 
-| Screen | State on 16 Nov 2026 (22:00 Dubai) | Evidence |
-|---|---|---|
-| Navigation v1.2 rev 1.1 | Ran; dock checks pass | Lab 6, 8, 9, 11 |
-| Profile v2.0 (six sections) | Ran; theme switching through Appearance passes | Lab 8, 11 |
-| Plan v2.0 | Ran (this week only). Interaction checks not written | Lab 9 |
-| Training Hub compact panel → full Hub | Ran; panel and expansion checks pass | Lab 11 |
-| Progress compact hero (no stage shown) | Ran; "no stage" checks pass | Lab 11 |
-| Coach page (timeline, rules-based conversation, shadow policy check, stored decisions) | Compiled. Not yet seen running: the check that opens it was faulty | iOS 261; Lab 13 pending |
-| Onboarding, seven pages with Athletic Roster | Compiled. Journey not yet run: the test ran in the wrong order | iOS 261; Lab 13 pending |
-| Strength recorder v1.4 | Compiled. Journey test pending | iOS 262; Lab 13 pending |
-| Review v1.4 (three sliders) | Written | iOS 263 pending |
-| Cycling v1.4 screen (Lab: labelled simulation) | Compiled. Journey test pending | iOS 262; Lab 13 pending |
-| Home v2.x | Not started (existing Home in use) | — |
-| Strength preparation screen v1.4 | Not started (existing session page in use) | — |
+| Screen | Reference | State on 18 Nov 2026 | Evidence (commit · run) | Open |
+|---|---|---|---|---|
+| Navigation v1.2 rev 1.1 (dock) | Sheet F1, final visual specification | Ran. Measured by test: ball bottom 34.0 pt, left 14.0 pt, ball 72 pt, silhouette 90.8 pt. Was 18 pt too high before Batch 1. Visually compared with F1 | e91e38be · Lab 32 | Content passes behind the dock while scrolling, as sheet F7 allows; owner asked for no content showing beneath it — decision open |
+| Home v2.3 | Prototype source (proto/ui-lab). PROVISIONAL: no picture reference, not approved | Ran on the athlete's own records in Lab and in the redesigned main app. Every control presents its page at the first tap (day, Consistency, Recovery, Endurance, Strength, Sleep, Key metrics; again after returning). End of page 128.0 pt | e91e38be · Lab 32 (8/8); iOS 286 redesigned main app ok | Differences in section 6. Awaits owner's visual review |
+| Profile v2.0 (six sections) | Sheets P01–P10 | Ran; theme switching passes. Inner pages still the existing ones | Lab 32 | Batch 5 |
+| Plan v2.0 | Sheets B1, B2 | Ran (this week). Close to B1; differences: week header shows "This week" not the date range, no "Add a goal" control, no exercise count/bars on session cards | Lab 32 | Batch 2 |
+| Training Hub compact panel → full Hub | v1.4 sheets 06b, 06c | Ran; panel and expansion checks pass | Lab 32 | — |
+| Strength preparation | v1.4 sheet 01a (J2), G3 | NOT built: the existing session sheet is shown | — | Batch 2 |
+| Strength recorder v1.4 | v1.4 sheets 04a–04c | Ran: journey logs 10 sets, saves, survives relaunch. Superset not seen on screen | Lab 32 | Visual comparison; superset on screen |
+| Finish / save | v1.4 sheets 06e, 06f | Ran, but the layout is not the approved one | Lab 32 | Batch 3 |
+| Review (three optional values, pain unknown ≠ none) | v1.4 sheet 06a | Ran, but the layout is not the approved one | Lab 32 | Batch 3 |
+| Cycling v1.4 (Lab: labelled simulation) | v1.4 sheets 05a, 05b | Ran; saves nothing in Lab | Lab 32 | Visual comparison; real recorder behind it is gated |
+| Coach page (timeline, rules-based conversation) | Sheets G1, G2 | Ran; card routes and chat pass. Structure is not G1 | Lab 32; iOS 286 | Batch 4 |
+| Progress compact hero | Sheets PH1–PH5 | Ran; lower sections are the existing ones | Lab 32 | Batch 5 |
+| Onboarding v3.4, seven pages | Sheets Z1–Z5 | Ran: new athlete onboards, approves, sees the plan; also in the redesigned main app | Lab 32; iOS 286 | Presentation of pages 3–7 provisional; Batch 5 |
 
 ## 2. Capabilities deliberately not built — kept visible
 
@@ -48,3 +50,40 @@ Evidence words: **compiled** = built in CI · **ran** = seen running in the iOS 
 
 ## 4. E1 safety work — unchanged and still open
 No fully verified E1 commit. Open: Progress large-text preview bubble; cancelled owner job of run 252; Delete All Data definition; "Not saved" screen test; large-text truncation; ride-start pathway tests; release accounting; device check; evidence report. E1 commits after `4970c5c7` are not in the Lab branch.
+
+## 5. Regression evidence (each applies to its own commit only)
+
+| Commit | Run | What passed | What did not |
+|---|---|---|---|
+| a4de9d30 | iOS 271 (smoke only) | 33 smoke tests, 0 failures, 7 skipped by design; 93 min. Earlier cancellations were the 75-minute limit | — |
+| a4de9d30 | Lab 19 | 7/7 | — |
+| caf4862e | iOS 274 (journeys; rerun) | Redesigned main app; production hybrid, cycling, strength journeys | First attempt: hybrid journey — Profile "Type & experience" row tapped, editor did not open. Not reproduced on rerun. Cause unknown; tracked (section 7) |
+| e91e38be | Lab 32 | 8/8 including first-tap Home navigation | — |
+| e91e38be | iOS 286 (journeys + smoke) | Redesigned main app (2 tests); production hybrid, cycling, strength journeys; 31 of 33 smoke tests incl. 8 of 9 production Home navigation tests | 2 smoke tests failed to START (simulator: "Timed out while launching application", "Failed to get background assertion"). Being rerun alone |
+| e91e38be | iOS 287, logic 131 | Compile, 809 unit tests; Linux logic tests | — |
+
+CI changes of 17 Nov (c6d594bc, not yet exercised by a full run): smoke job limit 120 min with a 15-minute limit per test; the design gallery audit, which ran in no routine job, now runs on the standard-size layout job. Five Plan/Home smoke tests take 3–9 minutes each — optimisation deferred.
+
+## 6. Home v2.3 — stated differences from the prototype and open points
+
+- Header is pinned (prototype scrolled it): the avatar is the only way to Profile.
+- A "Coach page" line follows a suggestion that opens its own sheet, so the Coach page stays reachable.
+- Trend graph has two modes built from records (Activity; Recovery trends). The prototype's load-against-recovery-score mode is NOT built: no approved recovery score exists.
+- Recovery is a status word, "partial" or "awaiting" — never a number. No sleep target is stored, so none is shown or offered.
+- Taps open the existing week, day, cycling, strength and recovery pages; the prototype's own detail sheets are not brought over.
+- The goal card and today's-session reminder of the previous dashboard are not on Home v2.3 (the Train ball covers today's session). Whether goals are reachable from Profile: not checked.
+- G3's schematic shows a "Today" card and "Next 7 days"; Home v2.3 has the week strip instead.
+- Lab demo athlete has no health readings: Recovery shows "Awaiting data", Key metrics "No data" — honest, but those parts are not visually exercised.
+- The Lab's yellow strip dominates the top of the screen.
+
+## 7. Defects and open issues
+
+| Item | State |
+|---|---|
+| Home v2.3 pages never appeared (Lab runs 20–31) | CLOSED in e91e38be. Cause: Home's wrapper asked the window for its bottom safe-area inset while Home's body was evaluated; Home was then never redrawn, so handlers ran and the route list changed but nothing was shown. Shown both ways in Lab 31. Fix: the shell reads the inset outside rendering and hands it down. Why the system stops redrawing after that lookup is not explained. Introduced by Batch 1 (the previous dashboard navigated correctly in the same shell) |
+| Production Profile → "Type & experience" did not open once (iOS 274, first attempt) | OPEN, cause unknown. Recording shows a still screen and a tap on the right row. Separate from the Home defect: different stack and mechanism. Covered by the required hybrid journey |
+| Tests that reported a hidden page as visible | CLOSED: `tapPresents` requires the page on screen, its back button tappable, and the tapped control no longer reachable |
+| Build-216 downgrade / data-loss risk | OPEN — release blocker |
+| Arabic (right-to-left, localisation) | Not started — required for the complete product |
+| Data import / recovery | Not started — required before production if export is presented as a backup |
+| Main-app coverage of strength recorder, review, cycling with the redesign on | Missing |
