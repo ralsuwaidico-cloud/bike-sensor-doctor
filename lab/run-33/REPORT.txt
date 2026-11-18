@@ -1,0 +1,63 @@
+RESULT Lab build: ok · 387s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint aaa6adee1954bf41 2 
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2480.120 (2480.143) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2480.120 (2480.156) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2480.120 (2480.159) seconds
+Test Case '-[CycliftLabUITests.LabChecks test0HomeControlsPresentTheirPages]' passed (618.464 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' passed (763.494 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved]' passed (282.502 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing]' passed (78.751 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' passed (498.483 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (88.359 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan]' passed (123.266 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' passed (26.800 seconds).
+RESULT Lab screen checks: ok · 2702s
+LAB-NOTE Coach card today leads to: Plan
+LAB-NOTE dock: ball bottom 34.0 pt above the screen bottom, left 14.0 pt, dock frame (14.0, 758.619873046875, 374.5, 90.76025390625)
+LAB-NOTE full session page from More: Adjust sets is offered
+LAB-NOTE Home end of page: last control ends 128.0000000000001 pt above the screen bottom (scrolling inset 128)
+LAB-NOTE Home navigation: a Key metrics row presented its page at the first tap: true
+LAB-NOTE Home navigation: the Consistency ring presented its page at the first tap: true
+LAB-NOTE Home navigation: the Endurance card presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day, again after returning presented its page at the first tap: true
+LAB-NOTE Home navigation: the Recovery indicator presented its page at the first tap: true
+LAB-NOTE Home navigation: the Sleep bar presented its page at the first tap: true
+LAB-NOTE Home navigation: the Strength card presented its page at the first tap: true
+LAB-NOTE preparation: 'Strength · Full body' · About 40 min · dumbbell, kettlebell, bench · 4 exercises listed; first: Goblet squat, 3 × 10
+LAB-NOTE strength journey: 10 sets logged; superset seen: false
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (aaa6adee1954bf41 2 )
+RESULT Lab launch in six themes: ok
+commit 8ba4f4e1fb788b1483e97e158f840963c7452f8f  branch ios/lab
