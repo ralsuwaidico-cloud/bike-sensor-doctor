@@ -1,0 +1,17 @@
+FAST focused Lab check — selected: LabFast/testProfileAthletePages LabChecks/test2eCoachNotNowKeepsTheSuggestionOpen
+TIME setup: 11s
+RESULT build (app + screen checks, once): ok
+TIME build: 695s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 7s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 373.579 (373.585) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 373.579 (373.587) seconds
+Test Case '-[CycliftLabUITests.LabChecks test2eCoachNotNowKeepsTheSuggestionOpen]' passed (136.491 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileAthletePages]' passed (237.088 seconds).
+RESULT selected screen checks: ok
+TIME tests: 468s
+LAB-NOTE not-now after reopening plan row: Coach Notes: Not trained in 4 weeks of detailed logs: hinge, single-leg, core.. Open
+LAB-NOTE not-now first plan row: Coach Suggests: Goblet squat: 25 kg → 26 kg per hand?. Review
+TIME total on the Mac: 1183s
+commit 8ab21fb7fc02972b47b76f9809a2105f09ae8f98  branch ios/lab
