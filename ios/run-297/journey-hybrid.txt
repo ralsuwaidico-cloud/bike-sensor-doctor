@@ -1,0 +1,172 @@
+=== journey-hybrid: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:51: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to synthesize event: Neither element nor any descendant has keyboard focus. Event dispatch snapshot: TextField, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name'
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (138.986 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== journey-hybrid: full filter ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:51: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to synthesize event: Neither element nor any descendant has keyboard focus. Event dispatch snapshot: TextField, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name'
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (138.986 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-18 11:05:26.809.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 140.021 (140.026) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-18 11:05:26.813.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 140.021 (140.030) seconds
+Test Suite 'Selected tests' failed at 2026-11-18 11:05:26.814.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 140.021 (140.032) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== journey-hybrid: last 150 lines ===
+ →Find: Target Application 'com.ralsuwaidico.bikecomputer'
+  Output: {
+    Application, 0x108265e00, pid: 36724, label: 'Cyclift'
+  }
+  ↪︎Find: Descendants matching type TextField
+    Output: {
+      TextField, 0x114c6ebc0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+      TextField, 0x10827cf00, {{258.7, 543.7}, {84.0, 22.0}}, identifier: 'onbWeight', label: 'Weight in kilograms', placeholderValue: 'Not set'
+    }
+    ↪︎Find: Elements matching predicate '"onbName" IN identifiers'
+      Output: {
+        TextField, 0x10823a6c0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+      }
+      ↪︎Find: First Match
+        Output: {
+          TextField, 0x107bfbac0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+        }
+
+    t =   124.90s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   125.91s     Retrying `Type 'Sara
+' into "onbName" TextField` (attempt #3)
+    t =   125.91s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   125.91s         Find the "onbName" TextField
+    t =   126.00s         Check for interrupting elements affecting "onbName" TextField
+    t =   126.16s         Synthesize event
+    t =   126.16s             Get number of matches for: Elements containing elements matching predicate 'hasKeyboardFocus == 1'
+    t =   126.30s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   128.54s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   128.76s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   128.84s             Find: Descendants matching type TextField
+    t =   128.84s             Find: Elements matching predicate '"onbName" IN identifiers'
+    t =   128.84s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   128.89s             Find: Descendants matching type TextField
+    t =   128.90s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   129.49s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   130.75s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   130.83s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   130.90s             Find: Descendants matching type TextField
+    t =   130.90s             Find: Elements matching predicate '"onbName" IN identifiers'
+    t =   130.91s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   130.98s             Find: Descendants matching type TextField
+    t =   130.99s             Requesting snapshot of accessibility hierarchy for app with pid 36724
+    t =   131.22s             Failed: Neither element nor any descendant has keyboard focus. Event dispatch snapshot: TextField, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name'
+Element debug description:
+Attributes: TextField, 0x10827e080, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+Element subtree:
+ →TextField, 0x10827e080, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+Path to element:
+ →Application, 0x10827ed00, pid: 36724, label: 'Cyclift'
+  ↳Window (Main), 0x10827e440, {{0.0, 0.0}, {402.0, 874.0}}
+   ↳Other, 0x10827fc00, {{0.0, 0.0}, {402.0, 874.0}}
+    ↳Other, 0x10827ea80, {{0.0, 0.0}, {402.0, 874.0}}
+     ↳Other, 0x10827e580, {{0.0, 0.0}, {402.0, 874.0}}
+      ↳Other, 0x10827f340, {{0.0, 0.0}, {402.0, 874.0}}
+       ↳Other, 0x10827fac0, {{0.0, 0.0}, {402.0, 874.0}}
+        ↳Other, 0x10827f980, {{0.0, 0.0}, {402.0, 874.0}}
+         ↳Other, 0x10827f0c0, {{0.0, 0.0}, {402.0, 874.0}}
+          ↳Other, 0x10827f480, {{0.0, 0.0}, {402.0, 874.0}}
+           ↳Other, 0x10827ee40, {{0.0, 0.0}, {402.0, 874.0}}
+            ↳ScrollView, 0x10827e6c0, {{0.0, 124.0}, {402.0, 648.0}}
+             ↳Other, 0x10827f200, {{0.0, 124.0}, {402.0, 482.7}}
+              ↳TextField, 0x10827e080, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+Query chain:
+ →Find: Target Application 'com.ralsuwaidico.bikecomputer'
+  Output: {
+    Application, 0x114c6d180, pid: 36724, label: 'Cyclift'
+  }
+  ↪︎Find: Descendants matching type TextField
+    Output: {
+      TextField, 0x1080f2bc0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+      TextField, 0x108265900, {{258.7, 543.7}, {84.0, 22.0}}, identifier: 'onbWeight', label: 'Weight in kilograms', placeholderValue: 'Not set'
+    }
+    ↪︎Find: Elements matching predicate '"onbName" IN identifiers'
+      Output: {
+        TextField, 0x10823a6c0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+      }
+      ↪︎Find: First Match
+        Output: {
+          TextField, 0x107bfa6c0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+        }
+
+    t =   131.24s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   131.27s     Requesting snapshot of accessibility hierarchy for app with pid 36724
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:51: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to synthesize event: Neither element nor any descendant has keyboard focus. Event dispatch snapshot: TextField, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name'
+Element debug description:
+Attributes: TextField, 0x10827e080, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+Element subtree:
+ →TextField, 0x10827e080, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+Path to element:
+ →Application, 0x10827ed00, pid: 36724, label: 'Cyclift'
+  ↳Window (Main), 0x10827e440, {{0.0, 0.0}, {402.0, 874.0}}
+   ↳Other, 0x10827fc00, {{0.0, 0.0}, {402.0, 874.0}}
+    ↳Other, 0x10827ea80, {{0.0, 0.0}, {402.0, 874.0}}
+     ↳Other, 0x10827e580, {{0.0, 0.0}, {402.0, 874.0}}
+      ↳Other, 0x10827f340, {{0.0, 0.0}, {402.0, 874.0}}
+       ↳Other, 0x10827fac0, {{0.0, 0.0}, {402.0, 874.0}}
+        ↳Other, 0x10827f980, {{0.0, 0.0}, {402.0, 874.0}}
+         ↳Other, 0x10827f0c0, {{0.0, 0.0}, {402.0, 874.0}}
+          ↳Other, 0x10827f480, {{0.0, 0.0}, {402.0, 874.0}}
+           ↳Other, 0x10827ee40, {{0.0, 0.0}, {402.0, 874.0}}
+            ↳ScrollView, 0x10827e6c0, {{0.0, 124.0}, {402.0, 648.0}}
+             ↳Other, 0x10827f200, {{0.0, 124.0}, {402.0, 482.7}}
+              ↳TextField, 0x10827e080, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+Query chain:
+ →Find: Target Application 'com.ralsuwaidico.bikecomputer'
+  Output: {
+    Application, 0x114c6d180, pid: 36724, label: 'Cyclift'
+  }
+  ↪︎Find: Descendants matching type TextField
+    Output: {
+      TextField, 0x1080f2bc0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+      TextField, 0x108265900, {{258.7, 543.7}, {84.0, 22.0}}, identifier: 'onbWeight', label: 'Weight in kilograms', placeholderValue: 'Not set'
+    }
+    ↪︎Find: Elements matching predicate '"onbName" IN identifiers'
+      Output: {
+        TextField, 0x10823a6c0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+      }
+      ↪︎Find: First Match
+        Output: {
+          TextField, 0x107bfa6c0, {{16.0, 243.0}, {370.0, 52.0}}, identifier: 'onbName', placeholderValue: 'Your first name', value: Your first name
+        }
+
+    t =   132.97s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (138.986 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' started.
+    t =     0.00s Start Test at 2026-11-18 11:05:26.253
+    t =     0.18s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testStrengthJourney] : Test skipped - persona strength not selected
+    t =     0.27s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' skipped (0.556 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-18 11:05:26.809.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 140.021 (140.026) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-18 11:05:26.813.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 140.021 (140.030) seconds
+Test Suite 'Selected tests' failed at 2026-11-18 11:05:26.814.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 140.021 (140.032) seconds
+2026-11-18 11:05:38.757723+0000 BikeComputerUITests-Runner[36148:98426] [Default] Xcode took 11.90 seconds to acknowledge that testing finished.
+2026-11-18 11:06:45.249 xcodebuild[35306:95456] [MT] IDETestOperationsObserverDebug: 243.582 elapsed -- Testing started completed.
+2026-11-18 11:06:45.250 xcodebuild[35306:95456] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-18 11:06:45.255 xcodebuild[35306:95456] [MT] IDETestOperationsObserverDebug: 243.583 sec, +243.583 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-ekkitjvpouuxvodpefhjgcbnkonx/Logs/Test/Test-BikeComputer-2026.11.18_11-02-32-+0000.xcresult
+
+Failing tests:
+	JourneyTests.testHybridJourney()
+
+** TEST EXECUTE FAILED **
+
+Testing started
+=== journey-hybrid: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' skipped (0.478 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (138.986 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' skipped (0.556 seconds).
+=== journey-hybrid: E0-DIAG lines ===
