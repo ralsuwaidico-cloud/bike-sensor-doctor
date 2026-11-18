@@ -1,7 +1,10 @@
-# Cyclift Lab — TestFlight upload. Owner approval of 16 Nov 2026, 17:14 (Dubai): Cyclift Lab 0.1.0 built exclusively
-# from commit 59e2f0338c763b6200c3c13d395e58b09a3d782e, internal testers only. This workflow uploads NOTHING ELSE: the
-# approved commit is fixed below, the app's source folder must be byte-identical to that commit, and the upload is
-# refused unless every check on the signed app passes. It never touches the production Cyclift app or its testers.
+# Cyclift Lab — TestFlight upload. Owner approval of 18 Nov 2026, 13:22 (Dubai): Cyclift Lab 0.1.0 built exclusively
+# from commit 8ba4f4e1fb788b1483e97e158f840963c7452f8f, internal testers only, conditional on the signed-app checks
+# passing in full. (Earlier: 59e2f033, approved 16 Nov 2026, uploaded as build 3.) This workflow uploads NOTHING ELSE:
+# the approved commit is fixed below, the run checks out exactly that commit before anything is built — so no newer
+# development commit can be in the app — and the upload is refused unless every check on the signed app passes. The
+# file that is checked is the file that is uploaded (same run, same .ipa). It never touches the production Cyclift
+# app or its testers.
 name: Cyclift Lab — TestFlight upload
 on:
   push:
@@ -13,7 +16,7 @@ concurrency:
   group: lab-upload
   cancel-in-progress: false
 env:
-  APPROVED: 59e2f0338c763b6200c3c13d395e58b09a3d782e
+  APPROVED: 8ba4f4e1fb788b1483e97e158f840963c7452f8f
 jobs:
   upload:
     runs-on: macos-26
@@ -30,11 +33,13 @@ jobs:
         with:
           fetch-depth: 0
       - id: n
-        name: Approved commit and unchanged source
+        name: Approved commit, checked out exactly
         run: |
           [ "$(head -1 tools/lab/UPLOAD_APPROVED | tr -dc 'a-f0-9')" = "$APPROVED" ] || { echo "UPLOAD_APPROVED does not name the approved commit"; exit 1; }
-          git diff --quiet "$APPROVED" HEAD -- ios || { echo "REFUSED: the app source (ios/) differs from the approved commit"; git diff --stat "$APPROVED" HEAD -- ios | tail -5; exit 1; }
-          echo "app source identical to $APPROVED (tree $(git rev-parse HEAD:ios))"
+          git checkout -q "$APPROVED" || { echo "REFUSED: the approved commit could not be checked out"; exit 1; }
+          [ "$(git rev-parse HEAD)" = "$APPROVED" ] || { echo "REFUSED: the working copy is not the approved commit"; exit 1; }
+          git diff --quiet "$APPROVED" -- . && [ -z "$(git status --porcelain)" ] || { echo "REFUSED: the working copy differs from the approved commit"; exit 1; }
+          echo "building exactly $APPROVED (app source tree $(git rev-parse HEAD:ios)); nothing newer is present"
           echo "build=$(( ${{ github.run_number }} + 2 ))" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:

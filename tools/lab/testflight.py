@@ -59,7 +59,16 @@ def main():
     if build is None: print(f"RESULT testflight: build {n} did not appear within 35 min"); return
     state = build["attributes"].get("processingState")
     if state != "VALID": print(f"RESULT testflight: build {n} processing state {state} — not installable"); return
-    text = f"CYCLIFT LAB — internal prototype, demo data only. Build {n}, commit {commit}. Not a release of Cyclift."
+    text = (f"CYCLIFT LAB — internal preview, demo data only. Build {n}, commit {commit}. Not a release of Cyclift and not final design.\n\n"
+            "WHAT IT IS: the redesigned Cyclift on a made-up demo athlete. It cannot reach your real Cyclift data, Apple Health, "
+            "Bluetooth sensors, GPS or any account. Everything you do stays inside this app; Profile > Data, Help & About can delete it or restore the demo.\n\n"
+            "TRY: Home and its pages; Plan; the Train ball > today's strength session > Start > log sets > minimise and resume > Finish > Save > optional review; "
+            "the Coach page; Progress; Profile and the six themes; onboarding after deleting the data.\n\n"
+            "KNOWN LIMITATIONS: Home v2.3 is provisional. Finish, Saved and Review work but are not yet in the approved layout. "
+            "Cycling is a labelled demonstration with simulated figures and saves nothing. The Coach follows written rules; AI chat is not connected. "
+            "Progress shows no stage (stage criteria are not approved) and its lower sections, and Profile's inner pages, are the older screens. "
+            "Plan lacks the Add a goal button. Apple Watch, devices, Arabic and data import are not in this build. "
+            "Tested only in the iOS Simulator before this build: please report anything that looks or behaves wrong on your iPhone.")
     st, res = asc.call("GET", f"/v1/builds/{build['id']}/betaBuildLocalizations", query={"limit": 20})
     locs = res.get("data", []) if st == 200 else []
     if locs: st, res = asc.call("PATCH", f"/v1/betaBuildLocalizations/{locs[0]['id']}", {"data": {"type": "betaBuildLocalizations", "id": locs[0]["id"], "attributes": {"whatsNew": text}}})
