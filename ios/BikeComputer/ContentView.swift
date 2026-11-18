@@ -110,7 +110,15 @@ struct RootView: View {
             // the display — the dock is removed (not just hidden) so the coach card and the controls are never covered.
             // Navigation v1.2 (sheet F1): in the redesign the Train ball sits 34 pt above the bottom of the screen (16 pt
             // without a home indicator); it was 18 pt too high. The production dock keeps its 8 pt.
-            .safeAreaInset(edge: .bottom, spacing: 0) { if !rideOwnsBottom { dock.padding(.bottom, CyProduct.redesign ? CyCradleMetrics.dockBottomPadding(deviceBottomInset: deviceBottom) : 8) } }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if !rideOwnsBottom {
+                    dock.padding(.bottom, CyProduct.redesign ? CyCradleMetrics.dockBottomPadding(deviceBottomInset: deviceBottom) : 8)
+                        // Owner's iPhone review of build 4 (18 Nov 2026): page content showed through under the dock and looked
+                        // obscured. In the redesign the page now fades into its own background just above the dock and is not
+                        // visible beneath it; every page still ends above the dock (see the scroll margins below).
+                        .background(alignment: .bottom) { if CyProduct.redesign { CyDockBackdrop() } }
+                }
+            }
             .environment(\.cyDeviceBottomInset, deviceBottom)
             .task {
                 guard CyProduct.redesign else { return }

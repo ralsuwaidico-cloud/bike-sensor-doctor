@@ -56,32 +56,38 @@ struct LabChrome: ViewModifier {
         return theme.preference.mode == .system ? "Theme: follows iOS" : "Theme: \(theme.preference.resolved(systemIsDark: false).title)"
     }
     func body(content: Content) -> some View {
-        // The banner is a strip of its own ABOVE the app (Lab 3: as a safe-area inset it covered the navigation bar's
-        // buttons and titles). Its text does not grow past the largest standard size, so it stays one line.
+        // The Lab mark is a slim row of its own ABOVE the app (Lab 3: as a safe-area inset it covered the navigation bar's
+        // buttons and titles). Owner's iPhone review of build 4 (18 Nov 2026): the full-width yellow band dominated every
+        // screen. It is now one compact yellow tag on the app's own background — still on every screen, still unmistakable —
+        // and nothing about Lab's isolation depends on it. Its text does not grow past the largest standard size.
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Text("CYCLIFT LAB · DEMO DATA").font(.caption2.weight(.heavy)).tracking(0.6).lineLimit(1).minimumScaleFactor(0.7)
+                Text("CYCLIFT LAB · DEMO DATA").font(.system(size: 10, weight: .heavy)).tracking(0.5).lineLimit(1).minimumScaleFactor(0.7)
+                    .foregroundStyle(Color.black)
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(Capsule().fill(Color(red: 1, green: 0.84, blue: 0.04)))
                 Spacer(minLength: 4)
                 // Lab 5, 6 and 8: choices in a pull-down menu here did not take effect reliably after the first change. The
                 // six themes are chosen where the design puts them — Profile › App Preferences › Appearance — and this
-                // strip only names the theme shown. Restore is a plain button so it also works from the Welcome screen.
-                Text(label).font(.caption2.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
+                // row only names the theme shown. Restore is a plain button so it also works from the Welcome screen.
+                Text(label).font(.system(size: 10, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.7)
+                    .foregroundStyle(CyTheme.ink2)
                     .accessibilityIdentifier("labThemeName")
                 Button { LabDemoData.restoreAtNextLaunch(); restoreAsked = true } label: {
-                    Text(restoreAsked ? "Reopen Lab" : "Restore demo").font(.caption2.weight(.heavy)).lineLimit(1)
-                        .padding(.horizontal, 8).frame(minHeight: 30)
-                        .overlay(Capsule().stroke(Color.black, lineWidth: 1.2))
-                        .frame(minHeight: 44).contentShape(Rectangle())
+                    Text(restoreAsked ? "Reopen Lab" : "Restore demo").font(.system(size: 10, weight: .heavy)).lineLimit(1)
+                        .foregroundStyle(CyTheme.ink)
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .overlay(Capsule().stroke(CyTheme.ink2, lineWidth: 1))
+                        .frame(minWidth: 44, minHeight: 26).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(restoreAsked ? "Restore asked for. Close and reopen Cyclift Lab" : "Restore the demo athlete")
                 .accessibilityIdentifier("labRestore")
             }
             .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-            .padding(.horizontal, 12)
-            .foregroundStyle(Color.black)
-            .tint(Color.black)
-            .background(Color(red: 1, green: 0.84, blue: 0.04).ignoresSafeArea(edges: .top))
+            .padding(.horizontal, 14)
+            .frame(height: 26)
+            .background(CyTheme.canvas.ignoresSafeArea(edges: .top))
             content
         }
     }

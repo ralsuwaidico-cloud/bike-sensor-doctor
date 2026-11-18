@@ -220,3 +220,22 @@ struct CyCradleDock: View {
         .accessibilityShowsLargeContentViewer { Label("Train", systemImage: "figure.strengthtraining.traditional") }
     }
 }
+
+
+/// The page's own background behind the dock: solid under it, fading out over the 12 pt above it, down to the bottom
+/// edge of the screen. 12 pt, because pages end 13 pt or more above the dock (Home: 128 pt scrolling inset, sheet F1),
+/// so the last control of a page is never inside the fade. It takes no touches.
+struct CyDockBackdrop: View {
+    @ObservedObject private var theme = CyThemeState.shared      // redraws with the theme
+    var body: some View {
+        let c = CyTheme.canvas
+        VStack(spacing: 0) {
+            LinearGradient(colors: [c.opacity(0), c], startPoint: .top, endPoint: .bottom).frame(height: 12)
+            c
+        }
+            .padding(.top, -12)
+            .ignoresSafeArea(edges: .bottom)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}

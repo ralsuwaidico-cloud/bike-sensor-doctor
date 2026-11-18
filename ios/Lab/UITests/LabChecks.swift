@@ -263,7 +263,12 @@ final class LabChecks: XCTestCase {
                 for s in ["progressEndurance", "progressStrengthDevelopment", "progressConsistency"] { XCTAssertTrue(pe(s).exists, "required: \(s) (the demo athlete rides and lifts)") }
                 print("LAB-NOTE progress: \(pe("progressEndurance").label.prefix(140)) | \(pe("progressStrengthDevelopment").label.prefix(140)) | \(pe("progressConsistency").label.prefix(80)) | zones: \(pe("progressZones").exists ? String(pe("progressZones").label.prefix(80)) : (pe("progressZonesMissing").exists ? pe("progressZonesMissing").label : "absent"))")
                 app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-5b-progress-lower")
-                app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-5c-progress-end")
+                app.swipeUp(); app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-5c-progress-end")
+                // owner's iPhone review of build 4: the dock must not cover the end of the page. At the end of Progress the last
+                // row is wholly above the dock, clear of the 12 pt fade above it.
+                let dockTop = pe("cradleDock").frame.minY, lastRow = app.buttons["progressOpenHistory"].firstMatch.frame.maxY
+                XCTAssertLessThanOrEqual(lastRow, dockTop - 12, "required: the last Progress row ends above the dock (row ends at \(lastRow), dock starts at \(dockTop))")
+                print("LAB-NOTE Progress end of page: last row ends \(dockTop - lastRow) pt above the dock")
                 let analytics = app.buttons["progressOpenAnalytics"].firstMatch
                 XCTAssertTrue(analytics.waitForExistence(timeout: 5), "required: Detailed analytics"); app.reveal(analytics); analytics.tap()
                 XCTAssertTrue(app.navigationBars["Detailed analytics"].firstMatch.waitForExistence(timeout: 8), "Detailed analytics opens the app's full analysis"); app.settleForScreenshot(1); shot("\(tag)-5d-progress-analytics")
