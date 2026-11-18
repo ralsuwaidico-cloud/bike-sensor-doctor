@@ -457,7 +457,19 @@ final class LabChecks: XCTestCase {
         app.buttons["reviewPainDone"].firstMatch.tap()        // an area without a level: nothing about pain is stored
         XCTAssertTrue(saveReview.waitForExistence(timeout: 5) && saveReview.isHittable)
         XCTAssertFalse(app.buttons["reviewChipPain"].firstMatch.isSelected, "an area alone does not report pain")
-        XCTAssertTrue(saveReview.isEnabled, "one answer is enough to save"); XCTAssertEqual(saveReview.label, "Save review"); saveReview.tap()
+        XCTAssertTrue(saveReview.isEnabled, "one answer is enough to save"); XCTAssertEqual(saveReview.label, "Save review")
+        // A complete review for the Coach: Performance answered too, and pain answered explicitly as none (never chosen for the
+        // athlete). Only then do the Coach's rules receive a full check-in — its timeline is looked at below.
+        app.buttons["reviewPerformancePlus"].firstMatch.tap()
+        XCTAssertEqual(el("reviewPerformanceValue").label, "6", "Performance answered")
+        app.buttons["reviewChipPain"].firstMatch.tap()
+        XCTAssertTrue(el("reviewPainSheet").waitForExistence(timeout: 6))
+        let none = app.buttons["reviewPain-none"].firstMatch
+        XCTAssertFalse(none.isSelected, "required: 'No pain to report' is never selected for the athlete"); none.tap()
+        XCTAssertTrue(none.isSelected, "said explicitly"); app.buttons["reviewPainDone"].firstMatch.tap()
+        XCTAssertTrue(saveReview.waitForExistence(timeout: 5) && saveReview.isHittable)
+        XCTAssertTrue(app.buttons["reviewChipPain"].firstMatch.isSelected, "pain is now answered (as none)")
+        saveReview.tap()
         // 06e: "optional review → return". (Changed expectation: the earlier screen stayed open with a "Review saved" line
         // that is not on the approved sheet. A review that cannot be stored keeps the page open and says so.)
         XCTAssertFalse(el("reviewNotSaved").waitForExistence(timeout: 2), "the review was stored")
@@ -468,6 +480,32 @@ final class LabChecks: XCTestCase {
         if close.waitForExistence(timeout: 5) { close.tap() }       // the session page's own Done (optional: it may already be closed)
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 15), "back on Home")
         app.settleForScreenshot(2); shot("strength-9-home-after")
+        // Coach page after a complete review (sheet G1): the Timeline now holds what the Coach's rules made of it.
+        do {
+            let link = app.buttons["homeCoachOpen"].firstMatch, quiet = el("homeCoachQuiet"), card = el("homeCoachAction")
+            let way = link.exists ? link : (quiet.exists ? quiet : card)
+            if way.exists {
+                app.reveal(way); way.tap()
+                if app.staticTexts["coachTitle"].firstMatch.waitForExistence(timeout: 6) {
+                    let entries = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'coachEntry-'"))
+                    XCTAssertGreaterThan(entries.count, 0, "required: after a complete review the Coach timeline is not empty")
+                    XCTAssertFalse(el("coachEmpty").exists, "the empty state is gone")
+                    print("LAB-NOTE coach timeline after a review: \(entries.count) entries; first: \(entries.firstMatch.label.prefix(200))")
+                    app.settleForScreenshot(1); shot("strength-11-coach-timeline")
+                    let notNow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'coachNotNow-'")).firstMatch
+                    if notNow.exists {
+                        notNow.tap()
+                        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH 'coachPostponed-'")).firstMatch.waitForExistence(timeout: 5), "required: Not now is recorded and said on the card")
+                        shot("strength-12-coach-postponed")
+                    } else { print("LAB-NOTE coach Not now: no open suggestion after this review, so the button was not on screen") }
+                    app.buttons["coachClose"].firstMatch.tap(); app.settleForScreenshot(1)
+                } else {
+                    print("LAB-NOTE coach timeline after a review: the Home Coach card led elsewhere; the Coach page was not opened here")
+                    let close = app.buttons["homeSheetClose"].firstMatch; if close.exists { close.tap() }
+                    tab(app, "Home")
+                }
+            } else { print("LAB-NOTE coach timeline after a review: no Coach entry point on Home") }
+        }
         app.buttons["centreButton"].firstMatch.tap()
         XCTAssertTrue(el("trainPanel").waitForExistence(timeout: 8), "the Train panel")
         let again = app.buttons["trainPanelPrimary"].firstMatch
