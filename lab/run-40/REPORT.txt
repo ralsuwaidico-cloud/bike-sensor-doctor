@@ -1,0 +1,71 @@
+RESULT Lab build: ok · 288s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint 4e3d4e8ea0399b94 2 
+	 Executed 12 tests, with 1 failure (0 unexpected) in 2592.200 (2592.223) seconds
+	 Executed 12 tests, with 1 failure (0 unexpected) in 2592.200 (2592.225) seconds
+	 Executed 12 tests, with 1 failure (0 unexpected) in 2592.200 (2592.226) seconds
+Lab/UITests/LabChecks.swift:333: error: -[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved] : Failed to get matching snapshots: Timed out while evaluating UI query.
+Test Case '-[CycliftLabUITests.LabChecks test0HomeControlsPresentTheirPages]' passed (341.295 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' passed (726.630 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2b2SupersetIsGroupedOnThePreparationScreen]' passed (31.318 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2b3SaveFailureAndUnconfirmedSaveKeepTheWorkout]' passed (66.793 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2b4CheckAgainFindsTheSavedWorkout]' passed (72.887 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved]' failed (134.061 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing]' passed (90.443 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2dProfileSectionsAndTheirPagesOpen]' passed (715.113 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' passed (203.587 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (82.197 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan]' passed (103.953 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' passed (23.922 seconds).
+RESULT Lab screen checks: FAILED · 2777s
+LAB-NOTE Coach card today leads to: Plan
+LAB-NOTE coach Not now: the demo athlete has no open suggestion, so the button was not on screen (logic tests cover the record)
+LAB-NOTE dock: ball bottom 34.0 pt above the screen bottom, left 14.0 pt, dock frame (14.0, 758.619873046875, 374.5, 90.76025390625)
+LAB-NOTE Home end of page: last control ends 128.0000000000001 pt above the screen bottom (scrolling inset 128)
+LAB-NOTE Home navigation: a Key metrics row presented its page at the first tap: true
+LAB-NOTE Home navigation: the Consistency ring presented its page at the first tap: true
+LAB-NOTE Home navigation: the Endurance card presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day, again after returning presented its page at the first tap: true
+LAB-NOTE Home navigation: the Recovery indicator presented its page at the first tap: true
+LAB-NOTE Home navigation: the Sleep bar presented its page at the first tap: true
+LAB-NOTE Home navigation: the Strength card presented its page at the first tap: true
+LAB-NOTE partial finish: Partial · 1 of 11 sets · Not done, Goblet squat · 2 sets, Dumbbell swing · 3 sets +2 more · Plan, Will be marked done as partial
+LAB-NOTE preparation: 'Full body' · About 40 min · dumbbells, kettlebells, bench · 4 exercises listed; first: Goblet squat, 3 × 10
+LAB-NOTE progress: Endurance development, 2 h 54, min a week,  About the same as the 4 weeks before · Cycling · riding time · average of the last 4 full weeks, | Strength development, 18, kg,  About the same as the 2 sessions before · Dumbbell bench press · recorded top set 18 kg × 8 · 32 sessions, Re | Training consistency, 14, of 14 weeks, Weeks with at least one session. Particip | zones: Time in zones, Not shown: not measurable: no FTP and no heart-rate zones.
+LAB-NOTE save lifecycle with restart: nothing logged → partial → not saved → not confirmed → app closed → relaunch: saved once; panel offers 'View results'
+LAB-NOTE superset preparation: 'SUPERSET A · 3 ROUNDS' · 5 exercises · About 40 min · dumbbells, kettlebells, bench
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (4e3d4e8ea0399b94 2 )
+RESULT Lab launch in six themes: FAILED
+commit 7b7ae556fd0b9342cebd2a71ab947cb02cfcee26  branch ios/lab
