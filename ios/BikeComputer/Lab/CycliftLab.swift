@@ -185,6 +185,19 @@ enum LabDemoData {
         // LAB_DEMO_SUPERSETS=1 (screen tests): the demo athlete has said they prefer supersets, so the app's own session
         // builder pairs exercises and the preparation screen and recorder show a real superset. Nothing is drawn by hand.
         if ProcessInfo.processInfo.environment["LAB_DEMO_SUPERSETS"] == "1" { out["strengthPrefs"] = ["prefersSupersets": true] }
+        // LAB_DEMO_PROPOSAL=1 (screen tests): the demo athlete also has one saved routine of their own, planned for
+        // today, at the weight the demo history shows lifted twice in a row at a moderate effort. No suggestion is written
+        // here: the app's own rules read these records and raise the increase themselves, and it waits for approval like
+        // any other. (Earlier in the day than the Coach-built session: the rules look at the NEXT session of an exercise.)
+        if ProcessInfo.processInfo.environment["LAB_DEMO_PROPOSAL"] == "1" {
+            func open(_ reps: Int, _ kg: Double) -> [String: Any] { ["id": UUID().uuidString, "reps": reps, "weightKg": kg, "bodyweight": false, "unilateral": false, "done": false] }
+            let squat: [String: Any] = ["id": UUID().uuidString, "exerciseId": "ex-003", "name": "Goblet squat", "pattern": "squat", "sets": [open(10, 25), open(10, 25), open(10, 25)], "notes": ""]
+            let routineId = UUID().uuidString
+            out["templates"] = [["id": routineId, "name": "Demo routine", "focus": "fullBody", "entries": [squat], "updatedAt": "2026-06-01T10:00:00Z"] as [String: Any]]
+            plan.append(["id": UUID().uuidString, "date": d(today, 6), "kind": "strength", "minutes": 30, "done": false, "skipped": false, "note": "", "edited": false, "sequence": 0,
+                         "strengthFocus": "fullBody", "templateId": routineId])
+            out["plan"] = plan
+        }
         let data = try! JSONSerialization.data(withJSONObject: out)
         return String(data: data, encoding: .utf8)!
     }

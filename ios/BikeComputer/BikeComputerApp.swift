@@ -57,6 +57,11 @@ struct BikeComputerApp: App {
             default: break
             }
         }
+        #if CYCLIFT_LAB
+        // Lab screen tests only (LAB_DEMO_PROPOSAL=1): the Coach reads the demo records once at launch, as it does after
+        // a review, so a suggestion its own rules raise is open from the start. The production app never contains this.
+        if ProcessInfo.processInfo.environment["LAB_DEMO_PROPOSAL"] == "1" { _ = s.runAdaptation() }
+        #endif
         _store = StateObject(wrappedValue: s)
         _device = StateObject(wrappedValue: d)
         _watchLink = StateObject(wrappedValue: w)

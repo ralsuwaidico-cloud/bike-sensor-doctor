@@ -668,6 +668,69 @@ final class LabChecks: XCTestCase {
         shot("superset-2-recorder")
     }
 
+    /// Coach "Not now" (sheet G1) with an open suggestion on screen. The suggestion is not drawn by hand: the demo athlete
+    /// gets one saved routine (LAB_DEMO_PROPOSAL=1) and the app's own rules raise the increase from the demo history.
+    /// Required: Plan and the Coach page show the same suggestion; Not now keeps it open and says so; it is still there,
+    /// still marked, after the app is closed and reopened; Review then reaches the approval sheet, and Accept closes it.
+    func test2eCoachNotNowKeepsTheSuggestionOpen() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+        app.launchEnvironment["LAB_DEMO_PROPOSAL"] = "1"
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        func starting(_ p: String) -> XCUIElementQuery { app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", p)) }
+        func openCoachFromPlan(_ step: String) -> Bool {
+            tab(app, "Plan")
+            let row = el("planCoachRow")
+            guard row.waitForExistence(timeout: 8) else { XCTFail("required (\(step)): Plan shows the Coach row"); return false }
+            print("LAB-NOTE not-now \(step) plan row: \(row.label)")
+            XCTAssertTrue(row.label.hasPrefix("Coach Suggests"), "required (\(step)): an open suggestion is called a suggestion (\(row.label))")
+            XCTAssertTrue(row.label.contains("Goblet squat"), "required (\(step)): the row names the suggestion (\(row.label))")
+            XCTAssertTrue(row.label.hasSuffix("Review"), "required (\(step)): a suggestion offers Review (\(row.label))")
+            if step == "first" { shot("notnow-0-plan-row") }
+            row.tap()
+            return el("coachTimeline").waitForExistence(timeout: 8)
+        }
+        guard openCoachFromPlan("first") else { XCTFail("required: the Plan row opens the Coach page"); return }
+        XCTAssertGreaterThan(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'coachEntry-' AND label CONTAINS 'Goblet squat'")).count, 0, "required: the Coach page lists the same suggestion")
+        let notNow = starting("coachNotNow-").firstMatch
+        XCTAssertTrue(notNow.waitForExistence(timeout: 8), "required: an open suggestion offers Not now")
+        _ = app.reveal(notNow)
+        XCTAssertTrue(starting("coachOpen-").firstMatch.exists, "required: an open suggestion offers Review")
+        shot("notnow-1-open")
+        notNow.tap(); app.settleForScreenshot(1)
+        let marked = starting("coachPostponed-").firstMatch
+        XCTAssertTrue(marked.waitForExistence(timeout: 8), "required: Not now is acknowledged on the suggestion")
+        XCTAssertTrue(marked.label.contains("stays open"), "it says the suggestion stays open (\(marked.label))")
+        XCTAssertEqual(starting("coachNotNow-").count, 0, "Not now is not offered twice")
+        XCTAssertTrue(starting("coachOpen-").firstMatch.exists, "required: Review is still offered after Not now")
+        shot("notnow-2-postponed")
+        el("coachClose").tap(); app.settleForScreenshot(2)
+
+        // closed and reopened: no fresh demo, no Coach run at launch — only what was stored
+        app.terminate()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = nil; app.launchEnvironment["LAB_DEMO_PROPOSAL"] = nil
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        guard openCoachFromPlan("after reopening") else { XCTFail("required: the Coach page opens after reopening"); return }
+        let still = starting("coachPostponed-").firstMatch
+        XCTAssertTrue(still.waitForExistence(timeout: 8), "required: the postponed suggestion is still open and still marked after reopening")
+        _ = app.reveal(still)
+        shot("notnow-3-after-reopen")
+        let review = starting("coachOpen-hold").firstMatch
+        XCTAssertTrue(review.waitForExistence(timeout: 8), "required: the postponed suggestion can be reviewed later")
+        _ = app.reveal(review); review.tap()
+        let accept = app.buttons["proposalAccept"].firstMatch
+        XCTAssertTrue(accept.waitForExistence(timeout: 8), "required: Review reaches the approval sheet")
+        app.settleForScreenshot(1); shot("notnow-4-approval-sheet")
+        accept.tap(); app.settleForScreenshot(2)
+        XCTAssertFalse(starting("coachPostponed-").firstMatch.waitForExistence(timeout: 3), "once approved, the suggestion is no longer open")
+        XCTAssertEqual(starting("coachNotNow-").count, 0, "once approved, nothing is left to postpone")
+        shot("notnow-5-after-approval")
+    }
+
     /// Profile v2.0: every section page and the pages behind it, as pictures for the comparison with sheets P03–P08.
     /// Each row named here is required to exist and to open a page with a way back.
     func test2dProfileSectionsAndTheirPagesOpen() {
