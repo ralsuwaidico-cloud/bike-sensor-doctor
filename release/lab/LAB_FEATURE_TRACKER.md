@@ -32,8 +32,6 @@ Governing instructions: Master Project Instructions v3.0. The repository has no 
 | Onboarding / Progress: Athlete Evolution stage | No approved stage criteria | Approved criteria |
 | Main-sport flag as its own field | Not approved; roster order carries it | Decision if order is not enough |
 | Activities without an identifier (walking, bodyweight, mobility, breathing, sauna) | Cannot be stored | Identifiers approved |
-| Review: unanswered pain stored as "unknown" | The stored record always holds a pain answer and the Coach acts on it | Storage and Coach decision (v1.4 pending item 4) |
-| Strength: skipped set, superset rounds and round rest, added-weight / assisted / timed sets | New data | Schema decision (v1.4 pending items 5, 6) |
 | Cycling: minimise a ride; real recorder behind the new screen | Blocked by the cycling safety gate | Gate passed and approved |
 | Cycling: Map view | Lab has no location | — |
 | Coach: AI chat | No model authorised | Authorisation |
@@ -47,6 +45,8 @@ Governing instructions: Master Project Instructions v3.0. The repository has no 
 |---|---|
 | Review record gains optional `intensity` (stored only; no engine reads it) | None: absent in every existing record; never defaulted |
 | Coach's own files `coach-shadow.json`, `coach-page.json` beside the athlete record | None: separate files; removed by Delete all data |
+| Session review record: three independent optional values (Intensity, Performance, Effort), pain optional so unknown is not "none" (approved 16 Nov) | None: absent in every existing record; never defaulted. Not downgrade-safe by itself — see build-216 risk |
+| Strength sets: skipped sets and exercises, timed, added-weight and assisted sets (approved 16 Nov). Superset rounds: written, not seen on screen | Same: optional and additive; build 216 would not understand them |
 
 ## 4. E1 safety work — unchanged and still open
 No fully verified E1 commit. Open: Progress large-text preview bubble; cancelled owner job of run 252; Delete All Data definition; "Not saved" screen test; large-text truncation; ride-start pathway tests; release accounting; device check; evidence report. E1 commits after `4970c5c7` are not in the Lab branch.
