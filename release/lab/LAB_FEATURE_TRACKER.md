@@ -59,7 +59,7 @@ No fully verified E1 commit. Open: Progress large-text preview bubble; cancelled
 | a4de9d30 | Lab 19 | 7/7 | — |
 | caf4862e | iOS 274 (journeys; rerun) | Redesigned main app; production hybrid, cycling, strength journeys | First attempt: hybrid journey — Profile "Type & experience" row tapped, editor did not open. Not reproduced on rerun. Cause unknown; tracked (section 7) |
 | e91e38be | Lab 32 | 8/8 including first-tap Home navigation | — |
-| e91e38be | iOS 286 (journeys + smoke) | Redesigned main app (2 tests); production hybrid, cycling, strength journeys; 31 of 33 smoke tests incl. 8 of 9 production Home navigation tests | 2 smoke tests failed to START (simulator: "Timed out while launching application", "Failed to get background assertion"). Being rerun alone |
+| e91e38be | iOS 286 (journeys + smoke) | Redesigned main app (2 tests); production hybrid, cycling, strength journeys; 31 of 33 smoke tests incl. 8 of 9 production Home navigation tests | 2 smoke tests failed to START (simulator: "Timed out while launching application", "Failed to get background assertion"). Rerun alone: see iOS 288 |
 | e91e38be | iOS 287, logic 131 | Compile, 809 unit tests; Linux logic tests | — |
 | e91e38be | iOS 288 (the two smoke tests alone) | Both passed on small and standard simulators. Supports a simulator launch failure in 286; the cause of those two launch failures is not known | — |
 | 8ba4f4e1 | Lab 33 | 8/8 incl. the strength journey through the v1.4 preparation screen and first-tap Home navigation | — |
