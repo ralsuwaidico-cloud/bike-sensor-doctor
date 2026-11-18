@@ -1,0 +1,164 @@
+=== layout-standard: errors / failures ===
+=== layout-standard: full filter ===
+Test Case '-[BikeComputerUITests.AdaptiveSmokeTests testQuickStrengthLogShowsCheckInThenAdjustments]' passed (195.212 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 195.212 (195.217) seconds
+Test Case '-[BikeComputerUITests.HomeNavigationTests testAvatarOpensTheMenuAndEveryRowItsOwnPage]' passed (576.860 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 576.860 (576.863) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 772.072 (772.084) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 772.072 (772.086) seconds
+** TEST EXECUTE SUCCEEDED **
+=== layout-standard: last 150 lines ===
+    t =   357.35s     Checking `Expect predicate `existsNoRetry == 1` for object "menuConnections" Any`
+    t =   357.36s         Checking existence of `"menuConnections" Any`
+    t =   359.00s Tap "menuConnections" Any
+    t =   359.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   359.15s     Find the "menuConnections" Any
+    t =   360.93s     Check for interrupting elements affecting "menuConnections" Button
+    t =   362.55s     Synthesize event
+    t =   363.15s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   363.50s Checking existence of `"menuMyProfile" Any`
+    t =   371.94s Checking existence of `"menuPreferences" Any`
+    t =   376.11s Checking existence of `"menuConnections" Any`
+    t =   379.84s Checking existence of `"menuSettings" Any`
+    t =   383.78s Checking existence of `"menuHelp" Any`
+    t =   386.95s Checking existence of `"profileMenuClose" Any`
+    t =   390.06s Checking existence of `"profileMenuScrim" Any`
+    t =   393.05s Checking existence of `"homeAvatar" Button`
+    t =   394.83s Checking existence of `"profileMenu" Any`
+    t =   398.88s Waiting 5.0s for "Devices & sensors" NavigationBar to exist
+    t =   399.93s     Checking `Expect predicate `existsNoRetry == 1` for object "Devices & sensors" NavigationBar`
+    t =   399.93s         Checking existence of `"Devices & sensors" NavigationBar`
+    t =   400.74s Added attachment named 'menu-04-connections'
+    t =   400.75s Waiting 5.0s for Button (Element at index 0) to exist
+    t =   401.82s     Checking `Expect predicate `existsNoRetry == 1` for object Button (Element at index 0)`
+    t =   401.82s         Checking existence of `Button (Element at index 0)`
+    t =   402.34s Tap Button (Element at index 0)
+    t =   402.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   402.34s     Find the Button (Element at index 0)
+    t =   403.46s     Check for interrupting elements affecting "BackButton" Button
+    t =   404.25s     Synthesize event
+    t =   404.60s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   406.89s Tap "homeAvatar" Button
+    t =   406.89s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   406.98s     Find the "homeAvatar" Button
+    t =   407.22s     Check for interrupting elements affecting "homeAvatar" Button
+    t =   407.90s     Synthesize event
+    t =   408.26s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   408.26s Waiting 5.0s for "menuSettings" Any to exist
+    t =   409.31s     Checking `Expect predicate `existsNoRetry == 1` for object "menuSettings" Any`
+    t =   409.31s         Checking existence of `"menuSettings" Any`
+    t =   410.03s Tap "menuSettings" Any
+    t =   410.03s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   410.08s     Find the "menuSettings" Any
+    t =   411.28s     Check for interrupting elements affecting "menuSettings" Button
+    t =   412.51s     Synthesize event
+    t =   412.84s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   414.11s Checking existence of `"menuMyProfile" Any`
+    t =   422.23s Checking existence of `"menuPreferences" Any`
+    t =   428.38s Checking existence of `"menuConnections" Any`
+    t =   433.02s Checking existence of `"menuSettings" Any`
+    t =   440.94s Checking existence of `"menuHelp" Any`
+    t =   451.41s Checking existence of `"profileMenuClose" Any`
+    t =   456.52s Checking existence of `"profileMenuScrim" Any`
+    t =   459.63s Checking existence of `"homeAvatar" Button`
+    t =   461.47s Checking existence of `"profileMenu" Any`
+    t =   465.71s Waiting 5.0s for "Settings" NavigationBar to exist
+    t =   466.74s     Checking `Expect predicate `existsNoRetry == 1` for object "Settings" NavigationBar`
+    t =   466.74s         Checking existence of `"Settings" NavigationBar`
+    t =   467.86s Added attachment named 'menu-05-settings'
+    t =   467.90s Waiting 5.0s for Button (Element at index 0) to exist
+    t =   468.93s     Checking `Expect predicate `existsNoRetry == 1` for object Button (Element at index 0)`
+    t =   468.93s         Checking existence of `Button (Element at index 0)`
+    t =   469.34s Tap Button (Element at index 0)
+    t =   469.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   469.35s     Find the Button (Element at index 0)
+    t =   470.02s     Check for interrupting elements affecting "BackButton" Button
+    t =   470.45s     Synthesize event
+    t =   470.87s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   473.01s Tap "homeAvatar" Button
+    t =   473.01s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   473.03s     Find the "homeAvatar" Button
+    t =   473.22s     Check for interrupting elements affecting "homeAvatar" Button
+    t =   473.58s     Synthesize event
+    t =   473.90s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   473.92s Waiting 5.0s for "menuHelp" Any to exist
+    t =   474.95s     Checking `Expect predicate `existsNoRetry == 1` for object "menuHelp" Any`
+    t =   474.98s         Checking existence of `"menuHelp" Any`
+    t =   475.97s Tap "menuHelp" Any
+    t =   475.97s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   476.33s     Find the "menuHelp" Any
+    t =   476.91s     Check for interrupting elements affecting "menuHelp" Button
+    t =   478.26s     Synthesize event
+    t =   478.59s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   478.68s Checking existence of `"menuMyProfile" Any`
+    t =   483.88s Checking existence of `"menuPreferences" Any`
+    t =   488.22s Checking existence of `"menuConnections" Any`
+    t =   491.84s Checking existence of `"menuSettings" Any`
+    t =   494.78s Checking existence of `"menuHelp" Any`
+    t =   498.66s Checking existence of `"profileMenuClose" Any`
+    t =   501.74s Checking existence of `"profileMenuScrim" Any`
+    t =   505.93s Checking existence of `"homeAvatar" Button`
+    t =   508.67s Checking existence of `"profileMenu" Any`
+    t =   516.81s Waiting 8.0s for "helpSupportPage" Any to exist
+    t =   517.85s     Checking `Expect predicate `existsNoRetry == 1` for object "helpSupportPage" Any`
+    t =   517.86s         Checking existence of `"helpSupportPage" Any`
+    t =   518.61s Checking existence of `"helpVersion" Any`
+    t =   521.02s Added attachment named 'menu-06-help'
+    t =   521.03s Waiting 5.0s for Button (Element at index 0) to exist
+    t =   522.10s     Checking `Expect predicate `existsNoRetry == 1` for object Button (Element at index 0)`
+    t =   522.10s         Checking existence of `Button (Element at index 0)`
+    t =   522.41s Tap Button (Element at index 0)
+    t =   522.41s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   522.42s     Find the Button (Element at index 0)
+    t =   523.08s     Check for interrupting elements affecting "BackButton" Button
+    t =   523.42s     Synthesize event
+    t =   523.76s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   525.95s Tap "homeAvatar" Button
+    t =   525.95s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   525.96s     Find the "homeAvatar" Button
+    t =   527.16s     Check for interrupting elements affecting "homeAvatar" Button
+    t =   528.13s     Synthesize event
+    t =   528.47s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   528.48s Waiting 5.0s for "menuViewProfile" Any to exist
+    t =   529.49s     Checking `Expect predicate `existsNoRetry == 1` for object "menuViewProfile" Any`
+    t =   529.49s         Checking existence of `"menuViewProfile" Any`
+    t =   530.42s Tap "menuViewProfile" Any
+    t =   530.42s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   530.70s     Find the "menuViewProfile" Any
+    t =   531.91s     Check for interrupting elements affecting "menuViewProfile" Button
+    t =   533.30s     Synthesize event
+    t =   533.64s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   533.65s Checking existence of `"menuMyProfile" Any`
+    t =   539.78s Checking existence of `"menuPreferences" Any`
+    t =   544.30s Checking existence of `"menuConnections" Any`
+    t =   548.82s Checking existence of `"menuSettings" Any`
+    t =   553.44s Checking existence of `"menuHelp" Any`
+    t =   558.04s Checking existence of `"profileMenuClose" Any`
+    t =   561.04s Checking existence of `"profileMenuScrim" Any`
+    t =   564.49s Checking existence of `"homeAvatar" Button`
+    t =   565.00s Find the "homeAvatar" Button
+    t =   565.63s Checking existence of `"profileMenu" Any`
+    t =   571.28s Checking existence of `"profileHeader" Any`
+    t =   573.66s Find the "profileHeader" Any
+    t =   576.26s Tear Down
+Test Case '-[BikeComputerUITests.HomeNavigationTests testAvatarOpensTheMenuAndEveryRowItsOwnPage]' passed (576.860 seconds).
+Test Suite 'HomeNavigationTests' passed at 2026-11-18 03:30:16.752.
+	 Executed 1 test, with 0 failures (0 unexpected) in 576.860 (576.863) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-18 03:30:16.755.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 772.072 (772.084) seconds
+Test Suite 'Selected tests' passed at 2026-11-18 03:30:16.756.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 772.072 (772.086) seconds
+2026-11-18 03:30:21.928 xcodebuild[76607:200986] [MT] IDETestOperationsObserverDebug: 977.283 elapsed -- Testing started completed.
+2026-11-18 03:30:21.929 xcodebuild[76607:200986] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-18 03:30:21.929 xcodebuild[76607:200986] [MT] IDETestOperationsObserverDebug: 977.283 sec, +977.283 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-standard.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+=== layout-standard: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.AdaptiveSmokeTests testQuickStrengthLogShowsCheckInThenAdjustments]' passed (195.212 seconds).
+Test Case '-[BikeComputerUITests.HomeNavigationTests testAvatarOpensTheMenuAndEveryRowItsOwnPage]' passed (576.860 seconds).
+=== layout-standard: E0-DIAG lines ===

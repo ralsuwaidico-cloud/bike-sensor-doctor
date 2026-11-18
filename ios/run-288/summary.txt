@@ -1,0 +1,25 @@
+BikeComputer iOS CI — run 288 — scope quick — jobs: quick=success test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 288 — 2026-11-18 02:26 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+RESULT build (Debug, for testing): ok · 6m4s
+RESULT tests: ok (Executed 809 tests, with 2 tests skipped and 0 failures) · 13m59s
+Quick UI targets: HomeNavigationTests/testAvatarOpensTheMenuAndEveryRowItsOwnPage AdaptiveSmokeTests/testQuickStrengthLogShowsCheckInThenAdjustments
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 16m12s
+  layout small counts: passed 2 · failed 0 · skipped 0 · screenshots so far 6
+  layout small (AX3): ok · 16m37s
+  layout standard counts: passed 2 · failed 0 · skipped 0 · screenshots so far 12
+  layout standard (L): ok · 16m48s
+  journey hybrid: ok · recording 104969 KB · 12m41s
+RESULT layout audit: ok (28 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 76m40s
+commit e91e38be146f872a797b78b6435971209f3cec09  branch ios/lab  job success
