@@ -41,6 +41,11 @@ struct StrengthRecorderV14: View {
     @State private var confirmDiscard = false
     @State private var pausedByFinish = false
     @State private var savedSummary: FinishSummary? = nil
+    /// Pending: Save was tapped and the result is not known yet (06e X4). Nothing is shown as saved.
+    @State private var saving = false
+    /// Unknown: the store accepted the save, but reading the file back did not find the workout (06f X7).
+    @State private var unconfirmed: StrengthSession? = nil
+    @State private var checks = 0
     /// After a confirmed save: the saved session, shown until the athlete leaves or opens the optional review.
     @State private var saved: StrengthSession? = nil
     @State private var review = false
@@ -52,6 +57,8 @@ struct StrengthRecorderV14: View {
     var body: some View {
         Group {
             if let done = saved { savedView(done) }
+            else if let u = unconfirmed { unconfirmedPage(u) }
+            else if saving { CySavingPage(detail: "\(savedSummary?.title ?? "Workout") · your sets are still on this phone") }
             else if finishing, let s = store.activeSession { finishPage(s) }
             else if let s = store.activeSession { recorder(s) }
             else { nothing }
@@ -483,14 +490,42 @@ struct StrengthRecorderV14: View {
         }
     }
 
-    /// The one durable save. Confirmed only when the saved session is in the history.
+    /// The one durable save, in five honest states: recorded (the Finish page) → pending ("Saving…") → confirmed
+    /// ("Saved": the store wrote it AND the file read back holds it) · failed ("Not saved yet": the session is still
+    /// active, Try again writes exactly one record) · unknown ("Save not confirmed": checked again, never assumed).
+    /// The save itself is the store's existing `finishActiveSession`; nothing about it is changed here.
     private func save() {
+        guard !saving, let active = store.activeSession else { return }
         store.saveFailure = nil
-        let before = store.activeSession.map { FinishSummary.make($0, title: sessionTitle($0), now: now) }
-        if let s = store.finishActiveSession(rpe: nil, notes: ""), store.strength.contains(where: { $0.id == s.id }) {
-            memory.clear(); savedSummary = before; saved = s; finishing = false; pausedByFinish = false
+        savedSummary = FinishSummary.make(active, title: sessionTitle(active), now: now)
+        saving = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 250_000_000)     // the pending state is shown, not skipped; the session stays active and safe meanwhile
+            if UITestSupport.takeFailedSave() {                  // simulator only: take the failure path without touching the store
+                store.saveFailure = "This save was made to fail by a test. Nothing was written."
+            } else if let s = store.finishActiveSession(rpe: nil, notes: "") {
+                memory.clear(); pausedByFinish = false
+                if store.strengthSaveCheck(s.id) == .confirmed { saved = s; finishing = false } else { checks = 0; unconfirmed = s }
+            }
+            // otherwise the session is still active and `saveFailure` says why: the page shows "Not saved yet"
+            saving = false
         }
-        // otherwise the session is still active and `saveFailure` says why: the page shows "Not saved yet"
+    }
+    /// "Check again" only reads. It can confirm the save; it cannot create a record.
+    private func checkAgain(_ s: StrengthSession) {
+        checks += 1
+        if store.strengthSaveCheck(s.id) == .confirmed { saved = s; unconfirmed = nil; finishing = false }
+    }
+    private func unconfirmedPage(_ s: StrengthSession) -> some View {
+        let f = savedSummary
+        var rows = [CyFinishRow(label: "Sets", value: (f?.setsText ?? "\((s.exercises ?? []).reduce(0) { $0 + $1.sets.count })") + " · kept", id: "unconfirmedSets")]
+        if s.workoutId != nil { rows.append(CyFinishRow(label: "Plan", value: "Not confirmed", id: "unconfirmedPlan")) }
+        if checks > 0 { rows.append(CyFinishRow(label: "Checked again", value: "\(checks) time\(checks == 1 ? "" : "s") · still not confirmed", id: "unconfirmedChecks")) }
+        return CyFinishPage(title: "Save not confirmed", titleID: "saveUnconfirmed",
+                            message: "Cyclift could not confirm that the workout was saved. It is kept here until that is known.",
+                            rows: rows, primary: "Check again", primaryID: "saveCheckAgain", onPrimary: { checkAgain(s) },
+                            secondary: "Close", secondaryID: "unconfirmedClose", onSecondary: { dismiss() },
+                            backLabel: "Close", onBack: { dismiss() }, pageID: "unconfirmedV14")
     }
 
     private func savedView(_ s: StrengthSession) -> some View {

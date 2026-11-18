@@ -168,9 +168,17 @@ struct CoachPageFile: Codable, Equatable {
         var text: String                // the proposal as the athlete saw it
         var why: String
     }
+    /// "Not now" on an open proposal (sheet G1): the athlete deliberately postponed the decision. It is neither an
+    /// approval nor a rejection, changes nothing in the plan, and the proposal stays open and reviewable.
+    struct Postponed: Codable, Equatable {
+        var proposalId: String          // AdaptiveProposal.id
+        var at: Date
+    }
     var schema = 1
     var messages: [CoachChatMessage] = []
     var links: [Link] = []
+    /// Optional so that a file written before postponement existed still opens (nil = none).
+    var postponed: [Postponed]? = nil
 }
 
 final class CoachJournal {
@@ -188,6 +196,22 @@ final class CoachJournal {
     }
     func append(_ m: CoachChatMessage) { file.messages.append(m); if file.messages.count > 400 { file.messages.removeFirst(file.messages.count - 400) }; save() }
     func link(_ l: CoachPageFile.Link) { guard !file.links.contains(where: { $0.shadowId == l.shadowId }) else { return }; file.links.append(l); save() }
+    /// Records "Not now" for an open proposal (once; the first time is kept). Returns false when nothing could be stored.
+    @discardableResult
+    func postpone(_ proposalId: String, at: Date) -> Bool {
+        guard writable else { return false }
+        var list = file.postponed ?? []
+        guard !list.contains(where: { $0.proposalId == proposalId }) else { return true }
+        list.append(.init(proposalId: proposalId, at: at)); file.postponed = list; save()
+        return true
+    }
+    /// Postponements of proposals that are no longer open are dropped (they were decided, or the Coach withdrew them).
+    func prunePostponed(open: Set<String>) {
+        guard let list = file.postponed, list.contains(where: { !open.contains($0.proposalId) }) else { return }
+        let kept = list.filter { open.contains($0.proposalId) }
+        file.postponed = kept.isEmpty ? nil : kept; save()
+    }
+    func postponedAt(_ proposalId: String) -> Date? { file.postponed?.first { $0.proposalId == proposalId }?.at }
     private func save() {
         guard writable else { return }
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601; enc.outputFormatting = [.sortedKeys]

@@ -19,4 +19,21 @@ enum UITestSupport {
         }
         #endif
     }
+
+    // Training Hub v1.4 save states (sheets 06e X6, 06f X7): two switches so the "Not saved yet" and "Save not confirmed"
+    // pages can be seen and their retries exercised. SIMULATOR ONLY, like everything in this file: on a real device both
+    // always answer false. Neither touches the store or its file — they only make the screen take its failure path once.
+    private static var failSavesLeft: Int = { number("BC_UITEST_SAVE_FAIL") }()
+    private static var unconfirmedChecksLeft: Int = { number("BC_UITEST_SAVE_UNCONFIRMED") }()
+    private static func number(_ key: String) -> Int {
+        #if targetEnvironment(simulator)
+        return Int(ProcessInfo.processInfo.environment[key] ?? "") ?? 0
+        #else
+        return 0
+        #endif
+    }
+    /// true = the screen must treat this Save tap as failed, without calling the store (so nothing is written).
+    static func takeFailedSave() -> Bool { guard failSavesLeft > 0 else { return false }; failSavesLeft -= 1; return true }
+    /// true = the read-back check must answer "not confirmed" this time.
+    static func takeUnconfirmedSaveCheck() -> Bool { guard unconfirmedChecksLeft > 0 else { return false }; unconfirmedChecksLeft -= 1; return true }
 }

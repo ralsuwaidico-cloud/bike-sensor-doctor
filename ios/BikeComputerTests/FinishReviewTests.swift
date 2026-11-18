@@ -59,15 +59,77 @@ final class FinishReviewTests: XCTestCase {
         XCTAssertEqual(ReviewScale.effort.word(9), "Very hard"); XCTAssertEqual(ReviewScale.effort.word(10), "Maximal")
     }
 
-    func testCoachNotesStoreOnlyWhatWasWrittenAndAnAreaAloneReportsNoPain() {
-        XCTAssertEqual(ReviewNotes().composed, ""); XCTAssertEqual(ReviewNotes(fatigue: "  ", equipment: "\n", note: " ").composed, "")
-        XCTAssertEqual(ReviewNotes(fatigue: "legs heavy", equipment: "", note: "short on time").composed, "Fatigue: legs heavy\nshort on time")
-        XCTAssertEqual(ReviewNotes(fatigue: "", equipment: "bench wobbles", note: "").composed, "Equipment: bench wobbles")
+    func testFatigueAndEquipmentAreStoredUnderTheirOwnNamesAndOnlyWhenWritten() throws {
+        XCTAssertTrue(ReviewNotes().isEmpty); XCTAssertTrue(ReviewNotes(fatigue: "  ", equipment: "\n", note: " ").isEmpty)
+        // nothing written: nothing stored, and the review is empty
+        XCTAssertTrue(SessionReview(fatigue: "  ", equipment: "").isEmpty)
+        let r = SessionReview(effort: 8, note: "short on time", fatigue: " legs heavy ", equipment: "bench wobbles", at: Date(timeIntervalSince1970: 1_800_000_000))   // whole seconds: the stored date format keeps no fractions
+        XCTAssertEqual(r.fatigue, "legs heavy"); XCTAssertEqual(r.equipment, "bench wobbles"); XCTAssertEqual(r.note, "short on time", "the note is not mixed with them")
+        XCTAssertFalse(SessionReview(fatigue: "tired").isEmpty, "a written word alone is a review")
+        // it survives storage under its own keys, and a record written before these keys existed still opens
+        let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
+        let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
+        let data = try enc.encode(r)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["fatigue"] as? String, "legs heavy"); XCTAssertEqual(json["equipment"] as? String, "bench wobbles")
+        XCTAssertEqual(try dec.decode(SessionReview.self, from: data), r)
+        let plain = try enc.encode(SessionReview(effort: 6))
+        let old = try XCTUnwrap(JSONSerialization.jsonObject(with: plain) as? [String: Any])
+        XCTAssertNil(old["fatigue"]); XCTAssertNil(old["equipment"], "absent when nothing was written")
+        let before = try dec.decode(SessionReview.self, from: Data(#"{"effort":7,"note":"","at":"2026-11-01T10:00:00Z"}"#.utf8))
+        XCTAssertNil(before.fatigue); XCTAssertNil(before.equipment); XCTAssertEqual(before.effort, 7)
+        // written words never become a rating or a pain report, and never make a full check-in on their own
+        let words = SessionReview(fatigue: "exhausted, 9 out of 10", equipment: "knee sleeve")
+        XCTAssertNil(words.effort); XCTAssertNil(words.intensity); XCTAssertNil(words.performance); XCTAssertNil(words.pain); XCTAssertNil(words.asCheckIn)
+    }
+
+    func testPainIsUnknownUntilAnsweredAndNoneOnlyWhenSaid() {
         // acceptance D9: an area with no level stores no level and no area; D6: nothing answered is an empty review
         let r = SessionReview(intensity: nil, performance: nil, effort: nil, pain: nil, painArea: .knees, note: "")
         XCTAssertNil(r.pain); XCTAssertNil(r.painArea); XCTAssertTrue(r.isEmpty)
+        // three different things: unknown, explicitly none, reported
+        let unknown = SessionReview(performance: 6, effort: 7)
+        XCTAssertNil(unknown.pain); XCTAssertNil(unknown.asCheckIn, "ratings without a pain answer are not a full check-in: no 'no pain' is assumed")
+        let none = SessionReview(performance: 6, effort: 7, pain: .noPain)
+        XCTAssertEqual(none.pain, .noPain); XCTAssertEqual(none.asCheckIn?.pain, .noPain)
+        let reported = SessionReview(pain: .discomfort, painArea: .knees)
+        XCTAssertEqual(reported.pain, .discomfort); XCTAssertEqual(reported.painArea, .knees); XCTAssertFalse(reported.isEmpty)
         // one answer alone is a review, but not a full check-in for the Coach
         let one = SessionReview(effort: 8)
         XCTAssertFalse(one.isEmpty); XCTAssertNil(one.asCheckIn); XCTAssertNil(one.intensity); XCTAssertNil(one.performance)
+    }
+
+    // MARK: save lifecycle — Saved only when the file on the phone holds the workout; a retry never duplicates
+
+    private func tmp(_ tag: String) -> URL {
+        let d = FileManager.default.temporaryDirectory.appendingPathComponent("finish-\(tag)-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true); return d
+    }
+    private func start(_ store: Store) {
+        var e = entry("Goblet squat", done: 2, open: 1)
+        e.sets[2].done = false
+        var s = StrengthSession(date: Date(), minutes: 0, focus: .fullBody)
+        s.startedAt = Date().addingTimeInterval(-900); s.exercises = [e]
+        store.activeSession = s
+    }
+
+    func testSavedIsConfirmedFromTheFileAndCheckingAgainWritesNothing() throws {
+        let d = tmp("ok"); let store = Store(directory: d, generatePlan: false)
+        start(store)
+        let saved = try XCTUnwrap(store.finishActiveSession(rpe: nil, notes: ""))
+        XCTAssertEqual(store.strengthSaveCheck(saved.id), .confirmed, "in the history and in the file")
+        let file = d.appendingPathComponent("store.json")
+        let bytes = try Data(contentsOf: file), stamp = try FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate] as? Date
+        for _ in 0..<5 { XCTAssertEqual(store.strengthSaveCheck(saved.id), .confirmed) }
+        XCTAssertEqual(try Data(contentsOf: file), bytes, "checking again does not write"); XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate] as? Date, stamp)
+        XCTAssertEqual(store.strength.filter { $0.id == saved.id }.count, 1)
+        // a second Save tap has no session left to save: no duplicate, in memory or on disk
+        XCTAssertNil(store.finishActiveSession(rpe: nil, notes: "")); XCTAssertEqual(store.strength.count, 1)
+        XCTAssertEqual(Store(directory: d, generatePlan: false).strength.count, 1, "one record after a relaunch")
+        // unknown workout, unreadable file, and a file that does not hold it are three different answers — none is "confirmed"
+        XCTAssertEqual(store.strengthSaveCheck(UUID()), .notInHistory)
+        try Data("not json".utf8).write(to: file); XCTAssertEqual(store.strengthSaveCheck(saved.id), .unreadable)
+        try Data(#"{"strength":[]}"#.utf8).write(to: file); XCTAssertEqual(store.strengthSaveCheck(saved.id), .notOnDisk)
+        try FileManager.default.removeItem(at: file); XCTAssertEqual(store.strengthSaveCheck(saved.id), .unreadable)
     }
 }

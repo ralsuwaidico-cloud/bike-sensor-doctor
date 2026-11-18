@@ -1,11 +1,11 @@
 import SwiftUI
 
 // Training Hub v1.4 — Finish and save (sheets 06e, 06f). Presentation only: the pages receive text and report taps.
-//  X1 Complete · X2 Partial · X3 Nothing recorded · X6 Save failed  → CyFinishPage
-//  X5 Saved — confirmed                                              → CySavedPage
-//  X8 Discard                                                        → CyDiscardDialog over the page
-// NOT built (the sheet marks both FUTURE, and "save-result handling" is a pending item of the v1.4 approval):
-//  X4 Saving (the save has no pending state) and X7 Save not confirmed.
+//  X1 Complete · X2 Partial · X3 Nothing recorded · X6 Save failed · X7 Save not confirmed  → CyFinishPage
+//  X4 Saving                                                                                → CySavingPage
+//  X5 Saved — confirmed                                                                     → CySavedPage
+//  X8 Discard                                                                               → CyDiscardDialog over the page
+// Recorded · pending · confirmed · failed · unknown are five different states (owner directive, 18 Nov 2026).
 
 struct CyFinishRow: Identifiable, Equatable { var label: String; var value: String; var id: String }
 
@@ -98,7 +98,7 @@ struct CyBottomActions: View {
 
 /// X1 / X2 / X3 / X6: what will be saved, stated before anything is saved.
 struct CyFinishPage: View {
-    var overline: String
+    var overline: String? = nil
     var title: String
     var titleID: String = "finishTitle"
     var status: String? = nil
@@ -111,22 +111,26 @@ struct CyFinishPage: View {
     var secondary: String? = nil
     var secondaryID: String = ""
     var onSecondary: () -> Void = {}
+    var backLabel: String = "Back to workout"
     var onBack: () -> Void
-    var onDiscard: () -> Void
+    var onDiscard: (() -> Void)? = nil
+    var pageID: String = "finishV14"
     @Environment(\.cyTheme) private var theme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            CyPageTopBar(backLabel: "Back to workout", backID: "finishBack", onBack: onBack,
-                         trailing: "Discard…", trailingID: "finishDiscard", trailingDestructive: true, onTrailing: onDiscard)
+            CyPageTopBar(backLabel: backLabel, backID: "finishBack", onBack: onBack,
+                         trailing: onDiscard == nil ? nil : "Discard…", trailingID: "finishDiscard", trailingDestructive: true, onTrailing: { onDiscard?() })
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: CySpace.s) {
-                        Capsule().fill(theme.strength).frame(width: 3, height: 14).accessibilityHidden(true)
-                        Text(overline).font(CyFont.caption).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("finishOverline")
+                    if let overline {
+                        HStack(spacing: CySpace.s) {
+                            Capsule().fill(theme.strength).frame(width: 3, height: 14).accessibilityHidden(true)
+                            Text(overline).font(CyFont.caption).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("finishOverline")
+                        }
+                        .padding(.top, 6)
                     }
-                    .padding(.top, 6)
                     Text(title).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
                         .lineLimit(3).minimumScaleFactor(0.7).fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader).accessibilityIdentifier(titleID)
@@ -152,7 +156,36 @@ struct CyFinishPage: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(theme.background.ignoresSafeArea())
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("finishV14")
+        .accessibilityIdentifier(pageID)
+    }
+}
+
+/// X4: pending. Not yet "saved"; the plan is not marked. No control: there is nothing to decide while it is written.
+struct CySavingPage: View {
+    var detail: String
+    @Environment(\.cyTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var turning = false
+    var body: some View {
+        VStack(spacing: 0) {
+            Circle().trim(from: 0.08, to: 1).stroke(theme.textPrimary, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .frame(width: 58, height: 58)
+                .rotationEffect(.degrees(turning ? 360 : 0))
+                .animation(reduceMotion ? nil : .linear(duration: 1).repeatForever(autoreverses: false), value: turning)
+                .accessibilityHidden(true)
+                .padding(.top, 140)
+            Text("Saving…").font(.system(.title, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
+                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("saveSaving").padding(.top, CySpace.xl)
+            Text(detail).font(.system(.callout)).foregroundStyle(theme.textSecondary).multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("saveSavingDetail").padding(.top, 6)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(theme.background.ignoresSafeArea())
+        .onAppear { turning = true }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("savingV14")
     }
 }
 

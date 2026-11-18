@@ -8,9 +8,9 @@ import SwiftUI
 // with − / + at accessibility text sizes (R5). The page does not scroll, so a drag is never a scroll.
 // Differences from the sheet, each a labelled CANDIDATE until reviewed:
 //  • the words under the numbers: only "Demanding" (7) and "Hard" (8) are drawn; the rest are provisional (ReviewScale);
-//  • Fatigue and Equipment are written notes, kept in the review's one note under their own label (no new stored field);
-//  • the pain sheet keeps "No pain to report" as a quiet line: without it "no pain" could not be said at all, and the
-//    Coach only receives a full check-in when performance, effort and pain are all answered.
+//  • Fatigue and Equipment are written words, each stored under its own name in the review; nothing calculates with them;
+//  • the pain sheet keeps "No pain to report" as a quiet line, never selected for the athlete: pain is unknown until
+//    they answer, "none" only when they say so, or reported with a level. Without the line "no pain" could not be said.
 //
 // WHAT IS STORED, AND WHAT IS NOT (owner decisions of 16 Nov 2026)
 // • The workout is already saved before this page opens. Leaving the page stores nothing about the review.
@@ -45,7 +45,7 @@ struct ReviewV14: View {
 
     private var draft: SessionReview {
         SessionReview(intensity: intensity, performance: performance, effort: effort, pain: pain, painArea: (pain?.needsArea ?? false) ? (area ?? .other) : nil,
-                      note: notes.composed)
+                      note: ReviewNotes.clean(notes.note), fatigue: notes.fatigue, equipment: notes.equipment)
     }
     private var canSave: Bool { !draft.isEmpty }
 
@@ -153,9 +153,9 @@ struct ReviewV14: View {
                 let row = dts.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: CySpace.s)) : AnyLayout(HStackLayout(spacing: CySpace.s))
                 row {
                     chip("Pain", on: pain != nil, id: "reviewChipPain") { painSheet = true }
-                    chip("Fatigue", on: !notes.fatigue.isEmpty, id: "reviewChipFatigue") { writing = .fatigue }
-                    chip("Equipment", on: !notes.equipment.isEmpty, id: "reviewChipEquipment") { writing = .equipment }
-                    chip("Note", on: !notes.note.isEmpty, id: "reviewChipNote") { writing = .note }
+                    chip("Fatigue", on: !ReviewNotes.clean(notes.fatigue).isEmpty, id: "reviewChipFatigue") { writing = .fatigue }
+                    chip("Equipment", on: !ReviewNotes.clean(notes.equipment).isEmpty, id: "reviewChipEquipment") { writing = .equipment }
+                    chip("Note", on: !ReviewNotes.clean(notes.note).isEmpty, id: "reviewChipNote") { writing = .note }
                 }
             }
         } else {

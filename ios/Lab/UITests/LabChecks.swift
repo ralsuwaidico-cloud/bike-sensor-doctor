@@ -166,6 +166,15 @@ final class LabChecks: XCTestCase {
                         // G1: Timeline | Ask. The questions and their answers are on Ask.
                         XCTAssertTrue(app.buttons["coachTabTimeline"].firstMatch.isSelected, "required: the page opens on Timeline")
                         app.settleForScreenshot(1); shot("\(tag)-1b-coach")
+                        // G1 "Not now": a deliberate postponement. Only an open suggestion carries it, so this depends on the demo records.
+                        let notNow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'coachNotNow-'")).firstMatch
+                        if notNow.exists {
+                            notNow.tap()
+                            let said = app.staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH 'coachPostponed-'")).firstMatch
+                            XCTAssertTrue(said.waitForExistence(timeout: 5), "required: Not now is recorded and said on the card")
+                            XCTAssertFalse(notNow.exists, "a postponed suggestion offers Review only")
+                            print("LAB-NOTE coach Not now: \(said.label)"); shot("\(tag)-1b2-coach-postponed")
+                        } else { print("LAB-NOTE coach Not now: the demo athlete has no open suggestion, so the button was not on screen (logic tests cover the record)") }
                         app.buttons["coachTabAsk"].firstMatch.tap()
                         XCTAssertTrue(app.staticTexts["coachAskNote"].firstMatch.waitForExistence(timeout: 5), "required: Ask says its answers come from fixed rules, with no AI model")
                         app.buttons["coachAsk-week"].firstMatch.tap()
@@ -430,6 +439,74 @@ final class LabChecks: XCTestCase {
         let again = app.buttons["trainPanelPrimary"].firstMatch
         XCTAssertFalse(again.exists && again.label.hasPrefix("Start"), "today's strength session is no longer offered to start (\(again.exists ? again.label : "no button"))")
         shot("strength-10-panel-after")
+    }
+
+    /// The save lifecycle on one session (sheets 06e X2, X3, X4 and 06f X5, X6, X7): nothing logged → no Save; partial →
+    /// a save made to fail keeps the workout and offers Try again; a save that cannot be confirmed is checked again and
+    /// never assumed; "Saved" appears only after the file on the phone holds the workout. The two failures are
+    /// switched on for this launch by simulator-only test settings; the store's own save is not altered.
+    func test2b3SaveFailureAndUnconfirmedSaveKeepTheWorkout() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launchEnvironment["BC_UITEST_SAVE_FAIL"] = "1"            // the first Save tap fails without writing
+        app.launchEnvironment["BC_UITEST_SAVE_UNCONFIRMED"] = "1"     // the first read-back check answers "not confirmed"
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        app.buttons["centreButton"].firstMatch.tap()
+        let primary = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertTrue(primary.waitForExistence(timeout: 8)); primary.tap()
+        let start = app.buttons["startWorkout"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 10)); start.tap()
+        XCTAssertTrue(el("strengthRecorderV14").waitForExistence(timeout: 10), "the recorder")
+        // X3 — nothing logged: no Save is offered
+        app.buttons["finishWorkout"].firstMatch.tap()
+        XCTAssertTrue(el("finishNothing").waitForExistence(timeout: 8), "required: 'Nothing was logged'")
+        XCTAssertEqual(el("finishTitle").label, "Nothing was logged")
+        XCTAssertFalse(app.buttons["saveWorkout"].firstMatch.exists, "required: no Save when no set is logged")
+        XCTAssertTrue(app.buttons["finishMarkDone"].firstMatch.exists, "Mark done without details is offered")
+        XCTAssertTrue(el("finishPlan").label.contains("Not marked done"), el("finishPlan").label)
+        shot("save-1-nothing-logged")
+        app.buttons["finishBackToWorkout"].firstMatch.tap()
+        // X2 — one set logged: partial, and what was not done is named
+        let log = el("logSet"); XCTAssertTrue(log.waitForExistence(timeout: 8), "back in the recorder"); log.tap()
+        XCTAssertTrue(el("recorderLogged").waitForExistence(timeout: 5))
+        app.buttons["finishWorkout"].firstMatch.tap()
+        let save = app.buttons["saveWorkout"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 8)); XCTAssertEqual(save.label, "Save")
+        XCTAssertTrue(el("finishCount").label.hasPrefix("Partial · 1 of "), "partial, counted: \(el("finishCount").label)")
+        XCTAssertTrue(el("finishNotDone").exists, "required: the Not done row"); XCTAssertTrue(el("finishPlan").label.contains("as partial"), el("finishPlan").label)
+        print("LAB-NOTE partial finish: \(el("finishCount").label) · \(el("finishNotDone").label) · \(el("finishPlan").label)")
+        shot("save-2-partial"); save.tap()
+        // X6 — the save failed: never shown as success, the workout is kept, Try again is offered
+        XCTAssertTrue(el("saveFailed").waitForExistence(timeout: 10), "required: 'Not saved yet' after a failed save")
+        XCTAssertFalse(el("saveConfirmed").exists, "a failed save is never shown as Saved")
+        XCTAssertEqual(save.label, "Try again"); XCTAssertTrue(el("finishPlan").label.contains("Not marked done yet"), el("finishPlan").label)
+        XCTAssertTrue(el("finishSets").label.contains("1 of "), "the logged set is still there: \(el("finishSets").label)")
+        shot("save-3-not-saved"); save.tap()
+        // X7 — written, but the read-back did not confirm it: not shown as Saved, checked again
+        XCTAssertTrue(el("saveUnconfirmed").waitForExistence(timeout: 10), "required: 'Save not confirmed' when the check does not confirm")
+        XCTAssertFalse(el("saveConfirmed").exists, "an unconfirmed save is never shown as Saved")
+        XCTAssertTrue(el("unconfirmedSets").label.contains("kept"), el("unconfirmedSets").label)
+        shot("save-4-not-confirmed")
+        app.buttons["saveCheckAgain"].firstMatch.tap()
+        // X5 — confirmed from the file on the phone
+        XCTAssertTrue(el("saveConfirmed").waitForExistence(timeout: 10), "required: Saved once the check confirms")
+        XCTAssertTrue(el("saveSummary").label.contains("1 of "), "what was saved: \(el("saveSummary").label)")
+        XCTAssertTrue(el("savedPlan").label.contains("Marked done · partial"), el("savedPlan").label)
+        print("LAB-NOTE save lifecycle: nothing logged → partial → not saved → not confirmed → saved (\(el("saveSummary").label))")
+        shot("save-5-saved")
+        app.buttons["saveDone"].firstMatch.tap()
+        // one workout, once: after a relaunch (no failure switches) today's session is done and not offered again
+        app.terminate()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = nil; app.launchEnvironment["BC_UITEST_SAVE_FAIL"] = nil; app.launchEnvironment["BC_UITEST_SAVE_UNCONFIRMED"] = nil
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        app.buttons["centreButton"].firstMatch.tap()
+        XCTAssertTrue(el("trainPanel").waitForExistence(timeout: 8))
+        let again = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertFalse(again.exists && (again.label.hasPrefix("Start") || again.label.hasPrefix("Resume")), "after the retry and a relaunch the session is saved once and nothing is in progress (\(again.exists ? again.label : "no button"))")
     }
 
     /// A real superset on the preparation screen and in the recorder (sheets 01a J2 and 04b). The demo athlete says they

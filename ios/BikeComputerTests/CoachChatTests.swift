@@ -108,4 +108,34 @@ final class CoachChatTests: XCTestCase {
         XCTAssertEqual(e.map(\.kind), [.decision, .question, .answer, .proposal])
         XCTAssertEqual(e[0].text, "Declined: Ease Thursday?"); XCTAssertEqual(e[2].chip, "AI not connected"); XCTAssertEqual(e[3].check, "Independent policy check: needs your decision.")
     }
+
+    /// Sheet G1 "Not now": a deliberate postponement, kept in the Coach's own file. It is not an approval and not a
+    /// rejection, the proposal stays open, and nothing in the athlete record is involved.
+    func testNotNowIsRecordedOnceSurvivesARelaunchAndEndsWhenTheProposalCloses() throws {
+        let d = FileManager.default.temporaryDirectory.appendingPathComponent("coach-postpone-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+        let j = CoachJournal(directory: d)
+        XCTAssertNil(j.postponedAt("p1"))
+        XCTAssertTrue(j.postpone("p1", at: t0)); XCTAssertTrue(j.postpone("p1", at: t0.addingTimeInterval(500)), "a second Not now changes nothing")
+        XCTAssertEqual(j.postponedAt("p1"), t0, "the first time is kept"); XCTAssertEqual(j.file.postponed?.count, 1)
+        XCTAssertTrue(j.postpone("p2", at: t0.addingTimeInterval(60)))
+        let again = CoachJournal(directory: d)
+        XCTAssertEqual(again.postponedAt("p1"), t0, "survives a relaunch"); XCTAssertNotNil(again.postponedAt("p2"))
+        // p1 was decided (no longer open): its postponement is dropped; p2 stays
+        again.prunePostponed(open: ["p2"])
+        XCTAssertNil(again.postponedAt("p1")); XCTAssertNotNil(again.postponedAt("p2"))
+        again.prunePostponed(open: [])
+        XCTAssertNil(CoachJournal(directory: d).file.postponed, "nothing postponed is stored as nothing")
+        // a file written before postponement existed still opens and can be written
+        let old = #"{"schema":1,"messages":[],"links":[]}"#
+        try Data(old.utf8).write(to: d.appendingPathComponent(CoachJournal.fileName))
+        let legacy = CoachJournal(directory: d)
+        XCTAssertTrue(legacy.writable); XCTAssertNil(legacy.file.postponed); XCTAssertTrue(legacy.postpone("p9", at: t0))
+        // an unreadable file is left alone: nothing is recorded and the caller is told
+        try Data("not json".utf8).write(to: d.appendingPathComponent(CoachJournal.fileName))
+        let broken = CoachJournal(directory: d)
+        XCTAssertFalse(broken.postpone("p1", at: t0)); XCTAssertNil(broken.postponedAt("p1"))
+        XCTAssertEqual(try String(contentsOf: d.appendingPathComponent(CoachJournal.fileName)), "not json")
+    }
 }

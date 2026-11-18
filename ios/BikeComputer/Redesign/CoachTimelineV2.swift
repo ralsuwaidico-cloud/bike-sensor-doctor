@@ -143,9 +143,14 @@ struct CoachTimelineScreen: View {
         .accessibilityIdentifier("coachTimeline")
     }
 
+    private func postponed(_ e: CyCoachEntry) -> Date? {
+        guard e.kind == .proposal, case .proposal(let id)? = e.opens else { return nil }
+        return center.postponedAt(id)
+    }
+    private static let dayTime: DateFormatter = { let f = DateFormatter(); f.dateFormat = "d MMM HH:mm"; return f }()
     private func stateTag(_ e: CyCoachEntry) -> String? {
         switch e.kind {
-        case .proposal: return "NEEDS YOU"
+        case .proposal: return postponed(e) == nil ? "NEEDS YOU" : "POSTPONED"
         case .outcome: return "APPLIED"
         case .decision: return e.text.hasPrefix("Declined") ? "REJECTED" : "APPROVED"
         default: return nil
@@ -153,7 +158,7 @@ struct CoachTimelineScreen: View {
     }
     private func dot(_ e: CyCoachEntry) -> Color {
         switch e.kind {
-        case .proposal: return theme.accent
+        case .proposal: return postponed(e) == nil ? theme.accent : theme.textTertiary
         case .outcome: return theme.success
         case .decision: return e.text.hasPrefix("Declined") ? theme.textTertiary : theme.success
         case .recovery: return theme.warning
@@ -196,14 +201,34 @@ struct CoachTimelineScreen: View {
                 .accessibilityLabel("\(e.author == .athlete ? "You" : "Coach"), \(e.kind.label), \(chip), \(time). \(e.text) \(e.detail ?? "") \(e.check ?? "") \(e.basedOn.isEmpty ? "" : "Based on " + e.basedOn.joined(separator: ", "))")
                 .accessibilityIdentifier("coachEntry-\(e.id)")
                 if let o = e.opens {
-                    if e.kind == .proposal {
-                        // G1: the filled Review button. (G1 also draws "Not now"; leaving the card open already is "not now",
-                        // and the app has no snooze to record, so no second button pretends to do something.)
-                        HStack {
-                            Spacer(minLength: 0)
+                    if e.kind == .proposal, let when = postponed(e) {
+                        // postponed by the athlete: said plainly, still open, still reviewable
+                        Text("You chose Not now on \(Self.dayTime.string(from: when)). It stays open and nothing changes until you decide.")
+                            .font(.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("coachPostponed-\(e.id)")
+                        Button { open(o) } label: {
+                            Text("Review").font(.system(.footnote).weight(.semibold)).foregroundStyle(theme.accent)
+                                .frame(minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Nothing changes in your plan unless you approve it")
+                        .accessibilityIdentifier("coachOpen-\(e.id)")
+                    } else if e.kind == .proposal, case .proposal(let pid) = o {
+                        // G1: Not now · Review. "Not now" records a deliberate postponement in the Coach's own file; it is
+                        // neither an approval nor a rejection and changes nothing in the plan.
+                        HStack(spacing: CySpace.m) {
+                            Button { center.postpone(proposalId: pid) } label: {
+                                Text("Not now").font(.system(.subheadline, design: .rounded).weight(.semibold)).foregroundStyle(theme.textSecondary)
+                                    .frame(maxWidth: .infinity, minHeight: 40)
+                                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(theme.border, lineWidth: 1.2))
+                                    .frame(minHeight: CyHit.min).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Postpones the decision. The suggestion stays open")
+                            .accessibilityIdentifier("coachNotNow-\(e.id)")
                             Button { open(o) } label: {
                                 Text("Review").font(.system(.subheadline, design: .rounded).weight(.bold)).foregroundStyle(theme.textOnAccent)
-                                    .frame(minWidth: 132, minHeight: 40).background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(theme.accent))
+                                    .frame(maxWidth: .infinity, minHeight: 40).background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(theme.accent))
                                     .frame(minHeight: CyHit.min).contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)

@@ -39,6 +39,7 @@ final class CoachCenter: ObservableObject {
             }
         }
         let open = Set(store.adaptiveProposals.map(\.id))
+        journal.prunePostponed(open: open)
         for l in journal.file.links where !open.contains(l.proposalId) {
             if store.approvedAdaptations.contains(l.adjustmentKey) { ledger.recordChoice(.approved, for: l.shadowId, now: now) }
             else if store.dismissedAdaptations.contains(l.proposalId) { ledger.recordChoice(.declined, for: l.shadowId, now: now) }
@@ -55,6 +56,11 @@ final class CoachCenter: ObservableObject {
         }
         return out
     }
+
+    /// "Not now": the athlete postponed deciding. Stored in the Coach's own file; the athlete record and the plan are
+    /// not touched, and the proposal stays open.
+    func postpone(proposalId: String, now: Date = Date()) { if journal?.postpone(proposalId, at: now) == true { revision += 1 } }
+    func postponedAt(_ proposalId: String) -> Date? { journal?.postponedAt(proposalId) }
 
     /// Answered proposals from the durable history, one per proposal.
     var closed: [CoachTimeline.Closed] {

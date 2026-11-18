@@ -72,18 +72,38 @@ enum ReviewScale: String, CaseIterable {
     }
 }
 
-/// "Anything your Coach should know?" — the three written choices beside Pain. The review record has one note, so
-/// what is written under Fatigue and Equipment is kept in that note under its own label. Nothing written = nothing stored.
+/// "Anything your Coach should know?" — the three written choices beside Pain. Each is stored under its own name in the
+/// review (SessionReview.fatigue / .equipment / .note), exactly as written. They are words for the athlete and the
+/// Coach page to show; nothing calculates with them. Nothing written = nothing stored.
 struct ReviewNotes: Equatable {
     var fatigue = ""
     var equipment = ""
     var note = ""
-    private func clean(_ s: String) -> String { s.trimmingCharacters(in: .whitespacesAndNewlines) }
-    var composed: String {
-        var parts: [String] = []
-        if !clean(fatigue).isEmpty { parts.append("Fatigue: " + clean(fatigue)) }
-        if !clean(equipment).isEmpty { parts.append("Equipment: " + clean(equipment)) }
-        if !clean(note).isEmpty { parts.append(clean(note)) }
-        return parts.joined(separator: "\n")
+    static func clean(_ s: String) -> String { s.trimmingCharacters(in: .whitespacesAndNewlines) }
+    var isEmpty: Bool { Self.clean(fatigue).isEmpty && Self.clean(equipment).isEmpty && Self.clean(note).isEmpty }
+}
+
+/// What the read-only check after a save found (sheets 06e X4 / 06f X5, X7). "Saved" is shown only for `.confirmed`.
+enum SaveCheck: Equatable {
+    /// The workout is in the app's history AND in the file on this phone.
+    case confirmed
+    /// The app's history does not hold it.
+    case notInHistory
+    /// The file could be read and does not hold it.
+    case notOnDisk
+    /// The file could not be read just now (for example while the iPhone is locking).
+    case unreadable
+}
+
+extension Store {
+    /// Reads the stored file back and looks for the workout. READ-ONLY: it writes nothing and changes nothing, so
+    /// checking again can never create a second record.
+    func strengthSaveCheck(_ id: UUID) -> SaveCheck {
+        guard strength.contains(where: { $0.id == id }) else { return .notInHistory }
+        if UITestSupport.takeUnconfirmedSaveCheck() { return .notOnDisk }
+        struct Probe: Decodable { struct Item: Decodable { let id: UUID }; let strength: [Item]? }
+        guard let data = try? Data(contentsOf: dir.appendingPathComponent("store.json")),
+              let p = try? JSONDecoder().decode(Probe.self, from: data) else { return .unreadable }
+        return (p.strength ?? []).contains { $0.id == id } ? .confirmed : .notOnDisk
     }
 }

@@ -194,12 +194,21 @@ struct SessionReview: Codable, Equatable {
     var pain: PainLevel? = nil
     var painArea: PainArea? = nil
     var note: String = ""
+    /// What the athlete wrote under "Fatigue" and "Equipment" (Training Hub v1.4, sheet 06a R3), each kept under its own
+    /// name so it stays identifiable. Free text exactly as written: never a measurement, never read by any engine or
+    /// Coach rule. nil = nothing written. Optional and additive (absent in every earlier record; an older build does
+    /// not know these keys — see the build-216 downgrade risk).
+    var fatigue: String? = nil
+    var equipment: String? = nil
     var at: Date = Date()
 
-    init(intensity: Int? = nil, performance: Int? = nil, effort: Int? = nil, pain: PainLevel? = nil, painArea: PainArea? = nil, note: String = "", at: Date = Date()) {
+    init(intensity: Int? = nil, performance: Int? = nil, effort: Int? = nil, pain: PainLevel? = nil, painArea: PainArea? = nil, note: String = "",
+         fatigue: String? = nil, equipment: String? = nil, at: Date = Date()) {
         func clamp(_ v: Int?) -> Int? { v.map { min(10, max(1, $0)) } }
+        func text(_ s: String?) -> String? { s.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 } }
         self.intensity = clamp(intensity); self.performance = clamp(performance); self.effort = clamp(effort)
         self.pain = pain; self.painArea = (pain?.needsArea ?? false) ? (painArea ?? .other) : nil
+        self.fatigue = text(fatigue); self.equipment = text(equipment)
         self.note = note; self.at = at
     }
     init(from decoder: Decoder) throws {
@@ -209,10 +218,12 @@ struct SessionReview: Codable, Equatable {
         pain = (try? c.decodeIfPresent(PainLevel.self, forKey: .pain)) ?? nil
         painArea = (try? c.decodeIfPresent(PainArea.self, forKey: .painArea)) ?? nil
         note = ((try? c.decodeIfPresent(String.self, forKey: .note)) ?? nil) ?? ""
+        fatigue = ((try? c.decodeIfPresent(String.self, forKey: .fatigue)) ?? nil).flatMap { $0.isEmpty ? nil : $0 }
+        equipment = ((try? c.decodeIfPresent(String.self, forKey: .equipment)) ?? nil).flatMap { $0.isEmpty ? nil : $0 }
         at = ((try? c.decodeIfPresent(Date.self, forKey: .at)) ?? nil) ?? Date(timeIntervalSince1970: 0)
     }
     /// Nothing answered and nothing written: there is nothing to store.
-    var isEmpty: Bool { intensity == nil && performance == nil && effort == nil && pain == nil && note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    var isEmpty: Bool { intensity == nil && performance == nil && effort == nil && pain == nil && fatigue == nil && equipment == nil && note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     /// The complete check-in this review amounts to — only when performance, effort and pain were all answered.
     var asCheckIn: CheckIn? {
         guard let p = performance, let e = effort, let pn = pain else { return nil }
