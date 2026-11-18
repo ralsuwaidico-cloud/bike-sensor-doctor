@@ -27,6 +27,7 @@ struct CoachTimelineScreen: View {
     @State private var proposal: PreviewRefString?
     @State private var showAdjustments = false
     @State private var draft = ""
+    @State private var tab = 0
     @FocusState private var typing: Bool
 
     private var entries: [CyCoachEntry] {
@@ -36,43 +37,12 @@ struct CoachTimelineScreen: View {
 
     var body: some View {
         let all = entries
+        let chat = all.filter { $0.kind == .question || $0.kind == .answer }
+        let timeline = all.filter { $0.kind != .question && $0.kind != .answer }
         return VStack(spacing: 0) {
             bar
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: CySpace.m) {
-                        Text(center.state == .historyUnreadable ? center.state.text : "The Coach follows written rules and works only from what you have recorded. AI chat is not connected.")
-                            .font(.caption2).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("coachRulesNote")
-                        if all.isEmpty {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("No coach notes yet").font(CyFont.headline).foregroundStyle(theme.textPrimary)
-                                Text("Complete a session and its short check-in. The Coach starts from what you actually do.")
-                                    .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                            }
-                            .padding(CySpace.l).frame(maxWidth: .infinity, alignment: .leading)
-                            .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.surface))
-                            .accessibilityElement(children: .combine)
-                            .accessibilityIdentifier("coachEmpty")
-                        }
-                        ForEach(CoachTimeline.days(all, now: Date()), id: \.day) { group in
-                            Text(group.day.uppercased()).font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
-                                .frame(maxWidth: .infinity).padding(.top, CySpace.s)
-                                .accessibilityAddTraits(.isHeader)
-                            ForEach(group.entries) { e in bubble(e).id(e.id) }
-                        }
-                        if center.thinking { ProgressView().frame(maxWidth: .infinity, alignment: .leading).accessibilityLabel("The Coach is answering") }
-                        Color.clear.frame(height: 1).id("end")
-                    }
-                    .padding(.horizontal, CySpace.l)
-                    .padding(.vertical, CySpace.m)
-                }
-                .accessibilityIdentifier("coachTimeline")
-                .scrollDismissesKeyboard(.interactively)
-                .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { proxy.scrollTo("end", anchor: .bottom) } }
-                .onChange(of: center.revision) { _, _ in DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { withAnimation { proxy.scrollTo("end", anchor: .bottom) } } }
-            }
-            composer
+            tabs
+            if tab == 0 { timelinePage(timeline) } else { askPage(chat) }
         }
         .background(theme.background.ignoresSafeArea())
         .onAppear { center.attach(directory: store.dir); center.sync(store) }
@@ -87,90 +57,233 @@ struct CoachTimelineScreen: View {
         }
     }
 
+    // MARK: G1 — bar and the Timeline | Ask selector
+
+    /// "‹ Home" on the left, "Coach" centred (sheet G1). Lab adds its DEMO DATA tag on the right.
     private var bar: some View {
-        HStack(spacing: CySpace.s) {
-            Button(action: onClose) {
-                Image(systemName: "chevron.down").font(.system(size: 15, weight: .bold)).foregroundStyle(theme.textPrimary)
-                    .frame(width: 34, height: 34).background(Circle().fill(theme.surface2))
-                    .frame(width: CyHit.min, height: CyHit.min).contentShape(Rectangle())
-            }
-            .accessibilityLabel("Close coach").accessibilityIdentifier("coachClose")
-            Text("Coach").font(CyFont.title).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+        ZStack {
+            Text("Coach").font(.system(.headline, design: .rounded)).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("coachTitle")
-            tag("rules-based", theme.textSecondary)
-            if CycliftLab.isLab { tag("DEMO DATA", theme.warning) }
-            Spacer(minLength: 0)
+            HStack(spacing: CySpace.s) {
+                Button(action: onClose) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold))
+                        Text("Home").font(.system(.body))
+                    }
+                    .foregroundStyle(theme.accent)
+                    .frame(minWidth: CyHit.min, minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).accessibilityLabel("Back to Home").accessibilityIdentifier("coachClose")
+                Spacer(minLength: 0)
+                if CycliftLab.isLab { tag("DEMO DATA", theme.warning) }
+            }
         }
-        .padding(.horizontal, CySpace.s)
-        .padding(.vertical, CySpace.s)
+        .padding(.horizontal, CySpace.l)
+        .padding(.top, CySpace.xs)
+    }
+    private var tabs: some View {
+        HStack(spacing: 0) {
+            tabButton("Timeline", 0, id: "coachTabTimeline")
+            tabButton("Ask", 1, id: "coachTabAsk")
+        }
+        .padding(3)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(theme.id == .highContrast ? theme.border : Color.clear, lineWidth: theme.borderWidth))
+        .padding(.horizontal, CySpace.l).padding(.top, CySpace.xs).padding(.bottom, CySpace.s)
+    }
+    private func tabButton(_ title: String, _ i: Int, id: String) -> some View {
+        Button { typing = false; tab = i } label: {
+            Text(title).font(.system(.subheadline, design: .rounded).weight(.semibold)).foregroundStyle(tab == i ? theme.textPrimary : theme.textSecondary)
+                .frame(maxWidth: .infinity, minHeight: 36)
+                .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(tab == i ? theme.surface2 : Color.clear))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).accessibilityAddTraits(tab == i ? .isSelected : []).accessibilityIdentifier(id)
     }
     private func tag(_ t: String, _ c: Color) -> some View {
-        Text(t).font(.caption2.weight(.semibold)).foregroundStyle(c).lineLimit(1).fixedSize()
-            .padding(.horizontal, 6).padding(.vertical, 2)
-            .overlay(Capsule().strokeBorder(c.opacity(0.7), lineWidth: 1))
+        Text(t).font(.system(size: 10, weight: .bold)).tracking(0.6).foregroundStyle(c).lineLimit(1).fixedSize()
+            .padding(.horizontal, 7).padding(.vertical, 3)
+            .overlay(Capsule().strokeBorder(c.opacity(0.8), lineWidth: 1))
+    }
+    private func note(_ text: String, id: String) -> some View {
+        Text(text).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+            .padding(CySpace.m).frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(theme.border, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+            .accessibilityIdentifier(id)
+    }
+
+    // MARK: G1 — Timeline: one history for everything the Coach saw, suggested and changed
+
+    private func timelinePage(_ all: [CyCoachEntry]) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: CySpace.m) {
+                if center.state == .historyUnreadable { note(center.state.text, id: "coachHistoryNote") }
+                if all.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("No coach notes yet").font(CyFont.headline).foregroundStyle(theme.textPrimary)
+                        Text("Complete a session and its short review. The Coach starts from what you actually do.")
+                            .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(CySpace.l).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.surface))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("coachEmpty")
+                }
+                ForEach(CoachTimeline.days(all, now: Date()), id: \.day) { group in
+                    Text(group.day.uppercased()).font(CyFont.overline).tracking(1.2).foregroundStyle(theme.textSecondary)
+                        .padding(.top, CySpace.xs).accessibilityAddTraits(.isHeader)
+                    ForEach(group.entries) { e in entryRow(e) }
+                }
+                Text("The Coach follows written rules and works only from what you have recorded.")
+                    .font(.caption2).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("coachRulesNote")
+            }
+            .padding(.horizontal, CySpace.l).padding(.bottom, CySpace.xl)
+        }
+        .accessibilityIdentifier("coachTimeline")
+    }
+
+    private func stateTag(_ e: CyCoachEntry) -> String? {
+        switch e.kind {
+        case .proposal: return "NEEDS YOU"
+        case .outcome: return "APPLIED"
+        case .decision: return e.text.hasPrefix("Declined") ? "REJECTED" : "APPROVED"
+        default: return nil
+        }
+    }
+    private func dot(_ e: CyCoachEntry) -> Color {
+        switch e.kind {
+        case .proposal: return theme.accent
+        case .outcome: return theme.success
+        case .decision: return e.text.hasPrefix("Declined") ? theme.textTertiary : theme.success
+        case .recovery: return theme.warning
+        default: return theme.textTertiary
+        }
+    }
+    private func sourceTag(_ e: CyCoachEntry) -> some View {
+        let chip = e.chip ?? (e.author == .athlete ? CoachSource.athlete.chip : CoachSource.rules.chip)
+        let c: Color = chip == CoachSource.notConnected.chip ? theme.warning : (e.author == .athlete ? theme.accent : theme.success)
+        return tag(chip.uppercased(), c)
+    }
+
+    /// A dot on the rail and a card: who produced it, its state, what it says, and the way to act on it.
+    private func entryRow(_ e: CyCoachEntry) -> some View {
+        let shape = RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous)
+        let chip = e.chip ?? (e.author == .athlete ? CoachSource.athlete.chip : CoachSource.rules.chip)
+        let time = Self.clock.string(from: e.at)
+        return HStack(alignment: .top, spacing: CySpace.m) {
+            Circle().fill(dot(e)).frame(width: 9, height: 9).padding(.top, CySpace.l).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: CySpace.s) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        sourceTag(e)
+                        if let s = stateTag(e) { tag(s, theme.textSecondary) }
+                        Spacer(minLength: 4)
+                        Text(time).font(.caption2).monospacedDigit().foregroundStyle(theme.textTertiary)
+                    }
+                    Text(e.text).font(.system(.callout, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                    if let d = e.detail {
+                        Text(d).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let c = e.check {
+                        Text(c).font(.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !e.basedOn.isEmpty {
+                        Text("Based on: " + e.basedOn.joined(separator: " · ")).font(.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(e.author == .athlete ? "You" : "Coach"), \(e.kind.label), \(chip), \(time). \(e.text) \(e.detail ?? "") \(e.check ?? "") \(e.basedOn.isEmpty ? "" : "Based on " + e.basedOn.joined(separator: ", "))")
+                .accessibilityIdentifier("coachEntry-\(e.id)")
+                if let o = e.opens {
+                    if e.kind == .proposal {
+                        // G1: the filled Review button. (G1 also draws "Not now"; leaving the card open already is "not now",
+                        // and the app has no snooze to record, so no second button pretends to do something.)
+                        HStack {
+                            Spacer(minLength: 0)
+                            Button { open(o) } label: {
+                                Text("Review").font(.system(.subheadline, design: .rounded).weight(.bold)).foregroundStyle(theme.textOnAccent)
+                                    .frame(minWidth: 132, minHeight: 40).background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(theme.accent))
+                                    .frame(minHeight: CyHit.min).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Nothing changes in your plan unless you approve it")
+                            .accessibilityIdentifier("coachOpen-\(e.id)")
+                        }
+                    } else {
+                        Button { open(o) } label: {
+                            Text(openLabel(e)).font(.system(.footnote).weight(.semibold)).foregroundStyle(theme.accent)
+                                .frame(minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("coachOpen-\(e.id)")
+                    }
+                }
+            }
+            .padding(CySpace.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(shape.fill(theme.surface))
+            .overlay(shape.strokeBorder(theme.border.opacity(theme.id == .highContrast ? 1 : 0.5), lineWidth: 1))
+        }
+    }
+
+    // MARK: G2 screen 6 — Ask: fixed questions answered by rules, from the athlete's records
+
+    private func askPage(_ chat: [CyCoachEntry]) -> some View {
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: CySpace.m) {
+                        note("Answers come from your records using fixed rules. No AI model is installed in this version.", id: "coachAskNote")
+                        ForEach(chat) { e in bubble(e).id(e.id) }
+                        if center.thinking { ProgressView().frame(maxWidth: .infinity, alignment: .leading).accessibilityLabel("The Coach is answering") }
+                        Color.clear.frame(height: 1).id("end")
+                    }
+                    .padding(.horizontal, CySpace.l).padding(.bottom, CySpace.m)
+                }
+                .accessibilityIdentifier("coachAsk")
+                .scrollDismissesKeyboard(.interactively)
+                .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { proxy.scrollTo("end", anchor: .bottom) } }
+                .onChange(of: center.revision) { _, _ in DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { withAnimation { proxy.scrollTo("end", anchor: .bottom) } } }
+            }
+            composer
+        }
     }
 
     private static let clock: DateFormatter = { let f = DateFormatter(); f.dateFormat = "HH:mm"; return f }()
 
+    /// The athlete's question on the right; the answer on the left with who produced it and what it is based on.
     @ViewBuilder private func bubble(_ e: CyCoachEntry) -> some View {
         let mine = e.author == .athlete
         let shape = RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous)
         let time = Self.clock.string(from: e.at)
         let chip = e.chip ?? (mine ? CoachSource.athlete.chip : CoachSource.rules.chip)
         HStack(alignment: .top, spacing: 0) {
-            if mine { Spacer(minLength: typeSize.isAccessibilitySize ? 16 : 48) }
+            if mine { Spacer(minLength: typeSize.isAccessibilitySize ? 16 : 56) }
             VStack(alignment: .leading, spacing: 6) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 5) {
-                        Image(systemName: e.kind.icon).font(.caption2).foregroundStyle(mine ? theme.accent : theme.textSecondary).accessibilityHidden(true)
-                        Text(e.kind.label).font(.caption2.weight(.semibold)).foregroundStyle(mine ? theme.accent : theme.textSecondary)
-                        Text(time).font(.caption2).monospacedDigit().foregroundStyle(theme.textTertiary)
-                        Spacer(minLength: 4)
-                        tag(chip, chip == CoachSource.notConnected.chip ? theme.warning : theme.textSecondary)
-                    }
-                    Text(e.text).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    if let d = e.detail {
-                        Text(d).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                    }
-                    if let c = e.check {
-                        Label { Text(c).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "checkmark.shield") }
-                            .font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                    }
-                    if !e.basedOn.isEmpty {
-                        Text("Based on: " + e.basedOn.joined(separator: " · ")).font(.caption2).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
-                    }
+                if !mine { sourceTag(e) }
+                Text(e.text).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                if let d = e.detail {
+                    Text(d).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(mine ? "You" : "Coach"), \(e.kind.label), \(chip), \(time). \(e.text) \(e.detail ?? "") \(e.check ?? "") \(e.basedOn.isEmpty ? "" : "Based on " + e.basedOn.joined(separator: ", "))")
-                .accessibilityIdentifier("coachEntry-\(e.id)")
-                if let o = e.opens {
-                    Button { open(o) } label: {
-                        HStack(spacing: 6) {
-                            Text(openLabel(e)).font(CyFont.caption.weight(.semibold))
-                            Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
-                            Spacer(minLength: 0)
-                        }
-                        .foregroundStyle(theme.accent)
-                        .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(e.kind == .proposal ? "Nothing changes in your plan unless you approve it" : "")
-                    .accessibilityIdentifier("coachOpen-\(e.id)")
+                if !e.basedOn.isEmpty {
+                    Text("Based on: " + e.basedOn.joined(separator: " · ")).font(.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(CySpace.m)
+            .padding(.horizontal, CySpace.m).padding(.vertical, mine ? CySpace.s + 2 : CySpace.m)
             .background(shape.fill(mine ? theme.accentSubtle : theme.surface))
-            .overlay(shape.strokeBorder(theme.id == .highContrast ? theme.border : Color.clear, lineWidth: theme.borderWidth))
-            .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
-            if !mine { Spacer(minLength: typeSize.isAccessibilitySize ? 16 : 48) }
+            .overlay(shape.strokeBorder(mine ? Color.clear : theme.border.opacity(theme.id == .highContrast ? 1 : 0.5), lineWidth: 1))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(mine ? "You" : "Coach"), \(e.kind.label), \(chip), \(time). \(e.text) \(e.detail ?? "") \(e.basedOn.isEmpty ? "" : "Based on " + e.basedOn.joined(separator: ", "))")
+            .accessibilityIdentifier("coachEntry-\(e.id)")
+            if !mine { Spacer(minLength: typeSize.isAccessibilitySize ? 16 : 56) }
         }
     }
 
     private func openLabel(_ e: CyCoachEntry) -> String {
         switch e.opens {
         case .proposal: return e.kind == .proposal ? "Review and decide" : "Details"
-        case .adjustments: return e.kind == .outcome ? "See the change · Undo" : "Open adjustments"
+        case .adjustments: return e.kind == .outcome ? "Undo · See the change" : "Open adjustments"
         case nil: return ""
         }
     }
@@ -202,7 +315,7 @@ struct CoachTimelineScreen: View {
                 .padding(.horizontal, CySpace.l)
             }
             HStack(spacing: CySpace.s) {
-                TextField("Ask the Coach", text: $draft, axis: .vertical)
+                TextField("Ask about your training…", text: $draft, axis: .vertical)
                     .lineLimit(1...3).focused($typing).submitLabel(.send).onSubmit { send(draft) }
                     .font(CyFont.callout).foregroundStyle(theme.textPrimary)
                     .padding(.horizontal, CySpace.m).frame(minHeight: CyHit.min)
@@ -218,10 +331,7 @@ struct CoachTimelineScreen: View {
                 .accessibilityLabel("Send question").accessibilityIdentifier("coachSend")
             }
             .padding(.horizontal, CySpace.l)
-            Text("Answers come from your records by written rules. AI chat is not connected.")
-                .font(.caption2).foregroundStyle(theme.textTertiary).padding(.horizontal, CySpace.l)
-                .accessibilityIdentifier("coachComposerNote")
-        }
+            }
         .padding(.vertical, CySpace.s)
         .background(theme.background)
     }

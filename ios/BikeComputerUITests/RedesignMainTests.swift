@@ -93,6 +93,8 @@ final class RedesignMainTests: XCTestCase {
         }
         must(app.staticTexts["coachTitle"].firstMatch, "the Coach page")
         XCTAssertFalse(app.staticTexts["DEMO DATA"].firstMatch.exists, "the main app's Coach page is not labelled as demo data")
+        must(app.buttons["coachTabTimeline"].firstMatch, "the Timeline | Ask selector (sheet G1)"); shot("10-coach-timeline")
+        app.buttons["coachTabAsk"].firstMatch.tap()
         let ask = app.buttons["coachAsk-week"].firstMatch; must(ask, "the week question"); ask.tap()
         let answer = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'coachEntry-chat-' AND label CONTAINS 'Coach, Answer, Rules'")).firstMatch
         must(answer, "a rules-based answer from the athlete's own plan"); shot("11-coach")

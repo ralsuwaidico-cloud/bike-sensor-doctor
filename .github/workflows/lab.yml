@@ -6,6 +6,7 @@ on:
   push:
     branches: ["ios/lab"]
     paths: ["ios/**", ".github/workflows/lab.yml"]
+  workflow_dispatch:      # the Lab checks can be started by hand on a commit that was pushed without them
 permissions:
   contents: write      # only to add the report and screenshots to the ci-logs branch
 concurrency:

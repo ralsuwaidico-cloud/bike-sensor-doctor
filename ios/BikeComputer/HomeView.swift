@@ -89,7 +89,7 @@ struct HomeView: View {
             .navigationDestination(isPresented: $showAdjustments) { AdjustmentsView() }
             .sheet(item: $prescription) { w in HomePrescriptionSheet(workout: w) }
             .sheet(item: $coachSheet) { s in coachSheetView(s) }
-            .sheet(isPresented: $showCoach) { CoachTimelineScreen(onClose: { showCoach = false }).cyThemeRoot() }
+            .fullScreenCover(isPresented: $showCoach) { CoachTimelineScreen(onClose: { showCoach = false }).cyThemeRoot() }      // G1: a page of its own, back to Home
             .sheet(isPresented: $showTrendsInfo) { HomeTrendsInfoSheet(close: { showTrendsInfo = false }).presentationDetents([.medium, .large]).cyThemeRoot() }
         }
     }

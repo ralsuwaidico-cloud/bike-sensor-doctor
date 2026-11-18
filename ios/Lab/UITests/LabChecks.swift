@@ -163,6 +163,11 @@ final class LabChecks: XCTestCase {
                         // the conversation: a supported question is answered by rules from the demo athlete's records; anything
                         // else gets the plain statement that AI chat is not connected. Nothing is invented.
                         func entry(_ part: String) -> XCUIElement { app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'coachEntry-chat-' AND label CONTAINS %@", part)).firstMatch }
+                        // G1: Timeline | Ask. The questions and their answers are on Ask.
+                        XCTAssertTrue(app.buttons["coachTabTimeline"].firstMatch.isSelected, "required: the page opens on Timeline")
+                        app.settleForScreenshot(1); shot("\(tag)-1b-coach")
+                        app.buttons["coachTabAsk"].firstMatch.tap()
+                        XCTAssertTrue(app.staticTexts["coachAskNote"].firstMatch.waitForExistence(timeout: 5), "required: Ask says its answers come from fixed rules, with no AI model")
                         app.buttons["coachAsk-week"].firstMatch.tap()
                         XCTAssertTrue(entry("You, Question").waitForExistence(timeout: 8), "the question is kept in the timeline")
                         XCTAssertTrue(entry("Coach, Answer, Rules").waitForExistence(timeout: 8), "the answer is labelled as rules-based")
@@ -171,8 +176,7 @@ final class LabChecks: XCTestCase {
                         app.buttons["coachSend"].firstMatch.tap()
                         XCTAssertTrue(entry("AI chat is not connected yet").waitForExistence(timeout: 8), "a question the rules cannot answer says AI chat is not connected")
                         app.settleForScreenshot(2); shot("\(tag)-1c-coach-chat")
-                    }
-                    app.settleForScreenshot(2); shot("\(tag)-1b-coach")
+                    } else { app.settleForScreenshot(2); shot("\(tag)-1b-coach") }
                     app.buttons["coachClose"].firstMatch.tap(); app.settleForScreenshot(2)
                     XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): closing the Coach page returns to Home")
                 }
