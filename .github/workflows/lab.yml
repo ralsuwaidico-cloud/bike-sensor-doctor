@@ -15,7 +15,7 @@ concurrency:
 jobs:
   lab:
     runs-on: macos-26
-    timeout-minutes: 75
+    timeout-minutes: 130      # the Lab set grew (save lifecycle, superset, Profile pages): run 33 already took 73 of 75 minutes
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
