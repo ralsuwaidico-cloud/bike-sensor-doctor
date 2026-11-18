@@ -167,11 +167,12 @@ struct PlanScreen: View {
         .frame(minHeight: 44)
     }
 
-    /// With a goal: its name and context; the row opens the details and carries no "add" action (that lives in More).
-    /// Without a goal: a clear "Set your goal" state with one action.
+    /// With a goal: its name and context (the row opens the details) and the explicit "Add a goal" control of sheet B1
+    /// (owner's decision of 18 Nov 2026). Without a goal: a clear "Set your goal" state with one action.
+    /// Both controls open the one existing goal page; there is no second goal editor.
     private var programRow: some View {
         let hasGoal = data.goalTitle != nil
-        let layout = large && !hasGoal ? AnyLayout(VStackLayout(alignment: .leading, spacing: CySpace.xs)) : AnyLayout(HStackLayout(spacing: CySpace.s))
+        let layout = large ? AnyLayout(VStackLayout(alignment: .leading, spacing: CySpace.xs)) : AnyLayout(HStackLayout(spacing: CySpace.s))
         return layout {
             Button(action: { act("Goal & Program") }) {
                 HStack(spacing: CySpace.s) {
@@ -185,9 +186,6 @@ struct PlanScreen: View {
                             .lineLimit(large ? 4 : 2).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
-                    if hasGoal {
-                        Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(theme.textTertiary).accessibilityHidden(true)
-                    }
                 }
                 .padding(.vertical, 6).frame(minHeight: 44).contentShape(Rectangle())
             }
@@ -195,6 +193,21 @@ struct PlanScreen: View {
             .accessibilityElement(children: .combine)
             .accessibilityHint("Opens goal and program")
             .accessibilityIdentifier("planProgram")
+            if hasGoal {
+                Button(action: { act("Add a goal") }) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "plus").font(.caption.weight(.bold)).accessibilityHidden(true)
+                        Text("Add a goal").font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(theme.accent)
+                    .padding(.horizontal, 12).frame(minHeight: 34)
+                    .overlay(Capsule().strokeBorder(theme.accent.opacity(theme.id == .highContrast ? 1 : 0.7), lineWidth: 1))
+                    .frame(minHeight: 44).contentShape(Rectangle())
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("planAddGoal")
+            }
             if !hasGoal {
                 Button(action: { act("Set a goal") }) {
                     Text("Set goal").font(.caption.weight(.bold)).foregroundStyle(theme.textOnAccent)
@@ -356,7 +369,7 @@ struct PlanScreen: View {
     @ViewBuilder private func marks(_ d: PlanV2Day) -> some View {
         HStack(spacing: 4) {
             if d.isRest {
-                Capsule().fill(theme.textSecondary.opacity(0.7)).frame(width: 9, height: 2)
+                Color.clear.frame(width: 7, height: 7)      // B1: a rest day carries no mark (it is still announced as a rest day)
             } else {
                 ForEach(Array(d.sessions.prefix(2).enumerated()), id: \.offset) { _, s in
                     if s.discipline == .endurance {
@@ -388,7 +401,8 @@ struct PlanScreen: View {
                 Image(systemName: "sparkles").font(.footnote).foregroundStyle(theme.accent).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("COACH SUGGESTS").font(.system(size: 9.5, weight: .semibold)).tracking(0.4).foregroundStyle(theme.textSecondary)
-                    Text(text).font(.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary).lineLimit(large ? 4 : 2).fixedSize(horizontal: false, vertical: true)
+                    Text(text).font(.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary)
+                        .lineLimit(large ? 4 : 1).minimumScaleFactor(large ? 1 : 0.85).truncationMode(.tail)
                 }
                 Spacer(minLength: CySpace.xs)
                 Text("Review").font(.footnote.weight(.bold)).foregroundStyle(theme.accent)

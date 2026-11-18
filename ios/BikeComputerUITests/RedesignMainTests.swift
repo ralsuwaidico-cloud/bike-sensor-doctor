@@ -6,9 +6,9 @@ import XCTest
 /// builds the first plan, the store that persists it, the Coach rules. No sensor, GPS or Apple Health is touched.
 /// Every control named here is required: a missing one fails the test.
 ///
-/// NOT COVERED YET in the main app: recording a strength session with the new recorder (the first planned session of
-/// a new athlete falls on a day the test cannot choose), the review, and the cycling screen (not connected to the real
-/// ride recorder). Those are proven in Cyclift Lab only.
+/// The strength journey (preparation → recorder → Finish → Saved → Review) runs here on a seeded test athlete whose
+/// plan has a strength session with a routine today (the same fixture as the production strength journey).
+/// NOT COVERED YET in the main app: the cycling screen (not connected to the real ride recorder; Lab only).
 final class RedesignMainTests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
 
@@ -131,5 +131,60 @@ final class RedesignMainTests: XCTestCase {
         app.launch()
         must(app.buttons["onboardingContinue"].firstMatch, "Welcome", timeout: 40)
         XCTAssertFalse(el(app, "onboardingV34").exists, "without the setting the existing onboarding is shown")
+    }
+
+    /// Training Hub v1.4 in the MAIN app with the redesign on: Train → preparation (01a J2) → recorder → Finish (06e) →
+    /// Saved (06f) → Review (06a) → back, on the app's real store, planner and save path.
+    func testStrengthSessionFromPreparationToReviewInTheRedesignedMainApp() {
+        let app = XCUIApplication()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = LaunchSmokeTests.build36Store()     // a strength day with a routine assigned to today
+        app.launchEnvironment["BC_UITEST_REDESIGN"] = "1"
+        app.launchEnvironment["BC_UITEST_THEME"] = "obsidian"
+        app.launch()
+        must(el(app, "homeV23"), "Home v2.3 in the main app", timeout: 40)
+        XCTAssertFalse(el(app, "labThemeName").exists, "the main app carries no Cyclift Lab strip")
+        let centre = app.buttons["centreButton"].firstMatch; must(centre, "the Train ball"); centre.tap()
+        let primary = app.buttons["trainPanelPrimary"].firstMatch; must(primary, "the panel offers today's session"); primary.tap()
+        must(el(app, "strengthPrepareV14"), "the v1.4 preparation screen")
+        let start = app.buttons["startWorkout"].firstMatch; must(start, "Start"); XCTAssertTrue(start.isHittable, "Start is on screen")
+        XCTAssertTrue(el(app, "prepareOverline").label.hasPrefix("Strength · planned"), el(app, "prepareOverline").label)
+        shot("s1-prepare"); start.tap()
+        must(el(app, "strengthRecorderV14"), "the v1.4 recorder")
+        XCTAssertFalse(el(app, "recorderName").label.contains("DEMO DATA"), "the main app does not label the athlete's session as demo data")
+        let log = el(app, "logSet"), finish = app.buttons["nextSetFinish"].firstMatch
+        must(log, "Log set"); shot("s2-recorder")
+        var taps = 0
+        while !finish.exists && taps < 60 {
+            let skip = app.buttons["restSkip"].firstMatch; if skip.exists { skip.tap() }
+            if log.exists { log.tap() }; taps += 1
+        }
+        must(finish, "Finish after the last set (\(taps) sets logged)", timeout: 5); finish.tap()
+        must(el(app, "finishV14"), "the v1.4 Finish page")
+        XCTAssertEqual(el(app, "finishCount").label, "Complete"); XCTAssertTrue(el(app, "finishPlan").label.contains("Will be marked done"), el(app, "finishPlan").label)
+        XCTAssertFalse(el(app, "finishOverline").label.contains("DEMO"), "no demo label in the main app")
+        let save = app.buttons["saveWorkout"].firstMatch; must(save, "Save"); shot("s3-finish"); save.tap()
+        must(el(app, "saveConfirmed"), "the save is confirmed")
+        XCTAssertTrue(el(app, "savedPlan").label.contains("Marked done"), "the plan itself says done: \(el(app, "savedPlan").label)")
+        shot("s4-saved"); app.buttons["saveReview"].firstMatch.tap()
+        must(el(app, "reviewV14"), "the review")
+        for v in ["reviewIntensityValue", "reviewPerformanceValue", "reviewEffortValue"] { XCTAssertEqual(el(app, v).label, "–", "\(v) starts unanswered") }
+        let saveReview = app.buttons["reviewSave"].firstMatch
+        XCTAssertFalse(saveReview.isEnabled, "nothing answered: nothing to save")
+        app.buttons["reviewPerformancePlus"].firstMatch.tap()
+        XCTAssertEqual(el(app, "reviewPerformanceValue").label, "6"); XCTAssertEqual(el(app, "reviewEffortValue").label, "–", "Effort stays unanswered")
+        shot("s5-review"); XCTAssertTrue(saveReview.isEnabled); saveReview.tap()
+        XCTAssertFalse(el(app, "reviewNotSaved").waitForExistence(timeout: 2), "the review was stored")
+        // back in the app: the session page says it is done, and it survives a relaunch
+        let done = app.buttons["Done"].firstMatch; if done.waitForExistence(timeout: 6) { done.tap() }      // the session page's own Done (optional: it may already be closed)
+        must(el(app, "homeV23"), "Home again")
+        app.terminate()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = nil
+        app.launch()
+        must(el(app, "homeV23"), "Home after relaunch", timeout: 40)
+        app.buttons["centreButton"].firstMatch.tap()
+        must(el(app, "trainPanel"), "the Train panel")
+        let again = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertFalse(again.exists && again.label.hasPrefix("Start"), "after the relaunch today's strength session is not offered to start again (\(again.exists ? again.label : "no button"))")
+        shot("s6-panel-after-relaunch")
     }
 }

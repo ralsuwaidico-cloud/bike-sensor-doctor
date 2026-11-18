@@ -54,7 +54,7 @@ struct StrengthWorkoutScreen: View {
             let routine = store.routine(for: w)
             StrengthPrepareV14(
                 overline: StrengthPrepare.overline(date: w.date),
-                title: routine?.name ?? w.displayTitle,
+                title: StrengthPrepare.title(routine?.name ?? w.displayTitle),
                 summary: StrengthPrepare.summary(minutes: w.minutes, equipment: StrengthPrepare.equipment(entries, library: store.allExercises), known: true),
                 groups: StrengthPrepare.groups(entries),
                 startLabel: store.activeSession?.workoutId == w.id ? "Resume" : "Start",

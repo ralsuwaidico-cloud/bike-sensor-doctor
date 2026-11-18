@@ -175,7 +175,11 @@ enum LabDemoData {
         let file: [String: Any] = ["schema": 1, "profile": profile, "settings": settings, "plan": plan, "rides": rides, "tiles": ["power", "cadence", "hr", "speed", "time", "dist"],
                                    "onboarded": true, "guest": true, "createdAt": "2026-06-01T10:00:00Z", "boardSync": [] as [Any], "onboardingStage": 0, "templates": [] as [Any], "customExercises": [] as [Any],
                                    "appliedProposals": [] as [Any], "equipment": ["owned": ["dumbbell", "bench", "kettlebell"], "excluded": [] as [Any]], "ignoredInsights": [] as [Any], "strength": strength]
-        let data = try! JSONSerialization.data(withJSONObject: file)
+        var out = file
+        // LAB_DEMO_SUPERSETS=1 (screen tests): the demo athlete has said they prefer supersets, so the app's own session
+        // builder pairs exercises and the preparation screen and recorder show a real superset. Nothing is drawn by hand.
+        if ProcessInfo.processInfo.environment["LAB_DEMO_SUPERSETS"] == "1" { out["strengthPrefs"] = ["prefersSupersets": true] }
+        let data = try! JSONSerialization.data(withJSONObject: out)
         return String(data: data, encoding: .utf8)!
     }
 }

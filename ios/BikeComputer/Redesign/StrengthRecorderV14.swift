@@ -39,6 +39,8 @@ struct StrengthRecorderV14: View {
     @State private var finishing = false
     @State private var allExercises = false
     @State private var confirmDiscard = false
+    @State private var pausedByFinish = false
+    @State private var savedSummary: FinishSummary? = nil
     /// After a confirmed save: the saved session, shown until the athlete leaves or opens the optional review.
     @State private var saved: StrengthSession? = nil
     @State private var review = false
@@ -50,18 +52,18 @@ struct StrengthRecorderV14: View {
     var body: some View {
         Group {
             if let done = saved { savedView(done) }
+            else if finishing, let s = store.activeSession { finishPage(s) }
             else if let s = store.activeSession { recorder(s) }
             else { nothing }
         }
         .background(theme.background.ignoresSafeArea())
         .onReceive(timer) { now = $0 }
         .onAppear { if let m = memory.lastLogged, m.sessionId != store.activeSession?.id { memory.clear() } }
-        .sheet(isPresented: $finishing) { finishSheet.cyThemeRoot() }
         .sheet(isPresented: $allExercises) { StrengthSessionView(legacy: true) }
-        .sheet(isPresented: $review, onDismiss: { dismiss() }) {
+        .fullScreenCover(isPresented: $review, onDismiss: { dismiss() }) {
             if let s = saved { ReviewV14(target: .strength(s.id)) { review = false }.cyThemeRoot() }
         }
-        .alert("Discard this workout?", isPresented: $confirmDiscard) {
+        .alert("Discard this workout?", isPresented: Binding(get: { confirmDiscard && !finishing }, set: { confirmDiscard = $0 })) {
             Button("Discard", role: .destructive) { store.discardActiveSession(); memory.clear(); dismiss() }
             Button("Cancel", role: .cancel) {}
         } message: { Text("Nothing is saved. The planned session stays open.") }
@@ -111,7 +113,7 @@ struct StrengthRecorderV14: View {
                 }
                 .padding(.horizontal, CySpace.l)
                 Spacer()
-                bigButton("Finish workout", id: "nextSetFinish") { finishing = true }
+                bigButton("Finish workout", id: "nextSetFinish") { beginFinish() }
             }
         }
     }
@@ -147,7 +149,7 @@ struct StrengthRecorderV14: View {
                     .frame(width: CyHit.min, height: CyHit.min).contentShape(Rectangle())
             }
             .buttonStyle(.plain).accessibilityLabel(paused ? "Resume" : "Pause").accessibilityIdentifier("recorderPause")
-            Button("Finish") { finishing = true }
+            Button("Finish") { beginFinish() }
                 .font(CyFont.label.weight(.semibold)).foregroundStyle(theme.textPrimary)
                 .frame(minWidth: CyHit.min, minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
                 .accessibilityIdentifier("finishWorkout")
@@ -414,106 +416,93 @@ struct StrengthRecorderV14: View {
     }
     private func clock(_ s: Int) -> String { let v = max(0, s); return v >= 3600 ? String(format: "%d:%02d:%02d", v / 3600, v / 60 % 60, v % 60) : String(format: "%02d:%02d", v / 60, v % 60) }
 
-    // MARK: finish and save — save first; review afterwards and optional; a failed save keeps everything
+    // MARK: finish and save — sheets 06e / 06f. Save first; review afterwards and optional; a failed save keeps everything.
 
-    private var finishSheet: some View {
-        let s = store.activeSession
-        let nothingToSave = s.map(Store.finishWouldSaveNothing) ?? false
-        let es = s?.exercises ?? []
-        let done = es.reduce(0) { $0 + $1.doneSets.count }, total = es.reduce(0) { $0 + $1.sets.count }
-        return NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: CySpace.l) {
-                    if store.saveFailure != nil {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("Not saved", systemImage: "exclamationmark.triangle.fill").font(CyFont.headline).foregroundStyle(theme.danger)
-                            Text("Cyclift could not write this workout to storage, so it is not in your history yet. Your sets are still here. Free some space and try again.")
-                                .font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                        }
-                        .accessibilityElement(children: .combine).accessibilityIdentifier("saveFailed")
-                    }
-                    if nothingToSave {
-                        Text("No set is logged, so there is nothing to save as a workout.").font(CyFont.callout).foregroundStyle(theme.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("finishNothing")
-                        if let wid = s?.workoutId {
-                            Button { store.discardActiveSession(); store.markDone(wid); memory.clear(); finishing = false; dismiss() } label: { Text("Mark done without details").frame(maxWidth: .infinity, minHeight: CyHit.min) }
-                                .buttonStyle(.bordered).accessibilityIdentifier("finishMarkDone")
-                        }
-                        Button(role: .destructive) { store.discardActiveSession(); memory.clear(); finishing = false; dismiss() } label: { Text("Discard — nothing is saved").frame(maxWidth: .infinity, minHeight: CyHit.min) }
-                            .buttonStyle(.bordered)
-                    } else {
-                        let skippedCount = es.reduce(0) { $0 + $1.sets.filter { $0.isSkipped }.count }
-                        Text(done == total ? "\(done) sets logged" : "\(done) of \(total) sets logged" + (skippedCount > 0 ? " · \(skippedCount) skipped" : "") + " · saved as partial")
-                            .font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("finishCount")
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("TOP SETS").font(CyFont.overline).tracking(1.2).foregroundStyle(theme.textSecondary)
-                            ForEach(es.filter { NextSet.topSet($0) != nil }) { e in
-                                HStack { Text(e.name).foregroundStyle(theme.textPrimary); Spacer(minLength: 8); Text(NextSet.setText(NextSet.topSet(e)!, units)).monospacedDigit().foregroundStyle(theme.textSecondary) }
-                                    .font(CyFont.callout)
-                            }
-                        }
-                        Text("Only the sets you logged are saved, with the measured working time. The review comes after saving and is optional.")
-                            .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                        Button { save() } label: {
-                            Text(store.saveFailure == nil ? "Save workout" : "Try again").font(.headline).foregroundStyle(theme.textOnAccent)
-                                .frame(maxWidth: .infinity, minHeight: 56).background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.accent))
-                        }
-                        .buttonStyle(.plain).accessibilityIdentifier("saveWorkout")
-                    }
-                }
-                .padding(CySpace.l)
+    /// The session's name as the athlete knows it from the plan ("Full body"), or its own name when it is not planned.
+    private func sessionTitle(_ s: StrengthSession) -> String {
+        if let w = s.workoutId.flatMap({ id in store.plan.first { $0.id == id } }) { return StrengthPrepare.title(w.displayTitle) }
+        return s.customName.isEmpty ? "Strength workout" : s.customName
+    }
+    /// Opening Finish pauses the clock ("paused while you decide"); going back resumes it only if Finish paused it.
+    private func beginFinish() {
+        store.saveFailure = nil      // a failure reported on another screen is not this workout's
+        pausedByFinish = store.activeSession?.pausedAt == nil
+        if pausedByFinish { store.pauseActiveSession() }
+        finishing = true
+    }
+    private func backToWorkout() {
+        if pausedByFinish { store.resumeActiveSession() }
+        pausedByFinish = false; confirmDiscard = false; finishing = false
+    }
+    private func discard() { store.discardActiveSession(); memory.clear(); confirmDiscard = false; finishing = false; dismiss() }
+
+    private func finishRows(_ f: FinishSummary, failed: Bool) -> [CyFinishRow] {
+        var rows = [CyFinishRow(label: "Time", value: f.timeText, id: "finishTime")]
+        if f.state == .partial && !failed { rows.append(CyFinishRow(label: "Not done", value: f.notDone, id: "finishNotDone")) }
+        else { rows.append(CyFinishRow(label: "Sets", value: f.setsText, id: "finishSets")) }
+        if f.skipped > 0 && f.state != .nothing { rows.append(CyFinishRow(label: "Skipped", value: f.skippedText, id: "finishSkipped")) }
+        if f.planned { rows.append(CyFinishRow(label: "Plan", value: failed ? "Not marked done yet" : f.planBefore, id: "finishPlan")) }
+        return rows
+    }
+    private func markDoneWithoutDetails(_ s: StrengthSession) {
+        guard let wid = s.workoutId else { return }
+        store.discardActiveSession(); _ = store.markDone(wid); memory.clear(); finishing = false; dismiss()
+    }
+
+    @ViewBuilder private func finishPage(_ s: StrengthSession) -> some View {
+        let f = FinishSummary.make(s, title: sessionTitle(s), now: now)
+        let overline = "Strength · paused while you decide" + (CycliftLab.isLab ? " · DEMO DATA" : "")
+        let failed = store.saveFailure != nil
+        let rows = finishRows(f, failed: failed)
+        let discardText = f.done == 0 ? "Nothing is logged. The planned session stays open."
+                                      : "\(f.done) logged set\(f.done == 1 ? "" : "s") will be deleted. This cannot be undone."
+        ZStack {
+            if failed {
+                // X6 — never shown as success. The session is still active; Try again writes exactly one record.
+                CyFinishPage(overline: overline, title: "Not saved yet", titleID: "saveFailed",
+                             message: "The workout could not be saved. Nothing is lost — it is still on this phone.",
+                             rows: rows, primary: "Try again", primaryID: "saveWorkout", onPrimary: save,
+                             secondary: "Back to workout", secondaryID: "finishBackToWorkout", onSecondary: backToWorkout,
+                             onBack: backToWorkout, onDiscard: { confirmDiscard = true })
+            } else if f.state == .nothing {
+                // X3 — no Save. "Mark done" is stored as marked, not measured.
+                CyFinishPage(overline: overline, title: "Nothing was logged",
+                             message: "No sets were recorded, so there is no workout to save.", messageID: "finishNothing",
+                             rows: rows, primary: "Back to workout", primaryID: "finishBackToWorkout", onPrimary: backToWorkout,
+                             secondary: s.workoutId == nil ? nil : "Mark done without details", secondaryID: "finishMarkDone",
+                             onSecondary: { markDoneWithoutDetails(s) },
+                             onBack: backToWorkout, onDiscard: { confirmDiscard = true })
+            } else {
+                // X1 complete / X2 partial — only recorded work is saved, as recorded
+                CyFinishPage(overline: overline, title: f.title, status: f.statusLine,
+                             rows: rows, primary: "Save", primaryID: "saveWorkout", onPrimary: save,
+                             secondary: "Back to workout", secondaryID: "finishBackToWorkout", onSecondary: backToWorkout,
+                             onBack: backToWorkout, onDiscard: { confirmDiscard = true })
             }
-            .background(theme.background.ignoresSafeArea())
-            .navigationTitle("Finish workout").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Back") { finishing = false }.accessibilityIdentifier("finishBack") } }
+            if confirmDiscard { CyDiscardDialog(message: discardText, onDiscard: discard, onKeep: { confirmDiscard = false }) }
         }
-        .presentationDetents([.medium, .large])
-        .onAppear { store.saveFailure = nil }       // a failure reported on another screen is not this workout's
     }
 
     /// The one durable save. Confirmed only when the saved session is in the history.
     private func save() {
         store.saveFailure = nil
+        let before = store.activeSession.map { FinishSummary.make($0, title: sessionTitle($0), now: now) }
         if let s = store.finishActiveSession(rpe: nil, notes: ""), store.strength.contains(where: { $0.id == s.id }) {
-            memory.clear(); saved = s; finishing = false
+            memory.clear(); savedSummary = before; saved = s; finishing = false; pausedByFinish = false
         }
-        // otherwise the session is still active and `saveFailure` says why: the sheet shows "Not saved"
+        // otherwise the session is still active and `saveFailure` says why: the page shows "Not saved yet"
     }
 
-    private func skippedLine(_ s: StrengthSession) -> String? {
-        let sets = (s.exercises ?? []).reduce(0) { $0 + ($1.skippedSets ?? 0) }
-        let whole = s.skippedExercises ?? []
-        if sets == 0 && whole.isEmpty { return nil }
-        var parts: [String] = []
-        if sets > 0 { parts.append("\(sets) set\(sets == 1 ? "" : "s") skipped") }
-        if !whole.isEmpty { parts.append("skipped entirely: " + whole.joined(separator: ", ")) }
-        return parts.joined(separator: " · ") + ". Skipped sets are not counted as done."
-    }
     private func savedView(_ s: StrengthSession) -> some View {
-        VStack(alignment: .leading, spacing: CySpace.l) {
-            Spacer()
-            Label("Saved", systemImage: "checkmark.circle.fill").font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.success)
-                .accessibilityIdentifier("saveConfirmed")
-            Text("\(s.customName.isEmpty ? "Strength workout" : s.customName) · \(s.minutes) min · \((s.exercises ?? []).reduce(0) { $0 + $1.sets.count }) sets")
-                .font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("saveSummary")
-            if let sk = skippedLine(s) { Text(sk).font(CyFont.callout).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("saveSkipped") }
-            Text("It is in your history and counts in Plan and Progress.").font(CyFont.callout).foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer()
-            Button { review = true } label: {
-                Text("Add a review (optional)").font(.headline).foregroundStyle(theme.textPrimary)
-                    .frame(maxWidth: .infinity, minHeight: 52).overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(theme.border, lineWidth: 1.2))
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain).accessibilityHint("How it felt. Your Coach uses it; skipping it stores nothing").accessibilityIdentifier("saveReview")
-            Button { dismiss() } label: {
-                Text("Done").font(.headline).foregroundStyle(theme.textOnAccent)
-                    .frame(maxWidth: .infinity, minHeight: 56).background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.accent))
-            }
-            .buttonStyle(.plain).accessibilityIdentifier("saveDone")
-        }
-        .padding(CySpace.l)
+        let f = savedSummary
+        let title = f?.title ?? (s.customName.isEmpty ? "Strength workout" : s.customName)
+        let sets = (s.exercises ?? []).reduce(0) { $0 + $1.sets.count }
+        // the plan line is read back from the plan itself: it says "Marked done" only when the plan says so
+        let marked = s.workoutId.flatMap { id in store.plan.first { $0.id == id } }.map { store.status($0).isCompleted }
+        let skipped = (s.exercises ?? []).reduce(0) { $0 + ($1.skippedSets ?? 0) }
+        var rows = [CyFinishRow(label: "Workout", value: "Saved on this phone", id: "savedWorkout")]
+        if skipped > 0 { rows.append(CyFinishRow(label: "Skipped", value: "\(skipped) set\(skipped == 1 ? "" : "s") · not counted as done", id: "saveSkipped")) }
+        if let m = marked { rows.append(CyFinishRow(label: "Plan", value: m ? (f?.state == .partial ? "Marked done · partial" : "Marked done") : "Not marked done", id: "savedPlan")) }
+        return CySavedPage(subtitle: f?.savedLine ?? "\(title) · \(sets) sets", rows: rows, onReview: { review = true }, onDone: { dismiss() })
     }
 }

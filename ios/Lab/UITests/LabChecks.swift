@@ -350,25 +350,72 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(finish.waitForExistence(timeout: 5), "after the last set the recorder offers Finish (\(taps) sets logged)")
         print("LAB-NOTE strength journey: \(taps) sets logged; superset seen: \(sawSuperset)")
         shot("strength-6-all-done"); finish.tap()
+        // Finish — sheet 06e X1: a page of its own (not a sheet), the clock paused, Save and Back to workout at the bottom
         let save = app.buttons["saveWorkout"].firstMatch
-        XCTAssertTrue(save.waitForExistence(timeout: 8), "the finish sheet"); XCTAssertTrue(el("finishCount").exists); shot("strength-7-finish"); save.tap()
-        XCTAssertTrue(el("saveConfirmed").waitForExistence(timeout: 10), "the save is confirmed"); XCTAssertTrue(app.buttons["saveReview"].firstMatch.exists, "the review is offered as optional")
+        XCTAssertTrue(el("finishV14").waitForExistence(timeout: 8), "required: the v1.4 Finish page")
+        XCTAssertTrue(save.waitForExistence(timeout: 5) && save.isHittable, "required: Save is on screen"); XCTAssertEqual(save.label, "Save")
+        XCTAssertTrue(el("finishOverline").label.hasPrefix("Strength · paused while you decide"), "says the session is paused: \(el("finishOverline").label)")
+        XCTAssertEqual(el("finishCount").label, "Complete", "every set was logged")
+        XCTAssertTrue(el("finishTime").exists && el("finishSets").exists && el("finishPlan").exists, "required: Time, Sets and Plan rows")
+        XCTAssertTrue(el("finishPlan").label.contains("Will be marked done"), "the plan is not marked before the save: \(el("finishPlan").label)")
+        print("LAB-NOTE finish: '\(el("finishTitle").label)' · \(el("finishTime").label) · \(el("finishSets").label) · \(el("finishPlan").label)")
+        shot("strength-7-finish")
+        // Discard… always asks first (06f X8); Keep workout changes nothing
+        app.buttons["finishDiscard"].firstMatch.tap()
+        XCTAssertTrue(el("discardDialog").waitForExistence(timeout: 5), "required: Discard asks for confirmation")
+        XCTAssertTrue(el("discardMessage").label.contains("logged set"), "says what would be deleted: \(el("discardMessage").label)")
+        shot("strength-7b-discard"); app.buttons["discardKeep"].firstMatch.tap()
+        XCTAssertFalse(el("discardDialog").exists, "Keep workout closes the question"); XCTAssertTrue(save.isHittable, "and the Finish page is unchanged")
+        // Back to workout returns to the recorder with the clock running again; Finish opens the page again
+        app.buttons["finishBackToWorkout"].firstMatch.tap()
+        XCTAssertTrue(el("recorderState").waitForExistence(timeout: 5), "Back to workout shows the recorder")
+        XCTAssertEqual(el("recorderState").label, "Recording", "the clock that Finish paused is running again")
+        app.buttons["finishWorkout"].firstMatch.tap()
+        XCTAssertTrue(save.waitForExistence(timeout: 5) && save.isHittable, "Finish again"); save.tap()
+        // Saved — 06f X5: only now is the plan marked and the review offered
+        XCTAssertTrue(el("saveConfirmed").waitForExistence(timeout: 10), "the save is confirmed")
+        XCTAssertTrue(el("savedWorkout").label.contains("Saved on this phone"), "says where it is saved")
+        XCTAssertTrue(el("savedPlan").label.contains("Marked done"), "the plan itself now says done: \(el("savedPlan").label)")
+        XCTAssertEqual(app.buttons["saveReview"].firstMatch.label, "Add how it felt", "the review is offered, not required")
+        XCTAssertTrue(app.buttons["saveDone"].firstMatch.isHittable, "Done leaves without a review")
+        print("LAB-NOTE saved: \(el("saveSummary").label) · \(el("savedPlan").label)")
         shot("strength-8-saved")
-        // the optional review: nothing is pre-filled; one answer alone can be saved
+        // The optional review — sheet 06a: nothing is pre-filled; one answer alone can be saved
         app.buttons["saveReview"].firstMatch.tap()
         XCTAssertTrue(el("reviewV14").waitForExistence(timeout: 8), "the review opens")
+        XCTAssertEqual(el("reviewTitle").label, "How was it?"); XCTAssertTrue(el("reviewSavedLine").label.hasPrefix("Saved · "), "says the workout is already saved: \(el("reviewSavedLine").label)")
         for v in ["reviewIntensityValue", "reviewPerformanceValue", "reviewEffortValue"] { XCTAssertEqual(el(v).label, "–", "\(v) starts unanswered") }
-        XCTAssertFalse(app.buttons["reviewSave"].firstMatch.isEnabled, "nothing answered: nothing to save")
-        app.buttons["reviewEffortPlus"].firstMatch.tap()
-        XCTAssertNotEqual(el("reviewEffortValue").label, "–", "Effort is answered"); XCTAssertEqual(el("reviewPerformanceValue").label, "–", "Performance stays unanswered")
-        shot("strength-8b-review")
+        XCTAssertEqual(el("reviewEffortWord").label, "Not answered")
         let saveReview = app.buttons["reviewSave"].firstMatch
-        var sw = 0; while !saveReview.isHittable && sw < 5 { app.swipeUp(); sw += 1 }
-        XCTAssertTrue(saveReview.isEnabled, "one answer is enough to save"); saveReview.tap()
-        XCTAssertTrue(el("reviewSaved").waitForExistence(timeout: 8), "the review is saved")
-        app.buttons["reviewClose"].firstMatch.tap()
+        XCTAssertTrue(saveReview.isHittable, "required: the page does not scroll — the button is on screen from the start")
+        XCTAssertFalse(saveReview.isEnabled, "nothing answered: nothing to save"); XCTAssertEqual(saveReview.label, "Nothing to save yet")
+        shot("strength-8a-review-empty")
+        app.buttons["reviewEffortPlus"].firstMatch.tap(); app.buttons["reviewEffortPlus"].firstMatch.tap(); app.buttons["reviewEffortPlus"].firstMatch.tap()
+        XCTAssertEqual(el("reviewEffortValue").label, "8", "Effort is answered"); XCTAssertEqual(el("reviewEffortWord").label, "Hard")
+        XCTAssertEqual(el("reviewPerformanceValue").label, "–", "Performance stays unanswered")
+        // a drag inside a column sets that column and nothing else (the page cannot scroll instead)
+        let track = el("reviewIntensityTrack")
+        track.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).press(forDuration: 0.1, thenDragTo: track.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
+        XCTAssertNotEqual(el("reviewIntensityValue").label, "–", "dragging the Intensity column answers Intensity"); XCTAssertEqual(el("reviewPerformanceValue").label, "–")
+        print("LAB-NOTE review: Intensity \(el("reviewIntensityValue").label) (\(el("reviewIntensityWord").label)) after a drag · Effort 8 (Hard) · Performance unanswered")
+        shot("strength-8b-review")
+        // "Anything your Coach should know?" opens to four choices; Pain opens its sheet (where, then how)
+        app.buttons["reviewCoachRow"].firstMatch.tap()
+        for c in ["reviewChipPain", "reviewChipFatigue", "reviewChipEquipment", "reviewChipNote"] { XCTAssertTrue(app.buttons[c].firstMatch.waitForExistence(timeout: 4), "required: \(c)") }
+        shot("strength-8c-review-coach")
+        app.buttons["reviewChipPain"].firstMatch.tap()
+        XCTAssertTrue(el("reviewPainSheet").waitForExistence(timeout: 6), "the pain sheet")
+        XCTAssertTrue(app.buttons["reviewArea-knees"].firstMatch.exists && app.buttons["reviewPain-soreness"].firstMatch.exists, "required: areas and levels")
+        app.buttons["reviewArea-knees"].firstMatch.tap(); shot("strength-8d-review-pain")
+        app.buttons["reviewPainDone"].firstMatch.tap()        // an area without a level: nothing about pain is stored
+        XCTAssertTrue(saveReview.waitForExistence(timeout: 5) && saveReview.isHittable)
+        XCTAssertFalse(app.buttons["reviewChipPain"].firstMatch.isSelected, "an area alone does not report pain")
+        XCTAssertTrue(saveReview.isEnabled, "one answer is enough to save"); XCTAssertEqual(saveReview.label, "Save review"); saveReview.tap()
+        // 06e: "optional review → return". (Changed expectation: the earlier screen stayed open with a "Review saved" line
+        // that is not on the approved sheet. A review that cannot be stored keeps the page open and says so.)
+        XCTAssertFalse(el("reviewNotSaved").waitForExistence(timeout: 2), "the review was stored")
         app.settleForScreenshot(2)
-        XCTAssertFalse(el("strengthRecorderV14").exists, "closing the review leaves the recorder")
+        XCTAssertFalse(el("reviewV14").exists, "a saved review returns"); XCTAssertFalse(el("strengthRecorderV14").exists, "and leaves the recorder")
         // updated training state: back on Home, today's strength session is no longer offered to start
         let close = app.buttons["Done"].firstMatch
         if close.waitForExistence(timeout: 5) { close.tap() }       // the session page's own Done (optional: it may already be closed)
@@ -379,6 +426,37 @@ final class LabChecks: XCTestCase {
         let again = app.buttons["trainPanelPrimary"].firstMatch
         XCTAssertFalse(again.exists && again.label.hasPrefix("Start"), "today's strength session is no longer offered to start (\(again.exists ? again.label : "no button"))")
         shot("strength-10-panel-after")
+    }
+
+    /// A real superset on the preparation screen and in the recorder (sheets 01a J2 and 04b). The demo athlete says they
+    /// prefer supersets, and the app's own session builder pairs the exercises; nothing is drawn by hand.
+    func test2b2SupersetIsGroupedOnThePreparationScreen() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+        app.launchEnvironment["LAB_DEMO_SUPERSETS"] = "1"
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        app.buttons["centreButton"].firstMatch.tap()
+        let primary = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertTrue(primary.waitForExistence(timeout: 8), "the panel offers today's session"); primary.tap()
+        XCTAssertTrue(el("strengthPrepareV14").waitForExistence(timeout: 10), "the preparation screen")
+        let group = el("prepareSuperset-A")
+        XCTAssertTrue(group.waitForExistence(timeout: 5), "required: the session's superset is shown as one group")
+        XCTAssertTrue(group.label.uppercased().contains("SUPERSET A") && group.label.lowercased().contains("rounds"), "the group names its rounds: \(group.label)")
+        let rows = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'prepareRow-'"))
+        print("LAB-NOTE superset preparation: '\(group.label)' · \(rows.count) exercises · \(el("prepareSummary").label)")
+        shot("superset-1-prepare")
+        app.buttons["startWorkout"].firstMatch.tap()
+        XCTAssertTrue(el("strengthRecorderV14").waitForExistence(timeout: 10), "the recorder")
+        var n = 0
+        while !el("recorderOverline").label.hasPrefix("SUPERSET") && n < 12 {
+            let skip = app.buttons["restSkip"].firstMatch; if skip.exists { skip.tap() }
+            let log = el("logSet"); if log.exists { log.tap() }; n += 1
+        }
+        XCTAssertTrue(el("recorderOverline").label.hasPrefix("SUPERSET"), "the recorder reaches the superset: \(el("recorderOverline").label)")
+        shot("superset-2-recorder")
     }
 
     /// The cycling screen in Lab is a labelled demonstration: the v1.4 layout and lifecycle, simulated figures, nothing saved.

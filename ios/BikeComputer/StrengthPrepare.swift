@@ -67,8 +67,24 @@ enum StrengthPrepare {
     static func summary(minutes: Int, equipment: [String], known: Bool) -> String {
         var parts: [String] = []
         if minutes > 0 { parts.append("About \(Fmt.duration(minutes: minutes))") }
-        if known { parts.append(equipment.isEmpty ? "bodyweight" : equipment.joined(separator: ", ")) }
+        if known { parts.append(equipment.isEmpty ? "bodyweight" : equipment.map(equipmentWord).joined(separator: ", ")) }
         return parts.joined(separator: " · ")
+    }
+    /// How a piece of equipment reads in a sentence (sheet 01a: "dumbbells, bench, band"). Things used in pairs or sets
+    /// are plural; nothing else about the library's own word is changed.
+    static func equipmentWord(_ e: String) -> String {
+        switch e {
+        case "dumbbell": return "dumbbells"
+        case "kettlebell": return "kettlebells"
+        default: return e
+        }
+    }
+    /// The session's name under an overline that already says "Strength": "Strength · Full body" reads "Full body".
+    /// A name that is only "Strength", or a routine's own name, is kept as it is.
+    static func title(_ name: String) -> String {
+        let prefix = "Strength · "
+        guard name.hasPrefix(prefix), name.count > prefix.count else { return name }
+        return String(name.dropFirst(prefix.count))
     }
     /// "Strength · planned today" / "Strength · planned Thu 19 Nov".
     static func overline(date: Date, now: Date = Date(), calendar cal: Calendar = .current) -> String {

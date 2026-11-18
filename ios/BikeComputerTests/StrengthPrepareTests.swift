@@ -21,7 +21,8 @@ final class StrengthPrepareTests: XCTestCase {
         XCTAssertEqual(g[1].rows.map(\.target), ["10", "10"], "inside a superset only the repetitions; the rounds are in the heading")
         XCTAssertEqual(g[2].rows[0].target, "2 × 12")
         XCTAssertEqual(StrengthPrepare.equipment(entries, library: [squat, press, row, pallof]), ["dumbbell", "bench", "band"], "in the order first needed, each once")
-        XCTAssertEqual(StrengthPrepare.summary(minutes: 35, equipment: ["dumbbell", "bench", "band"], known: true), "About 35 min · dumbbell, bench, band")
+        XCTAssertEqual(StrengthPrepare.summary(minutes: 35, equipment: ["dumbbell", "bench", "band"], known: true), "About 35 min · dumbbells, bench, band", "as sheet 01a words it")
+        XCTAssertEqual(StrengthPrepare.equipmentWord("kettlebell"), "kettlebells"); XCTAssertEqual(StrengthPrepare.equipmentWord("barbell"), "barbell")
     }
 
     func testNothingIsInventedForUnusualSets() {
@@ -39,6 +40,13 @@ final class StrengthPrepareTests: XCTestCase {
         XCTAssertEqual(StrengthPrepare.summary(minutes: 20, equipment: [], known: true), "About 20 min · bodyweight")
         XCTAssertEqual(StrengthPrepare.summary(minutes: 0, equipment: [], known: false), "")
         XCTAssertEqual(StrengthPrepare.target(ExerciseEntry(exercise: lunge, sets: []), inSuperset: false), "")
+    }
+
+    func testTheTitleDoesNotRepeatStrength() {
+        XCTAssertEqual(StrengthPrepare.title("Strength · Full body"), "Full body")
+        XCTAssertEqual(StrengthPrepare.title("Strength"), "Strength")
+        XCTAssertEqual(StrengthPrepare.title("Strength · "), "Strength · ")
+        XCTAssertEqual(StrengthPrepare.title("My Tuesday routine"), "My Tuesday routine")
     }
 
     func testTheOverlineSaysTodayOnlyForToday() {
