@@ -52,12 +52,12 @@ struct CoachTimelineScreen: View {
         .background(theme.background.ignoresSafeArea())
         .onAppear { center.attach(directory: store.dir); center.sync(store) }
         // the athlete's decision is made in the existing sheet; when it closes, read what was decided and record it
-        .sheet(item: $proposal, onDismiss: { center.sync(store) }) { p in HomeProposalSheet(adaptiveId: p.id, hybridId: nil).cyThemeRoot() }
+        .sheet(item: $proposal, onDismiss: { center.sync(store) }) { p in HomeProposalSheet(adaptiveId: p.id, hybridId: nil, onPostpone: { center.postpone(proposalId: $0) }).cyThemeRoot() }
         .sheet(item: $hybridProposal) { p in HomeProposalSheet(adaptiveId: nil, hybridId: p.id).cyThemeRoot() }
         .sheet(isPresented: $showFTP) { HomeFTPSheet().cyThemeRoot() }
         .sheet(isPresented: $showAdjustments, onDismiss: { center.sync(store) }) {
             NavigationStack {
-                AdjustmentsView()
+                AdjustmentsView(onPostpone: { center.postpone(proposalId: $0) })
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showAdjustments = false } } }
             }
             .cyThemeRoot()

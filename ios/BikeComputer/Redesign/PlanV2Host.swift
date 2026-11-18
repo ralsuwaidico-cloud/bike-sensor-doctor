@@ -42,7 +42,7 @@ enum PlanV2Adapter {
         }
         let trainingDays = avail.days.filter { $0.activity != .rest }.count
         let this = store.planWeekSummary(weekOf: now, now: now, recorderActive: recorderActive, calendar: cal)
-        let coach = store.homeCoach(now: now)
+        let coach = store.homeCoach(now: now, postponed: CoachPostpone.ids(store.dir))
         return PlanData(goalTitle: p.effectiveGoals.isEmpty ? nil : ProfileText.goals(p),
                         goalDetail: "\(ProfileText.mode(p.trainingMode)) · \(trainingDays) training day\(trainingDays == 1 ? "" : "s") a week",
                         weeks: weeks,

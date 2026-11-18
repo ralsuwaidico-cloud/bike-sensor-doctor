@@ -552,7 +552,9 @@ extension Store {
     }
 
     /// The coach slot from the engine outputs that already exist (no new coaching).
-    func homeCoach(now: Date = Date()) -> HomeCoachItem? {
+    /// `postponed`: suggestions the athlete answered "Not now" (redesign). They stay open on the Coach page and are not
+    /// pushed again on Home or Plan; no trigger for raising them again has been approved.
+    func homeCoach(now: Date = Date(), postponed: Set<String> = []) -> HomeCoachItem? {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
         let l = ledger
@@ -560,7 +562,7 @@ extension Store {
         let tomorrow = cal.date(byAdding: .day, value: 1, to: today)!
         let next = plan.filter { $0.date >= tomorrow && HomeToday.isTraining($0) && !$0.skipped && !l.status($0).isCompleted }.min { $0.date < $1.date }
         var i = HomeCoachItem.Input()
-        i.adaptiveProposals = adaptiveProposals
+        i.adaptiveProposals = adaptiveProposals.filter { !postponed.contains($0.id) }
         i.adjustments = activeAdaptations
         i.todayIds = todayIds
         i.nextSessionId = next?.id

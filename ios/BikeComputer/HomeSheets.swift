@@ -240,6 +240,9 @@ struct HomeProposalSheet: View {
     @Environment(\.dismiss) private var dismiss
     let adaptiveId: String?
     let hybridId: String?
+    /// Redesign (Coach page): "Not now" postpones through this and a separate "Decline" rejects. nil = the existing
+    /// app's sheet, unchanged.
+    var onPostpone: ((String) -> Void)? = nil
     /// The hybrid proposal just accepted (its Undo used to live on the old Home coach card).
     @State private var applied: String? = nil
     /// Rebuild fix (Phase 1): a suggestion that rebuilds a strength session opens the before/after preview first.
@@ -258,7 +261,14 @@ struct HomeProposalSheet: View {
                             Button { _ = store.acceptAdaptiveProposal(a); dismiss() } label: { Text("Accept").font(.headline).frame(maxWidth: .infinity, minHeight: DS.minTap) }
                                 .buttonStyle(.borderedProminent).tint(BC.accent).foregroundStyle(Color.black).accessibilityIdentifier("proposalAccept")
                         }
-                        Button { store.dismissAdaptiveProposal(a); dismiss() } label: { Text("Not now").frame(maxWidth: .infinity, minHeight: DS.minTap) }.buttonStyle(.bordered)
+                        if let onPostpone {
+                            Button { onPostpone(a.id); dismiss() } label: { Text("Not now").frame(maxWidth: .infinity, minHeight: DS.minTap) }.buttonStyle(.bordered)
+                                .accessibilityHint("Postpones the decision. The suggestion stays open").accessibilityIdentifier("proposalNotNow")
+                            Button(role: .destructive) { store.dismissAdaptiveProposal(a); dismiss() } label: { Text("Decline").frame(maxWidth: .infinity, minHeight: DS.minTap) }.buttonStyle(.bordered)
+                                .accessibilityHint("Rejects the suggestion. Your plan stays as it is").accessibilityIdentifier("proposalDecline")
+                        } else {
+                            Button { store.dismissAdaptiveProposal(a); dismiss() } label: { Text("Not now").frame(maxWidth: .infinity, minHeight: DS.minTap) }.buttonStyle(.bordered)
+                        }
                     } else if let done = applied {
                         Text("Applied: \(done)").font(.title3.weight(.bold)).fixedSize(horizontal: false, vertical: true)
                         Button { _ = store.undoLastProposal(); applied = nil; dismiss() } label: { Text("Undo").frame(maxWidth: .infinity, minHeight: DS.minTap) }

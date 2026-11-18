@@ -89,6 +89,9 @@ struct CheckInFlow: View {
 struct AdjustmentsView: View {
     @EnvironmentObject private var store: Store
     var afterCheckIn = false
+    /// Redesign: how "Not now" is recorded when the Coach page presents this list (nil = straight to the Coach's file).
+    var onPostpone: ((String) -> Void)? = nil
+    @State private var postponedTick = 0
     @State private var confirmRestore = false
     @State private var openWhy: Set<String> = []
     /// Review P3-11: "It's fine now" asks once more before releasing a concerning-pain hold.
@@ -204,8 +207,22 @@ struct AdjustmentsView: View {
             Text(p.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 if !p.adjustments.isEmpty { Button("Accept") { _ = store.acceptAdaptiveProposal(p) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large) }
-                Button(p.adjustments.isEmpty ? "OK" : "Not now") { store.dismissAdaptiveProposal(p) }.buttonStyle(.bordered).controlSize(.large)
+                if CyProduct.redesign {
+                    // one meaning everywhere: Not now postpones (the suggestion stays open); Decline rejects
+                    if !CoachPostpone.ids(store.dir).contains(p.id) {
+                        Button("Not now") {
+                            if let f = onPostpone { f(p.id) } else { CoachPostpone.record(p.id, directory: store.dir) }
+                            postponedTick += 1
+                        }.buttonStyle(.bordered).controlSize(.large)
+                    }
+                    Button("Decline", role: .destructive) { store.dismissAdaptiveProposal(p) }.buttonStyle(.bordered).controlSize(.large)
+                } else {
+                    Button(p.adjustments.isEmpty ? "OK" : "Not now") { store.dismissAdaptiveProposal(p) }.buttonStyle(.bordered).controlSize(.large)
+                }
                 Spacer()
+            }
+            if CyProduct.redesign, postponedTick >= 0, CoachPostpone.ids(store.dir).contains(p.id) {
+                Text("You chose Not now. It stays open and nothing changes until you decide.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }.padding(.vertical, 4)
     }

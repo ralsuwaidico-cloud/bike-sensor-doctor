@@ -96,7 +96,7 @@ struct HomeView: View {
 
     // MARK: Home v2.3 (redesign only) — the prototype's screen on this athlete's records; every tap goes to a page that already exists
     private func homeV23(_ data: Home21Data, _ h: HomeToday) -> some View {
-        let item = h.showCoach ? store.homeCoach() : nil
+        let item = h.showCoach ? store.homeCoach(postponed: CoachPostpone.ids(store.dir)) : nil
         let now = Date()
         let monday = TrainingLedger.monday(of: now)
         var coach = Home21Coach(isShown: !recorder.isActive)

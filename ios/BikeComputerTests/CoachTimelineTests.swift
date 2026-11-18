@@ -74,4 +74,24 @@ final class CoachTimelineTests: XCTestCase {
         XCTAssertEqual(d.map(\.day), ["Mon 9 Nov", "Today · Tue 10 Nov"])
         XCTAssertEqual(d.map { $0.entries.count }, [1, 1])
     }
+
+    /// Owner decision, 19 Nov 2026: "Not now" postpones. The suggestion stays open, the plan is untouched, it is not a
+    /// rejection, and it is not pushed again on Home or Plan (it stays on the Coach page).
+    func testNotNowPostponesKeepsTheSuggestionOpenAndStopsPushingIt() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let s = Store(directory: dir, generatePlan: false)
+        let adj = PlanAdjustment(workoutId: UUID(), change: .minutes(delta: 5), category: .progression, summary: "s", why: "w", createdAt: Date())
+        let p = AdaptiveProposal(id: "hold|x", reason: .heldIncrease, text: "Add 5 minutes?", why: "w", adjustments: [adj])
+        s.adaptiveProposals = [p]
+        let plan = s.plan
+        XCTAssertEqual(s.homeCoach(postponed: CoachPostpone.ids(dir))?.needsDecision, true, "before: Home and Plan offer it")
+        XCTAssertTrue(CoachPostpone.record(p.id, directory: dir))
+        XCTAssertEqual(CoachPostpone.ids(dir), ["hold|x"], "recorded in the Coach's own file")
+        XCTAssertEqual(s.adaptiveProposals, [p], "still open"); XCTAssertEqual(s.plan, plan, "plan unchanged")
+        XCTAssertTrue(s.dismissedAdaptations.isEmpty, "not a rejection"); XCTAssertTrue(s.approvedAdaptations.isEmpty, "not an approval")
+        let after = s.homeCoach(postponed: CoachPostpone.ids(dir))
+        if case .adaptiveProposal = after?.source { XCTFail("a postponed suggestion is not pushed again on Home or Plan") }
+        XCTAssertNotNil(CoachJournal(directory: dir).postponedAt(p.id), "the Coach page still has it, marked")
+    }
 }

@@ -59,7 +59,7 @@ final class CoachCenter: ObservableObject {
 
     /// "Not now": the athlete postponed deciding. Stored in the Coach's own file; the athlete record and the plan are
     /// not touched, and the proposal stays open.
-    func postpone(proposalId: String, now: Date = Date()) { if journal?.postpone(proposalId, at: now) == true { revision += 1 } }
+    func postpone(proposalId: String, now: Date = Date()) { if journal?.postpone(proposalId, at: now) == true { revision += 1 } }   // CoachPostpone.ids re-reads: the file changed
     func postponedAt(_ proposalId: String) -> Date? { journal?.postponedAt(proposalId) }
 
     /// Answered proposals from the durable history, one per proposal.

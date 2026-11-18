@@ -686,10 +686,15 @@ final class LabChecks: XCTestCase {
             let row = el("planCoachRow")
             guard row.waitForExistence(timeout: 8) else { XCTFail("required (\(step)): Plan shows the Coach row"); return false }
             print("LAB-NOTE not-now \(step) plan row: \(row.label)")
-            XCTAssertTrue(row.label.hasPrefix("Coach Suggests"), "required (\(step)): an open suggestion is called a suggestion (\(row.label))")
-            XCTAssertTrue(row.label.contains("Goblet squat"), "required (\(step)): the row names the suggestion (\(row.label))")
-            XCTAssertTrue(row.label.hasSuffix("Review"), "required (\(step)): a suggestion offers Review (\(row.label))")
-            if step == "first" { shot("notnow-0-plan-row") }
+            if step == "first" {
+                XCTAssertTrue(row.label.hasPrefix("Coach Suggests"), "required: an open suggestion is called a suggestion (\(row.label))")
+                XCTAssertTrue(row.label.contains("Goblet squat"), "required: the row names the suggestion (\(row.label))")
+                XCTAssertTrue(row.label.hasSuffix("Review"), "required: a suggestion offers Review (\(row.label))")
+                shot("notnow-0-plan-row")
+            } else {
+                // postponed: it stays on the Coach page and is not pushed again on Plan (owner decision, 19 Nov 2026)
+                XCTAssertFalse(row.label.contains("Goblet squat"), "required (\(step)): a postponed suggestion is not pushed again on Plan (\(row.label))")
+            }
             row.tap()
             return el("coachTimeline").waitForExistence(timeout: 8)
         }
@@ -724,6 +729,8 @@ final class LabChecks: XCTestCase {
         _ = app.reveal(review); review.tap()
         let accept = app.buttons["proposalAccept"].firstMatch
         XCTAssertTrue(accept.waitForExistence(timeout: 8), "required: Review reaches the approval sheet")
+        XCTAssertTrue(app.buttons["proposalNotNow"].firstMatch.exists, "required: the approval sheet offers Not now (postpone)")
+        XCTAssertTrue(app.buttons["proposalDecline"].firstMatch.exists, "required: the approval sheet offers a separate Decline")
         app.settleForScreenshot(1); shot("notnow-4-approval-sheet")
         accept.tap(); app.settleForScreenshot(2)
         XCTAssertFalse(starting("coachPostponed-").firstMatch.waitForExistence(timeout: 3), "once approved, the suggestion is no longer open")

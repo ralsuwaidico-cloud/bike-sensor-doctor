@@ -181,6 +181,29 @@ struct CoachPageFile: Codable, Equatable {
     var postponed: [Postponed]? = nil
 }
 
+/// "Not now" means one thing everywhere (owner decision, 19 Nov 2026): the decision is postponed. The suggestion stays
+/// open and reviewable, the plan is untouched, and it is neither an approval nor a rejection. Every screen that offers
+/// Not now records it here, in the Coach's own file, and reads it from here.
+enum CoachPostpone {
+    private static var cache: (path: String, stamp: Date?, ids: Set<String>)?
+    /// Open suggestions the athlete has postponed. Re-reads the file only when it has changed.
+    static func ids(_ directory: URL) -> Set<String> {
+        let url = directory.appendingPathComponent(CoachJournal.fileName)
+        let stamp = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+        if let c = cache, c.path == url.path, c.stamp == stamp { return c.ids }
+        let ids = Set((CoachJournal(directory: directory).file.postponed ?? []).map(\.proposalId))
+        cache = (url.path, stamp, ids)
+        return ids
+    }
+    /// Records the postponement (once). false = it could not be stored, so nothing may be shown as postponed.
+    @discardableResult
+    static func record(_ proposalId: String, directory: URL, at: Date = Date()) -> Bool {
+        let ok = CoachJournal(directory: directory).postpone(proposalId, at: at)
+        cache = nil
+        return ok
+    }
+}
+
 final class CoachJournal {
     static let fileName = "coach-page.json"
     private(set) var file = CoachPageFile()
