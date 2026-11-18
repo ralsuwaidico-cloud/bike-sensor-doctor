@@ -254,10 +254,13 @@ private struct RangeBar: View {
             ZStack {
                 Path { p in p.move(to: CGPoint(x: 0, y: y)); p.addLine(to: CGPoint(x: g.size.width, y: y)) }.stroke(track, lineWidth: 1)
                 Path { p in p.move(to: CGPoint(x: x(from), y: y)); p.addLine(to: CGPoint(x: x(to), y: y)) }.stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                Circle().fill(hole).frame(width: 9, height: 9).overlay(Circle().strokeBorder(color, lineWidth: 2)).position(x: x(from), y: y)
+                // unchanged from first to latest (Lab 39: both labels were drawn on top of each other): one mark, one label
+                if from != to {
+                    Circle().fill(hole).frame(width: 9, height: 9).overlay(Circle().strokeBorder(color, lineWidth: 2)).position(x: x(from), y: y)
+                    Text(fromText).font(.caption2).monospacedDigit().foregroundStyle(text.opacity(0.7)).fixedSize()
+                        .position(x: from <= to ? x(from) - 26 : x(from) + 26, y: y)
+                }
                 Circle().fill(color).frame(width: 10, height: 10).position(x: x(to), y: y)
-                Text(fromText).font(.caption2).monospacedDigit().foregroundStyle(text.opacity(0.7)).fixedSize()
-                    .position(x: from <= to ? x(from) - 26 : x(from) + 26, y: y)
                 Text(toText).font(.caption2.weight(.bold)).monospacedDigit().foregroundStyle(text).fixedSize()
                     .position(x: from <= to ? x(to) + 26 : x(to) - 26, y: y)
             }

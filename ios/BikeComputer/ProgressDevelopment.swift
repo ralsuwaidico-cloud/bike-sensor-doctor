@@ -99,7 +99,8 @@ struct ProgressDevelopment: Equatable {
     static func strength(_ lifts: [LiftSummary], weight: (Double) -> String) -> Strength? {
         guard let l = lifts.filter({ $0.topSets.count >= 2 }).max(by: { ($0.topSets.count, $1.name) < ($1.topSets.count, $0.name) }),
               let first = l.topSets.first, let last = l.topSets.last else { return nil }
-        var ranges = [Strength.Range(title: "Recorded top set", note: "\(weight(first.weightKg)) × \(first.reps) → \(weight(last.weightKg)) × \(last.reps)",
+        let same = first.weightKg == last.weightKg && first.reps == last.reps
+        var ranges = [Strength.Range(title: "Recorded top set", note: same ? "\(weight(last.weightKg)) × \(last.reps) · unchanged since the first session" : "\(weight(first.weightKg)) × \(first.reps) → \(weight(last.weightKg)) × \(last.reps)",
                                      from: first.weightKg, to: last.weightKg, fromText: weight(first.weightKg), toText: weight(last.weightKg))]
         let est = l.topSets.compactMap(\.e1RM)
         if l.e1RMTrendAvailable, let a = est.first, let b = est.last {
