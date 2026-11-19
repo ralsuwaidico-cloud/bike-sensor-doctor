@@ -24,6 +24,11 @@ struct RootView: View {
     /// Redesign: false = the compact Train panel, true = the full Hub. Reset whenever the Hub opens.
     @State private var hubExpanded = false
     @State private var cyclingDemo = false
+    /// Redesign: the compact panel's Strength shortcut (Shell/CyStrengthPicker.swift).
+    @State private var strengthPicker = false
+    /// Rest, Undo and the facts the Train ball needs that are not in the store (a save not confirmed, a session
+    /// restored after the app ended). The same object the recorder uses — not a second session.
+    @ObservedObject private var trainMemory = CyRecorderMemory.shared
     /// The device's bottom safe-area inset, read from the window (Navigation v1.2 places the dock from the screen's bottom edge).
     @State private var deviceBottom: CGFloat = 34
     @State private var lastCentreTap = Date.distantPast
@@ -87,7 +92,7 @@ struct RootView: View {
                                 .accessibilityHidden(true)
                             CyTrainPanel(perform: { a in closeHub(); perform(a) },
                                          freeRide: { closeHub(); openRide() },
-                                         otherSession: { closeHub(); trainSheet = store.todayAction() },
+                                         strength: { closeHub(); strengthPicker = true },
                                          expand: { var t = Transaction(); t.disablesAnimations = true; withTransaction(t) { hubExpanded = true } },
                                          close: { closeHub() })
                                 .padding(.bottom, 8)
@@ -122,6 +127,9 @@ struct RootView: View {
             .environment(\.cyDeviceBottomInset, deviceBottom)
             .task {
                 guard CyProduct.redesign else { return }
+                // Training Hub v1.4 (sheet 08): a strength session found at launch was interrupted by the app ending;
+                // it is kept as stored and paused until the athlete resumes it (the ball shows "restored").
+                trainMemory.noteLaunch(store)
                 deviceBottom = CyCradleMetrics.deviceBottomInset
                 try? await Task.sleep(nanoseconds: 400_000_000)          // the window's insets can settle after the first frame
                 deviceBottom = CyCradleMetrics.deviceBottomInset
@@ -141,6 +149,7 @@ struct RootView: View {
         .fullScreenCover(item: CyProduct.redesign ? $strengthWorkout : Binding<UUID?>.constant(nil)) { id in StrengthWorkoutScreen(workoutId: id) }
         .fullScreenCover(isPresented: $resumeSession) { StrengthSessionView() }
         .fullScreenCover(isPresented: $cyclingDemo) { CyclingDemoRide().cyThemeRoot() }
+        .sheet(isPresented: $strengthPicker) { CyStrengthPicker(open: { strengthWorkout = $0 }).cyThemeRoot() }
         .sheet(item: $homeSheet) { a in homeSheetView(a) }
         .sheet(isPresented: $holdSheet) { HealthHoldSheet() }
     }
@@ -194,7 +203,15 @@ struct RootView: View {
         if CyProduct.redesign {
             // Navigation v1.2 rev 1.1 (Shell/CyCradleDock.swift). Destinations and the Train routing are the existing
             // ones; Profile (page 4) is reached from the Home avatar and has no tab.
-            CyCradleDock(selection: $tab, hubOpen: showHub, ball: ballState, onTrain: centreTapped)
+            // The ball is drawn from the real session (Shell/CyTrainBallState.swift). While a session exists the dock is
+            // redrawn once a second so the time in the ball moves; otherwise it is drawn once.
+            if ballInput(now: Date()).strength != nil || recorder.isActive {
+                TimelineView(.periodic(from: .now, by: 1)) { c in
+                    CyCradleDock(selection: $tab, hubOpen: showHub, ball: CyTrainBallState.make(ballInput(now: c.date)), onTrain: centreTapped)
+                }
+            } else {
+                CyCradleDock(selection: $tab, hubOpen: showHub, ball: CyTrainBallState.make(ballInput(now: Date())), onTrain: centreTapped)
+            }
         } else {
             let action = store.todayAction(now: max(Date(), day))
             let copy = RideTabBar.centreCopy(recording: recorder.isActive, action: action)
@@ -203,10 +220,23 @@ struct RootView: View {
                          centreIcon: copy.icon, centreLabel: copy.label, centreHint: copy.hint, onCentre: centreTapped)
         }
     }
-    private var ballState: CyTrainBallState {
-        if recorder.isActive { return .recording }
-        if let s = store.activeSession { return .active(max(0, Int(max(Date(), day).timeIntervalSince(s.startedAt ?? Date())))) }
-        return .idle
+    /// The Train ball's facts, read from the one strength session (Store.activeSession), the one ride recorder and the
+    /// recorder's memory. Nothing is kept here. `showPanel` is the compact panel, not the expanded Hub.
+    /// CYCLING HOOK: `CyTrainBallInput.Cycling(elapsed:paused:simulated:)` is what the v1.4 cycling screen can feed
+    /// later; today it is fed by the existing ride recorder only (the Lab demonstration ride is a full-screen page
+    /// with its own clock and is not minimised — ride minimisation stays blocked by the safety gate).
+    private func ballInput(now: Date) -> CyTrainBallInput {
+        var i = CyTrainBallInput()
+        i.panelOpen = showHub && !hubExpanded
+        i.saveUnconfirmed = trainMemory.unconfirmed != nil
+        if recorder.isActive { i.cycling = .init(elapsed: recorder.elapsedS, paused: recorder.state == .paused, simulated: false) }
+        if let s = store.activeSession {
+            i.strength = .init(elapsed: s.elapsedSeconds(now: now), paused: s.pausedAt != nil,
+                               allSetsLogged: NextSet.pick(s.exercises ?? []) == nil,
+                               saveFailed: trainMemory.saveFailedSession == s.id,
+                               restored: trainMemory.restoredSession == s.id)
+        }
+        return i
     }
 
     /// Checkpoint C (owner-approved prototype §2.2): the centre button always opens the Training Hub, whose card carries
@@ -221,6 +251,14 @@ struct RootView: View {
         if now.timeIntervalSince(lastCentreTap) < 0.35 { hubLog.notice("centre tap ignored: \(Int(now.timeIntervalSince(lastCentreTap) * 1000)) ms after the previous one (hub \(showHub ? "open" : "closed"))"); return }
         lastCentreTap = now
         if recorder.isActive { hubLog.notice("centre tap → Ride (recording)"); tab = 2; return }
+        // Navigation v1.2 (F9: Minimised → Resumed): with a strength session in progress — or a save that is not
+        // confirmed — the ball returns to that workout's own screen. One session at a time; nothing new is started.
+        if CyProduct.redesign, store.activeSession != nil || trainMemory.unconfirmed != nil {
+            hubLog.notice("centre tap → strength recorder (session in progress)")
+            if showHub { closeHub() }
+            resumeSession = true
+            return
+        }
         if showHub { hubLog.notice("centre tap → close hub"); closeHub() } else { hubLog.notice("centre tap → open hub (tab \(tab))"); openHub() }
     }
     private func openHub() {

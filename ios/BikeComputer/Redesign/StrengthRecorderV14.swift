@@ -23,10 +23,43 @@ import SwiftUI
 /// only: they belong to the running session and end with it.
 @MainActor final class CyRecorderMemory: ObservableObject {
     static let shared = CyRecorderMemory()
-    struct Logged: Equatable { var sessionId: UUID; var entry: Int; var set: Int; var text: String; var number: Int; var skippedSets: [Int] = [] }
+    struct Logged: Equatable { var sessionId: UUID; var entry: Int; var set: Int; var text: String; var number: Int; var skippedSets: [Int] = []; var label: String? = nil }
     @Published var restEndsAt: Date? = nil
     @Published var lastLogged: Logged? = nil
-    func clear() { restEndsAt = nil; lastLogged = nil }
+    /// "Set 1 removed. Its values are back above." (04c K1) — shown after Undo until the next set is logged.
+    @Published var undone: String? = nil
+    /// The session whose last Save failed (it is still active and unsaved). The Train ball reads it.
+    @Published var saveFailedSession: UUID? = nil
+    /// A workout that was written but whose read-back has not confirmed it (06f X7). It is kept here — not in the
+    /// recorder screen — so that closing the page does not lose the fact: the Train ball shows it and reopens the page.
+    @Published var unconfirmed: StrengthSession? = nil
+    /// The session that was in progress when the app was last ended, until the athlete resumes it (sheet 08:
+    /// "app ended → Interrupted → reopen, only what was stored → Paused").
+    @Published var restoredSession: UUID? = nil
+    private var launchChecked = false
+    func clear() { restEndsAt = nil; lastLogged = nil; undone = nil; saveFailedSession = nil }
+    /// After a logged set was corrected: the "Logged" line says the set as it is now, or goes (with its rest) when
+    /// that set is no longer logged.
+    func refreshLogged(_ s: StrengthSession?, units: AppSettings.Units) {
+        guard var m = lastLogged, m.skippedSets.isEmpty else { return }
+        guard let s, s.id == m.sessionId, let es = s.exercises, es.indices.contains(m.entry),
+              es[m.entry].sets.indices.contains(m.set), es[m.entry].sets[m.set].done else { lastLogged = nil; restEndsAt = nil; return }
+        m.text = NextSet.setText(es[m.entry].sets[m.set], units)
+        if m != lastLogged { lastLogged = m }
+    }
+
+    /// Called once when the main screen first appears after a launch. A strength session found in the store was
+    /// interrupted by the app ending: it is kept exactly as stored and paused (existing `pauseActiveSession`), so its
+    /// clock stands still until the athlete resumes it. Nothing is reset, completed or started.
+    /// LIMIT (stated, not hidden): the store does not record when the app ended, so the time between the app ending
+    /// and this relaunch is still inside the session's clock; only the time from the relaunch on is excluded.
+    func noteLaunch(_ store: Store) {
+        guard !launchChecked else { return }
+        launchChecked = true
+        guard let s = store.activeSession else { return }
+        restoredSession = s.id
+        if s.pausedAt == nil { store.pauseActiveSession() }
+    }
 }
 
 struct StrengthRecorderV14: View {
@@ -43,8 +76,13 @@ struct StrengthRecorderV14: View {
     @State private var savedSummary: FinishSummary? = nil
     /// Pending: Save was tapped and the result is not known yet (06e X4). Nothing is shown as saved.
     @State private var saving = false
-    /// Unknown: the store accepted the save, but reading the file back did not find the workout (06f X7).
-    @State private var unconfirmed: StrengthSession? = nil
+    /// Unknown: the store accepted the save, but reading the file back did not find the workout (06f X7). Held in
+    /// CyRecorderMemory so it survives closing this page (the Train ball shows "!" and reopens it).
+    private var unconfirmed: StrengthSession? {
+        get { memory.unconfirmed }
+        nonmutating set { memory.unconfirmed = newValue }
+    }
+    @State private var correcting = false
     @State private var checks = 0
     @State private var lastCheck: SaveCheck? = nil
     /// After a confirmed save: the saved session, shown until the athlete leaves or opens the optional review.
@@ -58,7 +96,7 @@ struct StrengthRecorderV14: View {
     var body: some View {
         Group {
             if let done = saved { savedView(done) }
-            else if let u = unconfirmed { unconfirmedPage(u) }
+            else if let u = unconfirmed, store.activeSession == nil { unconfirmedPage(u) }
             else if saving { CySavingPage(detail: "\(savedSummary?.title ?? "Workout") · your sets are still on this phone") }
             else if finishing, let s = store.activeSession { finishPage(s) }
             else if let s = store.activeSession { recorder(s) }
@@ -67,7 +105,8 @@ struct StrengthRecorderV14: View {
         .background(theme.background.ignoresSafeArea())
         .onReceive(timer) { now = $0 }
         .onAppear { if let m = memory.lastLogged, m.sessionId != store.activeSession?.id { memory.clear() } }
-        .sheet(isPresented: $allExercises) { StrengthSessionView(legacy: true) }
+        .sheet(isPresented: $allExercises, onDismiss: refreshLogged) { StrengthSessionView(legacy: true) }
+        .sheet(isPresented: $correcting, onDismiss: refreshLogged) { StrengthCorrectV14().cyThemeRoot() }
         .fullScreenCover(isPresented: $review, onDismiss: { dismiss() }) {
             if let s = saved { ReviewV14(target: .strength(s.id)) { review = false }.cyThemeRoot() }
         }
@@ -109,7 +148,7 @@ struct StrengthRecorderV14: View {
                     }
                     .padding(.horizontal, CySpace.l).padding(.top, CySpace.m)
                 }
-                bigButton("Log set", id: "logSet") { log(s, p, e, st) }
+                bigButton(p.label.map { "Log \($0)" } ?? "Log set", id: "logSet") { log(s, p, e, st) }
             } else {
                 Spacer()
                 VStack(alignment: .leading, spacing: CySpace.s) {
@@ -152,7 +191,7 @@ struct StrengthRecorderV14: View {
             }
             .accessibilityElement(children: .combine)
             Spacer(minLength: 4)
-            Button { if paused { store.resumeActiveSession() } else { store.pauseActiveSession() } } label: {
+            Button { if paused { resumeClock() } else { store.pauseActiveSession() } } label: {
                 Image(systemName: paused ? "play.fill" : "pause.fill").font(.body.weight(.bold)).foregroundStyle(theme.textPrimary)
                     .frame(width: CyHit.min, height: CyHit.min).contentShape(Rectangle())
             }
@@ -170,9 +209,18 @@ struct StrengthRecorderV14: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(overline(es, p, e)).font(CyFont.overline).tracking(1.2).foregroundStyle(theme.textSecondary)
                 .accessibilityIdentifier("recorderOverline")
-            Text(e.name).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
-                .fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("recorderExercise")
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if let l = p.label {
+                    // 04b: the member's mark ("A1") stands before the name; the round is said in the line above and below
+                    Text(l).font(CyFont.label.weight(.heavy)).foregroundStyle(theme.background)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(theme.textPrimary))
+                        .accessibilityLabel(l).accessibilityIdentifier("recorderMember")
+                }
+                Text(e.name).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("recorderExercise")
+            }
             HStack(spacing: 8) {
                 HStack(spacing: 4) {
                     ForEach(Array(e.sets.enumerated()), id: \.offset) { i, st in
@@ -182,16 +230,16 @@ struct StrengthRecorderV14: View {
                     }
                 }
                 .accessibilityHidden(true)
-                Text("Set \(p.set + 1) of \(e.sets.count)").font(CyFont.label).monospacedDigit().foregroundStyle(theme.textPrimary)
+                Text("\(p.label == nil ? "Set" : "Round") \(p.set + 1) of \(e.sets.count)").font(CyFont.label).monospacedDigit().foregroundStyle(theme.textPrimary)
                     .accessibilityIdentifier("recorderSet")
             }
         }
     }
-    /// "EXERCISE 1 OF 4" — or, in a superset, the member and the round in words.
+    /// "EXERCISE 1 OF 4" — or, in a superset, the group and the round in words ("SUPERSET A · ROUND 1 OF 3", 04b).
     private func overline(_ es: [ExerciseEntry], _ p: NextSet.Pick, _ e: ExerciseEntry) -> String {
-        if let l = p.label, let g = e.superset {
+        if p.label != nil, let g = e.superset {
             let rounds = es.filter { $0.superset == g }.map { $0.sets.count }.max() ?? e.sets.count
-            return "SUPERSET \(g) · \(l) · ROUND \(p.set + 1) OF \(rounds)"
+            return "SUPERSET \(g) · ROUND \(p.set + 1) OF \(rounds)"
         }
         return "EXERCISE \(p.entry + 1) OF \(es.count)"
     }
@@ -273,15 +321,20 @@ struct StrengthRecorderV14: View {
     }
 
     /// Before a set: the rest that will follow it. After a set: the rest counting down on the clock, with −15 / Skip / +15.
+    /// Pause freezes the rest together with the workout time (04c K3): while paused the rest is measured to the moment
+    /// of the pause, and resuming moves its end by the length of the pause (`resumeClock`).
     @ViewBuilder private func restRow(_ e: ExerciseEntry) -> some View {
         if let end = memory.restEndsAt {
-            let left = Int(end.timeIntervalSince(now).rounded(.up))
+            let pausedAt = store.activeSession?.pausedAt
+            let left = max(0, Int(end.timeIntervalSince(pausedAt ?? now).rounded(.up)))
             HStack(alignment: .firstTextBaseline, spacing: CySpace.s) {
-                Text(left > 0 ? clock(left) : "Go").font(.system(.title, design: .rounded).weight(.heavy)).monospacedDigit().foregroundStyle(left > 0 ? theme.textPrimary : theme.success)
-                    .accessibilityLabel(left > 0 ? "Rest, \(left) seconds left" : "Rest done").accessibilityIdentifier("restTimer")
-                Text(left > 0 ? "rest" : "rest is over").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                Text(restClock(left)).font(.system(.title, design: .rounded).weight(.heavy)).monospacedDigit()
+                    .foregroundStyle(left > 0 && pausedAt == nil ? theme.textPrimary : theme.textSecondary)
+                    .accessibilityLabel(left > 0 ? "Rest, \(left) seconds left\(pausedAt == nil ? "" : ", paused")" : "Rest complete").accessibilityIdentifier("restTimer")
+                Text(restWord(left: left, paused: pausedAt != nil)).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                    .accessibilityIdentifier("restWord")
                 Spacer(minLength: 4)
-                if left > 0 {
+                if left > 0 && pausedAt == nil {
                     restButton("−15", "15 seconds less rest", id: "restMinus") { memory.restEndsAt = max(now, end.addingTimeInterval(-15)) }
                     restButton("Skip", "Skip the rest", id: "restSkip") { memory.restEndsAt = nil }
                     restButton("+15", "15 seconds more rest", id: "restPlus") { memory.restEndsAt = end.addingTimeInterval(15) }
@@ -294,10 +347,22 @@ struct StrengthRecorderV14: View {
                 .accessibilityIdentifier("restPlanned")
         }
     }
+    /// "rest" · "rest after round" (the rest that follows a completed superset round) · "rest paused" · "rest complete".
+    private func restWord(left: Int, paused: Bool) -> String {
+        if left <= 0 { return "rest complete" }
+        if paused { return "rest paused" }
+        let es = store.activeSession?.exercises ?? []
+        if let m = memory.lastLogged, es.indices.contains(m.entry), es[m.entry].superset != nil { return "rest after round" }
+        return "rest"
+    }
+    private func restClock(_ s: Int) -> String { let v = max(0, s); return String(format: "%d:%02d", v / 60, v % 60) }
     private func plannedRest(_ e: ExerciseEntry) -> String {
         guard let es = store.activeSession?.exercises, let p = NextSet.pick(es) else { return "" }
-        guard let r = NextSet.restAfter(es, logged: p) else { return e.superset != nil ? "No rest inside the round — straight to the next exercise" : "No rest is prescribed for this exercise" }
-        return e.superset != nil ? "Rest \(clock(r)) after this round" : "Rest \(clock(r)) after this set"
+        guard let r = NextSet.restAfter(es, logged: p) else {
+            if e.superset != nil { return "No rest before \(NextSet.following(es)?.label ?? "the next exercise")" }
+            return "No rest is prescribed for this exercise"
+        }
+        return e.superset != nil ? "Rest \(restClock(r)) after this round" : "Rest \(restClock(r)) after this set"
     }
     private func restButton(_ t: String, _ label: String, id: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -312,7 +377,7 @@ struct StrengthRecorderV14: View {
         if let m = memory.lastLogged, m.sessionId == s.id {
             HStack(alignment: .firstTextBaseline) {
                 Text(m.skippedSets.isEmpty ? "Logged" : "Skipped").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                Text(m.skippedSets.isEmpty ? "Set \(m.number) · \(m.text)" : m.text).font(CyFont.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                Text(m.skippedSets.isEmpty ? "\(m.label ?? "Set \(m.number)") · \(m.text)" : m.text).font(CyFont.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("recorderLogged")
                 Spacer(minLength: 8)
                 Button("Undo") { undo(m) }
@@ -320,19 +385,23 @@ struct StrengthRecorderV14: View {
                     .frame(minWidth: CyHit.min, minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
                     .accessibilityHint(m.skippedSets.isEmpty ? "Marks that set as not done again" : "Brings the skipped sets back").accessibilityIdentifier("recorderUndo")
             }
+        } else if let note = memory.undone {
+            Text(note).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                .frame(minHeight: CyHit.min, alignment: .leading).accessibilityIdentifier("recorderUndone")
         }
     }
 
     /// The next exercise is always visible; the options sit behind one ···.
     private func nextRow(_ es: [ExerciseEntry]) -> some View {
         let n = NextSet.following(es)
+        let inSuperset = nextIsSameSuperset(es, n)
         return HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("NEXT EXERCISE").font(CyFont.overline).tracking(1.2).foregroundStyle(theme.textSecondary)
+                Text(inSuperset ? "NEXT IN SUPERSET" : "NEXT EXERCISE").font(CyFont.overline).tracking(1.2).foregroundStyle(theme.textSecondary)
                 if let n {
                     let e = es[n.entry]
                     Text(e.name).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    Text("\(n.label.map { "\($0) · superset · " } ?? "")\(e.sets.count) × \(e.sets.first.map { "\($0.reps)" } ?? "–")")
+                    Text(nextDetail(es, n, e, inSuperset: inSuperset))
                         .font(CyFont.footnote).foregroundStyle(theme.textSecondary)
                 } else {
                     Text("This is the last exercise").font(CyFont.headline).foregroundStyle(theme.textPrimary)
@@ -352,6 +421,7 @@ struct StrengthRecorderV14: View {
                         Button("Assisted (band or machine)") { setKind(p, .assisted) }
                     } label: { Label("This exercise is…", systemImage: "slider.horizontal.3") }
                 }
+                Button { correcting = true } label: { Label("Correct a logged set", systemImage: "pencil") }
                 Button { allExercises = true } label: { Label("All exercises · correct a set", systemImage: "list.bullet") }
                 Button(role: .destructive) { confirmDiscard = true } label: { Label("Discard workout", systemImage: "trash") }
             } label: {
@@ -362,6 +432,20 @@ struct StrengthRecorderV14: View {
         }
         .padding(.top, CySpace.s)
         .overlay(alignment: .top) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
+    }
+
+    /// The line under "Next": inside a superset the partner and whether it is this round or the next (04b U1–U5);
+    /// otherwise the sets and reps of the exercise that follows ("A1 · superset · 3 rounds of 10", 04c).
+    private func nextIsSameSuperset(_ es: [ExerciseEntry], _ n: NextSet.Pick?) -> Bool {
+        guard let n, let p = NextSet.pick(es), es.indices.contains(n.entry), es.indices.contains(p.entry), let g = es[p.entry].superset else { return false }
+        return es[n.entry].superset == g
+    }
+    private func nextDetail(_ es: [ExerciseEntry], _ n: NextSet.Pick, _ e: ExerciseEntry, inSuperset: Bool) -> String {
+        let reps = e.sets.first.map { "\($0.reps)" } ?? "–"
+        guard let l = n.label else { return "\(e.sets.count) × \(reps)" }
+        guard inSuperset, let p = NextSet.pick(es) else { return "\(l) · superset · \(e.sets.count) rounds of \(reps)" }
+        if NextSet.restAfter(es, logged: p) == nil { return "\(l) · same round · no rest" }
+        return "\(l) · round \(n.set + 1) · after rest"
     }
 
     private func bigButton(_ title: String, id: String, _ action: @escaping () -> Void) -> some View {
@@ -386,7 +470,8 @@ struct StrengthRecorderV14: View {
     }
     private func log(_ s: StrengthSession, _ p: NextSet.Pick, _ e: ExerciseEntry, _ st: SetEntry) {
         change(p) { $0.done = true; $0.skipped = nil }
-        memory.lastLogged = .init(sessionId: s.id, entry: p.entry, set: p.set, text: NextSet.setText(st, units), number: p.set + 1)
+        memory.undone = nil
+        memory.lastLogged = .init(sessionId: s.id, entry: p.entry, set: p.set, text: NextSet.setText(st, units), number: p.set + 1, label: p.label)
         let rest = NextSet.restAfter(s.exercises ?? [], logged: p)
         memory.restEndsAt = rest.flatMap { $0 > 0 ? Date().addingTimeInterval(TimeInterval($0)) : nil }
     }
@@ -400,6 +485,7 @@ struct StrengthRecorderV14: View {
             x.exercises = e
         }
         memory.restEndsAt = nil
+        memory.undone = nil
         memory.lastLogged = .init(sessionId: s.id, entry: p.entry, set: p.set, text: wholeExercise ? "\(es[p.entry].name) · \(targets.count) set\(targets.count == 1 ? "" : "s")" : "\(es[p.entry].name) · set \(p.set + 1)",
                                   number: p.set + 1, skippedSets: targets)
     }
@@ -421,7 +507,17 @@ struct StrengthRecorderV14: View {
             }
         }
         memory.clear()
+        if m.skippedSets.isEmpty { memory.undone = "\(m.label ?? "Set \(m.number)") removed. Its values are back above." }
     }
+    /// Resume: the rest that was running is moved by the length of the pause, so it continues where it stood; a
+    /// session restored after the app ended stops being "restored" once the athlete resumes it.
+    private func resumeClock() {
+        if let p = store.activeSession?.pausedAt, let end = memory.restEndsAt { memory.restEndsAt = end.addingTimeInterval(Date().timeIntervalSince(p)) }
+        store.resumeActiveSession()
+        memory.restoredSession = nil
+    }
+    /// After a correction: the "Logged" line shows the set as it is now, or goes when that set is no longer logged.
+    private func refreshLogged() { memory.refreshLogged(store.activeSession, units: units) }
     private func clock(_ s: Int) -> String { let v = max(0, s); return v >= 3600 ? String(format: "%d:%02d:%02d", v / 3600, v / 60 % 60, v % 60) : String(format: "%02d:%02d", v / 60, v % 60) }
 
     // MARK: finish and save — sheets 06e / 06f. Save first; review afterwards and optional; a failed save keeps everything.
@@ -439,7 +535,8 @@ struct StrengthRecorderV14: View {
         finishing = true
     }
     private func backToWorkout() {
-        if pausedByFinish { store.resumeActiveSession() }
+        if pausedByFinish { resumeClock() }
+        memory.saveFailedSession = nil
         pausedByFinish = false; confirmDiscard = false; finishing = false
     }
     private func discard() { store.discardActiveSession(); memory.clear(); confirmDiscard = false; finishing = false; dismiss() }
@@ -498,6 +595,7 @@ struct StrengthRecorderV14: View {
     private func save() {
         guard !saving, let active = store.activeSession else { return }
         store.saveFailure = nil
+        memory.saveFailedSession = nil
         savedSummary = FinishSummary.make(active, title: sessionTitle(active), now: now)
         saving = true
         Task { @MainActor in
@@ -510,6 +608,7 @@ struct StrengthRecorderV14: View {
                 if check == .confirmed { saved = s; finishing = false } else { checks = 0; lastCheck = check; unconfirmed = s }
             }
             // otherwise the session is still active and `saveFailure` says why: the page shows "Not saved yet"
+            if store.activeSession != nil, store.saveFailure != nil { memory.saveFailedSession = active.id }
             saving = false
         }
     }
