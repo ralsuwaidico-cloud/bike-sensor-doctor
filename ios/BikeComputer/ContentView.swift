@@ -24,6 +24,7 @@ struct RootView: View {
     /// Redesign: false = the compact Train panel, true = the full Hub. Reset whenever the Hub opens.
     @State private var hubExpanded = false
     @State private var cyclingDemo = false
+    @State private var cyclingLive = false      // redesigned main app: the v1.4 cycling screen on the real recorder
     /// Redesign: the compact panel's Strength shortcut (Shell/CyStrengthPicker.swift).
     @State private var strengthPicker = false
     /// Rest, Undo and the facts the Train ball needs that are not in the store (a save not confirmed, a session
@@ -149,6 +150,9 @@ struct RootView: View {
         .fullScreenCover(item: CyProduct.redesign ? $strengthWorkout : Binding<UUID?>.constant(nil)) { id in StrengthWorkoutScreen(workoutId: id) }
         .fullScreenCover(isPresented: $resumeSession) { StrengthSessionView() }
         .fullScreenCover(isPresented: $cyclingDemo) { CyclingDemoRide().cyThemeRoot() }
+        .fullScreenCover(isPresented: $cyclingLive) {
+            CyclingLiveV14(onClose: { cyclingLive = false }, onOpenRideScreen: { cyclingLive = false; tab = 2 }).cyThemeRoot()
+        }
         .sheet(isPresented: $strengthPicker) { CyStrengthPicker(open: { strengthWorkout = $0 }).cyThemeRoot() }
         .sheet(item: $homeSheet) { a in homeSheetView(a) }
         .sheet(isPresented: $holdSheet) { HealthHoldSheet() }
@@ -156,7 +160,7 @@ struct RootView: View {
 
     /// Where a ride opens. Cyclift Lab cannot record (no sensors, no GPS), so with the redesign on it opens the labelled
     /// demonstration of the v1.4 cycling screen; everywhere else it is the existing Ride screen, unchanged.
-    private func openRide() { if CyProduct.redesign && CycliftLab.isLab { cyclingDemo = true } else { tab = 2 } }
+    private func openRide() { if CyProduct.redesign && CycliftLab.isLab { cyclingDemo = true } else if CyProduct.redesign { cyclingLive = true } else { tab = 2 } }
 
     /// Performs a Home action: the card's buttons and the centre button share it, so both reach the same destination.
     private func perform(_ a: HomeAction) {
