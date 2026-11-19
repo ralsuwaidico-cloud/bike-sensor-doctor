@@ -1,2 +1,2 @@
-LabFast/testProfileAppPreferencesPages LabFast/testProfileAthletePages LabFast/testProfileTrainingSetupPages LabFast/testOnboardingRoster
-Fast run 8: Strength preferences, onboarding roster (Z2), switch style, repeated typing; build made for any iPhone simulator (19 Nov 2026).
+LabFast/testProfileDataPages LabChecks/test2dProfileSectionsAndTheirPagesOpen LabChecks/test2eCoachNotNowKeepsTheSuggestionOpen LabFast/testProfileEditsNeedApproval
+Fast run 9: P08 pages; the full suite's Profile and Not now checks against the changed pages, before a full Lab run (19 Nov 2026).
