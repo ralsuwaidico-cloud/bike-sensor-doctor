@@ -1,2 +1,2 @@
-LabFast/testProfileDataPages LabChecks/test2dProfileSectionsAndTheirPagesOpen LabChecks/test2eCoachNotNowKeepsTheSuggestionOpen LabFast/testProfileEditsNeedApproval
-Fast run 9: P08 pages; the full suite's Profile and Not now checks against the changed pages, before a full Lab run (19 Nov 2026).
+LabFast/testProfileDataPages LabFast/testScreens
+Fast run 10: compiles the P06 shared code in Lab; Lab's device rows must still read unavailable (19 Nov 2026).
