@@ -90,8 +90,7 @@ final class LabFastCoach: XCTestCase {
         XCTAssertTrue(el(app, "coachReviewNeedsYou").exists, "required: why it needs the athlete")
         for id in ["proposalAccept", "proposalNotNow", "proposalDecline"] {
             let b = app.buttons[id].firstMatch
-            _ = app.reveal(b)
-            XCTAssertTrue(b.exists, "required: the review offers \(id)")
+            XCTAssertTrue(b.exists && b.isHittable, "required: the review offers \(id), on screen")
         }
         print("LAB-NOTE coach review: \(before.label) | \(after.label) | \(e0.label) | \(e1.label)")
         app.settleForScreenshot(1); shot(shotName)

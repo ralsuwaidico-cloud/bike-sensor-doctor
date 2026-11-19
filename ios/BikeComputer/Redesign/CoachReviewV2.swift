@@ -95,17 +95,24 @@ struct CoachReviewScreen: View {
     }
 
     private func page(_ m: CoachReviewModel) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: CySpace.m) {
-                changeCard(m)
-                evidenceCard(m)
-                elseCard(m)
-                needsYou(m)
-                if notSaved { notSavedCard } else { actions(m) }
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: CySpace.m) {
+                    changeCard(m)
+                    evidenceCard(m)
+                    elseCard(m)
+                    needsYou(m)
+                    if notSaved { notSavedCard } else { actionsNote(m) }
+                }
+                .padding(.horizontal, CySpace.l).padding(.top, CySpace.s).padding(.bottom, CySpace.l)
             }
-            .padding(.horizontal, CySpace.l).padding(.top, CySpace.s).padding(.bottom, CySpace.xl)
+            .accessibilityIdentifier("coachReview")
+            // the three decisions stay on screen whatever the text size (they are never below the fold)
+            if !notSaved {
+                actions(m).padding(.horizontal, CySpace.l).padding(.top, CySpace.s).padding(.bottom, CySpace.s)
+                    .background(theme.background)
+            }
         }
-        .accessibilityIdentifier("coachReview")
     }
 
     // MARK: pieces
@@ -218,7 +225,8 @@ struct CoachReviewScreen: View {
             .accessibilityIdentifier("coachReviewNeedsYou")
     }
 
-    // MARK: actions — Decline · Approve (G1), and Not now beneath (owner decision of 19 Nov 2026: Not now postpones)
+    // MARK: actions — Decline · Approve (G1), and Not now beneath (owner decision of 19 Nov 2026: Not now postpones).
+    // Pinned under the page so all three are always reachable.
 
     private func outline(_ title: String) -> some View {
         Text(title).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textSecondary)
@@ -251,12 +259,14 @@ struct CoachReviewScreen: View {
                 .buttonStyle(.plain)
                 .accessibilityHint("Postpones the decision. The suggestion stays open")
                 .accessibilityIdentifier("proposalNotNow")
-            Text(m.canApprove
+        }
+    }
+    private func actionsNote(_ m: CoachReviewModel) -> some View {
+        Text(m.canApprove
                  ? "Approve saves the change and adds it to the timeline with Undo. Not now keeps the suggestion open and changes nothing. Decline is remembered: it is not offered again for the same session."
                  : "Not now keeps this note open. Dismiss removes it. Neither changes your plan.")
                 .font(CyDyn.f(11)).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("coachReviewActionsNote")
-        }
     }
 
     /// The approval is in the app's memory but the athlete record could not be written. Said plainly; never "Approved".
