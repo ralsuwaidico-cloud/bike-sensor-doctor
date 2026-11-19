@@ -614,17 +614,26 @@ struct OnboardingV34View: View {
         let main = a.primaryGoal ?? a.goals?.first
         let others = (a.goals ?? []).filter { $0 != main }
         let n = OnbWeekText.sessions(kinds)
+        let single: String = (v.mainEndurance ?? v.mainStrength)?.title ?? ""
+        let lead: String = v.mode == .hybrid ? leadWord : single
+        var goalLine = ""
+        if let g = main {
+            goalLine = GoalInfo.line(g)
+            if !others.isEmpty { goalLine += " · also " + others.map(\.title).joined(separator: ", ") }
+        }
+        let isStrengthGoal: Bool = main.map { $0.sport == .strength } ?? false
+        let totals: String = "\(OnbWeekText.total(kinds, ride: ride, lift: lift)) · \(n) session\(n == 1 ? "" : "s")"
         return OnbBlueprintModel(
             name: (a.name ?? "").trimmingCharacters(in: .whitespaces),
             levels: levelsLine,
-            lead: v.mode == .hybrid ? leadWord : (v.mainEndurance ?? v.mainStrength)?.title ?? "",
+            lead: lead,
             identity: AthleticRoster.identityLine(sports, priority: a.priority),
             sports: blueprintSports(v),
             goalTitle: main?.title,
-            goalIsStrength: main?.sport == .strength,
-            goalLine: main.map { GoalInfo.line($0) + (others.isEmpty ? "" : " · also " + others.map(\.title).joined(separator: ", ")) } ?? "",
+            goalIsStrength: isStrengthGoal,
+            goalLine: goalLine,
             kinds: kinds, ride: ride, lift: lift,
-            weekTotals: "\(OnbWeekText.total(kinds, ride: ride, lift: lift)) · \(n) session\(n == 1 ? "" : "s")",
+            weekTotals: totals,
             proposalLines: lines,
             cells: blueprintCells(v, main: main, others: others),
             measured: measuredLine + " " + connectedLine)

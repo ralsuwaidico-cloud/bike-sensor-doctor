@@ -524,8 +524,11 @@ struct OnbConnectPage: View {
 
     /// Lab connects to nothing: the sheet's rows, each saying it is switched off. No state is imitated.
     private var labRows: some View {
-        let rows: [(String, String, String)] = [("heart", "Apple Health", "Workouts, weight, resting HR, sleep"), ("applewatch", "Apple Watch", "Heart rate while you train")]
-            + (mode.includesCycling ? [("rectangle.portrait", "Cyclift BikeComputer", "Live ride display"), ("bolt", "Bike sensors", "Power, heart rate, cadence")] : [])
+        var rows: [(String, String, String)] = [("heart", "Apple Health", "Workouts, weight, resting HR, sleep"), ("applewatch", "Apple Watch", "Heart rate while you train")]
+        if mode.includesCycling {
+            rows.append(("rectangle.portrait", "Cyclift BikeComputer", "Live ride display"))
+            rows.append(("bolt", "Bike sensors", "Power, heart rate, cadence"))
+        }
         return VStack(spacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.offset) { row in
                 HStack(spacing: CySpace.m) {
