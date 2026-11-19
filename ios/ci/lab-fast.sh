@@ -45,7 +45,7 @@ say "BUILD MODE: $MODE · files changed since then: $CHANGED"
 say "TIME setup: $((SECONDS-T0))s"
 T=$SECONDS
 xcodebuild build-for-testing -project CycliftLab.xcodeproj -scheme CycliftLab -configuration Debug -destination "id=$SIM" \
-  -derivedDataPath "$DD" -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > "$OUT/build.log" 2>&1
+  -derivedDataPath "$DD" -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO -showBuildTimingSummary > "$OUT/build.log" 2>&1
 BS=$?
 if [ $BS -ne 0 ] && [ "$MODE" != "clean" ]; then      # a kept build must never be the reason for a failure: once more from nothing
   say "  note: the build on the kept files failed — building again from nothing"; rm -rf "$DD"; MODE="clean (after a failed kept build)"
@@ -53,6 +53,8 @@ if [ $BS -ne 0 ] && [ "$MODE" != "clean" ]; then      # a kept build must never 
     -derivedDataPath "$DD" -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > "$OUT/build.log" 2>&1
   BS=$?
 fi
+# where the build time went (Xcode's own summary), so the next slow step is measured, not guessed
+sed -n '/Build Timing Summary/,$p' "$OUT/build.log" | grep -E "^[A-Za-z].*\| *[0-9.]+ seconds" | sort -t'|' -k2 -rn | head -8 | sed 's/^/  timing: /' | tee -a "$R"
 say "  compiled in this run: $(grep -cE "^(SwiftCompile|CompileSwift) " "$OUT/build.log") Swift compile step(s)"
 if [ $BS -eq 0 ] && [ "$CHANGED" != "0" ] && [ -z "$(find "$DD/Build/Products/Debug-iphonesimulator" -type f -newer "$STAMP" 2>/dev/null | head -1)" ]; then
   say "  FAIL source changed but nothing was rebuilt — refusing to test an old app"; exit 1
