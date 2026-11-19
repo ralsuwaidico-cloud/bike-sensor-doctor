@@ -1,2 +1,2 @@
-LabFast/testOnboardingRoster
-Fast run 12 (replaces 11, whose second check needs the deletion check before it): onboarding page 3 in the Y3 layout (19 Nov 2026).
+LabFast/testScenarioSelector LabFast/testOnboardingRoster
+request 13: scenario selector on the phone path; onboarding page 3 compact sizes
