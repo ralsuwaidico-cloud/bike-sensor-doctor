@@ -179,6 +179,29 @@ struct CoachPageFile: Codable, Equatable {
     var links: [Link] = []
     /// Optional so that a file written before postponement existed still opens (nil = none).
     var postponed: [Postponed]? = nil
+    /// An open proposal as the athlete saw it, kept so that a later decision can be shown with what it was about.
+    struct Seen: Codable, Equatable {
+        var proposalId: String          // AdaptiveProposal.id
+        var keys: [String]              // PlanAdjustment.key of each change it would make (empty = advice only)
+        var text: String
+        var why: String
+        var change: String?             // the engine's own "Goblet squat: 25 kg → 27 kg" line(s)
+    }
+    /// What the athlete decided, with its time. Read back from the athlete record (approved / dismissed keys), never
+    /// assumed: see CoachCenter.sync.
+    struct Decision: Codable, Equatable {
+        static let approved = "approved", declined = "declined", dismissed = "dismissed", undone = "undone"
+        var proposalId: String
+        var keys: [String]
+        var at: Date
+        var choice: String
+        var text: String
+        var why: String
+        var change: String?
+    }
+    /// Optional and additive, like `postponed` (nil = none; a file written before they existed still opens).
+    var seen: [Seen]? = nil
+    var decisions: [Decision]? = nil
 }
 
 /// "Not now" means one thing everywhere (owner decision, 19 Nov 2026): the decision is postponed. The suggestion stays
@@ -235,10 +258,37 @@ final class CoachJournal {
         file.postponed = kept.isEmpty ? nil : kept; save()
     }
     func postponedAt(_ proposalId: String) -> Date? { file.postponed?.first { $0.proposalId == proposalId }?.at }
-    private func save() {
-        guard writable else { return }
+    /// Remembers an open proposal as shown (replaced when its wording changed).
+    func see(_ s: CoachPageFile.Seen) {
+        var list = file.seen ?? []
+        if let i = list.firstIndex(where: { $0.proposalId == s.proposalId }) { guard list[i] != s else { return }; list[i] = s } else { list.append(s) }
+        file.seen = list; save()
+    }
+    /// A proposal that is no longer open without a decision (the Coach withdrew it) is forgotten.
+    func unsee(_ proposalId: String) {
+        guard let list = file.seen, list.contains(where: { $0.proposalId == proposalId }) else { return }
+        let kept = list.filter { $0.proposalId != proposalId }
+        file.seen = kept.isEmpty ? nil : kept; save()
+    }
+    /// Stores a decision (the last 200 are kept). false = it could not be written, so it may not be shown as decided.
+    @discardableResult
+    func decide(_ d: CoachPageFile.Decision) -> Bool {
+        guard writable else { return false }
+        let before = file
+        var list = file.decisions ?? []
+        list.append(d); if list.count > 200 { list.removeFirst(list.count - 200) }
+        file.decisions = list
+        if let s = file.seen { let kept = s.filter { $0.proposalId != d.proposalId }; file.seen = kept.isEmpty ? nil : kept }
+        if save() { return true }
+        file = before
+        return false
+    }
+    @discardableResult
+    private func save() -> Bool {
+        guard writable else { return false }
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601; enc.outputFormatting = [.sortedKeys]
-        if let d = try? enc.encode(file) { try? d.write(to: url, options: .atomic) }
+        guard let d = try? enc.encode(file) else { return false }
+        do { try d.write(to: url, options: .atomic); return true } catch { return false }
     }
     static func removeFiles(in directory: URL) {
         for n in [CoachJournal.fileName, ShadowLedger.fileName] { try? FileManager.default.removeItem(at: directory.appendingPathComponent(n)) }
