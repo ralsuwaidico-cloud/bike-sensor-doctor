@@ -7,6 +7,27 @@ import SwiftUI
 // Each control writes the same setting as the pages it replaces in the redesign (SettingsPage, RideCoachSettingsPage,
 // AdjustmentsView's switch), which the existing app keeps. Only what the app really does is offered.
 
+/// The switch of sheet P07: a light track with a dark knob when on, a dark track with a grey knob when off — told
+/// apart by position and by tone, never by colour alone. VoiceOver and the tests still see an ordinary switch.
+struct CySwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 10) {
+            configuration.label
+            Spacer(minLength: 8)
+            ZStack(alignment: configuration.isOn ? .trailing : .leading) {
+                Capsule().fill(configuration.isOn ? CyTheme.ink : CyTheme.card2)
+                    .overlay(Capsule().stroke(configuration.isOn ? Color.clear : CyTheme.ink2, lineWidth: 1.5))
+                Circle().fill(configuration.isOn ? CyTheme.canvas : CyTheme.ink2).padding(3.5)
+            }
+            .frame(width: 51, height: 31)
+        }
+        .frame(minHeight: CyTheme.minTap)
+        .contentShape(Rectangle())
+        .onTapGesture { configuration.isOn.toggle() }
+        .accessibilityRepresentation { Toggle(isOn: configuration.$isOn) { configuration.label } }
+    }
+}
+
 /// A switch row of sheet P07: title, one line of explanation, the switch, a hairline.
 struct CyToggleRow: View {
     let title: String
@@ -21,7 +42,7 @@ struct CyToggleRow: View {
                     Text(note).font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .tint(CyTheme.ink2).frame(minHeight: 60).accessibilityIdentifier(id)
+            .toggleStyle(CySwitchStyle()).frame(minHeight: 60).accessibilityIdentifier(id)
             Rectangle().fill(CyTheme.line).frame(height: 1).accessibilityHidden(true)
         }
     }

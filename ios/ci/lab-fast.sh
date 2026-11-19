@@ -37,6 +37,10 @@ xcrun simctl boot "$SIM" >/dev/null 2>&1 &      # the simulator starts while the
 # Safe use: every tracked source file gets one fixed date, and only the files that differ from the commit the kept
 # build was made from get today's date — so the compiler rebuilds exactly those. If that commit is unknown or cannot
 # be compared, or the request says "clean", the kept build is thrown away and everything is built from nothing.
+# Run 7 measured 245 s before the build even began and 93 s re-processing images for the one device. The build is
+# therefore made for "any iPhone simulator" (one architecture) and only the tests name the device. LAB_FAST_DEVICE_BUILD=1
+# returns to building for the named device.
+BUILD_DEST="generic/platform=iOS Simulator"; [ "${LAB_FAST_DEVICE_BUILD:-0}" = "1" ] && BUILD_DEST="id=$SIM"
 DD=build/lab-dd; MODE=clean; CHANGED=0
 git ls-files -z . | xargs -0 touch -t 202001010000 2>/dev/null
 defaults write com.apple.dt.XCBuild IgnoreFileSystemDeviceInodeChanges -bool YES 2>/dev/null
@@ -53,13 +57,13 @@ STAMP="$OUT/.start"; touch "$STAMP"; rm -f "$OUT/build.log" "$OUT/build.stamps"
 say "BUILD MODE: $MODE · files changed since then: $CHANGED"
 say "TIME setup: $((SECONDS-T0))s"
 T=$SECONDS
-xcodebuild build-for-testing -project CycliftLab.xcodeproj -scheme CycliftLab -configuration Debug -destination "id=$SIM" \
-  -derivedDataPath "$DD" -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO -showBuildTimingSummary 2>&1 | while IFS= read -r line; do printf '%s\n' "$line" >> "$OUT/build.log"; printf '%s\t%s\n' "$((SECONDS-T))" "${line:0:60}" >> "$OUT/build.stamps"; done
+xcodebuild build-for-testing -project CycliftLab.xcodeproj -scheme CycliftLab -configuration Debug -destination "$BUILD_DEST" \
+  -derivedDataPath "$DD" -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ONLY_ACTIVE_ARCH=YES ARCHS=arm64 -showBuildTimingSummary 2>&1 | while IFS= read -r line; do printf '%s\n' "$line" >> "$OUT/build.log"; printf '%s\t%s\n' "$((SECONDS-T))" "${line:0:60}" >> "$OUT/build.stamps"; done
 BS=${PIPESTATUS[0]}
 if [ $BS -ne 0 ] && [ "$MODE" != "clean" ]; then      # a kept build must never be the reason for a failure: once more from nothing
   say "  note: the build on the kept files failed — building again from nothing"; rm -rf "$DD"; MODE="clean (after a failed kept build)"
-  xcodebuild build-for-testing -project CycliftLab.xcodeproj -scheme CycliftLab -configuration Debug -destination "id=$SIM" \
-    -derivedDataPath "$DD" -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > "$OUT/build.log" 2>&1
+  xcodebuild build-for-testing -project CycliftLab.xcodeproj -scheme CycliftLab -configuration Debug -destination "$BUILD_DEST" \
+    -derivedDataPath "$DD" -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ONLY_ACTIVE_ARCH=YES ARCHS=arm64 > "$OUT/build.log" 2>&1
   BS=$?
 fi
 # where the build time went (Xcode's own summary), so the next slow step is measured, not guessed

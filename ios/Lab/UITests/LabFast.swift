@@ -87,6 +87,12 @@ final class LabFast: XCTestCase {
         // run 6 (first run on a newly created iPhone 15 Pro simulator): the field held "Demo L" after typing " Lab".
         // What the field holds is now checked on its own, so lost keystrokes are told apart from a save that loses text.
         XCTAssertEqual(name.value as? String, "Demo Lab", "required: the field holds what was typed")
+        for round in 1...3 {      // editing: remove what was added and type it again
+            name.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4))
+            XCTAssertEqual(name.value as? String, "Demo", "required (round \(round)): deleting four characters leaves the original name")
+            name.typeText(" Lab")
+            XCTAssertEqual(name.value as? String, "Demo Lab", "required (round \(round)): the field holds what was typed")
+        }
         XCTAssertTrue(save.isEnabled, "required: Save lights after a change")
         shot("p03-A1-personal-details-changed")
         save.tap(); app.settleForScreenshot(1)
@@ -116,6 +122,13 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(el(app, "equipExcluded").exists, "required: the restrictions row")
         shot("p04-B1-equipment")
         app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1)
+        let strength = el(app, "profilePreferences")
+        XCTAssertTrue(strength.waitForExistence(timeout: 8), "required: Strength preferences row"); strength.tap()
+        for id in ["hybridPlanLink", "strengthProgramming", "weekdayRoutines", "otherSports", "coachAdjustmentsRow"] { XCTAssertTrue(el(app, id).waitForExistence(timeout: 8), "required: \(id) stays reachable") }
+        shot("p04-B2-strength-preferences")
+        el(app, "hybridPlanLink").tap()
+        XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 8), "required: Strength split opens its editor")
+        app.navigationBars.buttons.firstMatch.tap(); app.navigationBars.buttons.firstMatch.tap()
         let recovery = el(app, "profileHealthSafety")
         XCTAssertTrue(recovery.waitForExistence(timeout: 8), "required: Recovery & pauses row"); recovery.tap(); app.settleForScreenshot(1)
         XCTAssertTrue(el(app, "recoveryCapacity").waitForExistence(timeout: 8), "required: the recovery control")
@@ -241,7 +254,7 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(units.waitForExistence(timeout: 8), "required: Units row"); shot("p07-E-app-preferences"); units.tap()
         let imperial = app.buttons["Imperial"].firstMatch, metric = app.buttons["Metric"].firstMatch
         XCTAssertTrue(imperial.waitForExistence(timeout: 8) && metric.isSelected, "required: the units control, Metric in the demo")
-        imperial.tap(); XCTAssertTrue(imperial.isSelected, "required: units change"); shot("p07-E1-units")
+        imperial.tap(); XCTAssertTrue(imperial.isSelected, "required: units change"); app.settleForScreenshot(1); shot("p07-E1-units")
         metric.tap(); XCTAssertTrue(metric.isSelected, "units restored")
         back(app)
         let notif = el(app, "profileNotifications")
@@ -250,9 +263,10 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(keep.waitForExistence(timeout: 8), "required: Keep the screen on")
         for id in ["settingsNotifications", "rideTiles", "rideDisplay"] { XCTAssertTrue(el(app, id).exists, "required: \(id)") }
         let was = keep.value as? String
-        keep.switches.firstMatch.exists ? keep.switches.firstMatch.tap() : keep.tap()
+        keep.tap()
         XCTAssertNotEqual(keep.value as? String, was, "required: the switch changes"); shot("p07-E2-notifications-display")
-        keep.switches.firstMatch.exists ? keep.switches.firstMatch.tap() : keep.tap()
+        keep.tap()
+        XCTAssertEqual(keep.value as? String, was, "the switch is restored")
         back(app)
         let coach = el(app, "profileCoach")
         XCTAssertTrue(coach.waitForExistence(timeout: 8), "required: Coach row"); coach.tap()
