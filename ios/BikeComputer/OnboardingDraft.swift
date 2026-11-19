@@ -416,3 +416,82 @@ enum DeviceCards {
         return out
     }
 }
+
+// MARK: - Profile › Devices & Connections (sheet P06): one row per device family, state in a word and a shape
+
+/// The six connection states of sheet P06. Told apart by word and symbol, never by colour.
+enum ProfileConnection: String, CaseIterable, Equatable {
+    case receiving, connected, paired, disconnected, unavailable, notConfigured
+    var word: String {
+        switch self {
+        case .receiving: return "Receiving"; case .connected: return "Connected"; case .paired: return "Paired"
+        case .disconnected: return "Disconnected"; case .unavailable: return "Unavailable"; case .notConfigured: return "Not configured"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .receiving: return "dot.radiowaves.left.and.right"; case .connected: return "circle.fill"; case .paired: return "circle"
+        case .disconnected: return "circle.slash"; case .unavailable: return "circle.dashed"; case .notConfigured: return "plus"
+        }
+    }
+    /// Best first: used to show one state for a family of several sensors.
+    var rank: Int { switch self { case .receiving: return 5; case .connected: return 4; case .paired: return 3; case .disconnected: return 2; case .unavailable: return 1; case .notConfigured: return 0 } }
+}
+
+struct ProfileDeviceRow: Identifiable, Equatable {
+    enum Opens: Equatable { case health, devices, diagnostics, nothing }
+    var id: String
+    var title: String
+    var summary: String
+    var state: ProfileConnection?
+    var opens: Opens
+}
+
+enum ProfileDeviceRows {
+    /// The link's real state in the sheet's six words. A problem caused by Bluetooth or a permission being off is
+    /// "Unavailable" (it cannot be used until that changes); any other problem is "Disconnected" (the link was lost).
+    static func connection(_ s: DeviceState, usable: Bool = true) -> ProfileConnection {
+        guard usable else { return .unavailable }
+        switch s {
+        case .notPaired: return .notConfigured
+        case .paired: return .paired
+        case .connected, .stale: return .connected
+        case .receivingData: return .receiving
+        case .problem(let reason):
+            let r = reason.lowercased()
+            return ["bluetooth is off", "permission", "not allowed", "denied", "not available"].contains { r.contains($0) } ? .unavailable : .disconnected
+        }
+    }
+
+    /// One row per family, from the same cards the existing devices screen is built from (DeviceCards.build).
+    static func build(cards: [DeviceCardModel], healthAvailable: Bool, cycling: Bool) -> [ProfileDeviceRow] {
+        func card(_ id: String) -> DeviceCardModel? { cards.first { $0.id == id } }
+        func line(_ c: DeviceCardModel) -> String {
+            if case .problem(let reason) = c.state { return reason }
+            if case .stale = c.state { return "No recent data" }
+            return c.detail.isEmpty ? c.provides : c.detail.prefix(1).uppercased() + c.detail.dropFirst()
+        }
+        var out: [ProfileDeviceRow] = []
+        if let h = card(DeviceCards.healthId) {
+            out.append(ProfileDeviceRow(id: "health", title: "Apple Health", summary: healthAvailable ? line(h) : "Not available on this device",
+                                        state: connection(h.state, usable: healthAvailable), opens: .health))
+        }
+        if let w = card(DeviceCards.watchId) { out.append(ProfileDeviceRow(id: "watch", title: "Apple Watch", summary: line(w), state: connection(w.state), opens: .devices)) }
+        if cycling, let b = card(DeviceCards.boardId) { out.append(ProfileDeviceRow(id: "board", title: "Cyclift BikeComputer", summary: line(b), state: connection(b.state), opens: .devices)) }
+        out.append(ProfileDeviceRow(id: "cywatch", title: "Cyclift Watch", summary: "A future device", state: .unavailable, opens: .nothing))
+        if cycling {
+            func family(_ id: String, _ title: String, _ image: String, _ empty: String) -> ProfileDeviceRow {
+                let own = cards.filter { $0.systemImage == image && !$0.id.hasPrefix("add.") }
+                guard let best = own.max(by: { connection($0.state).rank < connection($1.state).rank }) else {
+                    return ProfileDeviceRow(id: id, title: title, summary: empty, state: .notConfigured, opens: .devices)
+                }
+                return ProfileDeviceRow(id: id, title: title, summary: own.map(\.name).joined(separator: ", "), state: connection(best.state), opens: .devices)
+            }
+            out.append(family("hr", "Heart-rate sensors", "heart.fill", "Add a sensor"))
+            out.append(family("power", "Power meters", "bolt.fill", "Add a meter"))
+            out.append(family("other", "Other sensors", "gauge.with.dots.needle.33percent", "Speed · cadence"))
+        }
+        out.append(ProfileDeviceRow(id: "diagnostics", title: "Connection diagnostics", summary: "What is arriving right now", state: nil, opens: .diagnostics))
+        return out
+    }
+}

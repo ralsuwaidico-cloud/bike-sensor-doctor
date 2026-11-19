@@ -264,9 +264,7 @@ struct CyProfileDevices: View {
                     CyProfileRow(title: "Cyclift Watch", summary: "Unavailable — a future device", kind: .notAvailable, id: "profileDevice-watch")
                     CyProfileRow(title: "This iPhone", summary: "Bluetooth and location are not used in Cyclift Lab", kind: .fact, id: "profileDevice-phone")
                 } else {
-                    CyProfileRow(title: "Devices & sensors", summary: "BikeComputer, sensors, Apple Watch", id: "profileDevices") { DevicesScreen() }
-                    CyProfileRow(title: "Apple Health", summary: "Use, ride export, workout import", id: "profileHealth") { HealthConnectionDetail() }
-                    CyProfileRow(title: "Cyclift Watch", summary: "Unavailable — a future device", kind: .notAvailable, id: "profileDevice-watch")
+                    CyProfileDeviceFamilies()
                 }
             }
         }
@@ -333,6 +331,59 @@ struct CyProfileThemes: View {
 }
 
 // MARK: - F · Data, Help & About
+
+/// Sheet P06 in the main app: one row per device family with its real state on the right. Pairing, repair, sync and
+/// device settings keep their existing screens behind these rows (DevicesScreen, HealthConnectionDetail, diagnostics).
+struct CyProfileDeviceFamilies: View {
+    @EnvironmentObject private var store: Store
+    @EnvironmentObject private var hub: SensorHub
+    @EnvironmentObject private var device: DeviceLink
+    @EnvironmentObject private var health: HealthAccess
+
+    private var rows: [ProfileDeviceRow] {
+        let states = UITestSupport.deviceStatesForDisplay() ?? hub.deviceStates
+        let sensors = hub.ble.paired.map { DeviceCards.Sensor(id: $0.sourceId, name: $0.name, provides: $0.kinds.map(\.title).joined(separator: ", "),
+                                                              hasHR: $0.kinds.contains(.heartRate), hasPower: $0.kinds.contains(.power), hasCadence: $0.kinds.contains(.speedCadence)) }
+        let cards = DeviceCards.build(states: states, mode: store.profile.trainingMode, bleSensors: sensors, healthAvailable: health.available, boardRemembered: device.remembered)
+        return ProfileDeviceRows.build(cards: cards, healthAvailable: health.available, cycling: store.profile.trainingMode.includesCycling)
+    }
+
+    var body: some View {
+        ForEach(rows) { r in
+            switch r.opens {
+            case .health: NavigationLink { HealthConnectionDetail() } label: { label(r) }.buttonStyle(.plain).accessibilityIdentifier("profileDevice-\(r.id)")
+            case .devices: NavigationLink { DevicesScreen() } label: { label(r) }.buttonStyle(.plain).accessibilityIdentifier("profileDevice-\(r.id)")
+            case .diagnostics: NavigationLink { PipelineDiagnosticsView() } label: { label(r) }.buttonStyle(.plain).accessibilityIdentifier("profileDevice-\(r.id)")
+            case .nothing: label(r).accessibilityIdentifier("profileDevice-\(r.id)")
+            }
+        }
+    }
+
+    private func label(_ r: ProfileDeviceRow) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(r.title).font(CyDyn.f(16.5, .semibold)).foregroundStyle(r.opens == .nothing ? CyTheme.ink2 : CyTheme.ink)
+                    Text(r.summary).font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                if let s = r.state {
+                    HStack(spacing: 5) {
+                        Image(systemName: s.symbol).font(.system(size: 11, weight: .bold)).accessibilityHidden(true)
+                        Text(s.word).font(CyDyn.f(13, .semibold))
+                    }
+                    .foregroundStyle(s == .receiving || s == .connected ? CyTheme.ink : CyTheme.ink2)
+                }
+                if r.opens != .nothing { Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(CyTheme.ink3).accessibilityHidden(true) }
+            }
+            .frame(minHeight: 60).contentShape(Rectangle())
+            Rectangle().fill(CyTheme.line).frame(height: 1).accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(r.title), \(r.state?.word ?? ""). \(r.summary)")
+        .accessibilityAddTraits(r.opens == .nothing ? [] : .isButton)
+    }
+}
 
 struct CyProfileData: View {
     var body: some View {

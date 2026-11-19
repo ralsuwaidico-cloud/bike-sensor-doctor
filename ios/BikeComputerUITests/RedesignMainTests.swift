@@ -189,4 +189,72 @@ final class RedesignMainTests: XCTestCase {
         XCTAssertFalse(again.exists && again.label.hasPrefix("Start"), "after the relaunch today's strength session is not offered to start again (\(again.exists ? again.label : "no button"))")
         shot("s6-panel-after-relaunch")
     }
+
+    /// Profile in the MAIN app with the redesign on (owner directive, 19 Nov 2026): Devices & Connections (sheet P06)
+    /// drawn in controlled connection states — no hardware — and a Profile edit that is stored by the real store.
+    /// The states are given only to that page for display (simulator-only setting); nothing is connected or recorded.
+    func testProfileDevicesAndAnEditInTheRedesignedMainApp() {
+        func launch(_ states: String?) -> XCUIApplication {
+            let app = XCUIApplication()
+            app.launchEnvironment["BC_UITEST_SEED_JSON"] = LaunchSmokeTests.build36Store()
+            app.launchEnvironment["BC_UITEST_REDESIGN"] = "1"; app.launchEnvironment["BC_UITEST_THEME"] = "obsidian"
+            if let states { app.launchEnvironment["BC_UITEST_DEVICE_STATES"] = states }
+            app.launch()
+            must(el(app, "homeV23"), "Home v2.3 in the main app", timeout: 40)
+            XCTAssertFalse(el(app, "labThemeName").exists, "the main app carries no Cyclift Lab strip")
+            let avatar = app.buttons["homeAvatar"].firstMatch; must(avatar, "the Home avatar"); avatar.tap()
+            return app
+        }
+        func openDevices(_ app: XCUIApplication) { let d = el(app, "profileSectionD"); must(d, "Devices & Connections on the Profile landing"); d.tap(); must(el(app, "profileDevice-watch"), "the Apple Watch row") }
+        func label(_ app: XCUIApplication, _ id: String) -> String { el(app, "profileDevice-\(id)").label }
+
+        // 1 connected, receiving, and Bluetooth off
+        var app = launch("apple-health=connected;watch=receiving;bikecomputer=problem:Bluetooth is off")
+        openDevices(app)
+        XCTAssertTrue(label(app, "watch").contains("Receiving"), "required: a live watch reads Receiving (\(label(app, "watch")))")
+        let health = label(app, "health")
+        XCTAssertTrue(health.contains("Connected") || health.contains("Unavailable"), "required: Apple Health reads Connected, or Unavailable where the device has none (\(health))")
+        if el(app, "profileDevice-board").exists { XCTAssertTrue(label(app, "board").contains("Unavailable"), "required: Bluetooth off reads Unavailable (\(label(app, "board")))") }
+        XCTAssertTrue(label(app, "cywatch").contains("Unavailable"), "required: the future Cyclift Watch is never shown as working")
+        must(el(app, "profileDevice-diagnostics"), "Connection diagnostics")
+        shot("p06-1-connected-receiving-unavailable")
+        el(app, "profileDevice-watch").tap()
+        must(app.navigationBars["Devices & sensors"].firstMatch, "a device row opens the existing devices screen")
+        app.terminate()
+
+        // 2 a lost link and a denied permission
+        app = launch("watch=problem:Out of range;bikecomputer=problem:Cyclift is not allowed to use Bluetooth")
+        openDevices(app)
+        XCTAssertTrue(label(app, "watch").contains("Disconnected"), "required: a lost link reads Disconnected (\(label(app, "watch")))")
+        if el(app, "profileDevice-board").exists { XCTAssertTrue(label(app, "board").contains("Unavailable"), "required: a denied permission reads Unavailable (\(label(app, "board")))") }
+        shot("p06-2-disconnected-permission-denied")
+        app.terminate()
+
+        // 3 nothing set up (the real state of this simulator), then a Profile edit stored by the real store
+        app = launch(nil)
+        openDevices(app)
+        XCTAssertTrue(label(app, "watch").contains("Not configured") || label(app, "watch").contains("Paired") || label(app, "watch").contains("Unavailable"), "required: with no watch the row does not claim a connection (\(label(app, "watch")))")
+        shot("p06-3-real-state")
+        app.navigationBars.buttons.firstMatch.tap()
+        let a = el(app, "profileSectionA"); must(a, "Athlete Profile"); a.tap()
+        let personal = el(app, "profilePersonal"); must(personal, "Personal details row"); personal.tap()
+        let name = app.textFields["personalName"].firstMatch; must(name, "the name field")
+        let save = app.buttons["personalSave"].firstMatch; XCTAssertFalse(save.isEnabled, "Save is unlit until something changes")
+        name.tap(); name.typeText("X")
+        XCTAssertTrue((name.value as? String ?? "").hasSuffix("X"), "required: the field holds what was typed (\(String(describing: name.value)))")
+        XCTAssertTrue(save.isEnabled, "required: Save lights after a change"); save.tap()
+        must(personal, "back on Athlete Profile after Save")
+        XCTAssertTrue(personal.label.contains("X"), "required: the saved name is shown (\(personal.label))")
+        shot("p03-main-app-personal-saved")
+        app.terminate()
+        // relaunch WITHOUT a new seed: the stored name survived
+        let again = XCUIApplication()
+        again.launchEnvironment["BC_UITEST_REDESIGN"] = "1"; again.launchEnvironment["BC_UITEST_THEME"] = "obsidian"
+        again.launch()
+        must(el(again, "homeV23"), "Home after relaunch", timeout: 40)
+        again.buttons["homeAvatar"].firstMatch.tap()
+        let a2 = el(again, "profileSectionA"); must(a2, "Athlete Profile after relaunch"); a2.tap()
+        let p2 = el(again, "profilePersonal"); must(p2, "Personal details row after relaunch")
+        XCTAssertTrue(p2.label.contains("X"), "required: the edit is still stored after relaunch (\(p2.label))")
+    }
 }

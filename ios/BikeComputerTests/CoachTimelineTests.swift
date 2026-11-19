@@ -94,4 +94,31 @@ final class CoachTimelineTests: XCTestCase {
         if case .adaptiveProposal = after?.source { XCTFail("a postponed suggestion is not pushed again on Home or Plan") }
         XCTAssertNotNil(CoachJournal(directory: dir).postponedAt(p.id), "the Coach page still has it, marked")
     }
+
+    /// Profile › Devices (sheet P06): the six state words, from controlled link states — no hardware.
+    func testProfileDeviceRowsShowTheRealStateInTheSheetsWords() {
+        XCTAssertEqual(ProfileDeviceRows.connection(.connected), .connected)
+        XCTAssertEqual(ProfileDeviceRows.connection(.receivingData(lastSampleAt: Date())), .receiving)
+        XCTAssertEqual(ProfileDeviceRows.connection(.stale(lastSampleAt: Date())), .connected)
+        XCTAssertEqual(ProfileDeviceRows.connection(.paired), .paired)
+        XCTAssertEqual(ProfileDeviceRows.connection(.notPaired), .notConfigured)
+        XCTAssertEqual(ProfileDeviceRows.connection(.problem(reason: "Out of range")), .disconnected, "a lost link is Disconnected")
+        XCTAssertEqual(ProfileDeviceRows.connection(.problem(reason: "Bluetooth is off")), .unavailable, "Bluetooth off is Unavailable")
+        XCTAssertEqual(ProfileDeviceRows.connection(.problem(reason: "Cyclift is not allowed to use Bluetooth")), .unavailable, "a denied permission is Unavailable")
+        XCTAssertEqual(ProfileDeviceRows.connection(.connected, usable: false), .unavailable, "an unsupported source is never shown as connected")
+        func status(_ id: String, _ s: DeviceState) -> DeviceStatus { DeviceStatus(id: id, name: id, state: s, lastSyncedAt: nil, provides: "") }
+        let states = [DeviceCards.healthId: status(DeviceCards.healthId, .connected), DeviceCards.watchId: status(DeviceCards.watchId, .receivingData(lastSampleAt: Date())),
+                      DeviceCards.boardId: status(DeviceCards.boardId, .problem(reason: "Bluetooth is off")), "strap": status("strap", .paired)]
+        let sensors = [DeviceCards.Sensor(id: "strap", name: "Polar H10", provides: "Heart rate", hasHR: true, hasPower: false, hasCadence: false)]
+        let cards = DeviceCards.build(states: states, mode: .hybrid, bleSensors: sensors, healthAvailable: true, boardRemembered: true)
+        let rows = ProfileDeviceRows.build(cards: cards, healthAvailable: true, cycling: true)
+        func state(_ id: String) -> ProfileConnection? { rows.first { $0.id == id }?.state }
+        XCTAssertEqual(rows.map(\.id), ["health", "watch", "board", "cywatch", "hr", "power", "other", "diagnostics"])
+        XCTAssertEqual(state("health"), .connected); XCTAssertEqual(state("watch"), .receiving); XCTAssertEqual(state("board"), .unavailable)
+        XCTAssertEqual(state("cywatch"), .unavailable, "the future device is never shown as working")
+        XCTAssertEqual(state("hr"), .paired); XCTAssertEqual(rows.first { $0.id == "hr" }?.summary, "Polar H10")
+        XCTAssertEqual(state("power"), .notConfigured); XCTAssertEqual(state("other"), .notConfigured)
+        let strengthOnly = ProfileDeviceRows.build(cards: DeviceCards.build(states: [:], mode: .strength, bleSensors: [], healthAvailable: false, boardRemembered: false), healthAvailable: false, cycling: false)
+        XCTAssertEqual(strengthOnly.map(\.id), ["health", "watch", "cywatch", "diagnostics"]); XCTAssertEqual(strengthOnly[0].state, .unavailable, "no Apple Health on this device")
+    }
 }

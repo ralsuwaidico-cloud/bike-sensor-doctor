@@ -206,6 +206,7 @@ jobs:
         timeout-minutes: ${{ matrix.minutes }}
         env:
           STAGE: ${{ matrix.stage }}
+          ONLY_SPEC: ${{ github.event_name == 'workflow_dispatch' && inputs.only || '' }}
           LAYOUT_DEVICES: ${{ matrix.devices }}
           BUILD_NUMBER: ${{ github.run_number }}
           # On a push the list is left to ios/ci/build.sh (LayoutAudit on every size; the component gallery audit on the

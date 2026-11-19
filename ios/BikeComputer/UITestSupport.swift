@@ -20,6 +20,34 @@ enum UITestSupport {
         #endif
     }
 
+    /// `BC_UITEST_DEVICE_STATES="apple-health=connected;watch=receiving;bikecomputer=problem:Bluetooth is off"`
+    /// SIMULATOR ONLY: lets the Profile › Devices page be SHOWN in chosen connection states without hardware. It
+    /// changes nothing the app uses to record or connect — only what that one page is given to draw. nil on a device.
+    static func deviceStatesForDisplay() -> [String: DeviceStatus]? {
+        #if targetEnvironment(simulator)
+        guard let raw = ProcessInfo.processInfo.environment["BC_UITEST_DEVICE_STATES"], !raw.isEmpty else { return nil }
+        var out: [String: DeviceStatus] = [:]
+        for part in raw.split(separator: ";") {
+            let kv = part.split(separator: "=", maxSplits: 1).map(String.init)
+            guard kv.count == 2 else { continue }
+            let word = kv[1].split(separator: ":", maxSplits: 1).map(String.init)
+            let state: DeviceState
+            switch word[0] {
+            case "paired": state = .paired
+            case "connected": state = .connected
+            case "receiving": state = .receivingData(lastSampleAt: Date())
+            case "stale": state = .stale(lastSampleAt: Date().addingTimeInterval(-120))
+            case "problem": state = .problem(reason: word.count > 1 ? word[1] : "Connection lost")
+            default: state = .notPaired
+            }
+            out[kv[0]] = DeviceStatus(id: kv[0], name: kv[0], state: state, lastSyncedAt: nil, provides: "", detail: "")
+        }
+        return out
+        #else
+        return nil
+        #endif
+    }
+
     // Training Hub v1.4 save states (sheets 06e X6, 06f X7): two switches so the "Not saved yet" and "Save not confirmed"
     // pages can be seen and their retries exercised. SIMULATOR ONLY, like everything in this file: on a real device both
     // always answer false. Neither touches the store or its file — they only make the screen take its failure path once.

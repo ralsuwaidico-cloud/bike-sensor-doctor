@@ -185,7 +185,12 @@ run_journeys() {
   command -v ffmpeg >/dev/null 2>&1 || brew install --quiet ffmpeg >/dev/null 2>&1 || note "  ffmpeg unavailable — recordings published only if small enough"
   local U=0
   warm_release_app
-  for persona in hybrid cycling strength; do record_journey "$persona" || U=1; done
+  # Focused main-app check (19 Nov 2026): only=journeys,redesign-only runs the redesigned-main-app tests on this same
+  # build without the three recorded journeys. A run made this way is NOT a journey result and says so.
+  case ",${ONLY_SPEC:-}," in
+    *",redesign-only,"*) note "  recorded journeys: NOT RUN (focused redesigned-main-app check)" ;;
+    *) for persona in hybrid cycling strength; do record_journey "$persona" || U=1; done ;;
+  esac
   # Main Development configuration (owner, 17 Nov 2026): the SAME build of the main app, run once more with the
   # redesign switched on by its simulator-only test setting. No second build, no other app.
   local RT=$SECONDS
@@ -195,7 +200,8 @@ run_journeys() {
   local RN; RN=$(grep -E "Test Case .*RedesignMainTests.* passed" "$OUT/redesign-main.log" | sort -u | wc -l | tr -d ' ')
   if [ $RM -eq 0 ] && [ "$RN" -ge 1 ]; then note "RESULT redesigned main app (switch on, real services, test athlete): ok · $RN test(s) · $(since $RT)"
   else note "RESULT redesigned main app (switch on, real services, test athlete): FAILED (exit $RM, passed $RN) · $(since $RT)"; U=1; fi
-  note "RESULT journey (recorded): $([ $U -eq 0 ] && echo ok || echo FAILED) — JourneyTests hybrid, cycling, strength · $(since $TS)"
+  case ",${ONLY_SPEC:-}," in *",redesign-only,"*) note "RESULT journey (recorded): not run — focused check · $(since $TS)" ;; *)
+  note "RESULT journey (recorded): $([ $U -eq 0 ] && echo ok || echo FAILED) — JourneyTests hybrid, cycling, strength · $(since $TS)" ;; esac
   [ $U -eq 0 ] || STATUS=1
 }
 
