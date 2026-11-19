@@ -12,8 +12,9 @@ final class LabFast: XCTestCase {
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         try? XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent("fast-\(name).png"))
     }
-    private func launch(_ extra: [String: String] = [:]) -> XCUIApplication {
+    private func launch(_ extra: [String: String] = [:], arguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchArguments += arguments
         app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
         app.launchEnvironment["LAB_THEME"] = "obsidian"
         for (k, v) in extra { app.launchEnvironment[k] = v }
@@ -143,5 +144,78 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(el(app, "powerMeter").exists, "required: the power-meter row")
         XCTAssertTrue(app.buttons["powerEdit"].firstMatch.exists, "required: Edit in the bar")
         shot("p05-C2-power")
+    }
+
+    private func openProfileSection(_ app: XCUIApplication, _ id: String) {
+        let avatar = app.buttons["homeAvatar"].firstMatch
+        XCTAssertTrue(avatar.waitForExistence(timeout: 8), "required: the Home avatar"); avatar.tap()
+        let s = el(app, id)
+        XCTAssertTrue(s.waitForExistence(timeout: 8), "required: \(id) on the Profile landing"); s.tap()
+    }
+    private func back(_ app: XCUIApplication) { app.navigationBars.buttons.firstMatch.tap() }
+    /// The two restriction rows must not run into each other.
+    private func restrictionRowsAreSeparate(_ app: XCUIApplication, _ tag: String) {
+        let a = el(app, "equipExcluded"), b = el(app, "equipPrefs")
+        XCTAssertTrue(a.waitForExistence(timeout: 8) && b.exists, "required (\(tag)): both restriction rows")
+        _ = app.reveal(b, top: 120, bottomMargin: 130)
+        print("LAB-NOTE equipment rows \(tag): first \(Int(a.frame.minY))–\(Int(a.frame.maxY)), second \(Int(b.frame.minY))–\(Int(b.frame.maxY))")
+        XCTAssertLessThanOrEqual(a.frame.maxY, b.frame.minY + 1, "required (\(tag)): the restriction rows do not overlap")
+    }
+
+    /// Edits that change training go through the existing preview and approval, and nothing changes when it is
+    /// cancelled: equipment (sheet P04 B1), recovery preference (B3), athlete type (P03 A3).
+    func testProfileEditsNeedApproval() {
+        let app = launch()
+        openProfileSection(app, "profileSectionB")
+        let equipment = el(app, "profileEquipment")
+        XCTAssertTrue(equipment.waitForExistence(timeout: 8), "required: Equipment row"); equipment.tap()
+        restrictionRowsAreSeparate(app, "normal text")
+        shot("p04-B1-equipment-rows")
+        let chip = app.buttons["equip-barbell"].firstMatch
+        XCTAssertTrue(chip.waitForExistence(timeout: 8), "required: the Barbell chip")
+        let before = chip.isSelected
+        chip.tap()
+        XCTAssertNotEqual(chip.isSelected, before, "the chip shows the choice")
+        back(app)
+        let apply = app.buttons["planChangeApply"].firstMatch, cancel = app.buttons["planChangeCancel"].firstMatch
+        XCTAssertTrue(apply.waitForExistence(timeout: 10), "required: an equipment change is previewed for approval")
+        shot("p04-B1-equipment-preview")
+        cancel.tap()
+        XCTAssertTrue(equipment.waitForExistence(timeout: 8), "back on Training Setup"); equipment.tap()
+        XCTAssertTrue(chip.waitForExistence(timeout: 8)); XCTAssertEqual(chip.isSelected, before, "required: cancelled means the equipment is unchanged")
+        back(app)
+        if apply.waitForExistence(timeout: 2) { cancel.tap() }      // leaving unchanged must not propose anything
+        let recovery = el(app, "profileHealthSafety")
+        XCTAssertTrue(recovery.waitForExistence(timeout: 8), "required: Recovery & pauses row"); recovery.tap()
+        let slower = app.buttons["Slower"].firstMatch, normal = app.buttons["Normal"].firstMatch
+        XCTAssertTrue(slower.waitForExistence(timeout: 8) && normal.isSelected, "required: recovery control, Normal chosen in the demo")
+        slower.tap()
+        XCTAssertTrue(apply.waitForExistence(timeout: 10), "required: a recovery change is previewed for approval")
+        shot("p04-B3-recovery-preview")
+        cancel.tap()
+        XCTAssertTrue(normal.waitForExistence(timeout: 8) && normal.isSelected, "required: cancelled means recovery is unchanged")
+        back(app); back(app)
+        let a = el(app, "profileSectionA")
+        XCTAssertTrue(a.waitForExistence(timeout: 8), "back on the landing"); a.tap()
+        let type = el(app, "profileType")
+        XCTAssertTrue(type.waitForExistence(timeout: 8), "required: Athlete type row"); type.tap()
+        let strength = el(app, "typeMode").buttons["Strength"].firstMatch, save = app.buttons["typeSave"].firstMatch
+        XCTAssertTrue(strength.waitForExistence(timeout: 8), "required: the Strength option"); strength.tap()
+        XCTAssertTrue(save.isEnabled, "required: Save lights after a change"); save.tap()
+        XCTAssertTrue(apply.waitForExistence(timeout: 10), "required: an athlete-type change is previewed for approval")
+        shot("p03-A3-type-preview")
+        cancel.tap()
+    }
+
+    /// The Equipment page at a large accessibility text size: chips wrap, the restriction rows stay separate.
+    func testEquipmentAtLargeText() {
+        let app = launch(arguments: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"])
+        openProfileSection(app, "profileSectionB")
+        let equipment = el(app, "profileEquipment")
+        XCTAssertTrue(equipment.waitForExistence(timeout: 8), "required: Equipment row"); equipment.tap()
+        XCTAssertGreaterThanOrEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'equip-'")).count, 4, "required: the chips")
+        shot("p04-B1-equipment-large-text")
+        restrictionRowsAreSeparate(app, "large text")
+        shot("p04-B1-equipment-large-text-rows")
     }
 }
