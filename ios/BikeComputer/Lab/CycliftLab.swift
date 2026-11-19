@@ -52,6 +52,7 @@ enum LabTheme {
 struct LabChrome: ViewModifier {
     @ObservedObject private var theme = CyThemeState.shared
     @State private var restoreAsked = false
+    @State private var choosing = false
     private var label: String {
         return theme.preference.mode == .system ? "Theme: follows iOS" : "Theme: \(theme.preference.resolved(systemIsDark: false).title)"
     }
@@ -73,8 +74,21 @@ struct LabChrome: ViewModifier {
                 Text(label).font(.system(size: 10, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.7)
                     .foregroundStyle(CyTheme.ink2)
                     .accessibilityIdentifier("labThemeName")
+                // Owner's direction, 19 Nov 2026: the demonstration states (supersets, an open Coach suggestion, a ride day,
+                // a new athlete) must be reachable on the phone, not only through test settings. A plain button opening a
+                // sheet of plain buttons (the pull-down menu here was unreliable, see above).
+                Button { choosing = true } label: {
+                    Text("Scenario").font(.system(size: 10, weight: .heavy)).lineLimit(1)
+                        .foregroundStyle(CyTheme.ink)
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .overlay(Capsule().stroke(CyTheme.ink2, lineWidth: 1))
+                        .frame(minWidth: 44, minHeight: 26).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Choose a demonstration scenario. Now: \(LabDemoData.scenario.title)")
+                .accessibilityIdentifier("labScenario")
                 Button { LabDemoData.restoreAtNextLaunch(); restoreAsked = true } label: {
-                    Text(restoreAsked ? "Reopen Lab" : "Restore demo").font(.system(size: 10, weight: .heavy)).lineLimit(1)
+                    Text(restoreAsked ? "Reopen Lab" : "Restore").font(.system(size: 10, weight: .heavy)).lineLimit(1)
                         .foregroundStyle(CyTheme.ink)
                         .padding(.horizontal, 7).padding(.vertical, 3)
                         .overlay(Capsule().stroke(CyTheme.ink2, lineWidth: 1))
@@ -90,6 +104,75 @@ struct LabChrome: ViewModifier {
             .background(CyTheme.canvas.ignoresSafeArea(edges: .top))
             content
         }
+        .sheet(isPresented: $choosing) { LabScenarioSheet { restoreAsked = true; choosing = false } .cyThemeRoot() }
+    }
+}
+
+/// The demonstration states Lab can start from. Each is the same generated athlete with one difference in their own
+/// records; the app's own planner, session builder and Coach rules produce what is shown. Nothing is drawn by hand,
+/// nothing is real, and choosing one only rewrites Lab's own folder at the next launch.
+enum LabScenario: String, CaseIterable, Identifiable {
+    case normal, supersets, proposal, cycling, newAthlete
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .normal: return "Normal athlete"
+        case .supersets: return "Strength with supersets"
+        case .proposal: return "Coach suggestion waiting"
+        case .cycling: return "Cycling day"
+        case .newAthlete: return "New athlete"
+        }
+    }
+    var detail: String {
+        switch self {
+        case .normal: return "A hybrid athlete with a plan, ride history and a strength session today."
+        case .supersets: return "The same athlete prefers supersets, so today's session pairs exercises."
+        case .proposal: return "The same athlete has a routine today that the Coach's rules suggest increasing. It waits for a decision."
+        case .cycling: return "Today's planned session is a ride. The ride screen is a simulation: no sensor, no GPS, nothing saved."
+        case .newAthlete: return "No athlete at all. Lab opens at onboarding."
+        }
+    }
+}
+
+struct LabScenarioSheet: View {
+    var chosen: () -> Void
+    @State private var asked: LabScenario? = nil
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Demonstration scenario").font(CyDyn.f(22, .bold)).foregroundStyle(CyTheme.ink)
+                Text("Synthetic data only. Choosing one replaces what Lab holds now, the next time Lab is opened.")
+                    .font(CyDyn.f(13)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
+                ForEach(LabScenario.allCases) { s in
+                    Button { LabDemoData.choose(s); asked = s } label: {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: (asked ?? LabDemoData.scenario) == s ? "largecircle.fill.circle" : "circle")
+                                .foregroundStyle(CyTheme.ink).padding(.top, 2).accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(s.title).font(CyDyn.f(16, .semibold)).foregroundStyle(CyTheme.ink)
+                                Text(s.detail).font(CyDyn.f(13)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 10).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("labScenario-\(s.rawValue)")
+                    Divider().overlay(CyTheme.ink2.opacity(0.25))
+                }
+                if let a = asked {
+                    Text("“\(a.title)” starts when you close and reopen Cyclift Lab.").font(CyDyn.f(14, .semibold)).foregroundStyle(CyTheme.ink)
+                        .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("labScenarioAsked")
+                    Button(action: chosen) {
+                        Text("Done").font(CyDyn.f(16, .semibold)).foregroundStyle(CyTheme.canvas)
+                            .frame(maxWidth: .infinity, minHeight: 48).background(Capsule().fill(CyTheme.ink))
+                    }
+                    .buttonStyle(.plain).accessibilityIdentifier("labScenarioDone")
+                }
+            }
+            .padding(20)
+        }
+        .background(CyTheme.canvas.ignoresSafeArea())
     }
 }
 
@@ -98,6 +181,25 @@ enum LabDemoData {
     /// Lab's own notes, kept beside (not inside) the record folder so "Delete all data" does not remove them.
     private static func note(_ name: String, _ dir: URL) -> URL { dir.deletingLastPathComponent().appendingPathComponent("cyclift-lab-\(name)") }
     private static var recordDir: URL? = nil
+
+    /// The scenario Lab is showing: the one chosen in the Lab strip (kept in a note beside the record folder), unless a
+    /// screen test names one through its launch settings.
+    static var scenario: LabScenario {
+        let env = ProcessInfo.processInfo.environment
+        if env["LAB_NEW_ATHLETE"] == "1" { return .newAthlete }
+        if env["LAB_DEMO_PROPOSAL"] == "1" { return .proposal }
+        if env["LAB_DEMO_SUPERSETS"] == "1" { return .supersets }
+        if env["LAB_FRESH_DEMO"] == "1" { return .normal }       // screen tests that name nothing start from the plain athlete
+        if let d = recordDir, let raw = try? String(contentsOf: note("scenario", d), encoding: .utf8),
+           let s = LabScenario(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines)) { return s }
+        return .normal
+    }
+    /// Remembers the choice and asks for Lab's folder to be rewritten from it at the next launch. Lab's own folder only.
+    static func choose(_ s: LabScenario) {
+        guard let d = recordDir else { return }
+        try? Data(s.rawValue.utf8).write(to: note("scenario", d))
+        restoreAtNextLaunch()
+    }
 
     /// Writes the demo athlete once: on Lab's first launch, or when "Restore the demo athlete" was chosen. After
     /// "Delete all data" Lab stays empty (it starts at Welcome, like a new install) until the demo athlete is restored.
@@ -111,7 +213,8 @@ enum LabDemoData {
         if ProcessInfo.processInfo.environment["LAB_FRESH_DEMO"] == "1" { try? Data().write(to: restore) }
         // LAB_NEW_ATHLETE=1 (screen tests): start this launch with no athlete at all, exactly as after "Delete all data",
         // so an onboarding screen can be checked without first deleting through the interface. Lab's own folder only.
-        if ProcessInfo.processInfo.environment["LAB_NEW_ATHLETE"] == "1" {
+        if ProcessInfo.processInfo.environment["LAB_NEW_ATHLETE"] == "1" || (scenario == .newAthlete && fm.fileExists(atPath: restore.path)) {
+            try? fm.removeItem(at: restore)
             if let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) { for f in files { try? fm.removeItem(at: f) } }
             try? Data().write(to: seeded)
             return
@@ -140,6 +243,7 @@ enum LabDemoData {
             let day = cal.date(byAdding: .day, value: i, to: monday)!
             var kind = ["endurance", "rest", "tempo", "rest", "endurance", "long", "rest"][i]
             if cal.isDate(day, inSameDayAs: today) || cal.isDate(day, inSameDayAs: tomorrow) { kind = "strength" }
+            if scenario == .cycling && cal.isDate(day, inSameDayAs: today) { kind = "endurance" }      // a ride day
             let mins = kind == "rest" ? 0 : kind == "long" ? 120 : kind == "strength" ? 40 : 60
             var w: [String: Any] = ["id": UUID().uuidString, "date": d(day, 7), "kind": kind, "minutes": mins, "done": false, "skipped": false, "note": "", "edited": false, "sequence": 0]
             if kind == "strength" { w["strengthFocus"] = "fullBody" }
@@ -191,12 +295,12 @@ enum LabDemoData {
         var out = file
         // LAB_DEMO_SUPERSETS=1 (screen tests): the demo athlete has said they prefer supersets, so the app's own session
         // builder pairs exercises and the preparation screen and recorder show a real superset. Nothing is drawn by hand.
-        if ProcessInfo.processInfo.environment["LAB_DEMO_SUPERSETS"] == "1" { out["strengthPrefs"] = ["prefersSupersets": true] }
+        if scenario == .supersets { out["strengthPrefs"] = ["prefersSupersets": true] }
         // LAB_DEMO_PROPOSAL=1 (screen tests): the demo athlete also has one saved routine of their own, planned for
         // today, at the weight the demo history shows lifted twice in a row at a moderate effort. No suggestion is written
         // here: the app's own rules read these records and raise the increase themselves, and it waits for approval like
         // any other. (Earlier in the day than the Coach-built session: the rules look at the NEXT session of an exercise.)
-        if ProcessInfo.processInfo.environment["LAB_DEMO_PROPOSAL"] == "1" {
+        if scenario == .proposal {
             func open(_ reps: Int, _ kg: Double) -> [String: Any] { ["id": UUID().uuidString, "reps": reps, "weightKg": kg, "bodyweight": false, "unilateral": false, "done": false] }
             let squat: [String: Any] = ["id": UUID().uuidString, "exerciseId": "ex-003", "name": "Goblet squat", "pattern": "squat", "sets": [open(10, 25), open(10, 25), open(10, 25)], "notes": ""]
             let routineId = UUID().uuidString

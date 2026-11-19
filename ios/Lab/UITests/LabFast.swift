@@ -353,4 +353,68 @@ final class LabFast: XCTestCase {
         var n = 0; while !(delete.exists && delete.isHittable) && n < 8 { app.swipeUp(); n += 1 }
         XCTAssertTrue(delete.exists, "required: Delete all data reaches the existing protected control (not pressed here)")
     }
+    /// The Lab scenario selector (owner's direction, 19 Nov 2026): every demonstration state is reached the way it is on
+    /// the phone — from the Scenario button in the Lab strip, then closing and reopening Lab — with NO test setting
+    /// naming the state. Required for each: the choice is confirmed, nothing changes before reopening, and after
+    /// reopening the app's own screens show that state. Ends on the normal athlete so later checks start as before.
+    func testScenarioSelector() {
+        func open() -> XCUIApplication { let a = XCUIApplication(); a.launchEnvironment["LAB_THEME"] = "obsidian"; a.launch(); return a }
+        func choose(_ app: XCUIApplication, _ id: String) {
+            let b = app.buttons["labScenario"].firstMatch
+            XCTAssertTrue(b.waitForExistence(timeout: 30), "required: the Scenario button in the Lab strip (\(id))"); b.tap()
+            let row = app.buttons["labScenario-\(id)"].firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 8), "required: the scenario \(id) is offered")
+            if id == "supersets" {
+                for other in ["normal", "proposal", "cycling", "newAthlete"] { XCTAssertTrue(app.buttons["labScenario-\(other)"].firstMatch.exists, "required: scenario \(other) is offered") }
+                app.settleForScreenshot(1); shot("scenario-0-sheet")
+            }
+            row.tap()
+            XCTAssertTrue(el(app, "labScenarioAsked").waitForExistence(timeout: 5), "required: the sheet says the scenario starts after reopening")
+            let done = app.buttons["labScenarioDone"].firstMatch
+            XCTAssertTrue(done.exists, "required: Done"); done.tap()
+            app.settleForScreenshot(1)
+            app.terminate()
+        }
+        var app = launch()                         // a fresh normal athlete to start from
+        choose(app, "supersets")
+        app = open()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: supersets scenario opens on Home")
+        app.buttons["centreButton"].firstMatch.tap()
+        var primary = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertTrue(primary.waitForExistence(timeout: 8), "required: the panel offers today's session"); primary.tap()
+        XCTAssertTrue(el(app, "prepareSuperset-A").waitForExistence(timeout: 10), "required: the chosen scenario shows a superset on the preparation screen")
+        shot("scenario-1-supersets")
+        app.terminate(); app = open()      // the strip is under the full-screen workout; choose from the main screen
+        choose(app, "proposal")
+        app = open()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: proposal scenario opens on Home")
+        tab(app, "Plan")
+        let row = el(app, "planCoachRow")
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "required: Plan shows the Coach row")
+        XCTAssertTrue(row.label.hasPrefix("Coach Suggests") && row.label.contains("Goblet squat"), "required: the chosen scenario has an open suggestion (\(row.label))")
+        shot("scenario-2-proposal")
+        choose(app, "cycling")
+        app = open()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: cycling scenario opens on Home")
+        app.buttons["centreButton"].firstMatch.tap()
+        primary = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertTrue(primary.waitForExistence(timeout: 8), "required: the panel offers today's ride")
+        app.settleForScreenshot(1); shot("scenario-3-cycling-panel")
+        primary.tap()
+        XCTAssertTrue(el(app, "cyclingRecorderV14").waitForExistence(timeout: 10), "required: today's ride opens the cycling screen")
+        let strip = el(app, "cyclingSimulated")
+        XCTAssertTrue(strip.exists && strip.label.contains("SIMULATED"), "required: the ride says it is simulated (\(strip.label))")
+        shot("scenario-3-cycling")
+        app.terminate(); app = open()      // the strip is under the full-screen workout; choose from the main screen
+        choose(app, "newAthlete")
+        app = open()
+        XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.waitForExistence(timeout: 30), "required: the new-athlete scenario opens at onboarding")
+        shot("scenario-4-new-athlete")
+        choose(app, "normal")
+        app = open()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: the normal athlete is back")
+        tab(app, "Plan")
+        XCTAssertFalse(el(app, "planCoachRow").label.contains("Goblet squat"), "required: the normal athlete has no open suggestion")
+        shot("scenario-5-normal")
+    }
 }
