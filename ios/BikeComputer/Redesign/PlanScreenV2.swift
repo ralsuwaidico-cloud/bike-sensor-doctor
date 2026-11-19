@@ -107,6 +107,8 @@ struct PlanScreen: View {
     @State private var selectedDay = 12
     @State private var placeholder: String? = nil
     @State private var didInit = false
+    @State private var moreOpen = false          // the "More" page
+    @State private var morePending: String? = nil
     @State private var weekLog: [String] = []    // diagnostic: every week change and where it came from
     private var large: Bool { typeSize.isAccessibilitySize }
 
@@ -148,6 +150,38 @@ struct PlanScreen: View {
         }
     }
 
+    private var planMoreChoices: [(title: String, action: String, id: String)] {
+        [(data.goalTitle == nil ? "Set a goal" : "Add another goal", "Add a goal", "planMoreGoal"),
+         ("Routines", "Routines", "planMoreRoutines"),
+         ("Availability & preferences", "Availability & preferences", "planMoreAvailability"),
+         ("Plan history", "Plan history", "planMoreHistory")]
+    }
+    private var planMoreSheet: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Plan").font(.title3.weight(.heavy)).foregroundStyle(theme.textPrimary)
+                .accessibilityAddTraits(.isHeader).padding(.bottom, 6)
+            ForEach(planMoreChoices, id: \.id) { c in
+                Button { morePending = c.action; moreOpen = false } label: {
+                    HStack {
+                        Text(c.title).font(.body.weight(.semibold)).foregroundStyle(theme.textPrimary)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(theme.textSecondary)
+                            .accessibilityHidden(true)
+                    }
+                    .frame(minHeight: 48).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(c.id)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20).padding(.top, 26)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(theme.background.ignoresSafeArea())
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
     // MARK: Header, program, selector
 
     private var header: some View {
@@ -155,17 +189,19 @@ struct PlanScreen: View {
             Text("Plan").font(CyFont.display).foregroundStyle(theme.textPrimary)
                 .accessibilityAddTraits(.isHeader).accessibilityIdentifier("planTitle")
             Spacer()
-            Menu {
-                Button(data.goalTitle == nil ? "Set a goal" : "Add another goal") { act("Add a goal") }
-                Button("Routines") { act("Routines") }
-                Button("Availability & preferences") { act("Availability & preferences") }
-                Button("Plan history") { act("Plan history") }
-            } label: {
+            // 19 Nov 2026: a plain button opening a short page of plain buttons. Pull-down menu rows could not be pressed
+            // reliably in this app (Lab strip menu, Progress menu, recorder options — fast checks 15 and 17), so the same
+            // four choices are now ordinary buttons. The choice is carried out after the page has closed.
+            Button { moreOpen = true } label: {
                 Image(systemName: "ellipsis").font(.headline).foregroundStyle(theme.textPrimary)
                     .frame(width: 36, height: 36).background(Circle().fill(theme.surface2))
                     .frame(width: 44, height: 44).contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("More").accessibilityIdentifier("planMore")
+            .sheet(isPresented: $moreOpen, onDismiss: { if let m = morePending { morePending = nil; act(m) } }) {
+                planMoreSheet
+            }
         }
         .frame(minHeight: 44)
     }

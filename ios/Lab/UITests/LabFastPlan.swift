@@ -174,4 +174,19 @@ final class LabFastPlan: XCTestCase {
         XCTAssertTrue(again.contains("Strength +2"), "required: the approved goal is still there after a relaunch (\(again))")
         shot("plan-goal-6-after-relaunch")
     }
+
+    /// Plan's "More" page (19 Nov 2026: plain buttons instead of a pull-down menu). Required: all four choices are there,
+    /// and choosing the goal entry closes the page and opens the Add a goal sheet — the real destination, not a title.
+    func testMorePageOpensItsDestinations() {
+        let app = launch()
+        openPlan(app)
+        press(app, "planMore", "More")
+        for id in ["planMoreGoal", "planMoreRoutines", "planMoreAvailability", "planMoreHistory"] {
+            XCTAssertTrue(app.buttons[id].firstMatch.waitForExistence(timeout: 5), "required: \(id) on the More page")
+        }
+        shot("plan-more-page")
+        press(app, "planMoreGoal", "Add another goal")
+        XCTAssertTrue(el(app, "planGoalSheet").waitForExistence(timeout: 8), "required: the goal entry opens the Add a goal sheet")
+        XCTAssertFalse(app.buttons["planMoreRoutines"].firstMatch.exists, "required: the More page has closed")
+    }
 }
