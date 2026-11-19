@@ -15,7 +15,7 @@ concurrency:
 jobs:
   fast:
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
         with:
