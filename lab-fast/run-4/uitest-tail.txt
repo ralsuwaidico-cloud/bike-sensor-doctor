@@ -1,0 +1,158 @@
+    t =      nans Interface orientation changed to Portrait
+Test Case '-[CycliftLabUITests.LabFast testProfileAthletePages]' started.
+    t =     0.00s Start Test at 2026-11-19 09:02:45.339
+    t =     1.41s Set Up
+    t =     1.42s Open com.ralsuwaidico.cycliftlab
+    t =     1.42s     Launch com.ralsuwaidico.cycliftlab
+    t =    13.57s         Setting up automation session
+    t =    18.07s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    29.14s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    30.16s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    30.16s         Checking existence of `"homeGreeting" Any`
+    t =    36.28s Find the "homeGreeting" Any
+    t =    38.36s Waiting 8.0s for "homeAvatar" Button to exist
+    t =    39.41s     Checking `Expect predicate `existsNoRetry == 1` for object "homeAvatar" Button`
+    t =    39.41s         Checking existence of `"homeAvatar" Button`
+    t =    40.46s Tap "homeAvatar" Button
+    t =    40.46s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    40.66s     Find the "homeAvatar" Button
+    t =    42.53s     Check for interrupting elements affecting "homeAvatar" Button
+    t =    43.56s     Synthesize event
+    t =    44.42s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    45.47s Waiting 8.0s for "profileSectionA" Any to exist
+    t =    46.51s     Checking `Expect predicate `existsNoRetry == 1` for object "profileSectionA" Any`
+    t =    46.51s         Checking existence of `"profileSectionA" Any`
+    t =    50.84s Tap "profileSectionA" Any
+    t =    50.84s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    51.12s     Find the "profileSectionA" Any
+    t =    53.16s     Check for interrupting elements affecting "profileSectionA" Button
+    t =    54.53s     Synthesize event
+    t =    54.87s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    56.70s Waiting 8.0s for "profilePersonal" Any to exist
+    t =    57.74s     Checking `Expect predicate `existsNoRetry == 1` for object "profilePersonal" Any`
+    t =    57.74s         Checking existence of `"profilePersonal" Any`
+    t =    59.24s Tap "profilePersonal" Any
+    t =    59.24s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    59.52s     Find the "profilePersonal" Any
+    t =    60.56s     Check for interrupting elements affecting "profilePersonal" Button
+    t =    62.02s     Synthesize event
+    t =    62.40s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    63.81s Waiting 8.0s for "personalName" TextField to exist
+    t =    64.87s     Checking `Expect predicate `existsNoRetry == 1` for object "personalName" TextField`
+    t =    64.87s         Checking existence of `"personalName" TextField`
+    t =    65.43s Checking existence of `"personalDOB" Any`
+    t =    66.21s Checking existence of `"personalWeight" TextField`
+    t =    66.67s Checking existence of `"personalSave" Button`
+    t =    67.07s Find the "personalSave" Button
+    t =    68.00s Tap "personalName" TextField
+    t =    68.00s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    68.03s     Find the "personalName" TextField
+    t =    68.30s     Check for interrupting elements affecting "personalName" TextField
+    t =    69.08s     Synthesize event
+    t =    69.42s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    78.71s Type ' Lab' into "personalName" TextField
+    t =    78.71s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    79.47s     Find the "personalName" TextField
+    t =    82.31s     Check for interrupting elements affecting "personalName" TextField
+    t =    83.02s     Synthesize event
+    t =    83.40s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    84.02s Find the "personalSave" Button
+    t =    86.09s Tap "personalSave" Button
+    t =    86.09s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    86.09s     Find the "personalSave" Button
+    t =    86.56s     Check for interrupting elements affecting "personalSave" Button
+    t =    87.44s     Synthesize event
+    t =    87.81s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    90.91s Waiting 8.0s for "profilePersonal" Button to exist
+    t =    91.95s     Checking `Expect predicate `existsNoRetry == 1` for object "profilePersonal" Button`
+    t =    91.96s         Checking existence of `"profilePersonal" Button`
+    t =    92.92s Find the "profilePersonal" Button
+    t =    94.48s Waiting 8.0s for "profileType" Any to exist
+    t =    95.52s     Checking `Expect predicate `existsNoRetry == 1` for object "profileType" Any`
+    t =    95.52s         Checking existence of `"profileType" Any`
+    t =    96.34s Tap "profileType" Any
+    t =    96.34s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    96.49s     Find the "profileType" Any
+    t =    97.64s     Check for interrupting elements affecting "profileType" Button
+    t =    98.43s     Synthesize event
+    t =    98.73s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   100.40s Waiting 8.0s for "typeMode" Any to exist
+    t =   101.42s     Checking `Expect predicate `existsNoRetry == 1` for object "typeMode" Any`
+    t =   101.42s         Checking existence of `"typeMode" Any`
+    t =   102.48s Waiting 8.0s for "typeBalance" Any to exist
+    t =   103.52s     Checking `Expect predicate `existsNoRetry == 1` for object "typeBalance" Any`
+    t =   103.53s         Checking existence of `"typeBalance" Any`
+    t =   105.04s Waiting 8.0s for "typeRiding" Any to exist
+    t =   106.10s     Checking `Expect predicate `existsNoRetry == 1` for object "typeRiding" Any`
+    t =   106.10s         Checking existence of `"typeRiding" Any`
+    t =   107.53s Waiting 8.0s for "typeLifting" Any to exist
+    t =   108.58s     Checking `Expect predicate `existsNoRetry == 1` for object "typeLifting" Any`
+    t =   108.59s         Checking existence of `"typeLifting" Any`
+    t =   109.62s Find the "typeSave" Button
+    t =   110.28s Tear Down
+Test Case '-[CycliftLabUITests.LabFast testProfileAthletePages]' passed (110.916 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileTrainingSetupPages]' started.
+    t =     0.00s Start Test at 2026-11-19 09:04:36.256
+    t =     0.13s Set Up
+    t =     0.13s Open com.ralsuwaidico.cycliftlab
+    t =     0.13s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.13s         Terminate com.ralsuwaidico.cycliftlab:20099
+    t =     7.74s         Setting up automation session
+    t =    12.74s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    18.74s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    19.75s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    19.75s         Checking existence of `"homeGreeting" Any`
+    t =    22.77s Find the "homeGreeting" Any
+    t =    25.90s Waiting 8.0s for "homeAvatar" Button to exist
+    t =    26.92s     Checking `Expect predicate `existsNoRetry == 1` for object "homeAvatar" Button`
+    t =    26.93s         Checking existence of `"homeAvatar" Button`
+    t =    28.06s Tap "homeAvatar" Button
+    t =    28.06s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    28.11s     Find the "homeAvatar" Button
+    t =    29.05s     Check for interrupting elements affecting "homeAvatar" Button
+    t =    29.71s     Synthesize event
+    t =    30.05s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    31.05s Waiting 8.0s for "profileSectionB" Any to exist
+    t =    32.09s     Checking `Expect predicate `existsNoRetry == 1` for object "profileSectionB" Any`
+    t =    32.09s         Checking existence of `"profileSectionB" Any`
+    t =    32.74s Tap "profileSectionB" Any
+    t =    32.74s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    33.05s     Find the "profileSectionB" Any
+    t =    33.73s     Check for interrupting elements affecting "profileSectionB" Button
+    t =    34.59s     Synthesize event
+    t =    34.90s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    36.37s Waiting 8.0s for "profileEquipment" Any to exist
+    t =    37.42s     Checking `Expect predicate `existsNoRetry == 1` for object "profileEquipment" Any`
+    t =    37.42s         Checking existence of `"profileEquipment" Any`
+    t =    38.64s Tap "profileEquipment" Any
+    t =    38.64s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    38.84s     Find the "profileEquipment" Any
+    t =    39.80s     Check for interrupting elements affecting "profileEquipment" Button
+    t =    40.69s     Synthesize event
+    t =    41.04s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    42.65s Waiting 8.0s for "profileEquipmentPage" Any to exist
+    t =    43.69s     Checking `Expect predicate `existsNoRetry == 1` for object "profileEquipmentPage" Any`
+    t =    43.70s         Checking existence of `"profileEquipmentPage" Any`
+    t =    44.67s Get number of matches for: Elements matching predicate 'identifier BEGINSWITH "equip-"'
+    t =    45.03s Checking existence of `"equipExcluded" Any`
+    t =    46.73s Tap Button (First Match)
+    t =    46.73s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    46.97s     Find the Button (First Match)
+    t =    47.07s     Check for interrupting elements affecting "BackButton" Button
+    t =    47.52s     Synthesize event
+    t =    47.84s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    49.27s Waiting 8.0s for "profileHealthSafety" Any to exist
+    t =    50.33s     Checking `Expect predicate `existsNoRetry == 1` for object "profileHealthSafety" Any`
+    t =    50.34s         Checking existence of `"profileHealthSafety" Any`
+    t =    52.83s Tap "profileHealthSafety" Any
+    t =    52.83s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    52.96s     Find the "profileHealthSafety" Any
+    t =    54.80s     Check for interrupting elements affecting "profileHealthSafety" Button
+    t =    55.92s     Synthesize event
+    t =    56.23s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    57.79s Waiting 8.0s for "recoveryCapacity" Any to exist
+    t =    58.84s     Checking `Expect predicate `existsNoRetry == 1` for object "recoveryCapacity" Any`
+    t =    58.84s         Checking existence of `"recoveryCapacity" Any`
+    t =    59.76s Checking existence of `"healthPause" Any`
+    t =    61.42s Tear Down
+Test Case '-[CycliftLabUITests.LabFast testProfileTrainingSetupPages]' passed (61.805 seconds).
