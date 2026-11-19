@@ -194,10 +194,10 @@ run_journeys() {
   # Main Development configuration (owner, 17 Nov 2026): the SAME build of the main app, run once more with the
   # redesign switched on by its simulator-only test setting. No second build, no other app.
   local RT=$SECONDS
-  TEST_RUNNER_LAYOUT_DIR="$LAYOUT" twb "$RELEASE_XR" "$SIM" "$OUT/redesign-main.log" -only-testing:BikeComputerUITests/RedesignMainTests
+  TEST_RUNNER_LAYOUT_DIR="$LAYOUT" twb "$RELEASE_XR" "$SIM" "$OUT/redesign-main.log" -only-testing:BikeComputerUITests/RedesignMainTests -only-testing:BikeComputerUITests/RedesignMainProfileTests
   local RM=$?
   digest "$OUT/redesign-main.log" "redesign-main"
-  local RN; RN=$(grep -E "Test Case .*RedesignMainTests.* passed" "$OUT/redesign-main.log" | sort -u | wc -l | tr -d ' ')
+  local RN; RN=$(grep -E "Test Case .*RedesignMain(Profile)?Tests.* passed" "$OUT/redesign-main.log" | sort -u | wc -l | tr -d ' ')
   if [ $RM -eq 0 ] && [ "$RN" -ge 1 ]; then note "RESULT redesigned main app (switch on, real services, test athlete): ok · $RN test(s) · $(since $RT)"
   else note "RESULT redesigned main app (switch on, real services, test athlete): FAILED (exit $RM, passed $RN) · $(since $RT)"; U=1; fi
   case ",${ONLY_SPEC:-}," in *",redesign-only,"*) note "RESULT journey (recorded): not run — focused check · $(since $TS)" ;; *)
