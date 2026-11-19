@@ -1,0 +1,236 @@
+    t =      nans Interface orientation changed to Portrait
+Test Case '-[CycliftLabUITests.LabFast testProfileDataPages]' started.
+    t =     0.05s Start Test at 2026-11-19 12:12:35.110
+    t =     2.70s Set Up
+    t =     2.72s Open com.ralsuwaidico.cycliftlab
+    t =     2.72s     Launch com.ralsuwaidico.cycliftlab
+    t =    36.54s         Setting up automation session
+    t =    42.28s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    52.92s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    53.94s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    53.94s         Checking existence of `"homeGreeting" Any`
+    t =    55.14s Find the "homeGreeting" Any
+    t =    55.85s Waiting 8.0s for "homeAvatar" Button to exist
+    t =    56.90s     Checking `Expect predicate `existsNoRetry == 1` for object "homeAvatar" Button`
+    t =    56.90s         Checking existence of `"homeAvatar" Button`
+    t =    57.27s Tap "homeAvatar" Button
+    t =    57.27s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    57.27s     Find the "homeAvatar" Button
+    t =    57.64s     Check for interrupting elements affecting "homeAvatar" Button
+    t =    58.38s     Synthesize event
+    t =    58.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    59.19s Waiting 8.0s for "profileSectionF" Any to exist
+    t =    60.21s     Checking `Expect predicate `existsNoRetry == 1` for object "profileSectionF" Any`
+    t =    60.21s         Checking existence of `"profileSectionF" Any`
+    t =    62.24s Tap "profileSectionF" Any
+    t =    62.24s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    62.48s     Find the "profileSectionF" Any
+    t =    65.50s     Check for interrupting elements affecting "profileSectionF" Button
+    t =    66.75s     Synthesize event
+    t =    67.08s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    67.24s Waiting 8.0s for "profileDataWhere" Any to exist
+    t =    68.30s     Checking `Expect predicate `existsNoRetry == 1` for object "profileDataWhere" Any`
+    t =    68.30s         Checking existence of `"profileDataWhere" Any`
+    t =    69.34s Waiting 8.0s for "profileExport" Any to exist
+    t =    70.38s     Checking `Expect predicate `existsNoRetry == 1` for object "profileExport" Any`
+    t =    70.38s         Checking existence of `"profileExport" Any`
+    t =    71.04s Waiting 8.0s for "profilePermissions" Any to exist
+    t =    72.08s     Checking `Expect predicate `existsNoRetry == 1` for object "profilePermissions" Any`
+    t =    72.09s         Checking existence of `"profilePermissions" Any`
+    t =    72.77s Waiting 8.0s for "profileSettings" Any to exist
+    t =    73.82s     Checking `Expect predicate `existsNoRetry == 1` for object "profileSettings" Any`
+    t =    73.83s         Checking existence of `"profileSettings" Any`
+    t =    75.05s Waiting 8.0s for "profileHelp" Any to exist
+    t =    76.10s     Checking `Expect predicate `existsNoRetry == 1` for object "profileHelp" Any`
+    t =    76.11s         Checking existence of `"profileHelp" Any`
+    t =    77.17s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    78.13s Checking existence of `"profileVersion" Any`
+    t =    78.94s Checking existence of `"profileVersion" Any`
+    t =    79.90s Find the "profileVersion" Any
+    t =    81.06s Find the "profileVersion" StaticText
+    t =    82.54s Find the "profileVersion" StaticText
+    t =    83.48s Press Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] -> (0.0, -200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =    83.48s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    83.79s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    84.00s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    84.20s     Synthesize event
+    t =    84.21s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    84.36s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    84.86s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    85.25s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    85.47s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    86.64s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    88.26s Checking existence of `"profileVersion" StaticText`
+    t =    89.12s Checking existence of `"profileVersion" StaticText`
+    t =    89.86s Find the "profileVersion" StaticText
+    t =    90.84s Find the "profileVersion" StaticText
+    t =    91.51s Checking existence of `"profileVersion" StaticText`
+    t =    92.48s Find the "profileVersion" StaticText
+    t =    93.62s Checking existence of `"profileVersion" StaticText`
+    t =    94.69s Find the "profileVersion" StaticText
+    t =    95.72s Checking existence of `"profileVersion" StaticText`
+    t =    96.45s Find the "profileVersion" StaticText
+    t =    97.21s Checking existence of `"profileVersion" StaticText`
+    t =    97.86s Checking existence of `"profileVersion" StaticText`
+    t =    98.68s Find the "profileVersion" StaticText
+    t =    99.84s Find the "profileVersion" StaticText
+    t =   100.87s Checking existence of `"profileVersion" StaticText`
+    t =   101.48s Checking existence of `"profilePrivacy" Any`
+    t =   102.60s Checking existence of `"profileTerms" Any`
+    t =   103.54s Find the "profileVersion" StaticText
+    t =   104.99s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   105.45s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   105.97s Checking existence of `"profileDataWhere" Any`
+    t =   106.93s Checking existence of `"profileDataWhere" Any`
+    t =   108.06s Find the "profileDataWhere" Any
+    t =   109.37s Find the "profileDataWhere" Button
+    t =   110.60s Press Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.cycliftlab'[0.50, 0.55] -> (0.0, 200.0) with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   110.60s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   110.74s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   111.02s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =   111.23s     Synthesize event
+    t =   111.23s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   111.38s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   111.55s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   111.86s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   112.22s         Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   113.11s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   114.88s Checking existence of `"profileDataWhere" Button`
+    t =   115.68s Checking existence of `"profileDataWhere" Button`
+    t =   116.69s Find the "profileDataWhere" Button
+    t =   117.80s Find the "profileDataWhere" Button
+    t =   118.87s Checking existence of `"profileDataWhere" Button`
+    t =   119.77s Find the "profileDataWhere" Button
+    t =   121.14s Checking existence of `"profileDataWhere" Button`
+    t =   122.46s Find the "profileDataWhere" Button
+    t =   123.72s Checking existence of `"profileDataWhere" Button`
+    t =   124.85s Find the "profileDataWhere" Button
+    t =   126.93s Checking existence of `"profileDataWhere" Button`
+    t =   128.59s Checking existence of `"profileDataWhere" Button`
+    t =   130.30s Find the "profileDataWhere" Button
+    t =   131.70s Find the "profileDataWhere" Button
+    t =   133.57s Tap "profileDataWhere" Button
+    t =   133.57s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   133.85s     Find the "profileDataWhere" Button
+    t =   135.09s     Check for interrupting elements affecting "profileDataWhere" Button
+    t =   136.17s     Synthesize event
+    t =   136.52s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   137.03s Waiting 8.0s for "profileBackup" Any to exist
+    t =   138.08s     Checking `Expect predicate `existsNoRetry == 1` for object "profileBackup" Any`
+    t =   138.09s         Checking existence of `"profileBackup" Any`
+    t =   139.40s Waiting 8.0s for "profileRestore" Any to exist
+    t =   140.44s     Checking `Expect predicate `existsNoRetry == 1` for object "profileRestore" Any`
+    t =   140.44s         Checking existence of `"profileRestore" Any`
+    t =   142.22s Waiting 8.0s for "profileExportFromWhere" Any to exist
+    t =   143.26s     Checking `Expect predicate `existsNoRetry == 1` for object "profileExportFromWhere" Any`
+    t =   143.26s         Checking existence of `"profileExportFromWhere" Any`
+    t =   144.21s Tap "profileExportFromWhere" Any
+    t =   144.21s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   144.27s     Find the "profileExportFromWhere" Any
+    t =   145.66s     Check for interrupting elements affecting "profileExportFromWhere" Button
+    t =   146.25s     Synthesize event
+    t =   146.62s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   147.85s Waiting 8.0s for "exportData" Button to exist
+    t =   148.87s     Checking `Expect predicate `existsNoRetry == 1` for object "exportData" Button`
+    t =   148.87s         Checking existence of `"exportData" Button`
+    t =   155.05s Tap Button (First Match)
+    t =   155.05s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   155.06s     Find the Button (First Match)
+    t =   155.66s     Check for interrupting elements affecting "BackButton" Button
+    t =   156.11s     Synthesize event
+    t =   156.64s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   157.03s Tap Button (First Match)
+    t =   157.03s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   157.04s     Find the Button (First Match)
+    t =   157.89s     Check for interrupting elements affecting "BackButton" Button
+    t =   158.24s     Synthesize event
+    t =   158.68s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   159.19s Waiting 8.0s for "profileSettings" Any to exist
+    t =   160.23s     Checking `Expect predicate `existsNoRetry == 1` for object "profileSettings" Any`
+    t =   160.24s         Checking existence of `"profileSettings" Any`
+    t =   164.69s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   164.96s Checking existence of `"profileSettings" Any`
+    t =   166.16s Checking existence of `"profileSettings" Any`
+    t =   167.43s Find the "profileSettings" Any
+    t =   169.16s Find the "profileSettings" Button
+    t =   170.47s Checking existence of `"profileSettings" Button`
+    t =   171.62s Find the "profileSettings" Button
+    t =   173.20s Checking existence of `"profileSettings" Button`
+    t =   174.89s Find the "profileSettings" Button
+    t =   176.29s Checking existence of `"profileSettings" Button`
+    t =   177.51s Find the "profileSettings" Button
+    t =   178.36s Checking existence of `"profileSettings" Button`
+    t =   179.03s Checking existence of `"profileSettings" Button`
+    t =   180.11s Find the "profileSettings" Button
+    t =   181.30s Find the "profileSettings" Button
+    t =   182.29s Tap "profileSettings" Button
+    t =   182.29s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   182.29s     Find the "profileSettings" Button
+    t =   182.91s     Check for interrupting elements affecting "profileSettings" Button
+    t =   183.80s     Synthesize event
+    t =   184.15s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   184.91s Checking existence of `"deleteAllData" Button`
+    t =   186.40s Find the "deleteAllData" Button
+    t =   188.07s Checking existence of `"deleteAllData" Button`
+    t =   189.76s Tear Down
+Test Case '-[CycliftLabUITests.LabFast testProfileDataPages]' passed (190.154 seconds).
+Test Case '-[CycliftLabUITests.LabFast testScreens]' started.
+    t =     0.00s Start Test at 2026-11-19 12:15:45.268
+    t =     0.10s Set Up
+    t =     0.10s Open com.ralsuwaidico.cycliftlab
+    t =     0.11s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.11s         Terminate com.ralsuwaidico.cycliftlab:13150
+    t =     4.72s         Setting up automation session
+    t =    11.06s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    22.23s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    23.28s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    23.28s         Checking existence of `"homeGreeting" Any`
+    t =    25.90s Find the "homeGreeting" Any
+    t =    26.72s Waiting 10.0s for "CYCLIFT LAB · DEMO DATA" StaticText to exist
+    t =    27.75s     Checking `Expect predicate `existsNoRetry == 1` for object "CYCLIFT LAB · DEMO DATA" StaticText`
+    t =    27.75s         Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =    28.41s Waiting 8.0s for "Plan" Button to exist
+    t =    29.48s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =    29.49s         Checking existence of `"Plan" Button`
+    t =    29.62s Checking existence of `"Plan" Button`
+    t =    29.70s Tap "Plan" Button
+    t =    29.70s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    29.71s     Find the "Plan" Button
+    t =    29.78s     Check for interrupting elements affecting "Plan" Button
+    t =    30.47s     Synthesize event
+    t =    30.96s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    32.31s Waiting 8.0s for "planTitle" StaticText to exist
+    t =    33.35s     Checking `Expect predicate `existsNoRetry == 1` for object "planTitle" StaticText`
+    t =    33.35s         Checking existence of `"planTitle" StaticText`
+    t =    33.88s Checking existence of `"planDayHeader" StaticText`
+    t =    34.84s Checking existence of `"planCoachRow" Any`
+    t =    36.32s Tap "planCoachRow" Any
+    t =    36.32s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    36.44s     Find the "planCoachRow" Any
+    t =    40.08s     Check for interrupting elements affecting "planCoachRow" Other
+    t =    41.38s     Synthesize event
+    t =    41.73s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    42.23s Waiting 8.0s for "coachTimeline" Any to exist
+    t =    43.25s     Checking `Expect predicate `existsNoRetry == 1` for object "coachTimeline" Any`
+    t =    43.25s         Checking existence of `"coachTimeline" Any`
+    t =    43.53s Tap "coachClose" Button
+    t =    43.53s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    43.53s     Find the "coachClose" Button
+    t =    43.60s     Check for interrupting elements affecting "coachClose" Button
+    t =    44.36s     Synthesize event
+    t =    44.79s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    46.28s Waiting 8.0s for "Progress" Button to exist
+    t =    47.35s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =    47.35s         Checking existence of `"Progress" Button`
+    t =    47.48s Checking existence of `"Progress" Button`
+    t =    47.58s Tap "Progress" Button
+    t =    47.58s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    47.60s     Find the "Progress" Button
+    t =    47.71s     Check for interrupting elements affecting "Progress" Button
+    t =    48.48s     Synthesize event
+    t =    48.83s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    50.35s Waiting 8.0s for "evolutionTrack" Any to exist
+    t =    51.38s     Checking `Expect predicate `existsNoRetry == 1` for object "evolutionTrack" Any`
+    t =    51.39s         Checking existence of `"evolutionTrack" Any`
+    t =    52.75s Tear Down
+Test Case '-[CycliftLabUITests.LabFast testScreens]' passed (53.027 seconds).
