@@ -151,7 +151,7 @@ struct ProgressV23Sections: View {
     }
 
     /// A development section that opens its page. The section's own text is one VoiceOver element and one button.
-    private func opens<V: View>(_ route: String, id: String, @ViewBuilder _ content: () -> V) -> some View {
+    private func opens<V: View>(_ route: ProgressRoute, id: String, @ViewBuilder _ content: () -> V) -> some View {
         let label = content()
         return Button { open(route) } label: {
             label.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())

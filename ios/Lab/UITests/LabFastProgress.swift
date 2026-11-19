@@ -28,15 +28,35 @@ final class LabFastProgress: XCTestCase {
         if b.exists { b.tap(); app.settleForScreenshot(1) }
         XCTAssertTrue(el(app, "evolutionTrack").waitForExistence(timeout: 8), "required: Progress shows the Evolution Track")
     }
+    /// Waits (bounded, no fixed pause) until an element can be pressed.
+    private func pressable(_ e: XCUIElement, _ timeout: TimeInterval = 6) -> Bool {
+        guard e.waitForExistence(timeout: timeout) else { return false }
+        let until = Date().addingTimeInterval(timeout)
+        while !e.isHittable && Date() < until { Thread.sleep(forTimeInterval: 0.2) }
+        return e.isHittable
+    }
     /// Opens a page from a control of the page underneath, checks the page's own element, optionally runs checks on
-    /// it, and returns to where the control is reachable again.
+    /// it, and returns to where the control is reachable again. The whole test is ONE launch: open, assert, back.
+    ///
+    /// Every control here is REQUIRED and unconditional for the demo athlete (the detail pages are plain, non-lazy
+    /// stacks, so a control below the fold is in the accessibility tree; `tapPresents` scrolls it into the clear band,
+    /// bounded, before the tap). Fast check 17 reported four of them "not on the page" (Heart-rate settings, Power
+    /// settings and Strength development from analytics, Records & history from Endurance). They were on the page:
+    /// the link before each of them had not opened, and this helper then pressed Back, which left the page they are
+    /// on. A failed open now presses Back only when a page really was pushed.
     private func visit(_ app: XCUIApplication, _ what: String, control id: String, page: String, shotName: String? = nil, inside: () -> Void = {}) {
         let control = el(app, id)
         XCTAssertTrue(control.waitForExistence(timeout: 8), "required: \(what) (\(id)) is on the page")
         guard control.exists else { return }
         let ok = app.tapPresents(control, page: page)
         XCTAssertTrue(ok, "required: \(what) opens its page (\(page)) at the first tap")
-        guard ok else { if app.navigationBars.buttons.firstMatch.exists && app.navigationBars.buttons.firstMatch.isHittable { app.navigationBars.buttons.firstMatch.tap() }; return }
+        guard ok else {
+            // Recover without leaving the page the control is on: the control is still in the tree when nothing was
+            // pushed (a pushed page removes the page underneath from it). Only a wrong page that DID open is left.
+            let back = app.navigationBars.buttons.firstMatch
+            if !control.exists && back.exists && back.isHittable { back.tap() }
+            return
+        }
         if let shotName { app.settleForScreenshot(1); shot(shotName) }
         inside()
         XCTAssertTrue(app.backReveals(control), "required: back from \(page) returns to \(what)")
@@ -129,28 +149,38 @@ final class LabFastProgress: XCTestCase {
         }
     }
 
-    /// Sheet PH4's "•••" button: every entry opens a page that exists.
+    /// Sheet PH4's "•••" button: a plain button that opens a compact sheet of plain buttons (not a pull-down menu:
+    /// its entries could not be pressed in fast check 17). Every entry closes the sheet and opens a page that exists.
     func testMoreMenuEntriesOpenRealPages() {
         let app = launch()
         openProgress(app)
         let menu = el(app, "progressMenu")
-        XCTAssertTrue(menu.waitForExistence(timeout: 8) && menu.isHittable, "required: the ••• button")
-        let entries: [(String, String)] = [("Detailed analytics", "progressAnalyticsPage"), ("Records & history", "progressHistoryPage"),
-                                           ("Athlete Evolution", "evolutionDetailsTitle"), ("Power settings", "ftpValue"), ("Heart-rate settings", "hrMaximum")]
-        for (n, (label, page)) in entries.enumerated() {
-            guard menu.waitForExistence(timeout: 6), menu.isHittable else { XCTFail("required: the ••• button is reachable before \(label)"); return }
+        XCTAssertTrue(pressable(menu, 8), "required: the ••• button")
+        let entries: [(String, String, String)] = [("progressMenuAnalytics", "Detailed analytics", "progressAnalyticsPage"),
+                                                   ("progressMenuHistory", "Records & history", "progressHistoryPage"),
+                                                   ("progressMenuEvolution", "Athlete Evolution", "evolutionDetailsTitle"),
+                                                   ("progressMenuPower", "Power settings", "ftpValue"),
+                                                   ("progressMenuHeartRate", "Heart-rate settings", "hrMaximum")]
+        for (n, (id, label, page)) in entries.enumerated() {
+            guard pressable(menu) else { XCTFail("required: the ••• button is reachable before \(label)"); return }
             menu.tap()
-            let item = app.buttons[label].firstMatch
-            XCTAssertTrue(item.waitForExistence(timeout: 5), "required: the menu offers \(label)")
-            if n == 0 { app.settleForScreenshot(1); shot("progress-13-menu") }
+            let item = app.buttons[id].firstMatch
+            XCTAssertTrue(pressable(item, 5), "required: the ••• sheet offers \(label) (\(id)) as a button that can be pressed")
             guard item.exists else { continue }
+            XCTAssertEqual(item.label, label, "required: the entry is named as on sheet PH4")
+            if n == 0 {
+                for other in entries { XCTAssertTrue(app.buttons[other.0].firstMatch.exists, "required: \(other.1) is in the ••• sheet") }
+                app.settleForScreenshot(1); shot("progress-13-menu")
+            }
             item.tap()
             let shown = el(app, page).waitForExistence(timeout: 8)
             XCTAssertTrue(shown, "required: \(label) opens its page (\(page))")
+            XCTAssertFalse(item.exists, "required: the ••• sheet has closed after choosing \(label)")
             let back = app.navigationBars.buttons.firstMatch
-            XCTAssertTrue(back.waitForExistence(timeout: 4) && back.isHittable, "required: \(label) is a pushed page with a way back")
-            if back.exists && back.isHittable { back.tap() }
+            XCTAssertTrue(shown && pressable(back, 4), "required: \(label) is a pushed page with a way back")
+            if shown && back.exists && back.isHittable { back.tap() }
+            else if item.exists { app.swipeDown() }   // the sheet stayed up: close it so the next entry is still checked
         }
-        XCTAssertTrue(menu.waitForExistence(timeout: 6), "required: back on Progress after the menu pages")
+        XCTAssertTrue(pressable(menu), "required: back on Progress after the ••• pages")
     }
 }

@@ -329,20 +329,23 @@ struct ProgressScreen<Analysis: View>: View {
 
     @State private var frames: [String: CGRect] = [:]
     @State private var rmCollapsed = false
-    @State private var path: [String] = []
+    /// THE navigation state of Progress: every page is one ProgressRoute appended here, whoever asks for it (a landing
+    /// section, a link on a detail page, the "•••" sheet, the host). Back removes the last one.
+    @State private var path: [ProgressRoute] = []
     @State private var anchorOffset: CGFloat = 0
+    @State private var showMenu = false
+    /// The entry chosen in the "•••" sheet; pushed when the sheet has closed.
+    @State private var menuChoice: ProgressRoute? = nil
 
-    /// A page the content asks for by name (the host sets it; this screen pushes it and clears it).
-    var route: Binding<String?> = .constant(nil)
-    /// The host's own pages by name; nil = the Athlete Evolution page.
-    var destination: (String) -> AnyView? = { _ in nil }
+    /// A page the host asks for (the host sets it; this screen pushes it and clears it).
+    var route: Binding<ProgressRoute?> = .constant(nil)
 
     init(sample: ProgressSample, bottomInset: CGFloat = 0, launchScroll: String? = nil, forceReduceMotion: Bool = false,
-         showProbe: Bool = false, route: Binding<String?> = .constant(nil), destination: @escaping (String) -> AnyView? = { _ in nil },
+         showProbe: Bool = false, route: Binding<ProgressRoute?> = .constant(nil),
          @ViewBuilder analysis: @escaping (ScrollViewProxy) -> Analysis) {
         self.sample = sample; self.bottomInset = bottomInset; self.launchScroll = launchScroll
         self.forceReduceMotion = forceReduceMotion; self.showProbe = showProbe; self.analysis = analysis
-        self.route = route; self.destination = destination
+        self.route = route
     }
 
     private let space = "progressRoot"
@@ -357,30 +360,38 @@ struct ProgressScreen<Analysis: View>: View {
             }
             .navigationTitle("Progress")
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: String.self) { name in
-                routed(name)
+            // The ONE destination of the Progress stack, declared at its root. A pushed page does not inherit the
+            // environment of the landing content, so `progressOpen` is given to every pushed page here as well:
+            // without it the links on the detail pages did nothing (fast check 17).
+            .navigationDestination(for: ProgressRoute.self) { r in
+                routed(r).environment(\.progressOpen, { next in path.append(next) })
             }
             .onChange(of: route.wrappedValue) { _, r in if let r { path.append(r); route.wrappedValue = nil } }
         }
+        .sheet(isPresented: $showMenu, onDismiss: pushMenuChoice) {
+            ProgressMenuSheet { r in menuChoice = r; showMenu = false }
+                .cyThemeRoot()
+        }
     }
 
-    /// The page for a route: the redesigned Progress pages first (Redesign/ProgressDetailV2.swift), then a page the
-    /// host supplies under another name, else Athlete Evolution.
-    @ViewBuilder private func routed(_ name: String) -> some View {
-        if let page = ProgressRoute.page(name) { page }
-        else if let page = destination(name) { page }
+    /// The "•••" sheet has closed: open what was chosen in it (nothing when it was closed without a choice).
+    private func pushMenuChoice() {
+        guard let r = menuChoice else { return }
+        menuChoice = nil
+        path.append(r)
+    }
+
+    /// The page for a route: the redesigned Progress pages (Redesign/ProgressDetailV2.swift), else Athlete Evolution.
+    @ViewBuilder private func routed(_ r: ProgressRoute) -> some View {
+        if let page = ProgressRoute.page(r) { page }
         else { EvolutionDetailsPage(sample: sample, bottomInset: bottomInset) }
     }
 
     /// Sheet PH4: the "•••" button at the top right. Every entry opens a page that exists; nothing here is a placeholder.
+    /// A plain button opening a sheet of plain buttons: the entries of a pull-down menu could not be pressed reliably
+    /// (fast check 17, "Activation point invalid"; the same lesson as the Lab banner, see LabChrome).
     private var moreMenu: some View {
-        Menu {
-            Button("Detailed analytics") { path.append(ProgressRoute.analytics) }.accessibilityIdentifier("progressMenuAnalytics")
-            Button("Records & history") { path.append(ProgressRoute.history) }.accessibilityIdentifier("progressMenuHistory")
-            Button("Athlete Evolution") { path.append(ProgressRoute.evolution) }.accessibilityIdentifier("progressMenuEvolution")
-            Button("Power settings") { path.append(ProgressRoute.power) }.accessibilityIdentifier("progressMenuPower")
-            Button("Heart-rate settings") { path.append(ProgressRoute.heartRate) }.accessibilityIdentifier("progressMenuHeartRate")
-        } label: {
+        Button { menuChoice = nil; showMenu = true } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(theme.textPrimary)
@@ -390,6 +401,7 @@ struct ProgressScreen<Analysis: View>: View {
                 .frame(width: CyHit.min, height: CyHit.min)
                 .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityLabel("More")
         .accessibilityIdentifier("progressMenu")
     }
@@ -558,14 +570,14 @@ struct ProgressScreen<Analysis: View>: View {
                 .frame(height: m.slot)
                 .background(measure("slot"))
                 identity.opacity(reduceMotion ? 1 : fade)
-                ProgressEvolutionTrack(sample: sample) { path.append("evolution") }
+                ProgressEvolutionTrack(sample: sample) { path.append(.evolution) }
                     .padding(.horizontal, -16)
                     .padding(.top, 8)
                     .background(measure("track"))
             }
             .background(measure("hero"))
             analysis(proxy).padding(.top, 22)
-                .environment(\.progressOpen, { name in path.append(name) })
+                .environment(\.progressOpen, { r in path.append(r) })
         }
         .padding(.horizontal, 16)
         .padding(.bottom, bottomInset + 24)
@@ -607,6 +619,50 @@ struct ProgressScreen<Analysis: View>: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(sample.identityLabel)
         .accessibilityIdentifier("heroIdentity")
+    }
+}
+
+// MARK: - "•••" sheet
+
+/// The five entries of the Progress "•••" button, as plain rows in a compact sheet (the same row as the links on the
+/// Progress pages). Choosing one closes the sheet; the Progress screen then opens the page.
+struct ProgressMenuSheet: View {
+    let choose: (ProgressRoute) -> Void
+    @Environment(\.cyTheme) private var theme
+
+    private let entries: [(title: String, route: ProgressRoute, id: String)] = [
+        ("Detailed analytics", .analytics, "progressMenuAnalytics"),
+        ("Records & history", .history, "progressMenuHistory"),
+        ("Athlete Evolution", .evolution, "progressMenuEvolution"),
+        ("Power settings", .power, "progressMenuPower"),
+        ("Heart-rate settings", .heartRate, "progressMenuHeartRate"),
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Progress")
+                    .font(.system(.title3, design: .rounded).weight(.heavy))
+                    .foregroundStyle(theme.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.bottom, 6)
+                    .accessibilityIdentifier("progressMenuTitle")
+                ForEach(entries, id: \.id) { e in
+                    Button { choose(e.route) } label: { PgLinkLabel(title: e.title) }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier(e.id)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 26)
+            .padding(.bottom, 16)
+        }
+        .background(theme.background.ignoresSafeArea())
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("progressMenuSheet")
     }
 }
 

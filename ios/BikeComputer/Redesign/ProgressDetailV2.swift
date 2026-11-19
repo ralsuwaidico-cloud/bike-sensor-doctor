@@ -22,39 +22,35 @@ import SwiftUI
 // MARK: - Routes
 
 private struct ProgressOpenKey: EnvironmentKey {
-    static let defaultValue: (String) -> Void = { _ in }
+    static let defaultValue: (ProgressRoute) -> Void = { _ in }
 }
 extension EnvironmentValues {
-    /// Pushes a Progress page by name on the Progress screen's own navigation stack (set by ProgressScreen).
-    var progressOpen: (String) -> Void {
+    /// Pushes a Progress page on the Progress screen's own navigation stack: appends one route to the stack's path, so
+    /// Back returns to the page the control was on. ProgressScreen sets it for the landing page AND for every pushed
+    /// page. (Fast check 17: it was set on the landing content only. A pushed page does not inherit the environment
+    /// of the view that pushed it, so the links on the detail pages called the empty default and did nothing.)
+    var progressOpen: (ProgressRoute) -> Void {
         get { self[ProgressOpenKey.self] }
         set { self[ProgressOpenKey.self] = newValue }
     }
 }
 
-enum ProgressRoute {
-    static let analytics = "analytics"
-    static let history = "history"
-    static let endurance = "endurance"
-    static let strength = "strength"
-    static let consistency = "consistency"
-    static let zones = "zones"
-    static let evolution = "evolution"
-    static let power = "settingsPower"
-    static let heartRate = "settingsHeartRate"
+/// Every page Progress can push. The one element type of the Progress navigation path.
+enum ProgressRoute: String, Hashable, CaseIterable {
+    case analytics, history, endurance, strength, consistency, zones, evolution, power, heartRate
 
-    /// The redesigned page for a route; nil = not one of these (the host's own page, or Athlete Evolution).
-    static func page(_ name: String) -> AnyView? {
-        switch name {
-        case analytics: return AnyView(ProgressAnalyticsV2Page())
-        case history: return AnyView(ProgressHistoryV2Page())
-        case endurance: return AnyView(ProgressEnduranceV2Page())
-        case strength: return AnyView(ProgressStrengthV2Page())
-        case consistency: return AnyView(ProgressConsistencyV2Page())
-        case zones: return AnyView(ProgressZonesV2Page())
-        case power: return AnyView(CyProfilePower())             // the existing Profile › Performance › Power page
-        case heartRate: return AnyView(CyProfileHeartRate())     // the existing Profile › Performance › Heart rate page
-        default: return nil
+    /// The redesigned page for a route; nil = Athlete Evolution (ProgressScreen builds it: it needs the shown sample).
+    static func page(_ route: ProgressRoute) -> AnyView? {
+        switch route {
+        case .analytics: return AnyView(ProgressAnalyticsV2Page())
+        case .history: return AnyView(ProgressHistoryV2Page())
+        case .endurance: return AnyView(ProgressEnduranceV2Page())
+        case .strength: return AnyView(ProgressStrengthV2Page())
+        case .consistency: return AnyView(ProgressConsistencyV2Page())
+        case .zones: return AnyView(ProgressZonesV2Page())
+        case .power: return AnyView(CyProfilePower())             // the existing Profile › Performance › Power page
+        case .heartRate: return AnyView(CyProfileHeartRate())     // the existing Profile › Performance › Heart rate page
+        case .evolution: return nil
         }
     }
 }
@@ -234,7 +230,7 @@ struct PgLinkLabel: View {
 struct PgRouteRow: View {
     let title: String
     var sub: String = ""
-    let route: String
+    let route: ProgressRoute
     let id: String
     @Environment(\.progressOpen) private var open
     var body: some View {

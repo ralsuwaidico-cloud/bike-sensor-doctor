@@ -15,7 +15,7 @@ struct ProgressTabView: View {
     @State private var metric: TrendMetric = .riding
     @State private var range: ChartRange = .w8
     @State private var positioned = false
-    @State private var route: String? = nil
+    @State private var route: ProgressRoute? = nil
     @Environment(\.dynamicTypeSize) private var dts
     /// Two years of weeks (cheap: one ledger pass per week).
     private let historyWeeks = 104
@@ -32,25 +32,11 @@ struct ProgressTabView: View {
         let riding = TrendChartMath.buckets(ledger, riding: true, weeks: historyWeeks, now: Date())
         let lifting = TrendChartMath.buckets(ledger, riding: false, weeks: historyWeeks, now: Date())
         if CyProduct.redesign {
-            // Approved compact hero over the Progress v2.3 sections (sheet PH4). The app's full analysis — the same views
-            // and figures as before — is one tap away under "Detailed analytics"; the session history under "Records & history".
-            ProgressScreen(sample: .notEvaluated, route: $route, destination: { name in
-                switch name {
-                case "analytics":
-                    return AnyView(ScrollViewReader { proxy in
-                        ScrollView { analysis(riding: riding, lifting: lifting, proxy: proxy, history: false).padding(16).padding(.bottom, 120) }
-                    }
-                    .background(CyTheme.sysPage).navigationTitle("Detailed analytics").navigationBarTitleDisplayMode(.inline)
-                    .accessibilityElement(children: .contain).accessibilityIdentifier("progressAnalyticsPage"))
-                case "history":
-                    return AnyView(ScrollView { sessions.padding(16).padding(.bottom, 120) }
-                        .background(CyTheme.sysPage).navigationTitle("Records & history").navigationBarTitleDisplayMode(.inline)
-                        .accessibilityElement(children: .contain).accessibilityIdentifier("progressHistoryPage"))
-                default: return nil
-                }
-            }) { _ in
+            // Approved compact hero over the Progress v2.3 sections (sheet PH4). "Detailed analytics" and "Records & history"
+            // are pages of the Progress screen's one navigation path (ProgressRoute); this host only asks for them.
+            ProgressScreen(sample: .notEvaluated, route: $route) { _ in
                 ProgressV23Sections(model: development(riding: riding, lifting: lifting), units: store.settings.units, showAnalytics: !metrics.isEmpty,
-                                    onAnalytics: { route = "analytics" }, onHistory: { route = "history" })
+                                    onAnalytics: { route = .analytics }, onHistory: { route = .history })
             }
             .onAppear(perform: position)
         } else {
