@@ -1,2 +1,2 @@
-LabFast/testProfilePerformancePages LabFast/testEquipmentAtLargeText LabFast/testProfileAthletePages
-Fast run 6: iPhone 15 Pro; P05 Cycling & sources; text-size scaling of the new Profile pages; build timing summary (19 Nov 2026).
+LabFast/testProfileAppPreferencesPages LabFast/testProfileAthletePages
+Fast run 7: P07 App Preferences pages; Personal details typing re-checked on the iPhone 15 Pro; build stage timings (19 Nov 2026).
