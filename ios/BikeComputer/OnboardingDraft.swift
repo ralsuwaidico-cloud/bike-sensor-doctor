@@ -439,12 +439,46 @@ enum ProfileConnection: String, CaseIterable, Equatable {
 }
 
 struct ProfileDeviceRow: Identifiable, Equatable {
-    enum Opens: Equatable { case health, devices, diagnostics, nothing }
+    /// The redesigned page a row opens (Shell/CyProfileDevices.swift). `.nothing` = a stated limit, opens nothing.
+    enum Opens: Equatable { case health, watch, board, sensors, phone, diagnostics, nothing }
     var id: String
     var title: String
     var summary: String
     var state: ProfileConnection?
     var opens: Opens
+}
+
+/// Which of the three sensor rows of sheet P06 a sensor paired with this phone belongs to — the same order of
+/// precedence as its icon on the existing devices screen (a power meter also reports cadence; it is a power meter).
+enum ProfileSensorFamily: String, CaseIterable, Equatable {
+    case hr, power, other
+    var title: String { switch self { case .hr: return "Heart-rate sensors"; case .power: return "Power meters"; case .other: return "Other sensors" } }
+    var purpose: String {
+        switch self {
+        case .hr: return "Straps and bands that send heart rate to this iPhone."
+        case .power: return "Meters that send power and cadence to this iPhone."
+        case .other: return "Speed and cadence sensors paired with this iPhone."
+        }
+    }
+    static func of(hasHR: Bool, hasPower: Bool) -> ProfileSensorFamily { hasPower ? .power : hasHR ? .hr : .other }
+}
+
+/// "This iPhone" (sheet P06) and Permissions (sheet P08 F2): each permission in one plain word, from the real state.
+enum ProfilePhoneWords {
+    enum Notifications: Equatable { case allowed, notAllowed, notAsked, unknown }
+    static let labNote = "Not used in Cyclift Lab"
+    static func bluetooth(off: Bool, unauthorized: Bool, unsupported: Bool) -> String {
+        unsupported ? "Not available" : unauthorized ? "Not allowed" : off ? "Off" : "On"
+    }
+    static func location(authorized: Bool, denied: Bool) -> String { authorized ? "Allowed" : denied ? "Not allowed" : "Not asked yet" }
+    static func notifications(_ n: Notifications) -> String {
+        switch n { case .allowed: return "Allowed"; case .notAllowed: return "Not allowed"; case .notAsked: return "Not asked yet"; case .unknown: return "Checking…" }
+    }
+    static func health(available: Bool, writeAuthorized: Bool, wanted: Bool) -> String {
+        !available ? "Not available" : writeAuthorized ? "On" : wanted ? "Not allowed" : "Off"
+    }
+    /// The row's one summary line, e.g. "Bluetooth on · location allowed".
+    static func summary(bluetooth: String, location: String) -> String { "Bluetooth \(bluetooth.lowercased()) · location \(location.lowercased())" }
 }
 
 enum ProfileDeviceRows {
@@ -476,22 +510,43 @@ enum ProfileDeviceRows {
             out.append(ProfileDeviceRow(id: "health", title: "Apple Health", summary: healthAvailable ? line(h) : "Not available on this device",
                                         state: connection(h.state, usable: healthAvailable), opens: .health))
         }
-        if let w = card(DeviceCards.watchId) { out.append(ProfileDeviceRow(id: "watch", title: "Apple Watch", summary: line(w), state: connection(w.state), opens: .devices)) }
-        if cycling, let b = card(DeviceCards.boardId) { out.append(ProfileDeviceRow(id: "board", title: "Cyclift BikeComputer", summary: line(b), state: connection(b.state), opens: .devices)) }
+        if let w = card(DeviceCards.watchId) { out.append(ProfileDeviceRow(id: "watch", title: "Apple Watch", summary: line(w), state: connection(w.state), opens: .watch)) }
+        if cycling, let b = card(DeviceCards.boardId) { out.append(ProfileDeviceRow(id: "board", title: "Cyclift BikeComputer", summary: line(b), state: connection(b.state), opens: .board)) }
         out.append(ProfileDeviceRow(id: "cywatch", title: "Cyclift Watch", summary: "A future device", state: .unavailable, opens: .nothing))
         if cycling {
             func family(_ id: String, _ title: String, _ image: String, _ empty: String) -> ProfileDeviceRow {
                 let own = cards.filter { $0.systemImage == image && !$0.id.hasPrefix("add.") }
                 guard let best = own.max(by: { connection($0.state).rank < connection($1.state).rank }) else {
-                    return ProfileDeviceRow(id: id, title: title, summary: empty, state: .notConfigured, opens: .devices)
+                    return ProfileDeviceRow(id: id, title: title, summary: empty, state: .notConfigured, opens: .sensors)
                 }
-                return ProfileDeviceRow(id: id, title: title, summary: own.map(\.name).joined(separator: ", "), state: connection(best.state), opens: .devices)
+                return ProfileDeviceRow(id: id, title: title, summary: own.map(\.name).joined(separator: ", "), state: connection(best.state), opens: .sensors)
             }
             out.append(family("hr", "Heart-rate sensors", "heart.fill", "Add a sensor"))
             out.append(family("power", "Power meters", "bolt.fill", "Add a meter"))
             out.append(family("other", "Other sensors", "gauge.with.dots.needle.33percent", "Speed · cadence"))
         }
         out.append(ProfileDeviceRow(id: "diagnostics", title: "Connection diagnostics", summary: "What is arriving right now", state: nil, opens: .diagnostics))
+        return out
+    }
+
+    /// The page's rows with "This iPhone" in the sheet's place: after the sensors, before Connection diagnostics.
+    static func withPhone(_ rows: [ProfileDeviceRow], summary: String) -> [ProfileDeviceRow] {
+        var out = rows
+        let phone = ProfileDeviceRow(id: "phone", title: "This iPhone", summary: summary, state: nil, opens: .phone)
+        if let i = out.firstIndex(where: { $0.id == "diagnostics" }) { out.insert(phone, at: i) } else { out.append(phone) }
+        return out
+    }
+
+    /// Cyclift Lab: the same rows, every one Unavailable — Lab connects to nothing and asks for no permission.
+    /// Each row still opens its page so the page can be looked at; the page says the same thing and offers no action.
+    static func lab(cycling: Bool) -> [ProfileDeviceRow] {
+        let off = "Switched off in Cyclift Lab"
+        var out = [ProfileDeviceRow(id: "health", title: "Apple Health", summary: off, state: .unavailable, opens: .health),
+                   ProfileDeviceRow(id: "watch", title: "Apple Watch", summary: off, state: .unavailable, opens: .watch)]
+        if cycling { out.append(ProfileDeviceRow(id: "board", title: "Cyclift BikeComputer", summary: off, state: .unavailable, opens: .board)) }
+        out.append(ProfileDeviceRow(id: "cywatch", title: "Cyclift Watch", summary: "A future device", state: .unavailable, opens: .nothing))
+        if cycling { for f in ProfileSensorFamily.allCases { out.append(ProfileDeviceRow(id: f.rawValue, title: f.title, summary: off, state: .unavailable, opens: .sensors)) } }
+        out.append(ProfileDeviceRow(id: "phone", title: "This iPhone", summary: "Bluetooth and location are not used in Cyclift Lab", state: nil, opens: .phone))
         return out
     }
 }
