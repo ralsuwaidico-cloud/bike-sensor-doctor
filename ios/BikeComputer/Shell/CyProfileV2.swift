@@ -336,14 +336,47 @@ struct CyProfileThemes: View {
 
 struct CyProfileData: View {
     var body: some View {
+        // Sheet P08. Export and Delete keep their existing, protected controls (the page behind "profileSettings");
+        // they are reached from their own rows here and are not re-implemented.
         CyProfilePage(title: "Data, Help & About", purpose: CycliftLab.isLab ? "Cyclift Lab holds demo data only, on this iPhone." : "Your data is stored only on this iPhone.") {
+            CyGroupLabel(text: "YOUR DATA")
             CyProfileRows {
-                CyProfileRow(title: "Where your data lives", summary: "Only on this iPhone. Deleting the app deletes it.", kind: .fact, id: "profileDataWhere")
-                CyProfileRow(title: "Cloud backup", summary: "Restore or import is not in the app", kind: .notAvailable, id: "profileBackup")
-                CyProfileRow(title: "Export, permissions & delete all data", summary: "Deleting asks first and states what is removed", id: "profileSettings") { SettingsPage() }
-                CyProfileRow(title: "Help, diagnostics & support", summary: "How Cyclift works, privacy policy, terms", id: "profileHelp") { HelpSupportPage() }
+                CyProfileRow(title: "Where your data lives", summary: "Only on this iPhone", id: "profileDataWhere") { CyProfileDataLives() }
+                CyProfileRow(title: "Export my data", summary: "One file with everything", id: "profileExport") { SettingsPage() }
+                CyProfileRow(title: "Permissions", summary: "One view of all permissions is not in the app", kind: .notAvailable, id: "profilePermissions")
+                CyProfileRow(title: "Delete all data", summary: "Asks you to confirm and states what is removed", id: "profileSettings") { SettingsPage() }
+            }
+            CyGroupLabel(text: "HELP")
+            CyProfileRows {
+                CyProfileRow(title: "How Cyclift works", summary: "Plan, numbers, devices, diagnostics, support", id: "profileHelp") { HelpSupportPage() }
+            }
+            CyGroupLabel(text: "ABOUT")
+            CyProfileRows {
+                CyProfileRow(title: "Privacy policy", id: "profilePrivacy") { LegalView(kind: .privacy) }
+                CyProfileRow(title: "Terms of use", id: "profileTerms") { LegalView(kind: .terms) }
                 CyProfileRow(title: "Version", summary: "Cyclift \(AppInfo.label)", kind: .fact, id: "profileVersion")
             }
         }
+    }
+}
+
+/// Sheet P08 F1 — says plainly where the data is and what does not exist.
+struct CyProfileDataLives: View {
+    var body: some View {
+        CyProfilePage(title: "Where your data lives") {
+            Text("Everything stays on this iPhone.").font(CyDyn.f(18, .semibold)).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true)
+            Text("Profile, plan, rides, strength sessions and routines are stored only inside Cyclift on this phone. There is no account and no copy on a server.")
+                .font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 8).padding(.bottom, 6)
+            CyProfileRows {
+                CyProfileRow(title: "Cloud backup", kind: .notAvailable, id: "profileBackup")
+                CyProfileRow(title: "Restore or import", kind: .notAvailable, id: "profileRestore")
+            }
+            Text("If this iPhone is lost or the app is deleted, your Cyclift data is gone unless you exported it or your iPhone backup includes it.")
+                .font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 14).padding(.bottom, 6)
+            CyProfileRows {
+                CyProfileRow(title: "Export my data", summary: "One file you can save or share. It cannot be imported back yet.", id: "profileExportFromWhere") { SettingsPage() }
+            }
+        }
+        .accessibilityIdentifier("profileDataLivesPage")
     }
 }

@@ -307,4 +307,28 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(app.staticTexts["onboardingProgress"].firstMatch.label.hasPrefix("3 of 7"), "required: Continue goes to page 3")
         shot("y3-goals")
     }
+
+    /// Profile sheet P08: Data, Help & About and "Where your data lives". Export and Delete are only confirmed to be
+    /// reachable here; deleting itself is exercised by the full Lab run, not by a fast check.
+    func testProfileDataPages() {
+        let app = launch()
+        openProfileSection(app, "profileSectionF")
+        for id in ["profileDataWhere", "profileExport", "profilePermissions", "profileSettings", "profileHelp"] { XCTAssertTrue(el(app, id).waitForExistence(timeout: 8), "required: \(id)") }
+        shot("p08-F-data-help-about")
+        let version = el(app, "profileVersion")
+        _ = app.reveal(version, top: 120, bottomMargin: 130)
+        XCTAssertTrue(version.exists && el(app, "profilePrivacy").exists && el(app, "profileTerms").exists, "required: privacy, terms and version")
+        XCTAssertLessThanOrEqual(version.frame.maxY, app.frame.height - 100, "required: the last row clears the dock")
+        shot("p08-F-end")
+        let lives = el(app, "profileDataWhere"); _ = app.reveal(lives, top: 120, bottomMargin: 130); lives.tap()
+        for id in ["profileBackup", "profileRestore", "profileExportFromWhere"] { XCTAssertTrue(el(app, id).waitForExistence(timeout: 8), "required: \(id)") }
+        shot("p08-F1-where-data-lives")
+        el(app, "profileExportFromWhere").tap()
+        XCTAssertTrue(app.buttons["exportData"].firstMatch.waitForExistence(timeout: 8), "required: Export reaches the existing export control")
+        back(app); back(app)
+        let del = el(app, "profileSettings"); XCTAssertTrue(del.waitForExistence(timeout: 8)); _ = app.reveal(del, top: 120, bottomMargin: 130); del.tap()
+        let delete = app.buttons["deleteAllData"].firstMatch
+        var n = 0; while !(delete.exists && delete.isHittable) && n < 8 { app.swipeUp(); n += 1 }
+        XCTAssertTrue(delete.exists, "required: Delete all data reaches the existing protected control (not pressed here)")
+    }
 }
