@@ -219,7 +219,9 @@ final class RedesignMainTests: XCTestCase {
         must(el(app, "profileDevice-diagnostics"), "Connection diagnostics")
         shot("p06-1-connected-receiving-unavailable")
         el(app, "profileDevice-watch").tap()
-        must(app.navigationBars["Devices & sensors"].firstMatch, "a device row opens the existing devices screen")
+        // 19 Nov 2026: the row no longer opens the legacy devices screen — the redesigned Apple Watch page replaced it
+        // (owner: no legacy navigation where a redesigned page exists), so the destination asserted here changed with it.
+        must(el(app, "deviceStatus-watch"), "the Apple Watch row opens its redesigned page")
         app.terminate()
 
         // 2 a lost link and a denied permission
