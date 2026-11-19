@@ -1,2 +1,2 @@
-LabFast/testProfileAthletePages LabFast/testProfileTrainingSetupPages
-Fast run 4: same two checks as run 3; first run with the kept-build cache (nothing kept yet) and Personal details without the keyboard bar (19 Nov 2026).
+LabFast/testProfileAthletePages LabFast/testProfileTrainingSetupPages LabFast/testProfilePerformancePages LabFast/testProfileEditsNeedApproval LabFast/testEquipmentAtLargeText
+Fast run 5: first run on a kept build (P05 pages, edit-approval and large-text checks added since run 4) (19 Nov 2026).
