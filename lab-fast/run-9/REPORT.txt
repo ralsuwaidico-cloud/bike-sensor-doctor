@@ -1,0 +1,34 @@
+FAST focused Lab check — selected: LabFast/testProfileDataPages LabChecks/test2dProfileSectionsAndTheirPagesOpen LabChecks/test2eCoachNotNowKeepsTheSuggestionOpen LabFast/testProfileEditsNeedApproval
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 1b5ea76a · files changed since then: 2
+TIME setup: 14s
+  timing: CompileAssetCatalogVariant (1 task) | 131.122 seconds
+  timing: SwiftDriver (16 tasks) | 31.387 seconds
+  timing: SwiftCompile (7 tasks) | 15.126 seconds
+  timing: Ld (18 tasks) | 8.580 seconds
+  timing: SwiftEmitModule (2 tasks) | 6.979 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 6.539 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.756 seconds
+  timing: Copy (17 tasks) | 0.606 seconds
+  stages: packages at 202s · packages prepared at 243s · dependency graph at 243s · inputs at 244s · build description at 244s · first Swift step at 265s · first link at 269s · asset catalogue at 277s · finished at 420s
+  compiled in this run: 18 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 421s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 22s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 221.744 (221.745) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 870.609 (870.616) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1092.353 (1092.363) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1092.353 (1092.366) seconds
+Test Case '-[CycliftLabUITests.LabChecks test2dProfileSectionsAndTheirPagesOpen]' passed (754.008 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2eCoachNotNowKeepsTheSuggestionOpen]' passed (116.602 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileDataPages]' passed (106.244 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileEditsNeedApproval]' passed (115.500 seconds).
+RESULT selected screen checks: ok
+TIME tests: 1200s
+LAB-NOTE equipment rows normal text: first 476–536, second 536–596
+LAB-NOTE not-now after reopening plan row: Coach Notes: Not trained in 4 weeks of detailed logs: hinge, single-leg, core.. Open
+LAB-NOTE not-now first plan row: Coach Suggests: Goblet squat: 25 kg → 26 kg per hand?. Review
+TIME total on the Mac: 1665s
+commit 9b9d3a6878bcc44473178bca2df0ca0432384fdb  branch ios/lab
