@@ -358,10 +358,40 @@ struct ProgressScreen<Analysis: View>: View {
             .navigationTitle("Progress")
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: String.self) { name in
-                if let page = destination(name) { page } else { EvolutionDetailsPage(sample: sample, bottomInset: bottomInset) }
+                routed(name)
             }
             .onChange(of: route.wrappedValue) { _, r in if let r { path.append(r); route.wrappedValue = nil } }
         }
+    }
+
+    /// The page for a route: the redesigned Progress pages first (Redesign/ProgressDetailV2.swift), then a page the
+    /// host supplies under another name, else Athlete Evolution.
+    @ViewBuilder private func routed(_ name: String) -> some View {
+        if let page = ProgressRoute.page(name) { page }
+        else if let page = destination(name) { page }
+        else { EvolutionDetailsPage(sample: sample, bottomInset: bottomInset) }
+    }
+
+    /// Sheet PH4: the "•••" button at the top right. Every entry opens a page that exists; nothing here is a placeholder.
+    private var moreMenu: some View {
+        Menu {
+            Button("Detailed analytics") { path.append(ProgressRoute.analytics) }.accessibilityIdentifier("progressMenuAnalytics")
+            Button("Records & history") { path.append(ProgressRoute.history) }.accessibilityIdentifier("progressMenuHistory")
+            Button("Athlete Evolution") { path.append(ProgressRoute.evolution) }.accessibilityIdentifier("progressMenuEvolution")
+            Button("Power settings") { path.append(ProgressRoute.power) }.accessibilityIdentifier("progressMenuPower")
+            Button("Heart-rate settings") { path.append(ProgressRoute.heartRate) }.accessibilityIdentifier("progressMenuHeartRate")
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(theme.textPrimary)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(theme.surface2))
+                .overlay(Circle().stroke(theme.cardStroke, lineWidth: 1))
+                .frame(width: CyHit.min, height: CyHit.min)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("More")
+        .accessibilityIdentifier("progressMenu")
     }
 
     // MARK: geometry
@@ -469,10 +499,11 @@ struct ProgressScreen<Analysis: View>: View {
             }
             Spacer(minLength: 0)
             if showProbe { probe(p, hole: hole, safeTop: safeTop, width: width) }
+            moreMenu
         }
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(.leading, lerp(16, 16 + symbolSize + 8, p))
-        .padding(.trailing, 8)
+        .padding(.trailing, 10)          // the 32 pt button inside its 44 pt target ends 16 pt from the edge (sheet PH4)
         .frame(height: headerHeight)
         .background(alignment: .leading) {
             if reduceMotion {
@@ -534,6 +565,7 @@ struct ProgressScreen<Analysis: View>: View {
             }
             .background(measure("hero"))
             analysis(proxy).padding(.top, 22)
+                .environment(\.progressOpen, { name in path.append(name) })
         }
         .padding(.horizontal, 16)
         .padding(.bottom, bottomInset + 24)
@@ -597,7 +629,7 @@ struct EvolutionDetailsPage: View {
                     .font(.body).foregroundStyle(theme.textPrimary)
                 Text(sample.highest.map { "Highest achieved: G\($0) · \(ProgressGen.name($0))" } ?? "Highest achieved: none yet")
                     .font(.body).foregroundStyle(theme.textPrimary)
-                Text("Cyclift does not assign a stage yet. The evidence each stage needs has not been defined and approved, so no stage is worked out or shown. Your measured progress is on the Progress page: consistency, FTP with its source, logged strength sets and checkpoints.")
+                Text("Cyclift does not assign a stage yet. The evidence each stage needs has not been defined and approved, so no stage is worked out or shown, and there is no next stage or timeline of stages. Your measured progress is on the Progress page: riding time, logged strength sets, consistency and time in zones.")
                     .font(.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("evolutionNotEvaluated")
             }

@@ -1,10 +1,16 @@
 import SwiftUI
 
-// Progress v2.3 — the open sections under the compact hero (sheet PH4, "AFTER"): Your development · Endurance
-// development · Strength development · Training consistency · Time in zones · Performance analysis · Records & history.
+// Progress v2.3 — the open sections under the compact hero (sheet PH4, "AFTER"), in the sheet's order:
+// Your development · Endurance development · Strength development · Training consistency · Time in zones ·
+// Next evolution · Performance analysis · Evolution timeline · Records & history.
 // The sections sit directly on the page (no cards), each with one large figure, one line saying what it is, and a small
-// drawing. Everything shown comes from ProgressDevelopment (the athlete's own records).
-// Not built, and why: Next evolution and the Evolution timeline need approved stage criteria (there are none).
+// drawing. Everything shown comes from ProgressDevelopment (the athlete's own records). Each development section opens
+// its own page (Redesign/ProgressDetailV2.swift).
+//
+// STAGES: the criteria are not approved (baseline register, Progress row). "Next evolution" and "Evolution timeline"
+// therefore show the baseline state only: no stage name, no requirement, no dated stage event. The sheet's "Since
+// baseline", "Improving" and "Developing Hybrid" wording is not used either: there is no approved baseline date or
+// trend-label method. The page says what was measured and against what.
 
 struct ProgressV23Sections: View {
     let model: ProgressDevelopment
@@ -12,43 +18,147 @@ struct ProgressV23Sections: View {
     var showAnalytics = true
     var onAnalytics: () -> Void
     var onHistory: () -> Void
+    @EnvironmentObject private var store: Store
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var dts
+    @Environment(\.progressOpen) private var open
+
+    private var showRiding: Bool { store.profile.trainingMode.includesCycling || !store.rides.isEmpty }
+    private var showLifting: Bool { store.profile.trainingMode.includesLifting || !store.strength.isEmpty }
+    /// Samples first (the host's figure), then the zone totals saved with the rides, else exactly what is missing.
+    private var zoneState: (zones: ProgressDevelopment.Zones?, unavailable: ProgressDevelopment.ZonesUnavailable?) {
+        guard showRiding else { return (nil, nil) }
+        return ProgressDevelopment.zonesResolved(sampled: model.zones, rides: store.rides, ftpKnown: store.profile.ftpKnown, hrZonesKnown: store.profile.hrZonesKnown)
+    }
+    private var nothingRecorded: Bool { model.isEmpty && store.rides.isEmpty && store.strength.isEmpty }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    overline("YOUR DEVELOPMENT")
-                    Spacer(minLength: CySpace.s)
-                    Text("From your records").font(.caption.weight(.semibold)).foregroundStyle(theme.textPrimary)
-                }
-                Text(model.isEmpty ? "Nothing recorded yet. Your development appears here after your first sessions."
-                                   : "Measured from your recorded rides and logged strength sessions. No stage is evaluated.")
-                    .font(.system(.subheadline)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("progressDevelopmentIntro")
-            }
-            if let e = model.endurance { endurance(e) }
-            if let s = model.strength { strength(s) }
-            if let c = model.consistency { consistency(c) }
-            if let z = model.zones { zones(z) }
-            else if let why = model.zonesMissing {
+            intro
+            development
+            zonesSection
+            nextEvolution
+            if showAnalytics {
                 VStack(alignment: .leading, spacing: 4) {
-                    title("Time in zones")
-                    Text("Not shown: \(why).").font(.system(.footnote)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    overline("PERFORMANCE ANALYSIS")
+                    row("Detailed analytics", analyticsSub, id: "progressOpenAnalytics", onAnalytics)
                 }
-                .accessibilityElement(children: .combine).accessibilityIdentifier("progressZonesMissing")
             }
-            VStack(alignment: .leading, spacing: 4) {
-                overline("PERFORMANCE ANALYSIS")
-                if showAnalytics { row("Detailed analytics", "Weekly trends · cycling · strength · checkpoints", id: "progressOpenAnalytics", onAnalytics) }
-                Rectangle().fill(theme.separator).frame(height: 1)
-                row("Records & history", "Every recorded ride and logged session", id: "progressOpenHistory", onHistory)
-            }
+            evolutionTimeline
+            row("Records & history", "Every recorded ride and logged session", id: "progressOpenHistory", onHistory)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("progressV23")
+    }
+
+    private var analyticsSub: String {
+        let parts = (showRiding ? ["Endurance"] : []) + (showLifting ? ["Strength"] : []) + ["Records", "Checkpoints"]
+        return parts.joined(separator: " · ")
+    }
+
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                overline("YOUR DEVELOPMENT")
+                Spacer(minLength: CySpace.s)
+                Text("From your records").font(.caption.weight(.semibold)).foregroundStyle(theme.textPrimary)
+            }
+            Text(nothingRecorded ? "Nothing recorded yet. Your development appears here after your first sessions."
+                                 : "Measured from your recorded rides and logged strength sessions. No stage is evaluated.")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("progressDevelopmentIntro")
+        }
+    }
+
+    @ViewBuilder private var development: some View {
+        if let e = model.endurance {
+            opens(ProgressRoute.endurance, id: "progressEndurance") { endurance(e) }
+        }
+        if let s = model.strength {
+            opens(ProgressRoute.strength, id: "progressStrengthDevelopment") { strength(s) }
+        } else if showLifting, let pending = ProgressDevelopment.strengthPending(lifts: store.liftSummaries(), sessions: store.strength.count) {
+            opens(ProgressRoute.strength, id: "progressStrengthPending") {
+                VStack(alignment: .leading, spacing: 4) {
+                    title("Strength development", chevron: true)
+                    Text(pending).font(.system(.footnote)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        if let c = model.consistency {
+            opens(ProgressRoute.consistency, id: "progressConsistency") { consistency(c) }
+        }
+    }
+
+    @ViewBuilder private var zonesSection: some View {
+        let state = zoneState
+        if let z = state.zones {
+            opens(ProgressRoute.zones, id: "progressZones") { zones(z) }
+        } else if let why = state.unavailable {
+            VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
+                    title("Time in zones")
+                    Text("Not shown. \(why.text)").font(.system(.footnote)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine).accessibilityIdentifier("progressZonesMissing")
+                if !why.settings.isEmpty { PgZoneSettingsRows(only: why.settings) }
+            }
+        }
+    }
+
+    // MARK: stages — baseline state only (criteria not approved)
+
+    private var nextEvolution: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            overline("NEXT EVOLUTION")
+            Text("Stage criteria are not set yet")
+                .font(.system(.title3, design: .rounded).weight(.heavy)).foregroundStyle(theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Cyclift does not evaluate stages in this version, so there is no next stage and nothing to qualify for yet.")
+                .font(.system(.subheadline)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+            Text("The evidence each stage needs has not been defined and approved.")
+                .font(.caption).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("progressNextEvolution")
+    }
+
+    private var evolutionTimeline: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            overline("EVOLUTION TIMELINE")
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 3).stroke(theme.textSecondary, lineWidth: 1.6).frame(width: 11, height: 11)
+                Line().stroke(theme.textSecondary.opacity(0.8), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [1.5, 5])).frame(height: 1)
+                Circle().fill(theme.accent).frame(width: 11, height: 11)
+            }
+            .accessibilityHidden(true)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Baseline").font(.caption.weight(.semibold)).foregroundStyle(theme.textPrimary)
+                    Text("being established").font(.caption2).foregroundStyle(theme.textSecondary)
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("Now").font(.caption.weight(.semibold)).foregroundStyle(theme.textPrimary)
+                    Text(Date().formatted(.dateTime.day().month(.abbreviated))).font(.caption2).foregroundStyle(theme.textSecondary)
+                }
+            }
+            Text("No stage events yet.").font(.caption).foregroundStyle(theme.textSecondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("progressEvolutionTimeline")
+    }
+
+    /// A development section that opens its page. The section's own text is one VoiceOver element and one button.
+    private func opens<V: View>(_ route: String, id: String, @ViewBuilder _ content: () -> V) -> some View {
+        let label = content()
+        return Button { open(route) } label: {
+            label.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
+        .accessibilityHint("Opens the details")
     }
 
     // MARK: pieces
@@ -56,8 +166,12 @@ struct ProgressV23Sections: View {
     private func overline(_ t: String) -> some View {
         Text(t).font(CyFont.overline).tracking(1.4).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
     }
-    private func title(_ t: String) -> some View {
-        Text(t).font(.system(.subheadline, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+    private func title(_ t: String, chevron: Bool = false) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(t).font(.system(.subheadline, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 6)
+            if chevron { Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(theme.textTertiary).accessibilityHidden(true) }
+        }
     }
     private func figure(_ value: String, _ unit: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 5) {
@@ -100,7 +214,7 @@ struct ProgressV23Sections: View {
     private func endurance(_ e: ProgressDevelopment.Endurance) -> some View {
         let h = e.averageMinutes / 60, m = e.averageMinutes % 60
         return VStack(alignment: .leading, spacing: 6) {
-            title("Endurance development")
+            title("Endurance development", chevron: true)
             figure(h > 0 ? "\(h) h \(String(format: "%02d", m))" : "\(m)", "min a week")
             line(e.direction, "\(e.fullWeeks) weeks", "Cycling · riding time · average of the last \(e.fullWeeks) full week\(e.fullWeeks == 1 ? "" : "s")")
             if let p = e.powerLine { Text(p).font(.system(.footnote)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true) }
@@ -108,8 +222,7 @@ struct ProgressV23Sections: View {
                 .frame(height: 76).padding(.top, 6).accessibilityHidden(true)
             ends(e.firstLabel, e.lastLabel, middle: "this week is not finished")
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("progressEndurance")
+        .accessibilityElement(children: .combine)       // the identifier is on the button that wraps this section
     }
 
     // MARK: Strength development — one lift, as logged
@@ -117,7 +230,7 @@ struct ProgressV23Sections: View {
     private func strength(_ s: ProgressDevelopment.Strength) -> some View {
         let shown = units == .imperial ? s.latestKg * 2.20462 : s.latestKg
         return VStack(alignment: .leading, spacing: 6) {
-            title("Strength development")
+            title("Strength development", chevron: true)
             figure(shown == shown.rounded() ? String(format: "%.0f", shown) : String(format: "%.1f", shown), units == .imperial ? "lb" : "kg")
             line(s.direction, "2 sessions", "\(s.liftName) · recorded top set \(s.latestText) · \(s.sessions) sessions")
             ForEach(Array(s.ranges.enumerated()), id: \.offset) { _, r in
@@ -134,15 +247,14 @@ struct ProgressV23Sections: View {
             }
             Text("One lift, not your whole strength.").font(.caption).foregroundStyle(theme.textSecondary).padding(.top, 4)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("progressStrengthDevelopment")
+        .accessibilityElement(children: .combine)       // the identifier is on the button that wraps this section
     }
 
     // MARK: Training consistency — weeks with at least one session
 
     private func consistency(_ c: ProgressDevelopment.Consistency) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            title("Training consistency")
+            title("Training consistency", chevron: true)
             figure("\(c.active)", "of \(c.total) weeks")
             Text("Weeks with at least one session. Participation, not performance.").font(.system(.footnote)).foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -164,17 +276,16 @@ struct ProgressV23Sections: View {
             }
             .font(.caption2).foregroundStyle(theme.textSecondary).accessibilityHidden(true)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("progressConsistency")
+        .accessibilityElement(children: .combine)       // the identifier is on the button that wraps this section
     }
 
     // MARK: Time in zones — measured time only
 
     private func zones(_ z: ProgressDevelopment.Zones) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            title("Time in zones")
+            title(z.title, chevron: true)
             figure("\(z.easyPercent)", "%")
-            Text("in zones 1–2 · \(z.hours) measured · \(z.basis)").font(.system(.footnote)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+            Text("in zones 1–2 · \(z.hours) recorded · \(z.basis)").font(.system(.footnote)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             GeometryReader { g in
                 HStack(spacing: 2) {
                     ForEach(Array(z.shares.enumerated()), id: \.offset) { i, s in
@@ -190,14 +301,16 @@ struct ProgressV23Sections: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4, alignment: .leading), count: cols), alignment: .leading, spacing: 4) {
                 ForEach(Array(z.shares.enumerated()), id: \.offset) { i, s in
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Z\(i + 1)").font(.caption2.weight(.semibold)).foregroundStyle(theme.textSecondary)
+                        HStack(spacing: 4) {
+                            RoundedRectangle(cornerRadius: 2).fill(theme.endurance.opacity(0.35 + 0.65 * Double(i) / Double(max(z.shares.count - 1, 1)))).frame(width: 7, height: 7)
+                            Text("Z\(i + 1)").font(.caption2.weight(.semibold)).foregroundStyle(theme.textSecondary)
+                        }
                         Text("\(s)%").font(.caption2.weight(.bold)).monospacedDigit().foregroundStyle(theme.textPrimary)
                     }
                 }
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("progressZones")
+        .accessibilityElement(children: .combine)       // the identifier is on the button that wraps this section
     }
 }
 
@@ -265,5 +378,15 @@ private struct RangeBar: View {
                     .position(x: from <= to ? x(to) + 26 : x(to) - 26, y: y)
             }
         }
+    }
+}
+
+/// A horizontal rule as a shape (so it can be dashed).
+private struct Line: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return p
     }
 }
