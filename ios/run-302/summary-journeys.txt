@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 302 — 2026-11-19 12:16 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+RESULT build (Release, for testing): ok · 17m51s
+  recorded journeys: NOT RUN (focused redesigned-main-app check)
+RESULT redesigned main app (switch on, real services, test athlete): ok · 4 test(s) · 11m6s
+RESULT journey (recorded): not run — focused check · 34m36s
+Total: 34m48s
