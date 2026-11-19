@@ -222,7 +222,7 @@ struct CyProfileSetup: View {
                         .onAppear { if equipmentAtOpen == nil { equipmentAtOpen = store.equipment } }
                         .onDisappear { if let old = equipmentAtOpen { equipmentAtOpen = nil; planPreview = store.proposeEquipmentEdit(from: old) } }
                 }
-                CyProfileRow(title: "Strength preferences", summary: store.strengthPrefs.prefersSupersets == true ? "Supersets on" : "Split, goal, supersets", id: "profilePreferences") { TrainingPreferencesPage() }
+                CyProfileRow(title: "Strength preferences", summary: store.strengthPrefs.prefersSupersets == true ? "Supersets on" : "Split, goal, supersets", id: "profilePreferences") { CyProfileStrengthPrefs() }
                 CyProfileRow(title: "Recovery, pauses & health check", summary: HealthSafetyPage.summary(store.profile).isEmpty ? "No pause" : HealthSafetyPage.summary(store.profile), id: "profileHealthSafety") { CyProfileRecoveryPauses() }
                 CyProfileRow(title: "Goals", summary: ProfileText.goals(store.profile), kind: .plan, id: "profileGoal") { GoalsPage() }
                 CyProfileRow(title: "Training schedule", summary: "Weekly calendar and recurring plan", kind: .plan, id: "profileWeek") { WeekPage() }

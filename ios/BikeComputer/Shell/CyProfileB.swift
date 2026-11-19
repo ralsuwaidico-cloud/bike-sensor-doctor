@@ -118,3 +118,38 @@ struct CyProfileRecoveryPauses: View {
         .sheet(item: $preview) { r in PlanChangeSheet(proposalId: r.id) }
     }
 }
+
+/// Sheet P04 B2 — Strength preferences. The sheet draws a three-way split and a three-way superset choice; the app
+/// stores four splits and a yes/no superset preference, so the choices are not redrawn here as controls the app does
+/// not have. Each row shows the stored value and opens the existing editor; every setting of the page this replaces
+/// in the redesign (TrainingPreferencesPage) stays reachable. Recovery is not repeated here (it lives in Recovery & pauses).
+struct CyProfileStrengthPrefs: View {
+    @EnvironmentObject private var store: Store
+    var body: some View {
+        let lifts = store.profile.trainingMode.includesLifting
+        CyProfilePage(title: "Strength preferences") {
+            if lifts {
+                CyGroupLabel(text: "PROGRAMMING")
+                CyProfileRows {
+                    CyProfileRow(title: "Strength split", summary: store.profile.strengthSplit?.title ?? "Coach decides", id: "hybridPlanLink") { HybridPlanEditor() }
+                    CyProfileRow(title: "Strength goal", summary: store.plannerContext().goal.title, id: "strengthProgramming") { StrengthPrefsPage() }
+                    CyProfileRow(title: "Lifting experience", summary: "\(ProfileText.strengthLevel(store.strengthPrefs.experience ?? store.plannerContext().experience)) · edited in Athlete Profile", kind: .fact, id: "strengthExperienceFact")
+                    CyProfileRow(title: "Supersets", summary: store.strengthPrefs.prefersSupersets == true ? "Preferred" : "Chosen per session in Plan", kind: .fact, id: "strengthSupersetsFact")
+                }
+                CyGroupLabel(text: "ROUTINES")
+                CyProfileRows {
+                    CyProfileRow(title: "Routine per weekday", summary: "\(store.weekdayRoutines.count) set", id: "weekdayRoutines") { WeekdayRoutinesPage() }
+                }
+            } else {
+                Text("Strength training is not part of your athlete type. Change it in Athlete Profile to set these.")
+                    .font(CyDyn.f(14)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
+            }
+            CyGroupLabel(text: "OTHER")
+            CyProfileRows {
+                CyProfileRow(title: "Other sports", summary: "\(store.profile.sports.count) added", id: "otherSports") { SportsPicker() }
+                CyProfileRow(title: "Coach adjustments", summary: store.activeAdaptations.isEmpty ? (store.settings.autoAdapt ? "None" : "Off") : "\(store.activeAdaptations.count) in force", id: "coachAdjustmentsRow") { AdjustmentsView() }
+            }
+        }
+        .accessibilityIdentifier("profileStrengthPage")
+    }
+}
