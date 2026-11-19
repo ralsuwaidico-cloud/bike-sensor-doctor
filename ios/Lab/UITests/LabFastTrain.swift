@@ -229,7 +229,10 @@ final class LabFastTrain: XCTestCase {
             let options = app.buttons["recorderOptions"].firstMatch
             XCTAssertTrue(options.waitForExistence(timeout: 5), "required: the ··· options"); options.tap()
             let item = app.buttons["Correct a logged set"].firstMatch
-            XCTAssertTrue(item.waitForExistence(timeout: 5), "required: 'Correct a logged set' under ···"); item.tap()
+            XCTAssertTrue(item.waitForExistence(timeout: 5), "required: 'Correct a logged set' under ···")
+            // fast check 15: the tap landed while the menu was still opening ("not hittable"); wait for the menu to settle
+            var w = 0; while !item.isHittable && w < 10 { app.settleForScreenshot(0.3); w += 1 }
+            XCTAssertTrue(item.isHittable, "required: the menu item can be pressed"); item.tap()
             XCTAssertTrue(el(app, "correctTitle").waitForExistence(timeout: 8), "required: the correction page")
         }
         openCorrection()
