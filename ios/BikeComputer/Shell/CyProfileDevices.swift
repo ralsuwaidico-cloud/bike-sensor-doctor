@@ -244,7 +244,8 @@ struct CyDeviceLabPage: View {
                 CyDevStatus(state: .unavailable, note: ProfilePhoneWords.labNote, id: "deviceStatus-\(row.id)")
             }
             ForEach(Array(offers.enumerated()), id: \.offset) { i, o in
-                CyDevFact(title: o.0, value: o.1, id: "deviceLabFact-\(row.id)-\(i)")
+                // This iPhone: the same identifiers as the page in the Cyclift app (fast check 18 found the Lab page used others)
+                CyDevFact(title: o.0, value: o.1, id: row.opens == .phone ? ["phoneBluetooth", "phoneLocation", "phoneNotifications"][min(i, 2)] : "deviceLabFact-\(row.id)-\(i)")
             }
             CyDevNote(text: "Cyclift Lab is a demonstration. It connects to nothing, asks for no permission and reads nothing from this iPhone. In the Cyclift app this page shows the real state and its actions.")
                 .accessibilityIdentifier("deviceLabNote-\(row.id)")

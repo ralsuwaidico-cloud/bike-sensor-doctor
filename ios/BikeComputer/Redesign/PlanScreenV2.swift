@@ -189,9 +189,10 @@ struct PlanScreen: View {
             Text("Plan").font(CyFont.display).foregroundStyle(theme.textPrimary)
                 .accessibilityAddTraits(.isHeader).accessibilityIdentifier("planTitle")
             Spacer()
-            // 19 Nov 2026: a plain button opening a short page of plain buttons. Pull-down menu rows could not be pressed
-            // reliably in this app (Lab strip menu, Progress menu, recorder options — fast checks 15 and 17), so the same
-            // four choices are now ordinary buttons. The choice is carried out after the page has closed.
+            // TEMPORARY (owner, 19 Nov 2026): a plain button opening a short page of plain buttons, kept for the current
+            // integration candidate only. The owner pressed the original compact pull-down menu on his iPhone 15 Pro
+            // (build 6): it works; only the automated simulator check could not press menu rows. The compact menu is the
+            // FINAL design for Plan and is to be restored after the gates, with a focused check of menu interaction.
             Button { moreOpen = true } label: {
                 Image(systemName: "ellipsis").font(.headline).foregroundStyle(theme.textPrimary)
                     .frame(width: 36, height: 36).background(Circle().fill(theme.surface2))
