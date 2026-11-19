@@ -1,2 +1,2 @@
-LabFastTrain LabFastCycling LabFastPlan/testAddGoalCancelLeavesGoalUnchanged LabFastPlan/testAddGoalApprovePersists
-request 15: Train ball, strength states, cycling Focus/Map; Plan goal checks with corrected expectations
+LabFastCycling/testFocusMapPauseResumeLapFinish LabFastTrain/testCorrectingALoggedSet LabFastProfile LabFastOnboarding LabFastProgress
+request 16: two corrected checks; Profile, Onboarding, Progress journeys
