@@ -292,10 +292,10 @@ struct CyProfilePreferences: View {
                 }
                 CyProfileRow(title: "Language", summary: "English", kind: .fact, id: "profileLanguage")
                 CyProfileRow(title: "Arabic", summary: "Designed, not in the app yet", kind: .notAvailable, id: "profileArabic")
-                CyProfileRow(title: "Units", summary: store.settings.units == .metric ? "Metric" : "Imperial", id: "profileUnits") { SettingsPage() }
-                CyProfileRow(title: "Notifications", summary: "Ride recording notice", id: "profileNotifications") { SettingsPage() }
-                CyProfileRow(title: "Coach", summary: "Rules-based · never changes the plan without your approval", id: "profileCoach") { RideCoachSettingsPage() }
-                CyProfileRow(title: "Training display", summary: "Keep screen on, ride tiles, ride display", id: "profileDisplay") { SettingsPage() }
+                CyProfileRow(title: "Units", summary: store.settings.units == .metric ? "Metric" : "Imperial", id: "profileUnits") { CyProfileUnits() }
+                CyProfileRow(title: "Notifications", summary: "Ride recording notice", id: "profileNotifications") { CyProfileNotificationsDisplay() }
+                CyProfileRow(title: "Coach", summary: "Rules-based · never changes the plan without your approval", id: "profileCoach") { CyProfileCoachPreferences() }
+                CyProfileRow(title: "Training display", summary: "Keep screen on, ride tiles, ride display", id: "profileDisplay") { CyProfileNotificationsDisplay() }
                 CyProfileRow(title: "Accessibility", summary: "Follows your iPhone's text size, contrast and motion settings", kind: .fact, id: "profileAccessibility")
             }
         }

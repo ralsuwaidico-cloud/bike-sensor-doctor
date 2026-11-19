@@ -84,6 +84,9 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(save.exists, "required: Save in the bar"); XCTAssertFalse(save.isEnabled, "Save is unlit until something changes")
         shot("p03-A1-personal-details")
         name.tap(); name.typeText(" Lab")
+        // run 6 (first run on a newly created iPhone 15 Pro simulator): the field held "Demo L" after typing " Lab".
+        // What the field holds is now checked on its own, so lost keystrokes are told apart from a save that loses text.
+        XCTAssertEqual(name.value as? String, "Demo Lab", "required: the field holds what was typed")
         XCTAssertTrue(save.isEnabled, "required: Save lights after a change")
         shot("p03-A1-personal-details-changed")
         save.tap(); app.settleForScreenshot(1)
@@ -227,5 +230,33 @@ final class LabFast: XCTestCase {
         shot("p04-B1-equipment-large-text")
         restrictionRowsAreSeparate(app, "large text")
         shot("p04-B1-equipment-large-text-rows")
+    }
+
+    /// Profile sheet P07: App Preferences, Units, Notifications & display, Coach. A switch is flipped and flipped
+    /// back to prove it is live; units are changed and restored.
+    func testProfileAppPreferencesPages() {
+        let app = launch()
+        openProfileSection(app, "profileSectionE")
+        let units = el(app, "profileUnits")
+        XCTAssertTrue(units.waitForExistence(timeout: 8), "required: Units row"); shot("p07-E-app-preferences"); units.tap()
+        let imperial = app.buttons["Imperial"].firstMatch, metric = app.buttons["Metric"].firstMatch
+        XCTAssertTrue(imperial.waitForExistence(timeout: 8) && metric.isSelected, "required: the units control, Metric in the demo")
+        imperial.tap(); XCTAssertTrue(imperial.isSelected, "required: units change"); shot("p07-E1-units")
+        metric.tap(); XCTAssertTrue(metric.isSelected, "units restored")
+        back(app)
+        let notif = el(app, "profileNotifications")
+        XCTAssertTrue(notif.waitForExistence(timeout: 8), "required: Notifications row"); notif.tap()
+        let keep = app.switches["keepScreenOn"].firstMatch
+        XCTAssertTrue(keep.waitForExistence(timeout: 8), "required: Keep the screen on")
+        for id in ["settingsNotifications", "rideTiles", "rideDisplay"] { XCTAssertTrue(el(app, id).exists, "required: \(id)") }
+        let was = keep.value as? String
+        keep.switches.firstMatch.exists ? keep.switches.firstMatch.tap() : keep.tap()
+        XCTAssertNotEqual(keep.value as? String, was, "required: the switch changes"); shot("p07-E2-notifications-display")
+        keep.switches.firstMatch.exists ? keep.switches.firstMatch.tap() : keep.tap()
+        back(app)
+        let coach = el(app, "profileCoach")
+        XCTAssertTrue(coach.waitForExistence(timeout: 8), "required: Coach row"); coach.tap()
+        for id in ["coachDuringRides", "coachTalk", "coachAutoAdapt", "coachAdjustments"] { XCTAssertTrue(el(app, id).waitForExistence(timeout: 8), "required: \(id)") }
+        shot("p07-E3-coach")
     }
 }
