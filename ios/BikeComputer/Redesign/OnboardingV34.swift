@@ -35,6 +35,9 @@ struct OnboardingV34View: View {
     @State private var library = false
     /// A group of the Blueprint was tapped: this page was opened from page 7 and its button returns there.
     @State private var fromBlueprint = false
+    /// Counts requests to bring the page back to its top (page 5, when the FTP keyboard closes).
+    @State private var toTop = 0
+    private static let topID = "onbPageTop"
     @EnvironmentObject private var hub: SensorHub
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var dts
@@ -50,6 +53,9 @@ struct OnboardingV34View: View {
         NavigationStack {
             VStack(spacing: 0) {
                 if page > 0 { rail }
+                // Simulator run 17: all pages share this one scroll view, which kept its position from page to page and
+                // after the keyboard, so a page could rest with its title under the rail. Every page now opens at its top.
+                ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: CySpace.l) {
                         switch page {
@@ -65,8 +71,12 @@ struct OnboardingV34View: View {
                     }
                     .padding(.horizontal, CySpace.l).padding(.top, CySpace.s).padding(.bottom, CySpace.xl)
                     .frame(maxWidth: CyTheme.maxContentWidth).frame(maxWidth: .infinity)
+                    .id(Self.topID)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .onChange(of: page) { _, _ in proxy.scrollTo(Self.topID, anchor: .top) }
+                .onChange(of: toTop) { _, _ in withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(Self.topID, anchor: .top) } }
+                }
                 if page > 0 { bottom }
             }
             .background(theme.background.ignoresSafeArea())
@@ -573,7 +583,7 @@ struct OnboardingV34View: View {
     private var pageConnect: some View {
         VStack(alignment: .leading, spacing: CySpace.m) {
             heading(5, "Connect", "Connect and calibrate")
-            OnbConnectPage(a: $a, ftpKnown: $ftpKnown, ftpText: $ftpText, mode: mode)
+            OnbConnectPage(a: $a, ftpKnown: $ftpKnown, ftpText: $ftpText, mode: mode, onEditingEnded: { toTop += 1 })
         }
     }
 
