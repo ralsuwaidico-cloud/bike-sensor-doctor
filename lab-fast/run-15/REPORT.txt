@@ -1,0 +1,43 @@
+FAST focused Lab check — selected: LabFastTrain LabFastCycling LabFastPlan/testAddGoalCancelLeavesGoalUnchanged LabFastPlan/testAddGoalApprovePersists
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from dfdaf1fb · files changed since then: 1
+TIME setup: 11s
+  timing: SwiftCompile (6 tasks) | 461.501 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 32.614 seconds
+  timing: SwiftDriver (16 tasks) | 25.187 seconds
+  timing: SwiftEmitModule (2 tasks) | 9.881 seconds
+  timing: Ld (18 tasks) | 8.509 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.398 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.509 seconds
+  timing: SwiftDriver Compilation (16 tasks) | 0.464 seconds
+  stages: packages at 171s · packages prepared at 274s · dependency graph at 274s · inputs at 275s · build description at 275s · first Swift step at 287s · first link at 291s · asset catalogue at 679s · finished at 710s
+  compiled in this run: 45 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 711s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 6s
+	 Executed 10 tests, with 2 failures (0 unexpected) in 1329.511 (1329.539) seconds
+	 Executed 10 tests, with 2 failures (0 unexpected) in 1329.511 (1329.540) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 632.695 (632.707) seconds
+	 Executed 2 tests, with 1 failure (0 unexpected) in 228.591 (228.595) seconds
+	 Executed 6 tests, with 1 failure (0 unexpected) in 468.226 (468.232) seconds
+Lab/UITests/LabFastCycling.swift:69: error: -[CycliftLabUITests.LabFastCycling testFocusMapPauseResumeLapFinish] : XCTAssertEqual failed: ("1") is not equal to ("0") - Lab creates no map view
+Lab/UITests/LabFastTrain.swift:232: error: -[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet] : Failed to not hittable: Button, {{127.0, 439.0}, {250.0, 42.0}}, identifier: 'pencil', label: 'Correct a logged set'
+Test Case '-[CycliftLabUITests.LabFastCycling testFocusMapPauseResumeLapFinish]' failed (141.290 seconds).
+Test Case '-[CycliftLabUITests.LabFastCycling testSensorStatesAreShownTruthfully]' passed (87.301 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testAddGoalApprovePersists]' passed (152.117 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testAddGoalCancelLeavesGoalUnchanged]' passed (480.578 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testBallShowsRecordingPausedAndRestoresTheRecorder]' passed (178.891 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet]' failed (93.239 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testPanelShortcutsAndPanelOpenBall]' passed (42.624 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testSessionSurvivesTheAppEndingAndIsRestoredFromTheBall]' passed (57.036 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testSupersetRoundGoesA1A2ThenNextRound]' passed (48.016 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testUnconfirmedSaveIsShownOnTheBall]' passed (48.421 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 1449s
+LAB-NOTE plan goal preview: now 'Fitness (main) · Maintain' → after 'Strength (main) · Fitness · Maintain'; headline '3 planned days would change'
+LAB-NOTE superset round: A1 → A2 → SUPERSET A · ROUND 2 OF 3; rest after the round runs (Rest, 93 seconds left)
+LAB-NOTE train ball: recording 00:16 → 00:19; paused at 00:34; completion pending after 9 more sets
+TIME total on the Mac: 2189s
+commit ca48c3d69b0953508a58e510c75107883dae8a95  branch ios/lab

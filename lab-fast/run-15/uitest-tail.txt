@@ -1,0 +1,300 @@
+    t =    20.10s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkout" Button`
+    t =    20.10s         Checking existence of `"startWorkout" Button`
+    t =    20.33s Tap "startWorkout" Button
+    t =    20.33s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    20.33s     Find the "startWorkout" Button
+    t =    20.37s     Check for interrupting elements affecting "startWorkout" Button
+    t =    20.56s     Synthesize event
+    t =    20.87s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    21.37s Waiting 10.0s for "strengthRecorderV14" Any to exist
+    t =    22.41s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthRecorderV14" Any`
+    t =    22.41s         Checking existence of `"strengthRecorderV14" Any`
+    t =    22.47s Waiting 5.0s for "logSet" Any to exist
+    t =    23.51s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Any`
+    t =    23.51s         Checking existence of `"logSet" Any`
+    t =    23.63s Tap "logSet" Any
+    t =    23.63s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    23.64s     Find the "logSet" Any
+    t =    23.75s     Check for interrupting elements affecting "logSet" Button
+    t =    24.03s     Synthesize event
+    t =    24.63s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    24.81s Waiting 5.0s for "recorderLogged" Any to exist
+    t =    25.87s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderLogged" Any`
+    t =    25.87s         Checking existence of `"recorderLogged" Any`
+    t =    26.33s Find the "recorderExercise" Any
+    t =    26.69s Find the "recorderSet" Any
+    t =    27.14s Terminate com.ralsuwaidico.cycliftlab:62927
+    t =    28.20s Open com.ralsuwaidico.cycliftlab
+    t =    28.20s     Launch com.ralsuwaidico.cycliftlab
+    t =    28.98s         Setting up automation session
+    t =    31.45s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    37.27s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    38.30s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    38.30s         Checking existence of `"homeGreeting" Any`
+    t =    38.97s Find the "homeGreeting" Any
+    t =    39.21s Waiting 8.0s for "centreButton" Button to exist
+    t =    40.25s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    40.25s         Checking existence of `"centreButton" Button`
+    t =    41.46s Checking `Expect predicate `label BEGINSWITH "Workout restored, paused"` for object "centreButton" Button`
+    t =    41.46s     Find the "centreButton" Button
+    t =    41.50s Find the "centreButton" Button
+    t =    41.56s Find the "centreButton" Button
+    t =    44.65s Find the "centreButton" Button
+    t =    44.95s Tap "centreButton" Button
+    t =    44.95s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    44.96s     Find the "centreButton" Button
+    t =    45.04s     Check for interrupting elements affecting "centreButton" Button
+    t =    45.60s     Synthesize event
+    t =    45.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    46.08s Waiting 10.0s for "strengthRecorderV14" Any to exist
+    t =    47.10s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthRecorderV14" Any`
+    t =    47.10s         Checking existence of `"strengthRecorderV14" Any`
+    t =    47.42s Find the "recorderExercise" Any
+    t =    47.74s Find the "recorderSet" Any
+    t =    48.01s Find the "recorderState" Any
+    t =    48.39s Tap "recorderPause" Button
+    t =    48.39s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    48.49s     Find the "recorderPause" Button
+    t =    48.57s     Check for interrupting elements affecting "recorderPause" Button
+    t =    48.91s     Synthesize event
+    t =    49.21s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    49.77s Find the "recorderState" Any
+    t =    50.11s Tap "finishWorkout" Button
+    t =    50.11s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    50.12s     Find the "finishWorkout" Button
+    t =    50.45s     Check for interrupting elements affecting "finishWorkout" Button
+    t =    50.74s     Synthesize event
+    t =    51.05s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    51.55s Waiting 8.0s for "finishCount" Any to exist
+    t =    52.59s     Checking `Expect predicate `existsNoRetry == 1` for object "finishCount" Any`
+    t =    52.59s         Checking existence of `"finishCount" Any`
+    t =    52.76s Find the "finishCount" Any
+    t =    53.15s Tap "finishBackToWorkout" Button
+    t =    53.15s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    53.20s     Find the "finishBackToWorkout" Button
+    t =    53.26s     Check for interrupting elements affecting "finishBackToWorkout" Button
+    t =    53.55s     Synthesize event
+    t =    53.86s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    54.07s Waiting 8.0s for "recorderMinimise" Button to exist
+    t =    55.10s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderMinimise" Button`
+    t =    55.10s         Checking existence of `"recorderMinimise" Button`
+    t =    55.33s Tap "recorderMinimise" Button
+    t =    55.33s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    55.33s     Find the "recorderMinimise" Button
+    t =    55.38s     Check for interrupting elements affecting "recorderMinimise" Button
+    t =    55.62s     Synthesize event
+    t =    55.94s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    56.37s Checking existence of `"centreButton" Button`
+    t =    56.43s Find the "centreButton" Button
+    t =    56.51s Find the "centreButton" Button
+    t =    56.76s Tear Down
+Test Case '-[CycliftLabUITests.LabFastTrain testSessionSurvivesTheAppEndingAndIsRestoredFromTheBall]' passed (57.036 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testSupersetRoundGoesA1A2ThenNextRound]' started.
+    t =     0.00s Start Test at 2026-11-19 16:32:46.741
+    t =     0.05s Set Up
+    t =     0.05s Open com.ralsuwaidico.cycliftlab
+    t =     0.05s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.05s         Terminate com.ralsuwaidico.cycliftlab:63839
+    t =     2.74s         Setting up automation session
+    t =     7.39s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    13.55s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    14.60s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    14.60s         Checking existence of `"homeGreeting" Any`
+    t =    15.82s Find the "homeGreeting" Any
+    t =    17.68s Waiting 8.0s for "centreButton" Button to exist
+    t =    18.69s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    18.69s         Checking existence of `"centreButton" Button`
+    t =    19.47s Find the "centreButton" Button
+    t =    19.73s Find the "centreButton" Button
+    t =    20.19s Tap "centreButton" Button
+    t =    20.19s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    20.20s     Find the "centreButton" Button
+    t =    20.50s     Check for interrupting elements affecting "centreButton" Button
+    t =    21.12s     Synthesize event
+    t =    21.45s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    21.46s Waiting 8.0s for "trainPanelPrimary" Button to exist
+    t =    22.49s     Checking `Expect predicate `existsNoRetry == 1` for object "trainPanelPrimary" Button`
+    t =    22.49s         Checking existence of `"trainPanelPrimary" Button`
+    t =    22.55s Tap "trainPanelPrimary" Button
+    t =    22.55s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    22.55s     Find the "trainPanelPrimary" Button
+    t =    22.59s     Check for interrupting elements affecting "trainPanelPrimary" Button
+    t =    23.02s     Synthesize event
+    t =    23.34s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    23.38s Waiting 10.0s for "startWorkout" Button to exist
+    t =    24.42s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkout" Button`
+    t =    24.42s         Checking existence of `"startWorkout" Button`
+    t =    24.51s Tap "startWorkout" Button
+    t =    24.51s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    24.51s     Find the "startWorkout" Button
+    t =    24.56s     Check for interrupting elements affecting "startWorkout" Button
+    t =    25.05s     Synthesize event
+    t =    25.36s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    25.86s Waiting 10.0s for "strengthRecorderV14" Any to exist
+    t =    26.87s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthRecorderV14" Any`
+    t =    26.87s         Checking existence of `"strengthRecorderV14" Any`
+    t =    26.98s Waiting 5.0s for "logSet" Any to exist
+    t =    28.02s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Any`
+    t =    28.02s         Checking existence of `"logSet" Any`
+    t =    28.22s Find the "recorderOverline" Any
+    t =    28.49s Find the "recorderOverline" Any
+    t =    28.69s Checking existence of `"restSkip" Button`
+    t =    29.87s Checking existence of `"recorderMember" Any`
+    t =    30.38s Find the "recorderMember" Any
+    t =    30.71s Find the "logSet" Any
+    t =    31.10s Find the "recorderSet" Any
+    t =    31.34s Checking existence of `"restPlanned" Any`
+    t =    31.61s Find the "restPlanned" Any
+    t =    31.90s Find the "recorderNext" Any
+    t =    32.36s Find the "recorderExercise" Any
+    t =    33.12s Tap "logSet" Button
+    t =    33.12s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    33.21s     Find the "logSet" Button
+    t =    33.36s     Check for interrupting elements affecting "logSet" Button
+    t =    33.92s     Synthesize event
+    t =    34.24s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    34.50s Find the "recorderMember" StaticText
+    t =    35.10s Find the "recorderMember" StaticText
+    t =    35.63s Find the "recorderExercise" Any
+    t =    35.93s Find the "recorderOverline" Any
+    t =    36.48s Checking existence of `"restTimer" Any`
+    t =    39.04s Find the "recorderLogged" Any
+    t =    39.70s Find the "recorderMember" StaticText
+    t =    40.40s Find the "recorderOverline" Any
+    t =    40.81s Tap "logSet" Button
+    t =    40.81s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    41.11s     Find the "logSet" Button
+    t =    41.21s     Check for interrupting elements affecting "logSet" Button
+    t =    41.61s     Synthesize event
+    t =    41.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    42.49s Find the "recorderOverline" Any
+    t =    43.09s Find the "recorderOverline" Any
+    t =    43.47s Find the "recorderMember" StaticText
+    t =    44.43s Find the "recorderExercise" Any
+    t =    45.07s Find the "recorderSet" Any
+    t =    45.70s Checking existence of `"restTimer" Any`
+    t =    46.27s Find the "restWord" Any
+    t =    46.61s Checking existence of `"restTimer" Any`
+    t =    46.89s Find the "restTimer" Any
+    t =    47.72s Tear Down
+Test Case '-[CycliftLabUITests.LabFastTrain testSupersetRoundGoesA1A2ThenNextRound]' passed (48.016 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testUnconfirmedSaveIsShownOnTheBall]' started.
+    t =     0.00s Start Test at 2026-11-19 16:33:34.757
+    t =     0.07s Set Up
+    t =     0.07s Open com.ralsuwaidico.cycliftlab
+    t =     0.07s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.07s         Terminate com.ralsuwaidico.cycliftlab:65207
+    t =     3.26s         Setting up automation session
+    t =     6.86s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    13.08s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    14.10s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    14.10s         Checking existence of `"homeGreeting" Any`
+    t =    14.97s Find the "homeGreeting" Any
+    t =    15.43s Waiting 8.0s for "centreButton" Button to exist
+    t =    16.46s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    16.46s         Checking existence of `"centreButton" Button`
+    t =    16.63s Find the "centreButton" Button
+    t =    16.80s Find the "centreButton" Button
+    t =    16.85s Tap "centreButton" Button
+    t =    16.85s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    16.86s     Find the "centreButton" Button
+    t =    16.92s     Check for interrupting elements affecting "centreButton" Button
+    t =    17.21s     Synthesize event
+    t =    17.57s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    17.58s Waiting 8.0s for "trainPanelPrimary" Button to exist
+    t =    18.61s     Checking `Expect predicate `existsNoRetry == 1` for object "trainPanelPrimary" Button`
+    t =    18.61s         Checking existence of `"trainPanelPrimary" Button`
+    t =    18.80s Tap "trainPanelPrimary" Button
+    t =    18.80s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    18.80s     Find the "trainPanelPrimary" Button
+    t =    18.84s     Check for interrupting elements affecting "trainPanelPrimary" Button
+    t =    19.07s     Synthesize event
+    t =    19.37s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    19.48s Waiting 10.0s for "startWorkout" Button to exist
+    t =    20.52s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkout" Button`
+    t =    20.52s         Checking existence of `"startWorkout" Button`
+    t =    20.88s Tap "startWorkout" Button
+    t =    20.88s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    20.88s     Find the "startWorkout" Button
+    t =    20.93s     Check for interrupting elements affecting "startWorkout" Button
+    t =    21.18s     Synthesize event
+    t =    21.50s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    22.19s Waiting 10.0s for "strengthRecorderV14" Any to exist
+    t =    23.22s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthRecorderV14" Any`
+    t =    23.22s         Checking existence of `"strengthRecorderV14" Any`
+    t =    23.72s Waiting 5.0s for "logSet" Any to exist
+    t =    24.75s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Any`
+    t =    24.75s         Checking existence of `"logSet" Any`
+    t =    24.91s Tap "logSet" Any
+    t =    24.91s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    24.91s     Find the "logSet" Any
+    t =    25.04s     Check for interrupting elements affecting "logSet" Button
+    t =    25.77s     Synthesize event
+    t =    26.09s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    26.35s Tap "finishWorkout" Button
+    t =    26.35s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    26.66s     Find the "finishWorkout" Button
+    t =    26.85s     Check for interrupting elements affecting "finishWorkout" Button
+    t =    27.24s     Synthesize event
+    t =    27.57s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    27.86s Waiting 8.0s for "saveWorkout" Button to exist
+    t =    28.87s     Checking `Expect predicate `existsNoRetry == 1` for object "saveWorkout" Button`
+    t =    28.87s         Checking existence of `"saveWorkout" Button`
+    t =    28.93s Tap "saveWorkout" Button
+    t =    28.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    28.94s     Find the "saveWorkout" Button
+    t =    29.02s     Check for interrupting elements affecting "saveWorkout" Button
+    t =    29.27s     Synthesize event
+    t =    29.57s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    30.09s Waiting 10.0s for "saveUnconfirmed" Any to exist
+    t =    31.12s     Checking `Expect predicate `existsNoRetry == 1` for object "saveUnconfirmed" Any`
+    t =    31.12s         Checking existence of `"saveUnconfirmed" Any`
+    t =    32.02s Tap "unconfirmedClose" Button
+    t =    32.02s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    32.40s     Find the "unconfirmedClose" Button
+    t =    32.52s     Check for interrupting elements affecting "unconfirmedClose" Button
+    t =    33.17s     Synthesize event
+    t =    33.52s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    33.84s Waiting 6.0s for "Done" Button to exist
+    t =    34.90s     Checking `Expect predicate `existsNoRetry == 1` for object "Done" Button`
+    t =    34.90s         Checking existence of `"Done" Button`
+    t =    35.06s Tap "Done" Button
+    t =    35.06s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    35.06s     Find the "Done" Button
+    t =    35.25s     Check for interrupting elements affecting "Done" Button
+    t =    36.04s     Synthesize event
+    t =    36.48s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    36.91s Checking existence of `"centreButton" Button`
+    t =    37.01s Find the "centreButton" Button
+    t =    37.10s Find the "centreButton" Button
+    t =    37.15s Find the "centreButton" Button
+    t =    37.53s Tap "centreButton" Button
+    t =    37.53s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    37.79s     Find the "centreButton" Button
+    t =    37.91s     Check for interrupting elements affecting "centreButton" Button
+    t =    38.22s     Synthesize event
+    t =    38.54s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    38.88s Waiting 10.0s for "saveUnconfirmed" Any to exist
+    t =    39.93s     Checking `Expect predicate `existsNoRetry == 1` for object "saveUnconfirmed" Any`
+    t =    39.94s         Checking existence of `"saveUnconfirmed" Any`
+    t =    40.16s Checking existence of `"saveConfirmed" Any`
+    t =    43.70s Tap "saveCheckAgain" Button
+    t =    43.70s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    44.00s     Find the "saveCheckAgain" Button
+    t =    44.10s     Check for interrupting elements affecting "saveCheckAgain" Button
+    t =    44.39s     Synthesize event
+    t =    44.72s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    44.87s Waiting 10.0s for "saveConfirmed" Any to exist
+    t =    45.89s     Checking `Expect predicate `existsNoRetry == 1` for object "saveConfirmed" Any`
+    t =    45.89s         Checking existence of `"saveConfirmed" Any`
+    t =    46.39s Tap "saveDone" Button
+    t =    46.39s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    46.39s     Find the "saveDone" Button
+    t =    46.49s     Check for interrupting elements affecting "saveDone" Button
+    t =    47.00s     Synthesize event
+    t =    47.30s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    47.71s Checking existence of `"centreButton" Button`
+    t =    47.82s Find the "centreButton" Button
+    t =    47.98s Find the "centreButton" Button
+    t =    48.13s Tear Down
+Test Case '-[CycliftLabUITests.LabFastTrain testUnconfirmedSaveIsShownOnTheBall]' passed (48.421 seconds).
