@@ -1,0 +1,300 @@
+    t =     0.06s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.06s         Terminate com.ralsuwaidico.cycliftlab:7531
+    t =     2.91s         Setting up automation session
+    t =     5.85s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    10.78s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    11.83s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    11.83s         Checking existence of `"homeGreeting" Any`
+    t =    12.08s Find the "homeGreeting" Any
+    t =    12.22s Waiting 8.0s for "Progress" Button to exist
+    t =    13.27s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =    13.27s         Checking existence of `"Progress" Button`
+    t =    13.30s Checking existence of `"Progress" Button`
+    t =    13.32s Tap "Progress" Button
+    t =    13.32s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    13.33s     Find the "Progress" Button
+    t =    13.36s     Check for interrupting elements affecting "Progress" Button
+    t =    13.60s     Synthesize event
+    t =    13.91s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    14.91s Waiting 8.0s for "evolutionTrack" Any to exist
+    t =    15.93s     Checking `Expect predicate `existsNoRetry == 1` for object "evolutionTrack" Any`
+    t =    15.93s         Checking existence of `"evolutionTrack" Any`
+    t =    16.21s Waiting 6.0s for "progressTitle" Any to exist
+    t =    17.26s     Checking `Expect predicate `existsNoRetry == 1` for object "progressTitle" Any`
+    t =    17.26s         Checking existence of `"progressTitle" Any`
+    t =    17.40s Waiting 6.0s for "progressMenu" Any to exist
+    t =    18.44s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenu" Any`
+    t =    18.45s         Checking existence of `"progressMenu" Any`
+    t =    18.63s Waiting 6.0s for "heroIdentity" Any to exist
+    t =    19.66s     Checking `Expect predicate `existsNoRetry == 1` for object "heroIdentity" Any`
+    t =    19.67s         Checking existence of `"heroIdentity" Any`
+    t =    19.96s Waiting 6.0s for "heroStage" Any to exist
+    t =    20.98s     Checking `Expect predicate `existsNoRetry == 1` for object "heroStage" Any`
+    t =    20.98s         Checking existence of `"heroStage" Any`
+    t =    21.45s Waiting 6.0s for "evolutionTrack" Any to exist
+    t =    22.49s     Checking `Expect predicate `existsNoRetry == 1` for object "evolutionTrack" Any`
+    t =    22.49s         Checking existence of `"evolutionTrack" Any`
+    t =    23.14s Waiting 6.0s for "progressV23" Any to exist
+    t =    24.15s     Checking `Expect predicate `existsNoRetry == 1` for object "progressV23" Any`
+    t =    24.15s         Checking existence of `"progressV23" Any`
+    t =    24.55s Waiting 6.0s for "progressDevelopmentIntro" Any to exist
+    t =    25.58s     Checking `Expect predicate `existsNoRetry == 1` for object "progressDevelopmentIntro" Any`
+    t =    25.59s         Checking existence of `"progressDevelopmentIntro" Any`
+    t =    26.21s Waiting 6.0s for "progressEndurance" Any to exist
+    t =    27.23s     Checking `Expect predicate `existsNoRetry == 1` for object "progressEndurance" Any`
+    t =    27.23s         Checking existence of `"progressEndurance" Any`
+    t =    27.66s Waiting 6.0s for "progressStrengthDevelopment" Any to exist
+    t =    28.69s     Checking `Expect predicate `existsNoRetry == 1` for object "progressStrengthDevelopment" Any`
+    t =    28.70s         Checking existence of `"progressStrengthDevelopment" Any`
+    t =    29.34s Waiting 6.0s for "progressConsistency" Any to exist
+    t =    30.36s     Checking `Expect predicate `existsNoRetry == 1` for object "progressConsistency" Any`
+    t =    30.36s         Checking existence of `"progressConsistency" Any`
+    t =    30.79s Waiting 6.0s for "progressZones" Any to exist
+    t =    31.84s     Checking `Expect predicate `existsNoRetry == 1` for object "progressZones" Any`
+    t =    31.84s         Checking existence of `"progressZones" Any`
+    t =    32.27s Waiting 6.0s for "progressNextEvolution" Any to exist
+    t =    33.32s     Checking `Expect predicate `existsNoRetry == 1` for object "progressNextEvolution" Any`
+    t =    33.32s         Checking existence of `"progressNextEvolution" Any`
+    t =    33.80s Waiting 6.0s for "progressOpenAnalytics" Any to exist
+    t =    34.83s     Checking `Expect predicate `existsNoRetry == 1` for object "progressOpenAnalytics" Any`
+    t =    34.83s         Checking existence of `"progressOpenAnalytics" Any`
+    t =    35.33s Waiting 6.0s for "progressEvolutionTimeline" Any to exist
+    t =    36.36s     Checking `Expect predicate `existsNoRetry == 1` for object "progressEvolutionTimeline" Any`
+    t =    36.36s         Checking existence of `"progressEvolutionTimeline" Any`
+    t =    36.91s Waiting 6.0s for "progressOpenHistory" Any to exist
+    t =    37.92s     Checking `Expect predicate `existsNoRetry == 1` for object "progressOpenHistory" Any`
+    t =    37.92s         Checking existence of `"progressOpenHistory" Any`
+    t =    38.35s Find the "heroStage" Any
+    t =    38.73s Checking existence of `"heroGeneration" Any`
+    t =    39.84s Checking existence of `"headerGeneration" Any`
+    t =    41.05s Find the "progressNextEvolution" Any
+    t =    41.67s Find the "progressEvolutionTimeline" Any
+    t =    42.17s Checking existence of `"progressZonesMissing" Any`
+    t =    43.18s Find the "progressEndurance" Any
+    t =    43.74s Find the "progressStrengthDevelopment" Any
+    t =    44.36s Find the "progressConsistency" Any
+    t =    44.95s Find the "progressZones" Any
+    t =    45.59s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    45.59s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    45.78s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    45.88s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    45.99s     Synthesize event
+    t =    46.43s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    49.76s Find the "progressOpenHistory" Button
+    t =    50.09s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    50.09s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    50.10s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    50.20s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    50.32s     Synthesize event
+    t =    50.75s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    52.47s Find the "progressOpenHistory" Button
+    t =    52.81s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    52.81s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    53.06s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    53.16s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    53.25s     Synthesize event
+    t =    53.68s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    55.13s Find the "progressOpenHistory" Button
+    t =    56.63s Find the "cradleDock" Any
+    t =    56.68s Find the "progressOpenHistory" Button
+    t =    56.92s Tear Down
+Test Case '-[CycliftLabUITests.LabFastProgress testSectionsArePresent]' passed (57.172 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet]' started.
+    t =     0.00s Start Test at 2026-11-19 19:52:58.932
+    t =     0.04s Set Up
+    t =     0.04s Open com.ralsuwaidico.cycliftlab
+    t =     0.04s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.04s         Terminate com.ralsuwaidico.cycliftlab:11901
+    t =     1.88s         Setting up automation session
+    t =     4.11s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =     8.06s Waiting 30.0s for "homeGreeting" Any to exist
+    t =     9.07s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =     9.07s         Checking existence of `"homeGreeting" Any`
+    t =     9.39s Find the "homeGreeting" Any
+    t =     9.66s Waiting 8.0s for "centreButton" Button to exist
+    t =    10.69s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    10.69s         Checking existence of `"centreButton" Button`
+    t =    10.72s Find the "centreButton" Button
+    t =    10.75s Find the "centreButton" Button
+    t =    10.80s Tap "centreButton" Button
+    t =    10.80s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    10.80s     Find the "centreButton" Button
+    t =    10.83s     Check for interrupting elements affecting "centreButton" Button
+    t =    11.13s     Synthesize event
+    t =    11.42s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    11.42s Waiting 8.0s for "trainPanelPrimary" Button to exist
+    t =    12.47s     Checking `Expect predicate `existsNoRetry == 1` for object "trainPanelPrimary" Button`
+    t =    12.48s         Checking existence of `"trainPanelPrimary" Button`
+    t =    12.53s Tap "trainPanelPrimary" Button
+    t =    12.53s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    12.53s     Find the "trainPanelPrimary" Button
+    t =    12.55s     Check for interrupting elements affecting "trainPanelPrimary" Button
+    t =    12.66s     Synthesize event
+    t =    12.95s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    13.42s Waiting 10.0s for "startWorkout" Button to exist
+    t =    14.46s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkout" Button`
+    t =    14.46s         Checking existence of `"startWorkout" Button`
+    t =    14.52s Tap "startWorkout" Button
+    t =    14.52s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    14.52s     Find the "startWorkout" Button
+    t =    14.55s     Check for interrupting elements affecting "startWorkout" Button
+    t =    14.65s     Synthesize event
+    t =    14.94s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    15.18s Waiting 10.0s for "strengthRecorderV14" Any to exist
+    t =    16.19s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthRecorderV14" Any`
+    t =    16.19s         Checking existence of `"strengthRecorderV14" Any`
+    t =    16.22s Waiting 5.0s for "logSet" Any to exist
+    t =    17.26s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Any`
+    t =    17.26s         Checking existence of `"logSet" Any`
+    t =    17.33s Find the "recorderSet" Any
+    t =    17.45s Tap "logSet" Any
+    t =    17.45s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    17.45s     Find the "logSet" Any
+    t =    17.51s     Check for interrupting elements affecting "logSet" Button
+    t =    17.63s     Synthesize event
+    t =    17.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    17.94s Waiting 5.0s for "recorderLogged" Any to exist
+    t =    18.99s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderLogged" Any`
+    t =    18.99s         Checking existence of `"recorderLogged" Any`
+    t =    19.35s Find the "recorderLogged" Any
+    t =    19.53s Waiting 5.0s for "recorderOptions" Button to exist
+    t =    20.55s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptions" Button`
+    t =    20.55s         Checking existence of `"recorderOptions" Button`
+    t =    20.64s Tap "recorderOptions" Button
+    t =    20.64s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    20.64s     Find the "recorderOptions" Button
+    t =    20.73s     Check for interrupting elements affecting "recorderOptions" Button
+    t =    20.87s     Synthesize event
+    t =    21.16s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    21.25s Waiting 5.0s for "recorderOptCorrect" Button to exist
+    t =    22.28s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptCorrect" Button`
+    t =    22.28s         Checking existence of `"recorderOptCorrect" Button`
+    t =    22.47s Find the "recorderOptCorrect" Button
+    t =    22.64s Find the "recorderOptCorrect" Button
+    t =    22.83s Find the "recorderOptCorrect" Button
+    t =    23.21s Tap "recorderOptCorrect" Button
+    t =    23.21s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    23.22s     Find the "recorderOptCorrect" Button
+    t =    23.42s     Check for interrupting elements affecting "recorderOptCorrect" Button
+    t =    23.54s     Synthesize event
+    t =    23.82s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    24.41s Waiting 8.0s for "correctTitle" Any to exist
+    t =    25.43s     Checking `Expect predicate `existsNoRetry == 1` for object "correctTitle" Any`
+    t =    25.44s         Checking existence of `"correctTitle" Any`
+    t =    25.68s Checking existence of `Any (First Match)`
+    t =    25.82s Find the Any (First Match)
+    t =    25.97s Checking existence of `Any (First Match)`
+    t =    26.21s Tap Any (First Match)
+    t =    26.21s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    26.22s     Find the Any (First Match)
+    t =    26.36s     Check for interrupting elements affecting "correctRepsPlus-0-0" Button
+    t =    26.50s     Synthesize event
+    t =    26.79s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    26.95s Find the "correctValue-0-0" StaticText
+    t =    27.33s Tap "correctDone" Button
+    t =    27.33s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    27.33s     Find the "correctDone" Button
+    t =    27.48s     Check for interrupting elements affecting "correctDone" Button
+    t =    27.61s     Synthesize event
+    t =    27.91s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    29.31s Waiting 8.0s for "recorderLogged" Any to exist
+    t =    30.34s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderLogged" Any`
+    t =    30.34s         Checking existence of `"recorderLogged" Any`
+    t =    30.48s Find the "recorderLogged" Any
+    t =    30.61s Waiting 5.0s for "recorderOptions" Button to exist
+    t =    31.67s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptions" Button`
+    t =    31.67s         Checking existence of `"recorderOptions" Button`
+    t =    31.78s Tap "recorderOptions" Button
+    t =    31.78s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    31.78s     Find the "recorderOptions" Button
+    t =    31.86s     Check for interrupting elements affecting "recorderOptions" Button
+    t =    32.08s     Synthesize event
+    t =    32.37s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    32.79s Waiting 5.0s for "recorderOptCorrect" Button to exist
+    t =    33.80s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptCorrect" Button`
+    t =    33.80s         Checking existence of `"recorderOptCorrect" Button`
+    t =    33.98s Find the "recorderOptCorrect" Button
+    t =    34.24s Find the "recorderOptCorrect" Button
+    t =    34.45s Find the "recorderOptCorrect" Button
+    t =    34.62s Tap "recorderOptCorrect" Button
+    t =    34.62s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    34.62s     Find the "recorderOptCorrect" Button
+    t =    34.80s     Check for interrupting elements affecting "recorderOptCorrect" Button
+    t =    35.06s     Synthesize event
+    t =    35.37s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    35.97s Waiting 8.0s for "correctTitle" Any to exist
+    t =    36.99s     Checking `Expect predicate `existsNoRetry == 1` for object "correctTitle" Any`
+    t =    36.99s         Checking existence of `"correctTitle" Any`
+    t =    37.35s Find the Any (First Match)
+    t =    37.48s Tap "correctDone" Button
+    t =    37.49s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    37.49s     Find the "correctDone" Button
+    t =    37.61s     Check for interrupting elements affecting "correctDone" Button
+    t =    37.74s     Synthesize event
+    t =    38.03s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    39.45s Tap "finishWorkout" Button
+    t =    39.45s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    39.46s     Find the "finishWorkout" Button
+    t =    39.49s     Check for interrupting elements affecting "finishWorkout" Button
+    t =    39.63s     Synthesize event
+    t =    39.92s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    39.97s Waiting 8.0s for "finishCount" Any to exist
+    t =    41.04s     Checking `Expect predicate `existsNoRetry == 1` for object "finishCount" Any`
+    t =    41.04s         Checking existence of `"finishCount" Any`
+    t =    41.15s Find the "finishCount" Any
+    t =    41.40s Tap "finishBackToWorkout" Button
+    t =    41.40s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    41.41s     Find the "finishBackToWorkout" Button
+    t =    41.45s     Check for interrupting elements affecting "finishBackToWorkout" Button
+    t =    41.57s     Synthesize event
+    t =    41.85s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    41.89s Waiting 8.0s for "logSet" Button to exist
+    t =    42.94s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    42.95s         Checking existence of `"logSet" Button`
+    t =    43.08s Waiting 5.0s for "recorderOptions" Button to exist
+    t =    44.12s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptions" Button`
+    t =    44.12s         Checking existence of `"recorderOptions" Button`
+    t =    44.21s Tap "recorderOptions" Button
+    t =    44.21s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    44.21s     Find the "recorderOptions" Button
+    t =    44.29s     Check for interrupting elements affecting "recorderOptions" Button
+    t =    44.42s     Synthesize event
+    t =    44.71s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    45.12s Waiting 5.0s for "recorderOptCorrect" Button to exist
+    t =    46.15s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptCorrect" Button`
+    t =    46.15s         Checking existence of `"recorderOptCorrect" Button`
+    t =    46.31s Find the "recorderOptCorrect" Button
+    t =    46.46s Find the "recorderOptCorrect" Button
+    t =    46.64s Find the "recorderOptCorrect" Button
+    t =    46.81s Tap "recorderOptCorrect" Button
+    t =    46.81s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    46.81s     Find the "recorderOptCorrect" Button
+    t =    46.98s     Check for interrupting elements affecting "recorderOptCorrect" Button
+    t =    47.32s     Synthesize event
+    t =    47.60s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    48.22s Waiting 8.0s for "correctTitle" Any to exist
+    t =    49.25s     Checking `Expect predicate `existsNoRetry == 1` for object "correctTitle" Any`
+    t =    49.25s         Checking existence of `"correctTitle" Any`
+    t =    49.55s Checking existence of `Any (First Match)`
+    t =    49.74s Tap Any (First Match)
+    t =    49.74s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    49.74s     Find the Any (First Match)
+    t =    50.08s     Check for interrupting elements affecting "correctUnlog-0-0" Button
+    t =    50.26s     Synthesize event
+    t =    50.55s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    50.63s Waiting 5.0s for "correctEmpty" Any to exist
+    t =    51.65s     Checking `Expect predicate `existsNoRetry == 1` for object "correctEmpty" Any`
+    t =    51.66s         Checking existence of `"correctEmpty" Any`
+    t =    51.89s Tap "correctDone" Button
+    t =    51.89s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    51.89s     Find the "correctDone" Button
+    t =    52.00s     Check for interrupting elements affecting "correctDone" Button
+    t =    52.22s     Synthesize event
+    t =    52.51s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    54.03s Waiting 8.0s for "logSet" Button to exist
+    t =    55.06s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    55.06s         Checking existence of `"logSet" Button`
+    t =    55.12s Checking existence of `"recorderLogged" Any`
+    t =    56.13s Find the "recorderSet" Any
+    t =    56.42s Tear Down
+Test Case '-[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet]' passed (56.696 seconds).
