@@ -63,9 +63,9 @@ struct CyProfileEquipment: View {
             .accessibilityElement(children: .contain).accessibilityIdentifier("equipmentChips")
             CyGroupLabel(text: "EXERCISE RESTRICTIONS")
             CyProfileRows {
-                CyProfileRow(title: "Exercises I cannot do and other equipment", summary: excludedSummary, id: "equipExcluded") { EquipmentPage() }
+                CyProfileRow(title: "Excluded exercises & other equipment", summary: excludedSummary, id: "equipExcluded") { EquipmentPage() }
                 if store.profile.trainingMode.includesLifting {
-                    CyProfileRow(title: "Avoided, always use instead, temporarily unavailable", summary: prefsSummary, id: "equipPrefs") { StrengthPrefsPage() }
+                    CyProfileRow(title: "Avoided & substitutions", summary: prefsSummary, id: "equipPrefs") { StrengthPrefsPage() }
                 }
             }
             Text("Changing equipment changes your plan — preview and approve first.")

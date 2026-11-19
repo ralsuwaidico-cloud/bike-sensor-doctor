@@ -118,4 +118,30 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(el(app, "healthPause").exists, "required: Pause training row")
         shot("p04-B3-recovery-pauses")
     }
+
+    /// Profile sheet P05: Performance Settings, Heart rate (values with sources, zone method, zones or "unknown") and
+    /// Power (FTP with its source, the meter's state, zones or "not shown"). Edit opens the existing editor.
+    func testProfilePerformancePages() {
+        let app = launch()
+        let avatar = app.buttons["homeAvatar"].firstMatch
+        XCTAssertTrue(avatar.waitForExistence(timeout: 8), "required: the Home avatar"); avatar.tap()
+        let c = el(app, "profileSectionC")
+        XCTAssertTrue(c.waitForExistence(timeout: 8), "required: Performance Settings on the landing"); c.tap()
+        let hr = el(app, "profileHR")
+        XCTAssertTrue(hr.waitForExistence(timeout: 8), "required: Heart rate row"); shot("p05-C-performance"); hr.tap()
+        for id in ["hrResting", "hrMaximum", "hrThreshold", "hrZoneMethod"] { XCTAssertTrue(el(app, id).waitForExistence(timeout: 8), "required: \(id)") }
+        XCTAssertTrue(app.buttons["hrEdit"].firstMatch.exists, "required: Edit in the bar")
+        shot("p05-C1-heart-rate")
+        app.buttons["hrEdit"].firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Heart rate"].firstMatch.waitForExistence(timeout: 8), "required: Edit opens the heart-rate editor")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(el(app, "hrResting").waitForExistence(timeout: 8), "back on Heart rate")
+        app.navigationBars.buttons.firstMatch.tap()
+        let ftp = el(app, "profileFTP")
+        XCTAssertTrue(ftp.waitForExistence(timeout: 8), "required: Power row"); ftp.tap()
+        XCTAssertTrue(el(app, "ftpValue").waitForExistence(timeout: 8), "required: the FTP value row")
+        XCTAssertTrue(el(app, "powerMeter").exists, "required: the power-meter row")
+        XCTAssertTrue(app.buttons["powerEdit"].firstMatch.exists, "required: Edit in the bar")
+        shot("p05-C2-power")
+    }
 }

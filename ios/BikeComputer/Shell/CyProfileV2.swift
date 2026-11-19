@@ -241,8 +241,8 @@ struct CyProfilePerformance: View {
     var body: some View {
         CyProfilePage(title: "Performance Settings", purpose: "The numbers your zones are calculated from.") {
             CyProfileRows {
-                CyProfileRow(title: "Heart rate", summary: store.profile.maxHRForZones.map { "Max \($0)\(store.profile.maxHRIsEstimate ? " · estimated" : "")" } ?? "Zones not set", id: "profileHR") { HeartRatePage() }
-                CyProfileRow(title: "Power", summary: "FTP \(store.profile.ftpDisplay) · \(store.profile.ftpSource.title)", id: "profileFTP") { PowerCyclingPage() }
+                CyProfileRow(title: "Heart rate", summary: store.profile.maxHRForZones.map { "Max \($0)\(store.profile.maxHRIsEstimate ? " · estimated" : "")" } ?? "Zones not set", id: "profileHR") { CyProfileHeartRate() }
+                CyProfileRow(title: "Power", summary: "FTP \(store.profile.ftpDisplay) · \(store.profile.ftpSource.title)", id: "profileFTP") { CyProfilePower() }
                 CyProfileRow(title: "Cadence", summary: "\(store.profile.cadenceLow)–\(store.profile.cadenceHigh) rpm", id: "profileCadence") { PowerCyclingPage() }
                 CyProfileRow(title: "Cycling parameters", summary: "Wheel \(store.profile.wheelMm) mm", id: "profileCycling") { PowerCyclingPage() }
                 CyProfileRow(title: "Measurement sources", summary: "Preferred heart-rate source", id: "profileSources") { SettingsPage() }
