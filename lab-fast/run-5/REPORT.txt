@@ -1,0 +1,23 @@
+FAST focused Lab check — selected: LabFast/testProfileAthletePages LabFast/testProfileTrainingSetupPages LabFast/testProfilePerformancePages LabFast/testProfileEditsNeedApproval LabFast/testEquipmentAtLargeText
+BUILD MODE: kept build from 0ea00593 · files changed since then: 4
+TIME setup: 13s
+  compiled in this run: 9 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 420s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 24s
+	 Executed 5 tests, with 0 failures (0 unexpected) in 417.485 (417.501) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 417.485 (417.503) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 417.485 (417.507) seconds
+Test Case '-[CycliftLabUITests.LabFast testEquipmentAtLargeText]' passed (91.896 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileAthletePages]' passed (113.596 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileEditsNeedApproval]' passed (120.267 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfilePerformancePages]' passed (51.600 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileTrainingSetupPages]' passed (40.125 seconds).
+RESULT selected screen checks: ok
+TIME tests: 506s
+LAB-NOTE equipment rows large text: first 479–539, second 539–599
+LAB-NOTE equipment rows normal text: first 479–539, second 539–599
+TIME total on the Mac: 966s
+commit 7664679ac1a13b5132a2376b36d90ace83150fe0  branch ios/lab
