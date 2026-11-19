@@ -1,0 +1,30 @@
+FAST focused Lab check — selected: LabFast/testProfilePerformancePages LabFast/testEquipmentAtLargeText LabFast/testProfileAthletePages
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 7664679a · files changed since then: 7
+TIME setup: 12s
+  timing: CompileAssetCatalogVariant (1 task) | 92.377 seconds
+  timing: SwiftDriver (2 tasks) | 14.887 seconds
+  timing: SwiftCompile (4 tasks) | 12.844 seconds
+  timing: Ld (18 tasks) | 12.638 seconds
+  timing: SwiftEmitModule (2 tasks) | 11.834 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 5.164 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.971 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.380 seconds
+  compiled in this run: 12 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 575s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 19s
+	 Executed 3 tests, with 1 failure (0 unexpected) in 297.178 (297.183) seconds
+	 Executed 3 tests, with 1 failure (0 unexpected) in 297.178 (297.184) seconds
+	 Executed 3 tests, with 1 failure (0 unexpected) in 297.178 (297.186) seconds
+Lab/UITests/LabFast.swift:91: error: -[CycliftLabUITests.LabFast testProfileAthletePages] : XCTAssertTrue failed - required: the saved name is shown (Personal details, Demo L)
+Test Case '-[CycliftLabUITests.LabFast testEquipmentAtLargeText]' passed (133.254 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileAthletePages]' failed (72.313 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfilePerformancePages]' passed (91.611 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 456s
+LAB-NOTE equipment rows large text: first 387–447, second 447–507
+TIME total on the Mac: 1063s
+commit 462a120285ffad87beacba9640cf26916a9baa82  branch ios/lab
