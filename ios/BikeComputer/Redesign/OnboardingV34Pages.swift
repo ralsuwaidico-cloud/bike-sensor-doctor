@@ -483,12 +483,27 @@ struct OnbWeekPage: View {
         }
     }
 
+    /// Simulator run 17: at an accessibility text size four choices side by side broke "Bodyweight" in the middle of
+    /// the word. From those sizes the same choice is drawn as rows of two (one a row at the three largest sizes), each
+    /// row the app's own choice bar on the same answer. What is stored is unchanged.
+    private var equipmentChoice: some View {
+        let all = EquipmentPreset.allCases.map { ($0, $0.title) }
+        let selection = Binding<EquipmentPreset>(get: { a.equipment ?? .notSure }, set: { a.equipment = $0 })
+        let perRow = !dts.isAccessibilitySize ? all.count : (dts >= .accessibility3 ? 1 : 2)
+        let rows: [[(EquipmentPreset, String)]] = stride(from: 0, to: all.count, by: perRow).map { i in Array(all[i..<min(i + perRow, all.count)]) }
+        return VStack(spacing: 6) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { row in
+                CyChoiceBar(options: row.element, selection: selection)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("onbEquipment")
+    }
+
     private var equipment: some View {
         VStack(alignment: .leading, spacing: CySpace.s) {
             OnbGroupHeader(mark: .none, title: "Equipment", trailing: "sets which exercises are offered")
-            CyChoiceBar(options: EquipmentPreset.allCases.map { ($0, $0.title) },
-                        selection: Binding(get: { a.equipment ?? .notSure }, set: { a.equipment = $0 }))
-                .accessibilityIdentifier("onbEquipment")
+            equipmentChoice
             if (a.equipment ?? .notSure) == .notSure {
                 Text("Not sure = bodyweight sessions until you confirm what you have.").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -505,6 +520,8 @@ struct OnbConnectPage: View {
     @Binding var ftpKnown: Bool
     @Binding var ftpText: String
     let mode: TrainingMode
+    /// Called when the FTP field gives up the keyboard, so the onboarding screen can bring the page title back.
+    var onEditingEnded: () -> Void = {}
     @FocusState private var ftpFocused: Bool
     @Environment(\.cyTheme) private var theme
 
@@ -520,6 +537,7 @@ struct OnbConnectPage: View {
             if mode.includesCycling { ftp }
             planChanges
         }
+        .onChange(of: ftpFocused) { _, focused in if !focused { onEditingEnded() } }
     }
 
     /// Lab connects to nothing: the sheet's rows, each saying it is switched off. No state is imitated.
@@ -540,7 +558,9 @@ struct OnbConnectPage: View {
                     Spacer(minLength: CySpace.s)
                     Text("off in Lab").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
                 }
-                .padding(.vertical, 8).frame(minHeight: 50)
+                // Simulator run 17: the page was about 45 pt taller than the iPhone 15 Pro screen, so after the FTP
+                // keyboard it rested with its title under the rail. These rows are not controls; they are drawn tighter.
+                .padding(.vertical, 5).frame(minHeight: 44)
                 .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("onbConnection-\(row.offset)")
@@ -829,14 +849,27 @@ struct OnbBlueprintPage: View {
     private var declared: some View {
         VStack(alignment: .leading, spacing: CySpace.s) {
             OnbGroupHeader(mark: .declared, title: "Declared by you", trailing: "tap to change")
-            let columns = dts.isAccessibilitySize ? [GridItem(.flexible(), alignment: .topLeading)]
-                : [GridItem(.flexible(), alignment: .topLeading), GridItem(.flexible(), alignment: .topLeading)]
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                ForEach(m.cells) { c in cell(c) }
+            // Simulator run 17: this was a LazyVGrid, which does not build the rows below the visible part of the
+            // page, so the last answers (plan changes) did not exist for VoiceOver or the checks until scrolled to.
+            // At most seven short cells: they are all built.
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(cellRows.enumerated()), id: \.offset) { row in
+                    HStack(alignment: .top, spacing: 8) {
+                        ForEach(row.element) { c in cell(c) }
+                        if row.element.count < cellsPerRow {
+                            Color.clear.frame(maxWidth: .infinity).frame(height: 1).accessibilityHidden(true)
+                        }
+                    }
+                }
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("blueprintDeclared")
+    }
+    private var cellsPerRow: Int { dts.isAccessibilitySize ? 1 : 2 }
+    private var cellRows: [[OnbBlueprintModel.Cell]] {
+        let n = cellsPerRow
+        return stride(from: 0, to: m.cells.count, by: n).map { i in Array(m.cells[i..<min(i + n, m.cells.count)]) }
     }
     private func cell(_ c: OnbBlueprintModel.Cell) -> some View {
         Button { onEdit(c.page) } label: {
@@ -848,7 +881,9 @@ struct OnbBlueprintPage: View {
             .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
+        // Simulator run 17: `.accessibilityElement(children: .ignore)` stood here and replaced the Button with a plain
+        // element — no button trait, so "blueprintCell-goals" was not found as a button and VoiceOver could not
+        // activate it. The Button itself now carries the label and the identifier.
         .accessibilityLabel("\(c.title): \(c.value)")
         .accessibilityHint("Opens its page; you return to the blueprint")
         .accessibilityIdentifier("blueprintCell-\(c.id)")

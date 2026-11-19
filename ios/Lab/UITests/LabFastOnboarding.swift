@@ -151,7 +151,12 @@ final class LabFastOnboarding: XCTestCase {
         let changes = need(app, "onbPlanChanges", "the plan-changes choice")
         XCTAssertTrue(changes.buttons["Always ask me"].firstMatch.exists && changes.buttons["Auto-apply reductions"].firstMatch.exists, "required: both plan-change options")
         XCTAssertTrue(el(app, "onbCoachLine").label.contains("presented for your approval"), "required: page 5 wording")
-        app.settleForScreenshot(1); shot("onb-5-connect")
+        app.settleForScreenshot(1)
+        // Added after simulator run 17: the page rested with its title cut off under the rail once the keyboard closed.
+        let title5 = app.staticTexts["onbTitle"].firstMatch, rail = app.buttons["onboardingBack"].firstMatch
+        XCTAssertEqual(title5.label, "Connect and calibrate", "required: page 5 title")
+        XCTAssertTrue(title5.frame.minY >= rail.frame.maxY - 1, "required: the page 5 title rests wholly below the rail (title top \(title5.frame.minY), rail bottom \(rail.frame.maxY))")
+        shot("onb-5-connect")
         next.tap()
 
         // 6 · Athlete Evolution: baseline state only, no stage
@@ -186,6 +191,10 @@ final class LabFastOnboarding: XCTestCase {
         app.settleForScreenshot(1); shot("onb-7-blueprint")
         _ = app.reveal(el(app, "blueprintMeasured"), top: 110, bottomMargin: 230)
         app.settleForScreenshot(1); shot("onb-7-blueprint-end")
+        // Added after simulator run 17: the last declared answer must be reachable clear of the fixed Approve zone.
+        let lastCell = app.buttons["blueprintCell-planChanges"].firstMatch
+        XCTAssertTrue(lastCell.exists, "required: the plan-changes answer is a button")
+        XCTAssertTrue(app.reveal(lastCell, top: 110, bottomMargin: 180) && lastCell.isHittable, "required: the plan-changes answer can be scrolled clear of the Approve zone")
 
         tap(app, el(app, "blueprintProposal"), "the proposal group")
         page(app, 4)
@@ -241,7 +250,9 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(need(app, "onbDayEditorDay", "the day editor").label, "Tuesday", "required: the editor opens the tapped day")
         XCTAssertTrue(app.buttons["onbRidePlus"].firstMatch.exists, "required: the ride length control")
         app.settleForScreenshot(1); shot("onb-large-4-week-day")
-        need(app, "onbEquipment", "the equipment choice")
+        let kit = need(app, "onbEquipment", "the equipment choice")
+        // Added after simulator run 17 ("Bodyweight" was broken mid-word): all four choices are still offered at large text.
+        for t in ["Gym", "Home", "Bodyweight", "Not sure"] { XCTAssertTrue(kit.buttons[t].firstMatch.exists, "required: the \(t) equipment choice at large text") }
         _ = app.reveal(el(app, "onbEquipment"), top: 110, bottomMargin: 300)
         app.settleForScreenshot(1); shot("onb-large-4-week-equipment")
         next.tap(); page(app, 5)
