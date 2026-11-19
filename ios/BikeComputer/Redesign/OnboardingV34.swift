@@ -11,11 +11,14 @@ import SwiftUI
 // week, device and FTP controls are the app's existing editors.
 //
 // STANDING OF THE DESIGN. The seven-page structure is the current direction and Page 2 is the selected baseline; the
-// VISUAL design of pages 1 and 3–7 is not approved, so their look here is provisional.
+// VISUAL design of pages 1 and 3–7 is not approved, so their look here is provisional. Pages 1 and 4–7 are drawn to
+// the v3.3 reference sheets (Y1, Y4, Y5) in OnboardingV34Pages.swift.
 //
 // NOT BUILT, AND NOT PRETENDED
-// • Sport per session and the recovery reminder (Page 4): they need stored fields that do not exist. The week is
-//   built in the stored terms — cycling, strength, both, rest.
+// • Sport per session, a length per day and the recovery reminder (Page 4): they need stored fields that do not
+//   exist. The week is built in the stored terms — cycling, strength, both, rest — with one ride length and one
+//   strength length for the week.
+// • The "approved" state of the Blueprint with an Open Home button (sheet Y5, B3): approval opens Home directly.
 // • Athlete Evolution stages (Page 6): no stage criteria are approved. The page shows the honest "establishing your
 //   baseline" state and names no stage.
 // • Activities without a stored identifier (walking, bodyweight, mobility, breathing, sauna) are listed as coming
@@ -30,6 +33,9 @@ struct OnboardingV34View: View {
     @State private var ftpText = ""
     @State private var resumed = false
     @State private var library = false
+    /// A group of the Blueprint was tapped: this page was opened from page 7 and its button returns there.
+    @State private var fromBlueprint = false
+    @EnvironmentObject private var hub: SensorHub
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var dts
     static let pages = 7
@@ -129,29 +135,29 @@ struct OnboardingV34View: View {
     // MARK: blueprint rail — progress, summary and the way back
 
     private var rail: some View {
-        HStack(spacing: 6) {
-            Button { page -= 1 } label: {
+        HStack(spacing: 5) {
+            Button { if !fromBlueprint { page -= 1 } else if canContinue { backToBlueprint() } } label: {
                 Image(systemName: "chevron.left").font(.body.weight(.semibold)).foregroundStyle(theme.textPrimary)
-                    .frame(width: CyHit.min, height: CyHit.min).contentShape(Rectangle())
+                    .frame(width: 36, height: CyHit.min).contentShape(Rectangle())
             }
-            .buttonStyle(.plain).accessibilityLabel("Back").accessibilityIdentifier("onboardingBack")
+            .buttonStyle(.plain).accessibilityLabel(fromBlueprint ? "Back to blueprint" : "Back").accessibilityIdentifier("onboardingBack")
             ForEach(1...6, id: \.self) { i in railSlot(i) }
-            Spacer(minLength: 0)
             Text("\(page) of \(Self.pages)").font(CyFont.caption).monospacedDigit().foregroundStyle(theme.textSecondary)
+                .lineLimit(1).fixedSize()
                 .accessibilityIdentifier("onboardingProgress")
         }
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .padding(.horizontal, CySpace.s).padding(.top, 4)
     }
+    /// One slot of the blueprint rail (sheet Y1): a number until its page is finished, then the mark the page left.
     private func railSlot(_ i: Int) -> some View {
         let done = i < page, here = i == page
-        return Button { if done { page = i } } label: {
-            Text(done ? railMark(i) : "\(i)")
-                .font(.caption.weight(.bold)).lineLimit(1).minimumScaleFactor(0.6)
-                .foregroundStyle(done ? theme.textPrimary : here ? theme.accent : theme.textTertiary)
-                .frame(width: 34, height: 30)
-                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(done ? theme.surface2 : Color.clear))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(here ? theme.accent : theme.border.opacity(done ? 0 : 0.7), lineWidth: here ? 1.6 : 1))
-                .frame(minWidth: 36, minHeight: CyHit.min).contentShape(Rectangle())
+        return Button { if done { fromBlueprint = false; page = i } } label: {
+            railMark(i, done: done, here: here)
+                .frame(maxWidth: .infinity).frame(height: 26)
+                .background(Capsule().fill(done ? theme.surface2 : Color.clear))
+                .overlay(Capsule().strokeBorder(here ? theme.textPrimary : theme.border.opacity(done ? 0 : 0.7), lineWidth: here ? 1.6 : 1))
+                .frame(minHeight: CyHit.min).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!done)
@@ -159,18 +165,44 @@ struct OnboardingV34View: View {
         .accessibilityHint(done ? "Goes back to this page" : "")
         .accessibilityIdentifier("railSlot-\(i)")
     }
-    private static let titles = ["", "About you", "What do you train?", "What are you aiming for?", "Build your week", "Connect and calibrate", "Athlete Evolution", "Athletic Blueprint"]
-    /// The mark a finished page leaves in the rail.
-    private func railMark(_ i: Int) -> String {
-        switch i {
-        case 1: return String((a.name ?? "").trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
-        case 2: return mode == .hybrid ? "E+S" : mode == .cycling ? "E" : "S"
-        case 3: return "★"
-        case 4: let k = a.week ?? proposedWeek; return "\(k.filter { $0 != .rest }.count)d"
-        case 5: return ftpKnown ? "FTP" : "✓"
-        default: return "◎"
+    @ViewBuilder private func railMark(_ i: Int, done: Bool, here: Bool) -> some View {
+        if !done {
+            Text("\(i)").font(.caption.weight(.bold)).foregroundStyle(here ? theme.textPrimary : theme.textTertiary)
+        } else if i == 1 {
+            Text(String((a.name ?? "").trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
+                .font(.caption.weight(.bold)).foregroundStyle(theme.textPrimary)
+        } else if i == 2 {
+            HStack(spacing: 2) {
+                if mode.includesCycling { Image(systemName: "bicycle") }
+                if mode.includesLifting { Image(systemName: "dumbbell") }
+            }
+            .font(.caption2.weight(.semibold)).foregroundStyle(theme.textPrimary)
+        } else if i == 3 {
+            Image(systemName: "star.fill").font(.caption2).foregroundStyle(goalTint(a.primaryGoal ?? a.goals?.first))
+        } else if i == 4 {
+            railWeekBars
+        } else if i == 5 {
+            Text(ftpKnown ? "FTP" : "✓").font(.caption2.weight(.bold)).foregroundStyle(theme.textPrimary)
+        } else {
+            Image(systemName: "circle").font(.caption2.weight(.bold)).foregroundStyle(theme.textPrimary)
         }
     }
+    /// The week as seven small bars: a ride, a strength day, both, or a short bar for rest.
+    private var railWeekBars: some View {
+        let k = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? proposedWeek
+        return HStack(alignment: .bottom, spacing: 2) {
+            ForEach(0..<7, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(k[i] == .rest ? theme.textTertiary : k[i] == .lift ? theme.strength : theme.endurance)
+                    .frame(width: 3, height: k[i] == .rest ? 4 : k[i] == .both ? 13 : 10)
+            }
+        }
+    }
+    private func goalTint(_ g: GoalID?) -> Color {
+        guard let g else { return theme.textPrimary }
+        return g.sport == .strength ? theme.strength : g.sport == .cycling ? theme.endurance : theme.recovery
+    }
+    private static let titles = ["", "About you", "What do you train?", "What are you aiming for?", "Build your week", "Connect and calibrate", "Athlete Evolution", "Athletic Blueprint"]
     private func railWords(_ i: Int) -> String {
         switch i {
         case 1: return a.name ?? ""
@@ -186,7 +218,9 @@ struct OnboardingV34View: View {
 
     private func heading(_ n: Int, _ over: String, _ title: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("0\(n) · \(over.uppercased())").font(CyFont.overline).tracking(1.2).foregroundStyle(theme.textSecondary)
+            (Text("0\(n)").foregroundColor(theme.accent) + Text(" · \(over.uppercased())").foregroundColor(theme.textSecondary))
+                .font(CyFont.overline).tracking(1.2)
+                .accessibilityLabel("Page \(n), \(over)")
             Text(title).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("onbTitle")
@@ -208,40 +242,56 @@ struct OnboardingV34View: View {
     }
 
     /// Fixed zone above the button: what the answers on this page mean for the plan. Rules-based, never a guess.
-    private var coachLine: String {
+    /// The mark is the provenance mark of the sheets; `strong` is the part the sheets draw in full strength.
+    private struct CoachLine { var mark: String; var tint: Color; var before: String = ""; var strong: String = ""; var after: String = "" }
+    private var coachLine: CoachLine {
+        if fromBlueprint, page < Self.pages {
+            return CoachLine(mark: "◆", tint: theme.accent, strong: "Editing from your blueprint.",
+                             after: page == 4 ? " Change the week here; the button returns you to the blueprint." : " Change it here; the button returns you to the blueprint.")
+        }
         switch page {
-        case 1: return "Your name is used on Home. Date of birth and weight are optional: zones and W/kg need them, and nothing is assumed without them."
+        case 1: return CoachLine(mark: "●", tint: theme.textPrimary, before: "Only your name is needed. ", strong: "Nothing is estimated from blanks", after: " — a missing weight stays unknown.")
         case 2:
-            if roster.mode == nil { return roster.hasOnlyUnsupported ? "Your interests are saved. Add a sport Cyclift can plan to continue." : "Choose the sport you train most. Your plan is built around it." }
-            return "◆ \(AthleticRoster.identityLine(sports, priority: a.priority)). " + (roster.mode == .hybrid ? "Rides and strength share one week; the lead decides the mix." : "Your week is built from this sport.")
+            if roster.mode == nil { return CoachLine(mark: "", tint: theme.textSecondary, before: roster.hasOnlyUnsupported ? "Your interests are saved. Add a sport Cyclift can plan to continue." : "Choose the sport you train most. Your plan is built around it.") }
+            return CoachLine(mark: "◆", tint: theme.accent, before: "\(AthleticRoster.identityLine(sports, priority: a.priority)). " + (roster.mode == .hybrid ? "Rides and strength share one week; the lead decides the mix." : "Your week is built from this sport."))
         case 3:
-            guard let g = a.primaryGoal ?? a.goals?.first else { return "Pick at least one goal. The main goal shapes the sessions the Coach proposes." }
-            return "◆ Main goal: \(g.title). \(GoalInfo.effect(g))"
+            guard let g = a.primaryGoal ?? a.goals?.first else { return CoachLine(mark: "", tint: theme.textSecondary, before: "Pick at least one goal. The main goal shapes the sessions the Coach proposes.") }
+            return CoachLine(mark: "◆", tint: theme.accent, strong: "Main goal: \(g.title).", after: " \(GoalInfo.effect(g))")
         case 4:
-            let k = a.week ?? proposedWeek, ride = a.rideMinutes ?? OnboardingWeek.defaultRideMinutes, lift = a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes
-            var parts: [String] = []
-            if mode.includesCycling { parts.append("\(OnboardingWeek.rides(k)) rides") }
-            if mode.includesLifting { parts.append("\(OnboardingWeek.lifts(k)) strength") }
-            return "◆ \(parts.joined(separator: " · ")) · \(OnboardingWeek.durationText(OnboardingWeek.minutes(k, ride: ride, lift: lift))) a week. Each training day becomes one planned session."
-        case 5: return "All optional. Your Coach works from what you record; increases to your plan are presented for your approval, and you can always see why a session changed."
-        case 6: return "Nothing on this page is stored. Your stage will only ever come from measured training, never from what you declare."
-        default: return "Approving creates your first plan from exactly these answers. You can change any of it later in Profile and Plan."
+            let k = a.week ?? proposedWeek
+            if OnboardingWeek.rides(k) + OnboardingWeek.lifts(k) == 0 { return CoachLine(mark: "◆", tint: theme.warning, strong: "A plan needs at least one training day.") }
+            return CoachLine(mark: "◆", tint: theme.accent, before: "Each tile becomes one planned session of that sport and length. ", strong: "Nothing is scheduled until you approve.")
+        case 5: return CoachLine(mark: "◆", tint: theme.accent, strong: "Increases to your plan are presented for your approval.",
+                                 after: " Reductions that protect recovery can be applied for you if you allow it. You can review why your plan changed.")
+        case 6: return CoachLine(mark: "▲", tint: theme.success, before: "Your stage is earned by ", strong: "recorded training only", after: ". Nothing you answered here can raise or lower it.")
+        default: return CoachLine(mark: "◆", tint: theme.accent, strong: "Nothing is scheduled until you approve.", after: " Tap any part of the blueprint to change it first.")
         }
     }
+    private func backToBlueprint() { fromBlueprint = false; page = Self.pages }
+    /// A Blueprint group opens the page it came from; that page's button returns here.
+    private func editFromBlueprint(_ p: Int) { fromBlueprint = true; page = p }
 
     private var bottom: some View {
-        VStack(alignment: .leading, spacing: CySpace.s) {
-            Text(coachLine).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                .lineLimit(dts.isAccessibilitySize ? 6 : 3, reservesSpace: !dts.isAccessibilitySize)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .clipped()                              // Lab run 13: a long line was drawn over the page above it
-                .accessibilityIdentifier("onbCoachLine")
-            if page == Self.pages {
-                CyPrimaryButton(title: "Approve my plan", systemImage: "checkmark", sport: .recovery) { OnboardingFlow.approve(a, store: store) }
+        let line = coachLine
+        return VStack(alignment: .leading, spacing: CySpace.s) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if !line.mark.isEmpty { Text(line.mark).font(CyDyn.f(10, .bold)).foregroundStyle(line.tint).accessibilityHidden(true) }
+                (Text(line.before).foregroundColor(theme.textSecondary) + Text(line.strong).fontWeight(.semibold).foregroundColor(theme.textPrimary) + Text(line.after).foregroundColor(theme.textSecondary))
+                    .font(CyDyn.f(14))
+                    .lineLimit(dts.isAccessibilitySize ? 6 : 3, reservesSpace: !dts.isAccessibilitySize)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .clipped()                              // Lab run 13: a long line was drawn over the page above it
+                    .accessibilityIdentifier("onbCoachLine")
+            }
+            if fromBlueprint, page < Self.pages {
+                CyPrimaryButton(title: "Back to blueprint", isEnabled: canContinue, action: backToBlueprint)
+                    .accessibilityIdentifier("onbBackToBlueprint")
+            } else if page == Self.pages {
+                CyPrimaryButton(title: "Approve my blueprint") { OnboardingFlow.approve(a, store: store) }
                     .accessibilityIdentifier("onbCreatePlan")
             } else {
-                CyPrimaryButton(title: page == 5 ? "Continue — connect later in Profile if you like" : "Continue", isEnabled: canContinue, action: next)
+                CyPrimaryButton(title: page == 6 ? "See my blueprint" : "Continue", isEnabled: canContinue, action: next)
                     .accessibilityIdentifier("onboardingNext")
             }
         }
@@ -272,10 +322,9 @@ struct OnboardingV34View: View {
     // MARK: 1 — About you
 
     private var pageAbout: some View {
-        VStack(alignment: .leading, spacing: CySpace.l) {
-            heading(1, "About you", (a.name ?? "").trimmingCharacters(in: .whitespaces).isEmpty ? "Who is training?" : (a.name ?? ""))
-            provenance("●", "Declared by you")
-            AthleteTypeEditor(a: $a, parts: [.name, .personal], healthWeight: healthWeightOffer, units: store.settings.units)
+        VStack(alignment: .leading, spacing: CySpace.m) {
+            heading(1, "You", "About you")
+            OnbAboutPage(a: $a, units: $store.settings.units, healthWeight: healthWeightOffer)
         }
     }
     /// A weight already read from Apple Health (with permission) is offered, never applied silently.
@@ -513,154 +562,114 @@ struct OnboardingV34View: View {
     // MARK: 4 — Week
 
     private var pageWeek: some View {
-        VStack(alignment: .leading, spacing: CySpace.l) {
+        VStack(alignment: .leading, spacing: CySpace.m) {
             heading(4, "Week", "Build your week")
-            provenance("◆", "Coach's proposal (rules-based) — tap a day to change it")
-            WeekBuilder(a: $a, mode: mode, preview: { k, r, l in OnboardingFlow.dryRun(a, store: store, kinds: k, ride: r, lift: l, weekOffset: 0) })
-            Text("Choosing the sport of each session and a recovery reminder on rest days are not available yet: the week is planned as cycling and strength sessions.")
-                .font(CyFont.footnote).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("onbWeekLimits")
+            OnbWeekPage(a: $a, mode: mode, enduranceTitle: roster.mainEndurance?.title ?? "Cycling", strengthTitle: roster.mainStrength?.title ?? "Strength")
         }
     }
 
     // MARK: 5 — Connect and calibrate
 
     private var pageConnect: some View {
-        VStack(alignment: .leading, spacing: CySpace.l) {
-            heading(5, "Devices", "Connect and calibrate")
-            if CycliftLab.isLab {
-                Text("Cyclift Lab: sensors, Apple Health and location are switched off in this demo app, so nothing can be connected here.")
-                    .font(CyFont.footnote).foregroundStyle(theme.warning).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("onbLabDevices")
-            }
-            provenance("▲", "Measured — from your devices")
-            DeviceCardList()
-            if mode.includesCycling {
-                provenance("●", "Declared — your FTP, if you know it")
-                OnboardingFTPCard(a: $a, ftpKnown: $ftpKnown, ftpText: $ftpText)
-            }
+        VStack(alignment: .leading, spacing: CySpace.m) {
+            heading(5, "Connect", "Connect and calibrate")
+            OnbConnectPage(a: $a, ftpKnown: $ftpKnown, ftpText: $ftpText, mode: mode)
         }
     }
 
     // MARK: 6 — Athlete Evolution (nothing stored; no stage is named because none is evaluated)
 
     private var pageEvolution: some View {
-        VStack(alignment: .leading, spacing: CySpace.l) {
+        VStack(alignment: .leading, spacing: CySpace.m) {
             heading(6, "Evolution", "Athlete Evolution")
-            VStack(spacing: CySpace.s) {
-                SingularityPlaceholder(diameter: 120, detail: 1).frame(height: 150).accessibilityHidden(true)
-                Text("ESTABLISHING YOUR BASELINE").font(Font.system(.subheadline, design: .rounded).weight(.heavy)).tracking(2.4)
-                    .foregroundStyle(theme.textPrimary).multilineTextAlignment(.center)
-                    .accessibilityIdentifier("onbEvolutionState")
-            }
-            .frame(maxWidth: .infinity)
-            card {
-                provenance("●", "Declared")
-                Text(declaredLine).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-            }
-            card {
-                provenance("▲", "Measured")
-                Text(measuredLine).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-            }
-            card {
-                Text("STAGE").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
-                Text("No stage yet. Cyclift does not evaluate stages in this version, and what you declare never sets one.")
-                    .font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("onbEvolutionStage")
-            }
+            OnbEvolutionPage(declared: levelsLine, rides: store.rides.count, lifts: store.strength.count)
         }
     }
-    private var declaredLine: String {
+    /// "Intermediate rider · beginner lifter" — what the athlete declared on page 3.
+    private var levelsLine: String {
         var parts: [String] = []
-        if mode.includesCycling { parts.append("Cycling: \((a.cyclingLevel ?? store.profile.level).rawValue)") }
-        if mode.includesLifting, let s = a.strengthLevel ?? store.strengthPrefs.experience { parts.append("Strength: \(s.rawValue)") }
-        return parts.isEmpty ? "Nothing declared yet." : parts.joined(separator: " · ") + ". Used to size your first weeks only."
-    }
-    private var measuredLine: String {
-        let rides = store.rides.count, lifts = store.strength.count
-        return rides + lifts == 0 ? "Nothing measured yet. Evidence builds from the sessions you record."
-            : "\(rides) recorded ride\(rides == 1 ? "" : "s") · \(lifts) logged strength session\(lifts == 1 ? "" : "s")."
+        if mode.includesCycling { parts.append("\(ProfileText.level(a.cyclingLevel ?? store.profile.level)) rider") }
+        if mode.includesLifting, let s = a.strengthLevel ?? store.strengthPrefs.experience {
+            let word = ProfileText.strengthLevel(s)
+            parts.append("\(parts.isEmpty ? word : word.lowercased()) lifter")
+        }
+        return parts.isEmpty ? "Nothing declared yet" : parts.joined(separator: " · ")
     }
 
     // MARK: 7 — Athletic Blueprint
 
     private var pageBlueprint: some View {
+        OnbBlueprintPage(m: blueprintModel, onEdit: editFromBlueprint)
+    }
+    private var blueprintModel: OnbBlueprintModel {
         let kinds = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? proposedWeek
         let ride = a.rideMinutes ?? OnboardingWeek.defaultRideMinutes, lift = a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes
         let plan = OnboardingFlow.dryRun(a, store: store, kinds: kinds, ride: ride, lift: lift, weekOffset: 0)
         let first = OnboardingApproach.firstWorkout(in: plan, from: Date())
             ?? OnboardingApproach.firstWorkout(in: OnboardingFlow.dryRun(a, store: store, kinds: kinds, ride: ride, lift: lift, weekOffset: 1), from: Date())
-        let lines = OnboardingApproach.lines(primary: a.primaryGoal, mode: mode, kinds: kinds, liftMinutes: lift, ftpKnown: store.profile.ftpKnown,
-                                             ftpWatts: store.profile.ftpValue, equipmentProvisional: store.equipment.isProvisional)
-        return VStack(alignment: .leading, spacing: CySpace.l) {
-            heading(7, "Blueprint", "Athletic Blueprint")
-            VStack(alignment: .leading, spacing: 4) {
-                Text(AthleticRoster.identityLine(sports, priority: a.priority)).font(CyFont.headline).foregroundStyle(theme.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("blueprintIdentity")
-                if let g = a.primaryGoal ?? a.goals?.first {
-                    Text("★ \(g.title)").font(CyFont.callout).foregroundStyle(theme.textSecondary).accessibilityLabel("Main goal: \(g.title)")
-                }
-            }
-            // ◆ the proposal
-            Button { page = 4 } label: {
-                card {
-                    provenance("◆", "Coach's proposal (rules-based) · week 1")
-                    CyCalendarStrip(days: (0..<7).map { i in
-                        let s: CyDaySport = { switch kinds[i] { case .ride: return .cycling; case .lift: return .strength; case .both: return .both; case .rest: return .rest } }()
-                        return CyDay(id: i, shortName: WeeklyAvailability.dayNames[i], longName: WeeklyAvailability.longDayNames[i], sport: s, status: s == .rest ? .none : .planned)
-                    })
-                    .allowsHitTesting(false)
-                    Text(weekTotals(kinds, ride: ride, lift: lift)).font(CyFont.label).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("blueprintWeekTotals")
-                    if let w = first {
-                        Text("First session: \(w.date.formatted(.dateTime.weekday(.wide))) · \(w.displayTitle) · \(w.minutes) min")
-                            .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("blueprintFirst")
-                    }
-                    ForEach(Array(lines.enumerated()), id: \.offset) { pair in
-                        Text("\(pair.offset + 1). \(pair.element)").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-            .buttonStyle(.plain).accessibilityHint("Opens Build your week").accessibilityIdentifier("blueprintProposal")
-            // ● declared
-            Button { page = 3 } label: {
-                card {
-                    provenance("●", "Declared by you")
-                    Text(declaredSummary).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .buttonStyle(.plain).accessibilityHint("Opens your goals and experience").accessibilityIdentifier("blueprintDeclared")
-            // ▲ measured
-            Button { page = 5 } label: {
-                card {
-                    provenance("▲", "Measured evidence")
-                    Text(measuredLine).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    Text(connectedLine).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .buttonStyle(.plain).accessibilityHint("Opens Connect and calibrate").accessibilityIdentifier("blueprintMeasured")
+        var lines = Array(OnboardingApproach.lines(primary: a.primaryGoal, mode: mode, kinds: kinds, liftMinutes: lift, ftpKnown: store.profile.ftpKnown,
+                                                   ftpWatts: store.profile.ftpValue, equipmentProvisional: store.equipment.isProvisional).prefix(2))
+        if let w = first { lines.append("First session: \(w.date.formatted(.dateTime.weekday(.wide))) · \(w.displayTitle) · \(w.minutes) min.") }
+        let v = roster
+        let main = a.primaryGoal ?? a.goals?.first
+        let others = (a.goals ?? []).filter { $0 != main }
+        let n = OnbWeekText.sessions(kinds)
+        return OnbBlueprintModel(
+            name: (a.name ?? "").trimmingCharacters(in: .whitespaces),
+            levels: levelsLine,
+            lead: v.mode == .hybrid ? leadWord : (v.mainEndurance ?? v.mainStrength)?.title ?? "",
+            identity: AthleticRoster.identityLine(sports, priority: a.priority),
+            sports: blueprintSports(v),
+            goalTitle: main?.title,
+            goalIsStrength: main?.sport == .strength,
+            goalLine: main.map { GoalInfo.line($0) + (others.isEmpty ? "" : " · also " + others.map(\.title).joined(separator: ", ")) } ?? "",
+            kinds: kinds, ride: ride, lift: lift,
+            weekTotals: "\(OnbWeekText.total(kinds, ride: ride, lift: lift)) · \(n) session\(n == 1 ? "" : "s")",
+            proposalLines: lines,
+            cells: blueprintCells(v, main: main, others: others),
+            measured: measuredLine + " " + connectedLine)
+    }
+    private var leadWord: String {
+        switch a.priority ?? .balanced { case .cycling: return "Endurance-led"; case .strength: return "Strength-led"; case .balanced: return "Balanced" }
+    }
+    /// The roster as the sheet's line-up: main sports filled, other planned sports outlined, interests dashed.
+    private func blueprintSports(_ v: AthleticRoster.Page) -> [OnbBlueprintModel.SportMark] {
+        func mark(_ x: RosterActivity, main: Bool) -> OnbBlueprintModel.SportMark {
+            OnbBlueprintModel.SportMark(id: x.id, short: OnbWeekText.short(x.title), icon: Self.symbol(x),
+                                        role: main ? "main" : x.capability.plannable ? "" : "interest",
+                                        strength: x.domain == .strength, main: main, interest: !x.capability.plannable)
         }
+        let leadStrength = a.priority == .strength
+        let mains = (leadStrength ? [v.mainStrength, v.mainEndurance] : [v.mainEndurance, v.mainStrength]).compactMap { $0 }
+        return mains.map { mark($0, main: true) } + v.also.map { mark($0, main: false) }
     }
-    private func weekTotals(_ k: [DayKind], ride: Int, lift: Int) -> String {
-        var parts: [String] = []
-        if mode.includesCycling { parts.append("\(OnboardingWeek.rides(k)) rides") }
-        if mode.includesLifting { parts.append("\(OnboardingWeek.lifts(k)) strength") }
-        parts.append(OnboardingWeek.durationText(OnboardingWeek.minutes(k, ride: ride, lift: lift)) + " planned")
-        return parts.joined(separator: " · ")
+    /// What the athlete declared, each with the page that changes it.
+    private func blueprintCells(_ v: AthleticRoster.Page, main: GoalID?, others: [GoalID]) -> [OnbBlueprintModel.Cell] {
+        var out: [OnbBlueprintModel.Cell] = []
+        if let g = main { out.append(.init(id: "goals", title: "Goals", value: ([g.title + " ★"] + others.map(\.title)).joined(separator: " · "), page: 3)) }
+        if v.mode == .hybrid { out.append(.init(id: "lead", title: "When time is short", value: leadWord, page: 2)) }
+        if mode.includesLifting { out.append(.init(id: "equipment", title: "Equipment", value: (a.equipment ?? .notSure).title, page: 4)) }
+        if mode.includesCycling {
+            let p = store.profile
+            let value = p.ftpKnown ? "\(p.ftpValue.map { "\($0) W" } ?? "Entered") · \(p.ftpSource == .tested ? "tested" : "not tested")" : "Unknown"
+            out.append(.init(id: "ftp", title: "FTP", value: value, page: 5))
+        }
+        out.append(.init(id: "planChanges", title: "Plan changes", value: store.settings.autoAdapt ? "Auto-apply reductions" : "Always ask me", page: 5))
+        let interests = v.also.filter { !$0.capability.plannable }.map(\.title)
+        if !interests.isEmpty { out.append(.init(id: "interests", title: "Interests", value: interests.joined(separator: " · "), page: 2)) }
+        return out
     }
-    private var declaredSummary: String {
-        var parts: [String] = []
-        if let g = a.goals, !g.isEmpty { parts.append("Goals: " + g.map(\.title).joined(separator: ", ")) }
-        if mode.includesCycling { parts.append("Cycling experience: \((a.cyclingLevel ?? store.profile.level).rawValue)") }
-        if mode.includesLifting, let s = a.strengthLevel ?? store.strengthPrefs.experience { parts.append("Strength experience: \(s.rawValue)") }
-        if mode.includesCycling { parts.append(store.profile.ftpKnown ? "FTP: \(store.profile.ftpValue.map { "\($0) W" } ?? "entered")" : "FTP: unknown — rides use heart rate and effort") }
-        parts.append(a.weightKg == nil ? "Weight: not given" : "Weight: given")
-        return parts.joined(separator: "\n")
+    private var measuredLine: String {
+        let rides = store.rides.count, lifts = store.strength.count
+        return rides + lifts == 0 ? "No recorded training yet."
+            : "\(rides) recorded ride\(rides == 1 ? "" : "s") · \(lifts) logged strength session\(lifts == 1 ? "" : "s")."
     }
+    /// Only links that are really up are named; Lab connects to nothing and says so.
     private var connectedLine: String {
-        let n = store.settings.enabledConnections.count + (health.workoutWriteAuthorized ? 1 : 0)
-        return n == 0 ? "No devices connected — add them any time in Profile." : "\(n) connection\(n == 1 ? "" : "s") set up."
+        if CycliftLab.isLab { return "Devices are switched off in Cyclift Lab." }
+        let names = hub.deviceStates.values.filter { $0.state.isConnectedOrBetter }.map(\.name).sorted()
+        return names.isEmpty ? "No devices connected — add them any time in Profile."
+            : names.joined(separator: ", ") + (names.count == 1 ? " is connected." : " are connected.")
     }
 }
 
