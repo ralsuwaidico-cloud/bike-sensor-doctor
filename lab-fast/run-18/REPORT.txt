@@ -1,0 +1,36 @@
+FAST focused Lab check — selected: LabFastProfile
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 240bbc6f · files changed since then: 0
+TIME setup: 14s
+  timing: CompileAssetCatalogVariant (1 task) | 108.801 seconds
+  timing: Ld (18 tasks) | 10.959 seconds
+  timing: SwiftEmitModule (2 tasks) | 7.173 seconds
+  timing: SwiftDriver (2 tasks) | 4.754 seconds
+  timing: SwiftCompile (3 tasks) | 3.684 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.614 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.792 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.673 seconds
+  stages: packages at 192s · packages prepared at 240s · dependency graph at 240s · inputs at 241s · build description at 241s · first link at 266s · first Swift step at 267s · asset catalogue at 271s · finished at 383s
+  compiled in this run: 7 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 384s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 12s
+	 Executed 8 tests, with 2 failures (0 unexpected) in 1756.655 (1756.670) seconds
+	 Executed 8 tests, with 2 failures (0 unexpected) in 1756.655 (1756.673) seconds
+	 Executed 8 tests, with 2 failures (0 unexpected) in 1756.655 (1756.674) seconds
+Lab/UITests/LabFastProfile.swift:160: error: -[CycliftLabUITests.LabFastProfile testDevicesRowsAndPagesInLab] : XCTAssertTrue failed - required: phoneBluetooth on This iPhone
+Lab/UITests/LabFastProfile.swift:161: error: -[CycliftLabUITests.LabFastProfile testDevicesRowsAndPagesInLab] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"phoneBluetooth" IN identifiers'`, given input App element pid: 39701
+Test Case '-[CycliftLabUITests.LabFastProfile testAppPreferencesRows]' passed (264.099 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testAthleteProfileRows]' passed (161.627 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testDataHelpAboutRows]' passed (256.164 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testDevicesRowsAndPagesInLab]' failed (377.847 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testPerformanceRows]' passed (176.873 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testPermissionsPageInLabAsksForNothing]' passed (52.288 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testProfileRowsDoNotOverlapAtLargeText]' passed (243.856 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testTrainingSetupRows]' passed (223.900 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 1884s
+TIME total on the Mac: 2296s
+commit b51e361c70eba367d43a5fe5cfecbafb53e994a6  branch ios/lab
