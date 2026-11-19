@@ -1,0 +1,67 @@
+FAST focused Lab check — selected: LabFastCoach LabFastPlan LabFastTrain LabFastCycling LabFast
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 60a33d60 · files changed since then: 0
+TIME setup: 11s
+  timing: CompileAssetCatalogVariant (1 task) | 138.733 seconds
+  timing: SwiftDriver (16 tasks) | 32.652 seconds
+  timing: Ld (18 tasks) | 11.898 seconds
+  timing: SwiftEmitModule (1 task) | 9.577 seconds
+  timing: SwiftCompile (1 task) | 2.624 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.614 seconds
+  timing: Copy (11 tasks) | 1.611 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.141 seconds
+  stages: packages at 114s · packages prepared at 190s · dependency graph at 190s · inputs at 190s · build description at 190s · first Swift step at 203s · first link at 207s · asset catalogue at 222s · finished at 367s
+  compiled in this run: 3 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 370s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 17s
+	 Executed 11 tests, with 0 failures (0 unexpected) in 864.367 (864.381) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 171.422 (171.425) seconds
+	 Executed 26 tests, with 0 failures (0 unexpected) in 2146.747 (2146.782) seconds
+	 Executed 26 tests, with 0 failures (0 unexpected) in 2146.747 (2146.784) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 251.813 (251.818) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 566.092 (566.097) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 293.053 (293.057) seconds
+Test Case '-[CycliftLabUITests.LabFast testEquipmentAtLargeText]' passed (79.196 seconds).
+Test Case '-[CycliftLabUITests.LabFast testOnboardingRoster]' passed (108.008 seconds).
+Test Case '-[CycliftLabUITests.LabFast testOpenSuggestion]' passed (51.044 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileAppPreferencesPages]' passed (86.917 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileAthletePages]' passed (89.603 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileDataPages]' passed (114.427 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileEditsNeedApproval]' passed (79.463 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfilePerformancePages]' passed (57.884 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileTrainingSetupPages]' passed (48.835 seconds).
+Test Case '-[CycliftLabUITests.LabFast testScenarioSelector]' passed (125.064 seconds).
+Test Case '-[CycliftLabUITests.LabFast testScreens]' passed (23.925 seconds).
+Test Case '-[CycliftLabUITests.LabFastCoach testApproveShowsTheOutcomeAndThePlanCarriesIt]' passed (77.208 seconds).
+Test Case '-[CycliftLabUITests.LabFastCoach testDeclineIsRecordedAndThePlanIsUnchanged]' passed (86.293 seconds).
+Test Case '-[CycliftLabUITests.LabFastCoach testNotNowPostponesAndStaysOpen]' passed (88.313 seconds).
+Test Case '-[CycliftLabUITests.LabFastCycling testFocusMapPauseResumeLapFinish]' passed (86.714 seconds).
+Test Case '-[CycliftLabUITests.LabFastCycling testSensorStatesAreShownTruthfully]' passed (84.708 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testAddGoalApprovePersists]' passed (133.856 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testAddGoalCancelLeavesGoalUnchanged]' passed (321.617 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testMorePageOpensItsDestinations]' passed (43.015 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testRecurringPlan]' passed (67.604 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testBallShowsRecordingPausedAndRestoresTheRecorder]' passed (114.868 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet]' passed (58.166 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testPanelShortcutsAndPanelOpenBall]' passed (19.802 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testSessionSurvivesTheAppEndingAndIsRestoredFromTheBall]' passed (42.308 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testSupersetRoundGoesA1A2ThenNextRound]' passed (25.215 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testUnconfirmedSaveIsShownOnTheBall]' passed (32.694 seconds).
+RESULT selected screen checks: ok
+TIME tests: 2287s
+LAB-NOTE coach approve after approval: You, Your decision, You, 21:54. Goblet squat: 25 kg → 26 kg per hand Approved by you 19 Nov 21:54. Your plan carries it now.   | In your plan now · Thu 19 Nov: Goblet squat 3 × 10 @ 26 kg
+LAB-NOTE coach approve after reopening: You, Your decision, You, 21:54. Goblet squat: 25 kg → 26 kg per hand Approved by you 19 Nov 21:54. Your plan carries it now.   | In your plan now · Thu 19 Nov: Goblet squat 3 × 10 @ 26 kg
+LAB-NOTE coach review: Now: 25 kg, 3 × 10 | Proposed: 26 kg, 3 × 10 · +1 kg (4 %) | Tue 10 Nov · 3 × 10 @ 25 kg: effort 7 | Fri 13 Nov · 3 × 10 @ 25 kg: effort 7
+LAB-NOTE correction: '25 kg × 10' → '25 kg × 11'; recorder line: was 'Set 1 · 25 kg × 10'
+LAB-NOTE equipment rows large text: first 269–373, second 373–507
+LAB-NOTE equipment rows normal text: first 476–536, second 536–596
+LAB-NOTE map element outside the cycling screen: id '' label '' frame (14.0, 404.3333333333333, 365.0, 129.33333333333331)
+LAB-NOTE plan goal preview: now 'Fitness (main) · Maintain' → after 'Strength (main) · Fitness · Maintain'; headline '3 planned days would change'
+LAB-NOTE recurring plan rows: Monday, Strength, 20 min | Tuesday, Ride, 1 h 26 min | Wednesday, Strength, 20 min | Thursday, Ride, 1 h 26 min | Friday, Strength, 20 min | Saturday, Ride, 2 h 8 min | Sunday, Rest || Availability & preferences, 6 days · 6 h of 6 h || warning: ''
+LAB-NOTE superset round: A1 → A2 → SUPERSET A · ROUND 2 OF 3; rest after the round runs (Rest, 92 seconds left)
+LAB-NOTE train ball: recording 00:12 → 00:15; paused at 00:21; completion pending after 9 more sets
+TIME total on the Mac: 2700s
+commit 741cc586e96d684e5604d7a27dd8195507c2095d  branch ios/lab
