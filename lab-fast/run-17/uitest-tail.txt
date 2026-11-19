@@ -1,0 +1,300 @@
+    t =    25.23s Waiting 6.0s for "progressTitle" Any to exist
+    t =    26.29s     Checking `Expect predicate `existsNoRetry == 1` for object "progressTitle" Any`
+    t =    26.29s         Checking existence of `"progressTitle" Any`
+    t =    26.63s Waiting 6.0s for "progressMenu" Any to exist
+    t =    27.66s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenu" Any`
+    t =    27.67s         Checking existence of `"progressMenu" Any`
+    t =    27.91s Waiting 6.0s for "heroIdentity" Any to exist
+    t =    28.95s     Checking `Expect predicate `existsNoRetry == 1` for object "heroIdentity" Any`
+    t =    28.95s         Checking existence of `"heroIdentity" Any`
+    t =    29.43s Waiting 6.0s for "heroStage" Any to exist
+    t =    30.49s     Checking `Expect predicate `existsNoRetry == 1` for object "heroStage" Any`
+    t =    30.49s         Checking existence of `"heroStage" Any`
+    t =    31.39s Waiting 6.0s for "evolutionTrack" Any to exist
+    t =    32.43s     Checking `Expect predicate `existsNoRetry == 1` for object "evolutionTrack" Any`
+    t =    32.43s         Checking existence of `"evolutionTrack" Any`
+    t =    33.04s Waiting 6.0s for "progressV23" Any to exist
+    t =    34.10s     Checking `Expect predicate `existsNoRetry == 1` for object "progressV23" Any`
+    t =    34.10s         Checking existence of `"progressV23" Any`
+    t =    35.19s Waiting 6.0s for "progressDevelopmentIntro" Any to exist
+    t =    36.24s     Checking `Expect predicate `existsNoRetry == 1` for object "progressDevelopmentIntro" Any`
+    t =    36.24s         Checking existence of `"progressDevelopmentIntro" Any`
+    t =    38.10s Waiting 6.0s for "progressEndurance" Any to exist
+    t =    39.14s     Checking `Expect predicate `existsNoRetry == 1` for object "progressEndurance" Any`
+    t =    39.14s         Checking existence of `"progressEndurance" Any`
+    t =    40.66s Waiting 6.0s for "progressStrengthDevelopment" Any to exist
+    t =    41.69s     Checking `Expect predicate `existsNoRetry == 1` for object "progressStrengthDevelopment" Any`
+    t =    41.69s         Checking existence of `"progressStrengthDevelopment" Any`
+    t =    42.76s Waiting 6.0s for "progressConsistency" Any to exist
+    t =    43.82s     Checking `Expect predicate `existsNoRetry == 1` for object "progressConsistency" Any`
+    t =    43.82s         Checking existence of `"progressConsistency" Any`
+    t =    45.33s Waiting 6.0s for "progressZones" Any to exist
+    t =    46.33s     Checking `Expect predicate `existsNoRetry == 1` for object "progressZones" Any`
+    t =    46.34s         Checking existence of `"progressZones" Any`
+    t =    47.37s Waiting 6.0s for "progressNextEvolution" Any to exist
+    t =    48.44s     Checking `Expect predicate `existsNoRetry == 1` for object "progressNextEvolution" Any`
+    t =    48.44s         Checking existence of `"progressNextEvolution" Any`
+    t =    49.35s Waiting 6.0s for "progressOpenAnalytics" Any to exist
+    t =    50.41s     Checking `Expect predicate `existsNoRetry == 1` for object "progressOpenAnalytics" Any`
+    t =    50.41s         Checking existence of `"progressOpenAnalytics" Any`
+    t =    51.28s Waiting 6.0s for "progressEvolutionTimeline" Any to exist
+    t =    52.28s     Checking `Expect predicate `existsNoRetry == 1` for object "progressEvolutionTimeline" Any`
+    t =    52.28s         Checking existence of `"progressEvolutionTimeline" Any`
+    t =    53.72s Waiting 6.0s for "progressOpenHistory" Any to exist
+    t =    54.75s     Checking `Expect predicate `existsNoRetry == 1` for object "progressOpenHistory" Any`
+    t =    54.75s         Checking existence of `"progressOpenHistory" Any`
+    t =    55.71s Find the "heroStage" Any
+    t =    56.88s Checking existence of `"heroGeneration" Any`
+    t =    59.22s Checking existence of `"headerGeneration" Any`
+    t =    61.41s Find the "progressNextEvolution" Any
+    t =    62.44s Find the "progressEvolutionTimeline" Any
+    t =    63.52s Checking existence of `"progressZonesMissing" Any`
+    t =    65.48s Find the "progressEndurance" Any
+    t =    66.63s Find the "progressStrengthDevelopment" Any
+    t =    67.49s Find the "progressConsistency" Any
+    t =    68.58s Find the "progressZones" Any
+    t =    69.81s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    69.81s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    69.92s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    70.11s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    70.71s     Synthesize event
+    t =    71.22s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    74.60s Find the "progressOpenHistory" Button
+    t =    75.47s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    75.47s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    75.52s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    75.73s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    76.03s     Synthesize event
+    t =    76.68s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    78.29s Find the "progressOpenHistory" Button
+    t =    78.88s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    78.88s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    79.26s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    79.49s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    79.66s     Synthesize event
+    t =    80.15s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    81.53s Find the "progressOpenHistory" Button
+    t =    83.55s Find the "cradleDock" Any
+    t =    83.67s Find the "progressOpenHistory" Button
+    t =    84.53s Tear Down
+Test Case '-[CycliftLabUITests.LabFastProgress testSectionsArePresent]' passed (84.829 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet]' started.
+    t =     0.00s Start Test at 2026-11-19 18:16:58.373
+    t =     0.05s Set Up
+    t =     0.05s Open com.ralsuwaidico.cycliftlab
+    t =     0.06s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.06s         Terminate com.ralsuwaidico.cycliftlab:86838
+    t =     2.45s         Setting up automation session
+    t =     7.17s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    13.49s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    14.52s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    14.52s         Checking existence of `"homeGreeting" Any`
+    t =    15.01s Find the "homeGreeting" Any
+    t =    15.32s Waiting 8.0s for "centreButton" Button to exist
+    t =    16.32s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    16.32s         Checking existence of `"centreButton" Button`
+    t =    16.37s Find the "centreButton" Button
+    t =    16.41s Find the "centreButton" Button
+    t =    16.50s Tap "centreButton" Button
+    t =    16.50s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    16.50s     Find the "centreButton" Button
+    t =    16.56s     Check for interrupting elements affecting "centreButton" Button
+    t =    17.17s     Synthesize event
+    t =    17.49s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    17.55s Waiting 8.0s for "trainPanelPrimary" Button to exist
+    t =    18.56s     Checking `Expect predicate `existsNoRetry == 1` for object "trainPanelPrimary" Button`
+    t =    18.56s         Checking existence of `"trainPanelPrimary" Button`
+    t =    18.65s Tap "trainPanelPrimary" Button
+    t =    18.65s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    18.91s     Find the "trainPanelPrimary" Button
+    t =    18.96s     Check for interrupting elements affecting "trainPanelPrimary" Button
+    t =    19.20s     Synthesize event
+    t =    19.50s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    19.60s Waiting 10.0s for "startWorkout" Button to exist
+    t =    20.63s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkout" Button`
+    t =    20.63s         Checking existence of `"startWorkout" Button`
+    t =    20.92s Tap "startWorkout" Button
+    t =    20.92s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    20.92s     Find the "startWorkout" Button
+    t =    21.06s     Check for interrupting elements affecting "startWorkout" Button
+    t =    21.27s     Synthesize event
+    t =    21.58s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    22.22s Waiting 10.0s for "strengthRecorderV14" Any to exist
+    t =    23.22s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthRecorderV14" Any`
+    t =    23.23s         Checking existence of `"strengthRecorderV14" Any`
+    t =    23.31s Waiting 5.0s for "logSet" Any to exist
+    t =    24.34s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Any`
+    t =    24.34s         Checking existence of `"logSet" Any`
+    t =    24.93s Find the "recorderSet" Any
+    t =    25.72s Tap "logSet" Any
+    t =    25.72s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    25.73s     Find the "logSet" Any
+    t =    26.09s     Check for interrupting elements affecting "logSet" Button
+    t =    26.32s     Synthesize event
+    t =    26.61s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    26.80s Waiting 5.0s for "recorderLogged" Any to exist
+    t =    27.83s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderLogged" Any`
+    t =    27.83s         Checking existence of `"recorderLogged" Any`
+    t =    28.21s Find the "recorderLogged" Any
+    t =    28.43s Waiting 5.0s for "recorderOptions" Button to exist
+    t =    29.45s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptions" Button`
+    t =    29.45s         Checking existence of `"recorderOptions" Button`
+    t =    29.62s Tap "recorderOptions" Button
+    t =    29.62s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    29.63s     Find the "recorderOptions" Button
+    t =    29.97s     Check for interrupting elements affecting "recorderOptions" Button
+    t =    30.25s     Synthesize event
+    t =    30.56s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    32.88s Waiting 5.0s for "Correct a logged set" Button to exist
+    t =    33.88s     Checking `Expect predicate `existsNoRetry == 1` for object "Correct a logged set" Button`
+    t =    33.88s         Checking existence of `"Correct a logged set" Button`
+    t =    35.04s Find the "Correct a logged set" Button
+    t =    36.32s Find the "pencil" Button
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Lab/UITests/LabFastTrain.swift:235: error: -[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet] : XCTAssertTrue failed - required: the menu item can be pressed
+    t =    37.43s Tap "pencil" Button
+    t =    37.43s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    40.48s     Find the "pencil" Button
+    t =    40.99s     Check for interrupting elements affecting "pencil" Button
+    t =    41.96s     Synthesize event
+    t =    42.00s         Scroll element to visible
+    t =    42.01s                 Retrying failed scroll-to-visible with containing cell Cell
+    t =    42.01s         Find the "pencil" Button
+    t =    42.42s         Computed hit point {252, 460} after scrolling to visible
+    t =    42.71s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    45.02s Waiting 8.0s for "correctTitle" Any to exist
+    t =    46.06s     Checking `Expect predicate `existsNoRetry == 1` for object "correctTitle" Any`
+    t =    46.06s         Checking existence of `"correctTitle" Any`
+    t =    46.68s Checking existence of `Any (First Match)`
+    t =    47.18s Find the Any (First Match)
+    t =    48.13s Checking existence of `Any (First Match)`
+    t =    48.47s Tap Any (First Match)
+    t =    48.47s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    48.47s     Find the Any (First Match)
+    t =    49.21s     Check for interrupting elements affecting "correctRepsPlus-0-0" Button
+    t =    49.87s     Synthesize event
+    t =    50.19s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    50.74s Find the "correctValue-0-0" StaticText
+    t =    51.66s Tap "correctDone" Button
+    t =    51.66s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    51.85s     Find the "correctDone" Button
+    t =    52.12s     Check for interrupting elements affecting "correctDone" Button
+    t =    52.39s     Synthesize event
+    t =    52.71s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    53.75s Waiting 8.0s for "recorderLogged" Any to exist
+    t =    54.81s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderLogged" Any`
+    t =    54.81s         Checking existence of `"recorderLogged" Any`
+    t =    55.03s Find the "recorderLogged" Any
+    t =    55.24s Waiting 5.0s for "recorderOptions" Button to exist
+    t =    56.28s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptions" Button`
+    t =    56.28s         Checking existence of `"recorderOptions" Button`
+    t =    56.42s Tap "recorderOptions" Button
+    t =    56.42s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    56.42s     Find the "recorderOptions" Button
+    t =    56.56s     Check for interrupting elements affecting "recorderOptions" Button
+    t =    57.07s     Synthesize event
+    t =    57.36s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    76.54s Waiting 5.0s for "Correct a logged set" Button to exist
+    t =    77.58s     Checking `Expect predicate `existsNoRetry == 1` for object "Correct a logged set" Button`
+    t =    77.58s         Checking existence of `"Correct a logged set" Button`
+    t =    78.14s Find the "Correct a logged set" Button
+    t =    79.16s Find the "pencil" Button
+    t =    80.58s Find the "pencil" Button
+    t =    82.21s Find the "pencil" Button
+    t =    83.37s Find the "pencil" Button
+    t =    84.03s Find the "pencil" Button
+    t =    84.42s Tap "pencil" Button
+    t =    84.43s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    87.57s     Find the "pencil" Button
+    t =    87.98s     Check for interrupting elements affecting "pencil" Button
+    t =    89.13s     Synthesize event
+    t =    89.20s         Failed: Failed to compute hit point for Button, {{127.0, 439.0}, {250.0, 42.0}}, identifier: 'pencil', label: 'Correct a logged set': Activation point invalid and no suggested hit points based on element frame
+    t =    89.20s         Requesting snapshot of accessibility hierarchy for app with pid 90070
+    t =    91.15s     Retrying `Tap "pencil" Button` (attempt #2)
+    t =    91.15s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    93.56s         Find the "pencil" Button
+    t =    94.42s         Check for interrupting elements affecting "pencil" Button
+    t =    95.33s         Synthesize event
+    t =    95.39s             Scroll element to visible
+    t =    95.40s             Find the "pencil" Button
+    t =    96.72s             Computed hit point {-1, -1} after scrolling to visible
+    t =    96.72s             Failed: Not hittable: Button, {{127.0, 439.0}, {250.0, 42.0}}, identifier: 'pencil', label: 'Correct a logged set'
+    t =    97.72s     Retrying `Tap "pencil" Button` (attempt #3)
+    t =    97.73s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    99.54s         Find the "pencil" Button
+    t =    99.96s         Check for interrupting elements affecting "pencil" Button
+    t =   100.66s         Synthesize event
+    t =   100.98s             Scroll element to visible
+    t =   100.99s                     Retrying failed scroll-to-visible with containing cell Cell
+    t =   100.99s             Find the "pencil" Button
+    t =   101.94s             Computed hit point {-1, -1} after scrolling to visible
+    t =   102.27s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   103.93s Waiting 8.0s for "correctTitle" Any to exist
+    t =   104.96s     Checking `Expect predicate `existsNoRetry == 1` for object "correctTitle" Any`
+    t =   104.96s         Checking existence of `"correctTitle" Any`
+    t =   105.60s Find the Any (First Match)
+    t =   106.20s Tap "correctDone" Button
+    t =   106.20s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   106.20s     Find the "correctDone" Button
+    t =   106.57s     Check for interrupting elements affecting "correctDone" Button
+    t =   107.12s     Synthesize event
+    t =   107.42s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   108.91s Tap "finishWorkout" Button
+    t =   108.91s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   108.92s     Find the "finishWorkout" Button
+    t =   109.00s     Check for interrupting elements affecting "finishWorkout" Button
+    t =   109.24s     Synthesize event
+    t =   109.55s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   109.77s Waiting 8.0s for "finishCount" Any to exist
+    t =   110.81s     Checking `Expect predicate `existsNoRetry == 1` for object "finishCount" Any`
+    t =   110.81s         Checking existence of `"finishCount" Any`
+    t =   111.29s Find the "finishCount" Any
+    t =   111.76s Tap "finishBackToWorkout" Button
+    t =   111.76s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   111.91s     Find the "finishBackToWorkout" Button
+    t =   112.02s     Check for interrupting elements affecting "finishBackToWorkout" Button
+    t =   112.27s     Synthesize event
+    t =   112.58s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   112.77s Waiting 8.0s for "logSet" Button to exist
+    t =   113.79s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =   113.79s         Checking existence of `"logSet" Button`
+    t =   113.93s Waiting 5.0s for "recorderOptions" Button to exist
+    t =   114.96s     Checking `Expect predicate `existsNoRetry == 1` for object "recorderOptions" Button`
+    t =   114.96s         Checking existence of `"recorderOptions" Button`
+    t =   115.46s Tap "recorderOptions" Button
+    t =   115.46s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   115.47s     Find the "recorderOptions" Button
+    t =   115.76s     Check for interrupting elements affecting "recorderOptions" Button
+    t =   116.37s     Synthesize event
+    t =   116.69s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   119.50s Waiting 5.0s for "Correct a logged set" Button to exist
+    t =   120.57s     Checking `Expect predicate `existsNoRetry == 1` for object "Correct a logged set" Button`
+    t =   120.57s         Checking existence of `"Correct a logged set" Button`
+    t =   121.37s Find the "Correct a logged set" Button
+    t =   122.95s Find the "pencil" Button
+    t =   124.37s Find the "pencil" Button
+    t =   125.13s Find the "pencil" Button
+    t =   126.17s Tap "pencil" Button
+    t =   126.17s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   132.56s     Find the "pencil" Button
+    t =   132.79s     Check for interrupting elements affecting "pencil" Button
+    t =   133.91s     Synthesize event
+    t =   133.99s         Failed: Failed to compute hit point for Button, {{127.0, 439.0}, {250.0, 42.0}}, identifier: 'pencil', label: 'Correct a logged set': Activation point invalid and no suggested hit points based on element frame
+    t =   133.99s         Requesting snapshot of accessibility hierarchy for app with pid 90070
+    t =   136.12s     Retrying `Tap "pencil" Button` (attempt #2)
+    t =   136.12s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   137.47s         Find the "pencil" Button
+    t =   137.76s         Check for interrupting elements affecting "pencil" Button
+    t =   139.06s         Synthesize event
+    t =   139.15s             Failed: Failed to compute hit point for Button, {{127.0, 439.0}, {250.0, 42.0}}, identifier: 'pencil', label: 'Correct a logged set': Activation point invalid and no suggested hit points based on element frame
+    t =   139.15s             Requesting snapshot of accessibility hierarchy for app with pid 90070
+    t =   141.21s     Retrying `Tap "pencil" Button` (attempt #3)
+    t =   141.21s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   144.44s         Find the "pencil" Button
+    t =   144.84s         Check for interrupting elements affecting "pencil" Button
+    t =   146.06s         Synthesize event
+    t =   146.15s             Failed: Failed to compute hit point for Button, {{127.0, 439.0}, {250.0, 42.0}}, identifier: 'pencil', label: 'Correct a logged set': Activation point invalid and no suggested hit points based on element frame
+    t =   146.15s             Requesting snapshot of accessibility hierarchy for app with pid 90070
+    t =   147.34s Requesting snapshot of accessibility hierarchy for app with pid 90070
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Lab/UITests/LabFastTrain.swift:235: error: -[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet] : Failed to failed to compute hit point for Button, {{127.0, 439.0}, {250.0, 42.0}}, identifier: 'pencil', label: 'Correct a logged set': Activation point invalid and no suggested hit points based on element frame. (Underlying Error: Activation point invalid and no suggested hit points based on element frame)
+    t =   148.36s Tear Down
+Test Case '-[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet]' failed (148.971 seconds).

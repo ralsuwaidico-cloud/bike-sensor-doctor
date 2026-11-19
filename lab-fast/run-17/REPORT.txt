@@ -1,0 +1,59 @@
+FAST focused Lab check — selected: LabFastCycling/testFocusMapPauseResumeLapFinish LabFastTrain/testCorrectingALoggedSet LabFastOnboarding LabFastProgress
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from ca48c3d6 · files changed since then: 3
+TIME setup: 13s
+  timing: CompileAssetCatalogVariant (1 task) | 192.360 seconds
+  timing: Ld (18 tasks) | 15.543 seconds
+  timing: SwiftEmitModule (2 tasks) | 13.541 seconds
+  timing: SwiftCompile (4 tasks) | 8.927 seconds
+  timing: SwiftDriver (2 tasks) | 8.473 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.443 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.723 seconds
+  timing: ConstructStubExecutorLinkFileList (1 task) | 0.681 seconds
+  stages: packages at 246s · packages prepared at 287s · dependency graph at 287s · inputs at 288s · build description at 288s · first link at 295s · first Swift step at 296s · asset catalogue at 301s · finished at 499s
+  compiled in this run: 9 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 502s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 18s
+	 Executed 2 tests, with 5 failures (0 unexpected) in 669.170 (669.173) seconds
+	 Executed 3 tests, with 15 failures (0 unexpected) in 1260.556 (1260.562) seconds
+	 Executed 7 tests, with 22 failures (0 unexpected) in 2225.095 (2225.112) seconds
+	 Executed 7 tests, with 22 failures (0 unexpected) in 2225.095 (2225.115) seconds
+Lab/UITests/LabFastOnboarding.swift:201: error: -[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan] : XCTAssertTrue failed - required: Back to blueprint on the goals page
+Lab/UITests/LabFastOnboarding.swift:202: error: -[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan] : Failed to tap "onbBackToBlueprint" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"onbBackToBlueprint" IN identifiers'`, given input App element pid: 27164
+Lab/UITests/LabFastOnboarding.swift:27: error: -[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan] : XCTAssertTrue failed - required: the plan-changes answer (blueprintCell-planChanges)
+Lab/UITests/LabFastOnboarding.swift:32: error: -[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan] : XCTAssertTrue failed - required: the declared goals
+Lab/UITests/LabFastOnboarding.swift:42: error: -[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan] : XCTAssertTrue failed - required: onboarding page 3 (shown: 7 of 7)
+Lab/UITests/LabFastProgress.swift:147: error: -[CycliftLabUITests.LabFastProgress testMoreMenuEntriesOpenRealPages] : Failed to failed to compute hit point for Button, {{133.0, 181.0}, {250.0, 42.0}}, identifier: 'progressMenuEvolution', label: 'Athlete Evolution': Activation point invalid and no suggested hit points based on element frame. (Underlying Error: Activation point invalid and no sugges
+Lab/UITests/LabFastProgress.swift:35: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Heart-rate settings (progressOpenHeartRateSettings) is on the page
+Lab/UITests/LabFastProgress.swift:35: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Power settings (from analytics) (analyticsOpenPowerSettings) is on the page
+Lab/UITests/LabFastProgress.swift:35: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Records & history (from Endurance) (enduranceOpenHistory) is on the page
+Lab/UITests/LabFastProgress.swift:35: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Strength development (from analytics) (analyticsOpenStrength) is on the page
+Lab/UITests/LabFastProgress.swift:38: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Endurance development (from analytics) opens its page (progressEndurancePage) at the first tap
+Lab/UITests/LabFastProgress.swift:38: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Power settings opens its page (ftpValue) at the first tap
+Lab/UITests/LabFastProgress.swift:38: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Records & history (from Consistency) opens its page (progressHistoryPage) at the first tap
+Lab/UITests/LabFastProgress.swift:38: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Records & history (from Strength) opens its page (progressHistoryPage) at the first tap
+Lab/UITests/LabFastProgress.swift:38: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: Time in zones (from Endurance) opens its page (progressZonesPage) at the first tap
+Lab/UITests/LabFastProgress.swift:42: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: back from progressAnalyticsPage returns to Detailed analytics
+Lab/UITests/LabFastProgress.swift:42: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: back from progressConsistencyPage returns to Training consistency
+Lab/UITests/LabFastProgress.swift:42: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: back from progressEndurancePage returns to Endurance development
+Lab/UITests/LabFastProgress.swift:42: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: back from progressStrengthPage returns to Strength development
+Lab/UITests/LabFastProgress.swift:42: error: -[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage] : XCTAssertTrue failed - required: back from progressZonesPage returns to Time in zones
+Lab/UITests/LabFastTrain.swift:235: error: -[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet] : Failed to failed to compute hit point for Button, {{127.0, 439.0}, {250.0, 42.0}}, identifier: 'pencil', label: 'Correct a logged set': Activation point invalid and no suggested hit points based on element frame. (Underlying Error: Activation point invalid and no suggested hit points based on el
+Lab/UITests/LabFastTrain.swift:235: error: -[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet] : XCTAssertTrue failed - required: the menu item can be pressed
+Test Case '-[CycliftLabUITests.LabFastCycling testFocusMapPauseResumeLapFinish]' passed (146.398 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testLargeTextPages]' passed (319.269 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' failed (349.900 seconds).
+Test Case '-[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage]' failed (1084.724 seconds).
+Test Case '-[CycliftLabUITests.LabFastProgress testMoreMenuEntriesOpenRealPages]' failed (91.004 seconds).
+Test Case '-[CycliftLabUITests.LabFastProgress testSectionsArePresent]' passed (84.829 seconds).
+Test Case '-[CycliftLabUITests.LabFastTrain testCorrectingALoggedSet]' failed (148.971 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 2391s
+LAB-NOTE map element outside the cycling screen: id '' label '' frame (14.0, 404.3333333333333, 365.0, 129.33333333333331)
+LAB-NOTE progress sections: Endurance development, 2 h 54, min a week,  About the same as the 4 weeks before · Cycling · riding time · average of th | Strength development, 18, kg,  About the same as the 2 sessions before · Dumbbell bench press · recorded top set 18 kg × | Training consistency, 14, of 14 weeks, Weeks with at least one session. Particip | Time in heart-rate zones, 81, %, in zones 1–2 · 36 h recorded · heart-rate zones, from the zone totals saved with 32 rides
+LAB-NOTE progress: the end of the page was reached after 3 swipes in all
+TIME total on the Mac: 2936s
+commit 240bbc6faff01de42800a337336bd9bf7e895e77  branch ios/lab
