@@ -62,12 +62,18 @@ def main():
     text = (f"CYCLIFT LAB — internal preview, demo data only. Build {n}, commit {commit}. Not a release of Cyclift and not final design.\n\n"
             "WHAT IT IS: the redesigned Cyclift on a made-up demo athlete. It cannot reach your real Cyclift data, Apple Health, "
             "Bluetooth sensors, GPS or any account. Everything you do stays inside this app; Profile > Data, Help & About can delete it or restore the demo.\n\n"
+            "NEW SINCE BUILD 4: Plan follows the approved B1 sheet with the header glow corrected; Home, Plan and the Coach page now show the same Coach item, "
+            "and a finding is no longer labelled as a suggestion to review; the Lab tag is compact and pages clear the bottom bar.\n\n"
             "TRY: Home and its pages; Plan; the Train ball > today's strength session > Start > log sets > minimise and resume > Finish > Save > optional review; "
             "the Coach page; Progress; Profile and the six themes; onboarding after deleting the data.\n\n"
-            "KNOWN LIMITATIONS: Home v2.3 is provisional. Finish, Saved and Review work but are not yet in the approved layout. "
+            "HOW IT WAS CHECKED: Lab run 43 on this exact commit passed 12 of 13 simulator checks, and the signed build passed its isolation check. The one failed "
+            "check had a mistake in the check itself; because of it, the last step of the Coach's Not now sequence (opening the approval sheet and accepting) "
+            "was NOT tested on this commit.\n\n"
+            "KNOWN LIMITATIONS: Home v2.3 is provisional, not an approved design. Coach 'Not now' is incomplete: on the Coach page it postpones the suggestion, but on "
+            "the approval sheet the same button still dismisses it; the demo athlete normally has no open suggestion, so you may not meet it at all. "
             "Cycling is a labelled demonstration with simulated figures and saves nothing. The Coach follows written rules; AI chat is not connected. "
-            "Progress shows no stage (stage criteria are not approved) and its lower sections, and Profile's inner pages, are the older screens. "
-            "Plan lacks the Add a goal button. Apple Watch, devices, Arabic and data import are not in this build. "
+            "Progress shows no stage (stage criteria are not approved) and draws its ring more simply than the approved sheet. Profile's inner pages are the older screens. "
+            "Plan was not re-checked on smaller iPhones or at large text sizes. Apple Watch, devices, Arabic and data import are not in this build. "
             "Tested only in the iOS Simulator before this build: please report anything that looks or behaves wrong on your iPhone.")
     st, res = asc.call("GET", f"/v1/builds/{build['id']}/betaBuildLocalizations", query={"limit": 20})
     locs = res.get("data", []) if st == 200 else []
