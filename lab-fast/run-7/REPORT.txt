@@ -1,0 +1,28 @@
+FAST focused Lab check — selected: LabFast/testProfileAppPreferencesPages LabFast/testProfileAthletePages
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 462a1202 · files changed since then: 4
+TIME setup: 14s
+  timing: CompileAssetCatalogVariant (1 task) | 93.493 seconds
+  timing: SwiftDriver (16 tasks) | 59.190 seconds
+  timing: SwiftCompile (4 tasks) | 16.235 seconds
+  timing: SwiftEmitModule (2 tasks) | 15.612 seconds
+  timing: Ld (18 tasks) | 8.513 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.646 seconds
+  timing: CopySwiftLibs (2 tasks) | 2.761 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.490 seconds
+  stages: packages at 245s · packages prepared at 313s · dependency graph at 314s · inputs at 318s · build description at 318s · first Swift step at 334s · first link at 338s · asset catalogue at 352s · finished at 477s
+  compiled in this run: 13 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 480s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 20s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 212.369 (212.379) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 212.369 (212.381) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 212.369 (212.384) seconds
+Test Case '-[CycliftLabUITests.LabFast testProfileAppPreferencesPages]' passed (122.825 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileAthletePages]' passed (89.544 seconds).
+RESULT selected screen checks: ok
+TIME tests: 284s
+TIME total on the Mac: 799s
+commit 6b6a1c609f08c79e94532bfb111f1ad21ab1e442  branch ios/lab
