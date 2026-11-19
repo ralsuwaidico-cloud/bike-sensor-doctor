@@ -305,7 +305,29 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(el(app, "rosterBrowse").exists, "required: Browse all activities")
         next.tap()
         XCTAssertTrue(app.staticTexts["onboardingProgress"].firstMatch.label.hasPrefix("3 of 7"), "required: Continue goes to page 3")
-        shot("y3-goals")
+        // page 3 (provisional, reference Y3): goals, main goal, levels
+        XCTAssertFalse(next.isEnabled, "required: page 3 needs a goal")
+        shot("y3-0-goals-empty")
+        let endurance = el(app, "goal-endurance"), strength = el(app, "goal-strength")
+        XCTAssertTrue(endurance.waitForExistence(timeout: 8) && strength.exists, "required: cycling and strength goals for a hybrid athlete")
+        endurance.tap()
+        XCTAssertTrue(app.buttons["goalStar-endurance"].firstMatch.waitForExistence(timeout: 5), "required: a chosen goal has its star")
+        XCTAssertTrue(endurance.label.contains("main goal"), "required: the first goal is the main goal (\(endurance.label))")
+        XCTAssertTrue(next.isEnabled, "required: Continue with one goal")
+        shot("y3-1-goals-endurance-main")
+        strength.tap()
+        XCTAssertFalse(strength.label.contains("main goal"), "a second goal is chosen but not main")
+        app.buttons["goalStar-strength"].firstMatch.tap()
+        XCTAssertTrue(strength.label.contains("main goal") && !endurance.label.contains("main goal"), "required: the star moves the main goal")
+        shot("y3-2-goals-strength-main")
+        for id in ["onbCyclingLevel", "onbStrengthLevel"] { XCTAssertTrue(el(app, id).exists, "required: \(id)") }
+        let advanced = el(app, "onbCyclingLevel").buttons["Advanced"].firstMatch
+        _ = app.reveal(advanced, top: 160, bottomMargin: 200); advanced.tap()
+        XCTAssertTrue(advanced.isSelected, "required: the cycling level can be changed")
+        shot("y3-3-levels")
+        next.tap()
+        XCTAssertTrue(app.staticTexts["onboardingProgress"].firstMatch.label.hasPrefix("4 of 7"), "required: Continue goes to page 4")
+        shot("y4-week")
     }
 
     /// Profile sheet P08: Data, Help & About and "Where your data lives". Export and Delete are only confirmed to be

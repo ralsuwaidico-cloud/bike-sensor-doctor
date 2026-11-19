@@ -427,11 +427,80 @@ struct OnboardingV34View: View {
     private var pageGoals: some View {
         VStack(alignment: .leading, spacing: CySpace.l) {
             heading(3, "Goals", "What are you aiming for?")
-            Text("Pick any. The first is your main goal — tap ★ to change it.").font(CyFont.callout).foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            GoalCardsEditor(a: $a, mode: mode)
-            provenance("●", "Your experience, as you declare it")
-            AthleteTypeEditor(a: $a, parts: [.experience], showsPriority: false, units: store.settings.units)
+            // PROVISIONAL (reference sheet Y3, not approved): compact goal cells and the level rows on one page. The
+            // same answers as before — goals, main goal, cycling and strength level — written through the same model.
+            // The priority ("when time is short, protect") is NOT repeated here: page 2 owns it (later sheet Z2).
+            ForEach(GoalInfo.choices(for: mode)) { group in
+                VStack(alignment: .leading, spacing: CySpace.s) {
+                    Text("\(group.title.uppercased()) GOALS").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                        ForEach(group.goals) { g in goalCell(g) }
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: CySpace.s) {
+                HStack(alignment: .firstTextBaseline) {
+                    provenance("●", "Your level")
+                    Spacer(minLength: CySpace.s)
+                    Text("declared by you — not measured").font(CyFont.caption).foregroundStyle(theme.textSecondary)
+                }
+                if mode.includesCycling {
+                    levelRow("Cycling", id: "onbCyclingLevel", options: RiderProfile.Level.allCases.map { ($0, ProfileText.level($0)) },
+                             selection: Binding(get: { a.cyclingLevel ?? store.profile.level }, set: { a.cyclingLevel = $0 }))
+                }
+                if mode.includesLifting {
+                    levelRow("Strength", id: "onbStrengthLevel", options: StrengthPrefs.Experience.allCases.map { ($0, ProfileText.strengthLevel($0)) },
+                             selection: Binding(get: { a.strengthLevel ?? store.strengthPrefs.experience ?? .beginner }, set: { a.strengthLevel = $0 }))
+                }
+            }
+        }
+    }
+    private func levelRow<T: Hashable>(_ title: String, id: String, options: [(T, String)], selection: Binding<T>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(CyFont.headline).foregroundStyle(theme.textPrimary)
+            CyChoiceBar(options: options, selection: selection).accessibilityIdentifier(id)
+        }
+    }
+    /// One goal of sheet Y3: a compact cell. Chosen and main = filled in the sport's colour with a filled star; chosen
+    /// but not main = outlined with an open star; the star is its own control beside the cell, as before.
+    private func goalCell(_ g: GoalID) -> some View {
+        let chosen = a.goals ?? []
+        let on = chosen.contains(g), main = on && a.primaryGoal == g
+        let tint: Color = g.sport == .strength ? theme.strength : g.sport == .cycling ? theme.endurance : theme.recovery
+        return ZStack(alignment: .trailing) {
+            Button {
+                var list = chosen
+                if list.contains(g) { list.removeAll { $0 == g } } else { list.append(g) }
+                a.goals = list
+                a.primaryGoal = a.primaryGoal.flatMap { list.contains($0) ? $0 : nil } ?? list.first
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(g.title).font(CyFont.headline).foregroundStyle(main ? theme.background : theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(GoalInfo.line(g)).font(CyFont.footnote).foregroundStyle(main ? theme.background.opacity(0.8) : theme.textSecondary).lineLimit(2).minimumScaleFactor(0.85)
+                }
+                .padding(.horizontal, 12).padding(.vertical, 8).padding(.trailing, on ? 30 : 0)
+                .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(main ? tint : theme.surface))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(on && !main ? tint : Color.clear, lineWidth: 1.5))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(g.title), \(GoalInfo.line(g))\(main ? ", main goal" : "")")
+            .accessibilityAddTraits(on ? .isSelected : [])
+            .accessibilityIdentifier("goal-\(g.rawValue)")
+            if on {
+                Button { a.primaryGoal = g } label: {
+                    Image(systemName: main ? "star.fill" : "star").font(.caption.weight(.bold))
+                        .foregroundStyle(main ? tint : tint)
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(main ? theme.background : Color.clear))
+                        .overlay(Circle().strokeBorder(main ? Color.clear : tint, lineWidth: 1))
+                        .frame(width: CyHit.min, height: CyHit.min).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(main ? "\(g.title) is the main goal" : "Make \(g.title) the main goal")
+                .accessibilityIdentifier("goalStar-\(g.rawValue)")
+            }
         }
     }
 
