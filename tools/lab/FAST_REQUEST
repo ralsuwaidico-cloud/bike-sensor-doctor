@@ -1,2 +1,2 @@
-LabFastCycling/testFocusMapPauseResumeLapFinish LabFastTrain/testCorrectingALoggedSet LabFastProfile LabFastOnboarding LabFastProgress
-request 16: two corrected checks; Profile, Onboarding, Progress journeys
+LabFastCycling/testFocusMapPauseResumeLapFinish LabFastTrain/testCorrectingALoggedSet LabFastOnboarding LabFastProgress
+request 17: run 16 was cut off by its time limit before reporting; first half of its list
