@@ -1,2 +1,2 @@
-LabFastPlan LabFastCoach
-request 14: first Mac compile of the seven merged batches; Plan goal flow and Coach review checks
+LabFastTrain LabFastCycling LabFastPlan/testAddGoalCancelLeavesGoalUnchanged LabFastPlan/testAddGoalApprovePersists
+request 15: Train ball, strength states, cycling Focus/Map; Plan goal checks with corrected expectations
