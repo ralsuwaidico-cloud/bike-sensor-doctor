@@ -69,4 +69,47 @@ final class ProgressDevelopmentTests: XCTestCase {
         let noRides = ProgressDevelopment.zones(analytics([], basis: "x", rides: 0)); XCTAssertNil(noRides.zones); XCTAssertNil(noRides.missing)
         XCTAssertTrue(ProgressDevelopment().isEmpty)
     }
+
+    /// Time in zones without per-second samples: the zone totals saved with the rides are used as they are, never mixed
+    /// across power and heart rate, and when nothing can be shown the reason names exactly what is missing.
+    func testZonesFromSavedRideTotalsAndExactReasons() throws {
+        let now = Date(timeIntervalSince1970: 1_795_000_000)
+        func ride(_ daysAgo: Int, zones: [Int], power: Int? = nil) -> RideRecord {
+            var r = RideRecord(start: now.addingTimeInterval(Double(-daysAgo) * 86_400), durationS: 3600, distanceM: 27_000, recorder: .phone, sources: [])
+            r.zoneSeconds = zones; r.avgPower = power; return r
+        }
+        let hr = [ride(2, zones: [900, 2100, 600, 0, 0, 0, 0]), ride(9, zones: [900, 2100, 600, 0, 0, 0, 0])]
+        let z = try XCTUnwrap(ProgressDevelopment.storedZones(rides: hr, now: now, calendar: cal).zones)
+        XCTAssertEqual(z.shares.count, 5, "a ride without power holds the five heart-rate zones"); XCTAssertEqual(z.kind, .heartRate)
+        XCTAssertEqual(z.shares, [25, 58, 17, 0, 0]); XCTAssertEqual(z.shares.reduce(0, +), 100)
+        XCTAssertEqual(z.easyPercent, z.shares[0] + z.shares[1]); XCTAssertTrue(z.fromRideTotals); XCTAssertEqual(z.title, "Time in heart-rate zones")
+        XCTAssertEqual(z.times[1], "1 h 10"); XCTAssertEqual(z.times[0], "30 min"); XCTAssertTrue(z.basis.contains("saved with 2 rides"))
+        let pw = try XCTUnwrap(ProgressDevelopment.storedZones(rides: [ride(1, zones: [60, 60, 60, 60, 60, 60, 60], power: 200)], now: now, calendar: cal).zones)
+        XCTAssertEqual(pw.shares.count, 7, "a ride with power holds the seven power zones"); XCTAssertEqual(pw.kind, .power)
+        // power and heart-rate totals are never added together
+        let mixed = ProgressDevelopment.storedZones(rides: hr + [ride(1, zones: [60, 60, 60, 60, 60, 60, 60], power: 200)], now: now, calendar: cal)
+        XCTAssertNil(mixed.zones); XCTAssertTrue(mixed.mixed)
+        // older than the period, or no totals: nothing
+        XCTAssertNil(ProgressDevelopment.storedZones(rides: [ride(200, zones: [600, 600, 0, 0, 0, 0, 0])], now: now, calendar: cal).zones)
+        XCTAssertNil(ProgressDevelopment.storedZones(rides: [ride(2, zones: [0, 0, 0, 0, 0, 0, 0])], now: now, calendar: cal).zones)
+
+        // sampled zones win; then saved totals; then the reason
+        let sampled = ProgressDevelopment.Zones(easyPercent: 50, basis: "power zones (FTP 240 W), from recorded samples", hours: "1.0 h", shares: [25, 25, 50])
+        XCTAssertEqual(ProgressDevelopment.zonesResolved(sampled: sampled, rides: hr, ftpKnown: true, hrZonesKnown: true, now: now, calendar: cal).zones, sampled)
+        XCTAssertEqual(ProgressDevelopment.zonesResolved(sampled: nil, rides: hr, ftpKnown: false, hrZonesKnown: false, now: now, calendar: cal).zones, z)
+        let bare = [ride(2, zones: [0, 0, 0, 0, 0, 0, 0])]
+        let none = ProgressDevelopment.zonesResolved(sampled: nil, rides: bare, ftpKnown: true, hrZonesKnown: true, now: now, calendar: cal)
+        XCTAssertNil(none.zones); XCTAssertEqual(none.unavailable?.settings, []); XCTAssertTrue(none.unavailable?.text.contains("no per-second power or heart-rate samples") == true)
+        var withPower = ride(2, zones: [0, 0, 0, 0, 0, 0, 0]); withPower.samples = (1...60).map { RideRecord.Sample(t: $0, w: 180) }
+        XCTAssertEqual(ProgressDevelopment.zonesUnavailable(rides: [withPower], ftpKnown: false, hrZonesKnown: true, now: now, calendar: cal)?.settings, [.power])
+        XCTAssertEqual(ProgressDevelopment.zonesUnavailable(rides: [withPower], ftpKnown: false, hrZonesKnown: false, now: now, calendar: cal)?.settings, [.power, .heartRate])
+        var withHR = ride(2, zones: [0, 0, 0, 0, 0, 0, 0]); withHR.samples = (1...60).map { RideRecord.Sample(t: $0, hr: 130) }
+        XCTAssertEqual(ProgressDevelopment.zonesUnavailable(rides: [withHR], ftpKnown: true, hrZonesKnown: false, now: now, calendar: cal)?.settings, [.heartRate])
+        XCTAssertNil(ProgressDevelopment.zonesUnavailable(rides: [], ftpKnown: false, hrZonesKnown: false, now: now, calendar: cal), "no rides: nothing to explain")
+        XCTAssertEqual(ProgressDevelopment.zoneTime(59), "0 min"); XCTAssertEqual(ProgressDevelopment.zoneTime(34_800), "9 h 40")
+
+        // strength: one logged session is said, not hidden and not called development
+        XCTAssertNotNil(ProgressDevelopment.strengthPending(lifts: [], sessions: 1))
+        XCTAssertNil(ProgressDevelopment.strengthPending(lifts: [], sessions: 0))
+    }
 }

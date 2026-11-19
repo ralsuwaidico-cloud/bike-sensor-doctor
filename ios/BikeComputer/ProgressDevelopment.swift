@@ -53,12 +53,26 @@ struct ProgressDevelopment: Equatable {
         var firstLabel: String
         var lastLabel: String
     }
+    /// Which athlete setting a zone model is calculated from (and which Profile page holds it).
+    enum ZoneSetting: String, Equatable { case power, heartRate }
     struct Zones: Equatable {
         /// Per cent of measured time in the two easiest zones.
         var easyPercent: Int
         var basis: String
         var hours: String
         var shares: [Int]
+        /// Power zones (from FTP) or heart-rate zones; nil when the basis text does not say.
+        var kind: ZoneSetting? = nil
+        /// Recorded time per zone, as text ("9 h 40", "35 min"), one per share; empty when not kept.
+        var times: [String] = []
+        /// true = added up from the zone totals stored with each ride, not from per-second samples.
+        var fromRideTotals = false
+        var title: String { kind == .power ? "Time in power zones" : kind == .heartRate ? "Time in heart-rate zones" : "Time in zones" }
+    }
+    /// Time in zones cannot be shown: what exactly is missing, and which settings would supply it.
+    struct ZonesUnavailable: Equatable {
+        var text: String
+        var settings: [ZoneSetting]
     }
 
     var endurance: Endurance?
@@ -129,13 +143,95 @@ struct ProgressDevelopment: Equatable {
     static func zones(_ c: CyclingAnalytics) -> (zones: Zones?, missing: String?) {
         let total = c.zoneSeconds.reduce(0, +)
         guard total > 0, c.zoneSeconds.count >= 2 else { return (nil, c.rides > 0 ? c.zoneBasis : nil) }
-        // whole per cents that add up to 100 (largest remainders), so the bar and its labels agree
-        let exact = c.zoneSeconds.map { Double($0) * 100 / Double(total) }
+        let kind: ZoneSetting? = c.zoneBasis.hasPrefix("power") ? .power : (c.zoneBasis.hasPrefix("heart-rate") ? .heartRate : nil)
+        return (make(c.zoneSeconds, basis: c.zoneBasis, kind: kind, fromRideTotals: false), nil)
+    }
+
+    /// Whole per cents that add up to 100 (largest remainders), so the bar and its labels agree.
+    private static func make(_ seconds: [Int], basis: String, kind: ZoneSetting?, fromRideTotals: Bool) -> Zones {
+        let total = max(seconds.reduce(0, +), 1)
+        let exact = seconds.map { Double($0) * 100 / Double(total) }
         var shares = exact.map { Int($0) }
         let order = exact.indices.sorted { exact[$0] - Double(shares[$0]) > exact[$1] - Double(shares[$1]) }
         for i in order.prefix(max(0, 100 - shares.reduce(0, +))) { shares[i] += 1 }
         let h = Double(total) / 3600
-        return (Zones(easyPercent: shares[0] + shares[1], basis: c.zoneBasis, hours: h >= 10 ? "\(Int(h.rounded())) h" : String(format: "%.1f h", h), shares: shares), nil)
+        return Zones(easyPercent: shares[0] + shares[1], basis: basis, hours: h >= 10 ? "\(Int(h.rounded())) h" : String(format: "%.1f h", h), shares: shares,
+                     kind: kind, times: seconds.map(zoneTime), fromRideTotals: fromRideTotals)
+    }
+    /// "9 h 40", "35 min", "0 min" (whole minutes of recorded time).
+    static func zoneTime(_ seconds: Int) -> String {
+        let m = seconds / 60
+        return m >= 60 ? String(format: "%d h %02d", m / 60, m % 60) : "\(m) min"
+    }
+
+    /// Time in zones for rides that carry no per-second samples but DO carry the zone totals saved with the ride (the
+    /// BikeComputer sends them). The same reading as the saved ride's own results page: a ride with power holds power
+    /// zones (7), a ride without power holds heart-rate zones (5). Nothing is recalculated and no threshold is applied
+    /// here. Rides of both kinds are never added together: then nothing is returned and `mixed` is true.
+    static func storedZones(rides all: [RideRecord], period: ProgressPeriod = .quarter, now: Date = Date(), calendar cal: Calendar = .current) -> (zones: Zones?, mixed: Bool) {
+        let (from, to) = ProgressAnalytics.range(period, now: now, calendar: cal)
+        let rs = ProgressAnalytics.dedupRides(all).filter { $0.start >= from && $0.start <= to && $0.zoneSeconds.reduce(0, +) > 0 }
+        guard !rs.isEmpty else { return (nil, false) }
+        let withPower = rs.filter { $0.avgPower != nil }
+        guard withPower.isEmpty || withPower.count == rs.count else { return (nil, true) }
+        let power = !withPower.isEmpty
+        let count = power ? 7 : 5
+        var sum = Array(repeating: 0, count: count)
+        for r in rs {
+            // a heart-rate ride with time beyond zone 5 does not fit the five heart-rate zones: not used
+            if !power, r.zoneSeconds.dropFirst(5).reduce(0, +) > 0 { return (nil, true) }
+            for (i, s) in r.zoneSeconds.prefix(count).enumerated() { sum[i] += s }
+        }
+        guard sum.reduce(0, +) > 0 else { return (nil, false) }
+        let basis = (power ? "power zones" : "heart-rate zones") + ", from the zone totals saved with \(rs.count) ride\(rs.count == 1 ? "" : "s")"
+        return (make(sum, basis: basis, kind: power ? .power : .heartRate, fromRideTotals: true), false)
+    }
+
+    /// Why Time in zones cannot be shown, said exactly, with the settings that would supply what is missing.
+    /// nil when there is no ride in the period (there is nothing to measure yet, which the caller says itself).
+    static func zonesUnavailable(rides all: [RideRecord], ftpKnown: Bool, hrZonesKnown: Bool, mixedTotals: Bool = false,
+                                 period: ProgressPeriod = .quarter, now: Date = Date(), calendar cal: Calendar = .current) -> ZonesUnavailable? {
+        let (from, to) = ProgressAnalytics.range(period, now: now, calendar: cal)
+        let rs = ProgressAnalytics.dedupRides(all).filter { $0.start >= from && $0.start <= to }
+        guard !rs.isEmpty else { return nil }
+        let n = "\(rs.count) ride\(rs.count == 1 ? "" : "s") in the last 3 months"
+        let hasPower = rs.contains { $0.samples.contains { $0.w != nil } }
+        let hasHR = rs.contains { $0.samples.contains { $0.hr != nil } }
+        if !hasPower && !hasHR {
+            if mixedTotals { return ZonesUnavailable(text: "Your \(n) have no per-second samples, and their saved zone totals mix power and heart-rate zones, which are not added together.", settings: []) }
+            return ZonesUnavailable(text: "Your \(n) have no per-second power or heart-rate samples and no saved zone totals, so there is no time to place in zones.", settings: [])
+        }
+        if !ftpKnown && !hrZonesKnown {
+            return ZonesUnavailable(text: "No FTP and no maximum heart rate are set, so no zones can be calculated for your \(n).", settings: [.power, .heartRate])
+        }
+        if hasPower && !ftpKnown && !hasHR {
+            return ZonesUnavailable(text: "Your rides have power samples, but no FTP is set to calculate power zones from.", settings: [.power])
+        }
+        if hasHR && !hrZonesKnown && !hasPower {
+            return ZonesUnavailable(text: "Your rides have heart-rate samples, but no maximum or threshold heart rate is set to calculate zones from.", settings: [.heartRate])
+        }
+        if ftpKnown && !hasPower && !hrZonesKnown {
+            return ZonesUnavailable(text: "An FTP is set, but your rides have no power samples; they have heart rate, and no maximum heart rate is set for heart-rate zones.", settings: [.heartRate])
+        }
+        if hrZonesKnown && !hasHR && !ftpKnown {
+            return ZonesUnavailable(text: "Heart-rate zones are set, but your rides have no heart-rate samples; they have power, and no FTP is set for power zones.", settings: [.power])
+        }
+        return ZonesUnavailable(text: "No recorded time fell inside your zones in the last 3 months.", settings: [])
+    }
+
+    /// The one answer for the screen: zones from samples when there are any, else from saved ride totals, else why not.
+    static func zonesResolved(sampled: Zones?, rides: [RideRecord], ftpKnown: Bool, hrZonesKnown: Bool,
+                              now: Date = Date(), calendar cal: Calendar = .current) -> (zones: Zones?, unavailable: ZonesUnavailable?) {
+        if let z = sampled { return (z, nil) }
+        let stored = storedZones(rides: rides, now: now, calendar: cal)
+        if let z = stored.zones { return (z, nil) }
+        return (nil, zonesUnavailable(rides: rides, ftpKnown: ftpKnown, hrZonesKnown: hrZonesKnown, mixedTotals: stored.mixed, now: now, calendar: cal))
+    }
+
+    /// Strength development needs two logged sessions of one lift. Until then: what has been logged so far.
+    static func strengthPending(lifts: [LiftSummary], sessions: Int) -> String? {
+        guard !lifts.contains(where: { $0.topSets.count >= 2 }) , sessions > 0 else { return nil }
+        return "\(sessions) strength session\(sessions == 1 ? "" : "s") logged. A lift appears here after two logged sessions of the same exercise."
     }
 
     var isEmpty: Bool { endurance == nil && strength == nil && consistency == nil && zones == nil }
