@@ -57,7 +57,9 @@ final class LabFastPlan: XCTestCase {
         XCTAssertTrue(app.staticTexts["planGoalSheetTitle"].firstMatch.exists, "required: the sheet title")
         let sub = el(app, "planGoalSubtitle")
         XCTAssertTrue(sub.exists, "required: the sheet says which goals the athlete has")
-        XCTAssertTrue(sub.label.contains("1 goal") && sub.label.contains("Fitness"), "required: the demo athlete's one goal is named (\(sub.label))")
+        // Corrected after fast check 14 (19 Nov 2026): the demo athlete holds TWO goals (Fitness as main, Maintain), not one.
+        // The app was right and these expectations were written from a wrong reading of the demo data.
+        XCTAssertTrue(sub.label.contains("2 goals") && sub.label.contains("main: Fitness"), "required: the demo athlete's goals are counted and the main one named (\(sub.label))")
         for id in ["planGoalCategory-fitness", "planGoalCategory-strength", "planGoalCategory-cycling"] {
             XCTAssertTrue(el(app, id).exists, "required: a hybrid athlete is offered \(id)")
         }
@@ -84,8 +86,8 @@ final class LabFastPlan: XCTestCase {
         let before = el(app, "planGoalBefore"), after = el(app, "planGoalAfter")
         XCTAssertTrue(before.exists && after.exists, "required: the preview shows now and after approval")
         let b = before.value as? String ?? "", a = after.value as? String ?? ""
-        XCTAssertEqual(b, "Fitness", "required: 'Now' is the athlete's current goal")
-        XCTAssertTrue(a.contains("Strength (main)") && a.contains("Fitness"), "required: 'After approval' has Strength as the main goal and keeps Fitness (\(a))")
+        XCTAssertEqual(b, "Fitness (main) · Maintain", "required: 'Now' is the athlete's current goals")
+        XCTAssertTrue(a.contains("Strength (main)") && a.contains("Fitness") && a.contains("Maintain"), "required: 'After approval' has Strength as the main goal and keeps Fitness and Maintain (\(a))")
         XCTAssertTrue(el(app, "planGoalHeadline").exists, "required: the planner's headline")
         XCTAssertTrue(el(app, "planGoalSessions").exists, "required: what happens to the planned sessions")
         for id in ["planGoalApprove", "planGoalAdjust", "planGoalNotNow", "planGoalPreviewNote"] {
@@ -140,7 +142,7 @@ final class LabFastPlan: XCTestCase {
         press(app, "planGoalBack", "back to Goals")
         XCTAssertTrue(el(app, "planGoalSheet").waitForExistence(timeout: 8), "required: back on the Add a goal sheet")
         let sub = el(app, "planGoalSubtitle")
-        XCTAssertTrue(sub.label.contains("1 goal") && sub.label.contains("Fitness"), "required: still one goal, Fitness (\(sub.label))")
+        XCTAssertTrue(sub.label.contains("2 goals") && sub.label.contains("main: Fitness"), "required: still two goals, main Fitness (\(sub.label))")
         shot("plan-goal-4-after-cancel")
     }
 
@@ -154,14 +156,14 @@ final class LabFastPlan: XCTestCase {
         XCTAssertTrue(app.staticTexts["planTitle"].firstMatch.waitForExistence(timeout: 8), "required: back on Plan after approval")
         XCTAssertFalse(el(app, "planGoalProgramPreview").exists, "required: the goal sheet closed after approval")
         let now = goalLine(app)
-        XCTAssertTrue(now.contains("Strength +1"), "required: the goal line shows the new main goal and one more (\(now))")
+        XCTAssertTrue(now.contains("Strength +2"), "required: the goal line shows the new main goal and two more (\(now))")
         XCTAssertNotEqual(now, start, "required: the goal line changed")
         shot("plan-goal-5-approved")
         // the sheet now knows both goals
         press(app, "planAddGoal", "Add a goal")
         let sub = el(app, "planGoalSubtitle")
         XCTAssertTrue(sub.waitForExistence(timeout: 8), "required: the sheet opens again")
-        XCTAssertTrue(sub.label.contains("2 goals") && sub.label.contains("Strength"), "required: two goals, main Strength (\(sub.label))")
+        XCTAssertTrue(sub.label.contains("3 goals") && sub.label.contains("main: Strength"), "required: three goals, main Strength (\(sub.label))")
         // relaunch without the fresh-demo switch: the stored athlete is read back
         app.terminate()
         app.launchEnvironment["LAB_FRESH_DEMO"] = nil
@@ -169,7 +171,7 @@ final class LabFastPlan: XCTestCase {
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home after the relaunch")
         openPlan(app)
         let again = goalLine(app)
-        XCTAssertTrue(again.contains("Strength +1"), "required: the approved goal is still there after a relaunch (\(again))")
+        XCTAssertTrue(again.contains("Strength +2"), "required: the approved goal is still there after a relaunch (\(again))")
         shot("plan-goal-6-after-relaunch")
     }
 }
