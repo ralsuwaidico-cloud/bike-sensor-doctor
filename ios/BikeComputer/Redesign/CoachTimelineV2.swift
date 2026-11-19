@@ -11,7 +11,8 @@ import SwiftUI
 // • No AI model is connected and none is called. A question the rules cannot answer gets exactly that statement.
 //   The conversation runs through `CoachResponder`, so a model can be connected later without rebuilding this page.
 // • Each open proposal is also described to the independent policy (shadow mode). Its verdict is shown; it changes
-//   nothing. Approval uses the app's existing, validated sheets — this page adds no new way to change a plan.
+//   nothing. Approval is made on "Review change" (CoachReviewV2.swift), which calls the Store's existing accept /
+//   dismiss functions; Undo calls the Store's existing undoAdaptation. This page adds no new way to change a plan.
 // • Decisions made from now on are kept in the Coach's own decision history (approved and declined, with the policy
 //   version). Decisions made before this history existed are not reconstructed.
 
@@ -37,13 +38,15 @@ struct CoachTimelineScreen: View {
     private var entries: [CyCoachEntry] {
         CoachTimeline.entries(.init(summary: store.lastAdaptation, proposals: store.adaptiveProposals, applied: store.activeAdaptations,
                                     accepted: store.appliedProposals, now: Date(), checks: center.checks, closed: center.closed, chat: center.messages,
-                                    current: store.homeCoach()))
+                                    current: store.homeCoach(), decisions: center.decisions))
     }
 
     var body: some View {
         let all = entries
-        let chat = all.filter { $0.kind == .question || $0.kind == .answer }
-        let timeline = all.filter { $0.kind != .question && $0.kind != .answer }
+        // The engine's own "not enough to change your plan" request (id "ask") is a Coach record, not part of the
+        // athlete's conversation: it stands on the Timeline (G1, "Not enough evidence").
+        let chat = all.filter { ($0.kind == .question || $0.kind == .answer) && $0.id != "ask" }
+        let timeline = all.filter { ($0.kind != .question && $0.kind != .answer) || $0.id == "ask" }
         return VStack(spacing: 0) {
             bar
             tabs
@@ -52,7 +55,12 @@ struct CoachTimelineScreen: View {
         .background(theme.background.ignoresSafeArea())
         .onAppear { center.attach(directory: store.dir); center.sync(store) }
         // the athlete's decision is made in the existing sheet; when it closes, read what was decided and record it
-        .sheet(item: $proposal, onDismiss: { center.sync(store) }) { p in HomeProposalSheet(adaptiveId: p.id, hybridId: nil, onPostpone: { center.postpone(proposalId: $0) }).cyThemeRoot() }
+        // G1 "Review change": the redesigned review of a proposal of the adaptation engine. When it closes, what the
+        // athlete record now says is read and recorded as the decision (CoachCenter.sync).
+        .sheet(item: $proposal, onDismiss: { center.sync(store) }) { p in
+            CoachReviewScreen(proposalId: p.id, onPostpone: { center.postpone(proposalId: $0) }).cyThemeRoot()
+        }
+        // a proposal of the hybrid coach keeps the existing sheet: it has its own before/after preview and Undo
         .sheet(item: $hybridProposal) { p in HomeProposalSheet(adaptiveId: nil, hybridId: p.id).cyThemeRoot() }
         .sheet(isPresented: $showFTP) { HomeFTPSheet().cyThemeRoot() }
         .sheet(isPresented: $showAdjustments, onDismiss: { center.sync(store) }) {
@@ -155,7 +163,11 @@ struct CoachTimelineScreen: View {
         return center.postponedAt(id)
     }
     private static let dayTime: DateFormatter = { let f = DateFormatter(); f.dateFormat = "d MMM HH:mm"; return f }()
+    /// An applied change while the athlete record could not be written: it is in memory only, so it is not "applied".
+    private func unsaved(_ e: CyCoachEntry) -> Bool { !e.undo.isEmpty && store.lastSaveError != nil }
     private func stateTag(_ e: CyCoachEntry) -> String? {
+        if unsaved(e) { return "NOT SAVED" }
+        if let s = e.state { return s }
         switch e.kind {
         case .proposal: return postponed(e) == nil ? "NEEDS YOU" : "POSTPONED"
         case .outcome: return "APPLIED"
@@ -164,6 +176,9 @@ struct CoachTimelineScreen: View {
         }
     }
     private func dot(_ e: CyCoachEntry) -> Color {
+        if unsaved(e) { return theme.danger }
+        if e.state == "DECLINED" || e.state == "UNDONE" || e.state == "DISMISSED" { return theme.textTertiary }
+        if e.state == "NO CHANGE" || e.state == "HELD" { return theme.warning }
         switch e.kind {
         case .proposal: return postponed(e) == nil ? theme.accent : theme.textTertiary
         case .outcome: return theme.success
@@ -207,6 +222,7 @@ struct CoachTimelineScreen: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(e.author == .athlete ? "You" : "Coach"), \(e.kind.label), \(chip), \(time). \(e.text) \(e.detail ?? "") \(e.check ?? "") \(e.basedOn.isEmpty ? "" : "Based on " + e.basedOn.joined(separator: ", "))")
                 .accessibilityIdentifier("coachEntry-\(e.id)")
+                outcomeExtras(e)
                 if let o = e.opens {
                     if e.kind == .proposal, let when = postponed(e) {
                         // postponed by the athlete: said plainly, still open, still reviewable
@@ -256,6 +272,53 @@ struct CoachTimelineScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(shape.fill(theme.surface))
             .overlay(shape.strokeBorder(theme.border.opacity(theme.id == .highContrast ? 1 : 0.5), lineWidth: 1))
+        }
+    }
+
+    // MARK: G1 screen 3 — outcomes: what the plan holds now, Undo, and a change that was not saved
+
+    /// The first change of an entry that is in force, with its planned session.
+    private func inForce(_ e: CyCoachEntry) -> (adj: PlanAdjustment, workout: Workout)? {
+        for key in e.undo {
+            if let a = store.adaptations.first(where: { $0.key == key }), let w = store.plan.first(where: { $0.id == a.workoutId }) { return (a, w) }
+        }
+        return nil
+    }
+    /// Read from the planned session itself (not from the Coach's sentence), so it shows what the plan really carries.
+    private func plannedNow(_ e: CyCoachEntry) -> String? {
+        guard let x = inForce(e) else { return nil }
+        return CoachReview.plannedNow(x.adj, workout: x.workout, entries: CoachReviewData.entries(store, x.workout), units: store.settings.units)
+    }
+    /// The engine's own Undo (the same call as Coach adjustments › Undo), then the history line.
+    private func undo(_ e: CyCoachEntry) {
+        for key in e.undo {
+            guard let a = store.adaptations.first(where: { $0.key == key }) else { continue }
+            store.undoAdaptation(key)
+            center.recordUndo(a, store: store)
+        }
+        center.sync(store)
+    }
+    private func link(_ title: String, id: String, hint: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(.footnote).weight(.semibold)).foregroundStyle(theme.accent)
+                .frame(minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).accessibilityHint(hint).accessibilityIdentifier(id)
+    }
+    @ViewBuilder private func outcomeExtras(_ e: CyCoachEntry) -> some View {
+        if !e.undo.isEmpty {
+            if let line = plannedNow(e) {
+                Text(line).font(.caption).monospacedDigit().foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("coachPlanNow-\(e.id)")
+            }
+            if unsaved(e) {
+                Text("The app could not write to storage. This change is not confirmed as saved.")
+                    .font(.caption).foregroundStyle(theme.danger).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("coachNotSaved-\(e.id)")
+                link("Try again", id: "coachRetry-\(e.id)", hint: "Writes your record to storage again") { _ = store.writeAgain(); center.sync(store) }
+            } else {
+                link("Undo", id: "coachUndo-\(e.id)", hint: "Takes this change out of your plan. It is not made again for this session") { undo(e) }
+            }
         }
     }
 
@@ -315,7 +378,7 @@ struct CoachTimelineScreen: View {
     private func openLabel(_ e: CyCoachEntry) -> String {
         switch e.opens {
         case .proposal: return e.kind == .proposal ? "Review and decide" : "Details"
-        case .adjustments: return e.kind == .outcome ? "Undo · See the change" : "Open adjustments"
+        case .adjustments: return e.kind == .outcome ? "See the change" : "Open adjustments"
         case .hybrid: return "Review and decide"
         case .ftp: return "Review"
         case nil: return ""

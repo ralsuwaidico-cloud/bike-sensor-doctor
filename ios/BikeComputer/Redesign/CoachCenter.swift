@@ -6,6 +6,8 @@ import SwiftUI
 // setting is changed here. It writes only the Coach's own two files (the shadow decision history and the conversation).
 // Approving or declining a proposal still happens in the app's existing approval sheet; afterwards this object reads
 // what the athlete decided and records it in the decision history.
+// The redesigned "Review change" page (CoachReviewV2.swift) calls the Store's own accept / dismiss functions itself and
+// then calls `sync` here; this object still assigns nothing on `Store`.
 
 @MainActor
 final class CoachCenter: ObservableObject {
@@ -40,6 +42,23 @@ final class CoachCenter: ObservableObject {
         }
         let open = Set(store.adaptiveProposals.map(\.id))
         journal.prunePostponed(open: open)
+        // Every open proposal is remembered as shown; when it is no longer open, what the athlete record says about it
+        // is recorded as the decision — whichever screen the decision was made on. A decision is recorded only when
+        // the athlete record itself reached storage, so an approval that was not saved is never shown as approved.
+        for p in store.adaptiveProposals {
+            journal.see(.init(proposalId: p.id, keys: p.adjustments.map(\.key), text: p.text, why: p.why,
+                              change: p.adjustments.isEmpty ? nil : p.adjustments.map(\.summary).joined(separator: "; ")))
+        }
+        if store.lastSaveError == nil {
+            for s in journal.file.seen ?? [] where !open.contains(s.proposalId) {
+                let choice: String?
+                if !s.keys.isEmpty, s.keys.allSatisfy({ store.approvedAdaptations.contains($0) }) { choice = CoachPageFile.Decision.approved }
+                else if store.dismissedAdaptations.contains(s.proposalId) { choice = s.keys.isEmpty ? CoachPageFile.Decision.dismissed : CoachPageFile.Decision.declined }
+                else { choice = nil }
+                if let choice { journal.decide(.init(proposalId: s.proposalId, keys: s.keys, at: now, choice: choice, text: s.text, why: s.why, change: s.change)) }
+                else { journal.unsee(s.proposalId) }      // withdrawn by the Coach: no decision was made
+            }
+        }
         for l in journal.file.links where !open.contains(l.proposalId) {
             if store.approvedAdaptations.contains(l.adjustmentKey) { ledger.recordChoice(.approved, for: l.shadowId, now: now) }
             else if store.dismissedAdaptations.contains(l.proposalId) { ledger.recordChoice(.declined, for: l.shadowId, now: now) }
@@ -62,11 +81,25 @@ final class CoachCenter: ObservableObject {
     func postpone(proposalId: String, now: Date = Date()) { if journal?.postpone(proposalId, at: now) == true { revision += 1 } }   // CoachPostpone.ids re-reads: the file changed
     func postponedAt(_ proposalId: String) -> Date? { journal?.postponedAt(proposalId) }
 
+    /// The athlete's decisions, oldest first, from the Coach's own file.
+    var decisions: [CoachPageFile.Decision] { journal?.file.decisions ?? [] }
+
+    /// Records that the athlete undid an applied change. The undo itself is the engine's (Store.undoAdaptation), called
+    /// by the page; this only writes the history line, and only when the change is really out and the record was saved.
+    func recordUndo(_ adj: PlanAdjustment, store: Store, now: Date = Date()) {
+        guard let journal, store.lastSaveError == nil, !store.adaptations.contains(where: { $0.key == adj.key }) else { revision += 1; return }
+        let from = journal.file.decisions?.last { $0.choice == CoachPageFile.Decision.approved && $0.keys.contains(adj.key) }
+        journal.decide(.init(proposalId: from?.proposalId ?? "hold|\(adj.key)", keys: [adj.key], at: now, choice: CoachPageFile.Decision.undone,
+                             text: adj.summary, why: adj.why, change: adj.summary))
+        revision += 1
+    }
+
     /// Answered proposals from the durable history, one per proposal.
     var closed: [CoachTimeline.Closed] {
         guard let ledger, let journal else { return [] }
         var seen = Set<String>(), out: [CoachTimeline.Closed] = []
-        for l in journal.file.links where !seen.contains(l.proposalId) {
+        let recorded = Set((journal.file.decisions ?? []).map(\.proposalId))     // shown from the decision record instead
+        for l in journal.file.links where !seen.contains(l.proposalId) && !recorded.contains(l.proposalId) {
             let evs = ledger.events(for: l.shadowId)
             guard let c = evs.first(where: { $0.kind == .athleteChoice }), let choice = c.choice else { continue }
             seen.insert(l.proposalId)

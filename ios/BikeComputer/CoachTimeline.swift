@@ -47,6 +47,11 @@ struct CyCoachEntry: Identifiable, Equatable {
     /// Who produced the line: "Rules", "You", "AI not connected".
     var chip: String? = nil
     var basedOn: [String] = []
+    /// The state shown beside the source chip when the record itself says it ("APPROVED", "DECLINED", "UNDONE",
+    /// "NO CHANGE", "HELD"). nil = the page derives it from the kind, as before.
+    var state: String? = nil
+    /// Keys of the adjustments in force that the engine's own Undo (Store.undoAdaptation) can take out again.
+    var undo: [String] = []
 }
 
 /// Builds the timeline from the app's Coach records. Pure, so it is the same in Lab and production.
@@ -66,6 +71,8 @@ enum CoachTimeline {
         /// The one item the Home card and the Plan row are showing now (Store.homeCoach). When it is not already one of
         /// the records above it is listed too, so the three places never disagree.
         var current: HomeCoachItem? = nil
+        /// The athlete's decisions as stored in the Coach's own file (approved, declined, dismissed, undone).
+        var decisions: [CoachPageFile.Decision] = []
     }
 
     /// The Home / Plan item as a timeline entry. nil when the timeline already holds it (a proposal of the adaptation
@@ -96,15 +103,20 @@ enum CoachTimeline {
             for (n, f) in s.findings.enumerated() {
                 out.append(CyCoachEntry(id: "obs-\(n)", at: s.at, author: .coach, kind: .observation, text: f))
             }
-            if let p = s.painAdvice { out.append(CyCoachEntry(id: "pain", at: s.at, author: .coach, kind: .recovery, text: p, opens: .adjustments)) }
-            if let q = s.feedbackRequest { out.append(CyCoachEntry(id: "ask", at: s.at, author: .coach, kind: .question, text: q)) }
+            // the engine's own protective hold after a pain report (nothing is released automatically)
+            if let p = s.painAdvice { out.append(CyCoachEntry(id: "pain", at: s.at, author: .coach, kind: .recovery, text: p, opens: .adjustments, state: "HELD")) }
+            // with low confidence the engine changes nothing and says what it is missing
+            if let q = s.feedbackRequest { out.append(CyCoachEntry(id: "ask", at: s.at, author: .coach, kind: .question, text: q, state: s.confidence == .low ? "NO CHANGE" : nil)) }
         }
         for a in i.accepted {
             out.append(CyCoachEntry(id: "acc-\(a.id)", at: a.appliedAt, author: .athlete, kind: .decision, text: "Approved: \(a.text)"))
         }
-        for a in i.applied {
-            out.append(CyCoachEntry(id: "adj-\(a.id)", at: a.createdAt, author: .coach, kind: .outcome, text: a.summary, detail: a.why, opens: .adjustments))
+        // A change the athlete approved is shown once, as their decision (below), not a second time as a Coach change.
+        let approvedKeys = Set(i.decisions.filter { $0.choice == CoachPageFile.Decision.approved }.flatMap(\.keys))
+        for a in i.applied where !approvedKeys.contains(a.key) {
+            out.append(CyCoachEntry(id: "adj-\(a.id)", at: a.createdAt, author: .coach, kind: .outcome, text: a.summary, detail: a.why, opens: .adjustments, undo: [a.key]))
         }
+        for (n, d) in i.decisions.enumerated() { out.append(decisionEntry(d, index: n, applied: i.applied, later: i.decisions.suffix(from: n + 1))) }
         // A proposal has no time of its own: it stands at the analysis that raised it (or now, if none is stored).
         let raised = i.summary?.at ?? i.now
         for p in i.proposals {
@@ -124,6 +136,34 @@ enum CoachTimeline {
         return out.enumerated().sorted { ($0.element.at, $0.offset) < ($1.element.at, $1.offset) }.map(\.element)
     }
 
+    private static func stamp(_ d: Date) -> String { let f = DateFormatter(); f.dateFormat = "d MMM HH:mm"; return f.string(from: d) }
+
+    /// One stored decision as a timeline entry. Nothing is claimed beyond the record: an approval offers Undo only while
+    /// its change is in force on an open session (`applied`), and says so when it is not.
+    static func decisionEntry(_ d: CoachPageFile.Decision, index: Int, applied: [PlanAdjustment], later: ArraySlice<CoachPageFile.Decision> = []) -> CyCoachEntry {
+        let what = d.change ?? d.text
+        let id = "dec-\(index)-\(d.proposalId)"
+        switch d.choice {
+        case CoachPageFile.Decision.approved:
+            let undone = later.contains { $0.choice == CoachPageFile.Decision.undone && !Set($0.keys).isDisjoint(with: d.keys) }
+            let active = undone ? [] : d.keys.filter { k in applied.contains { $0.key == k } }
+            let tail = active.isEmpty ? (undone ? " You undid it later." : " It is not in force on an open session now.") : " Your plan carries it now."
+            return CyCoachEntry(id: id, at: d.at, author: .athlete, kind: .decision, text: what, detail: "Approved by you \(stamp(d.at)).\(tail)",
+                                chip: CoachSource.athlete.chip, basedOn: [], state: "APPROVED", undo: active)
+        case CoachPageFile.Decision.undone:
+            return CyCoachEntry(id: id, at: d.at, author: .athlete, kind: .decision, text: "Undone: \(what)",
+                                detail: "You undid this change. It will not be made again for this session. Your logged sessions are unchanged.",
+                                chip: CoachSource.athlete.chip, state: "UNDONE")
+        case CoachPageFile.Decision.dismissed:
+            return CyCoachEntry(id: id, at: d.at, author: .athlete, kind: .decision, text: "Dismissed: \(what)", detail: "Advice only. Nothing in your plan changed.",
+                                chip: CoachSource.athlete.chip, state: "DISMISSED")
+        default:
+            return CyCoachEntry(id: id, at: d.at, author: .athlete, kind: .decision, text: "Declined: \(what)",
+                                detail: "Declined by you \(stamp(d.at)). Your plan stays as it is, and this is not offered again for the same session.",
+                                chip: CoachSource.athlete.chip, state: "DECLINED")
+        }
+    }
+
     static func dayText(_ d: Date, _ calendar: Calendar) -> String {
         let f = DateFormatter(); f.calendar = calendar; f.timeZone = calendar.timeZone; f.locale = Locale(identifier: "en_GB"); f.dateFormat = "EEE d MMM"
         return f.string(from: d)
@@ -140,5 +180,163 @@ enum CoachTimeline {
             }
         }
         return out
+    }
+}
+
+// MARK: - "Review change" (sheet G1, screen 2): what the page shows for one open proposal
+// Pure. Every value is read from the proposal, the planned session and the athlete's logged sessions. The "after"
+// values come from the engine's own `AdaptiveRules.apply` — the same function that changes the plan on approval — so
+// the preview cannot promise something different from what approval does. Nothing is applied here.
+
+struct CoachReviewModel: Equatable {
+    struct Change: Equatable, Identifiable {
+        var id: String                  // PlanAdjustment.key
+        var label: String               // "Goblet squat"
+        var summary: String             // the engine's own sentence, always shown to assistive technology
+        var before: String?             // "25 kg"
+        var beforeSub: String?          // "3 × 10"
+        var after: String?              // "27 kg"
+        var afterSub: String?           // "3 × 10 · +2 kg (8 %)"
+    }
+    struct Evidence: Equatable, Identifiable { var id: Int; var label: String; var value: String }
+    var title: String                   // "Goblet squat · Thu 19 Nov"
+    var stateTag: String                // "NEEDS YOUR APPROVAL" / "ADVICE ONLY"
+    var changes: [Change]
+    var text: String                    // the proposal as the Coach words it
+    var why: String
+    var evidence: [Evidence]
+    var evidenceNote: String?
+    var elseChanges: String
+    var needsYou: String
+    var canApprove: Bool
+}
+
+enum CoachReview {
+    struct Input {
+        var proposal: AdaptiveProposal
+        /// The planned session of the first adjustment as it is in the plan now (nil = not found).
+        var workout: Workout?
+        var sessionTitle: String?
+        /// That session's planned exercises as they are now.
+        var entries: [ExerciseEntry] = []
+        var strength: [StrengthSession] = []
+        var units: AppSettings.Units = .metric
+        /// Pain areas currently holding progression (the analysis the rules use), as words.
+        var painAreas: [String] = []
+        var now: Date = Date()
+    }
+
+    static func setsText(_ sets: [SetEntry]) -> String {
+        let reps = sets.map(\.reps)
+        guard let first = reps.first else { return "" }
+        return Set(reps).count == 1 ? "\(reps.count) × \(first)" : reps.map(String.init).joined(separator: "/")
+    }
+    static func top(_ sets: [SetEntry]) -> Double? { sets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max() }
+
+    /// Before and after of one adjustment on one planned session. `after` is `AdaptiveRules.apply` on the session as it is.
+    static func change(_ adj: PlanAdjustment, workout w: Workout?, entries: [ExerciseEntry], units u: AppSettings.Units) -> CoachReviewModel.Change {
+        var c = CoachReviewModel.Change(id: adj.key, label: adj.summary.components(separatedBy: ": ").first ?? adj.summary, summary: adj.summary)
+        guard let w else { return c }
+        let after = AdaptiveRules.apply([adj], to: w, entries: entries)
+        func entry(_ id: String, _ list: [ExerciseEntry]?) -> ExerciseEntry? { list?.first { $0.exerciseId == id } }
+        switch adj.change {
+        case .weight(let id, _):
+            guard let b = entry(id, entries), let a = entry(id, after.plannedEntries), let bt = top(b.sets), let at = top(a.sets) else { return c }
+            c.label = b.name
+            c.before = WeightFmt.text(bt, u); c.beforeSub = setsText(b.sets)
+            c.after = WeightFmt.text(at, u)
+            let d = at - bt, pct = bt > 0 ? Int((abs(d) / bt * 100).rounded()) : 0
+            c.afterSub = "\(setsText(a.sets)) · \(d >= 0 ? "+" : "−")\(WeightFmt.text(abs(d), u))" + (bt > 0 ? " (\(pct) %)" : "")
+        case .reps(let id, _):
+            guard let b = entry(id, entries), let a = entry(id, after.plannedEntries), !b.sets.isEmpty, !a.sets.isEmpty else { return c }
+            c.label = b.name
+            let load = top(b.sets).map { " @ \(WeightFmt.text($0, u))" } ?? ""
+            c.before = "\(b.sets.map(\.reps).max() ?? 0) reps"; c.beforeSub = setsText(b.sets) + load
+            c.after = "\(a.sets.map(\.reps).max() ?? 0) reps"; c.afterSub = setsText(a.sets) + load
+        case .sets(let id, _):
+            guard let b = entry(id, entries), let a = entry(id, after.plannedEntries) else { return c }
+            c.label = b.name
+            c.before = "\(b.sets.count) set\(b.sets.count == 1 ? "" : "s")"; c.beforeSub = setsText(b.sets)
+            c.after = "\(a.sets.count) set\(a.sets.count == 1 ? "" : "s")"; c.afterSub = setsText(a.sets)
+        case .minutes:
+            c.label = w.displayTitle
+            c.before = "\(w.minutes) min"; c.after = "\(after.minutes) min"
+            let d = after.minutes - w.minutes
+            c.afterSub = "\(d >= 0 ? "+" : "−")\(abs(d)) min"
+        case .intervalReps:
+            guard let b = w.effectiveIntervalReps, let a = after.effectiveIntervalReps else { return c }
+            c.label = w.displayTitle
+            c.before = "\(b) interval\(b == 1 ? "" : "s")"; c.after = "\(a) interval\(a == 1 ? "" : "s")"
+            c.beforeSub = "\(w.minutes) min"; c.afterSub = "\(after.minutes) min"
+        case .kind:
+            c.label = "Session type"
+            c.before = w.kind.title; c.after = after.kind.title
+            c.beforeSub = "\(w.minutes) min"; c.afterSub = "\(after.minutes) min"
+        case .replace(let id, let newId, _, _):
+            guard let b = entry(id, entries), let a = entry(newId, after.plannedEntries) else { return c }
+            c.label = "Exercise"
+            c.before = b.name; c.beforeSub = setsText(b.sets)
+            c.after = a.name; c.afterSub = setsText(a.sets)
+        }
+        return c
+    }
+
+    /// The logged sessions the progression rule read for this exercise: the most recent ones with completed sets of it
+    /// (the same selection and the same effort value as `AdaptationEngine.strengthDecision`). Nothing is filled in:
+    /// an effort that was not recorded is said to be not recorded.
+    static func strengthEvidence(exerciseId: String, strength: [StrengthSession], units u: AppSettings.Units, now: Date) -> [CoachReviewModel.Evidence] {
+        let hist = strength.filter { !$0.inProgress && !$0.awaitingReview && $0.date <= now }.sorted { $0.date > $1.date }
+            .compactMap { ses in ses.exercises?.first(where: { $0.exerciseId == exerciseId && !$0.doneSets.isEmpty }).map { (ses, $0) } }
+        return hist.prefix(AdaptiveRules.progressionSessions).reversed().enumerated().map { n, pair in
+            let (ses, x) = pair
+            let load = top(x.doneSets).map { " @ \(WeightFmt.text($0, u))" } ?? ""
+            let effort = x.doneSets.compactMap { $0.rpe }.max() ?? ses.rpe ?? ses.checkIn?.effort
+            return CoachReviewModel.Evidence(id: n, label: "\(AdaptationExplainer.day(ses.date)) · \(setsText(x.doneSets))\(load)", value: effort.map { "effort \($0)" } ?? "effort not recorded")
+        }
+    }
+
+    static func model(_ i: Input) -> CoachReviewModel {
+        let p = i.proposal
+        let changes = p.adjustments.map { change($0, workout: $0.workoutId == i.workout?.id ? i.workout : nil, entries: i.entries, units: i.units) }
+        let day = i.workout.map { AdaptationExplainer.day($0.date) }
+        var title = p.reason.title
+        if let c = changes.first { title = [changes.count == 1 ? c.label : (i.sessionTitle ?? c.label), day].compactMap { $0 }.joined(separator: " · ") }
+        var evidence: [CoachReviewModel.Evidence] = []
+        var note: String? = nil
+        if let a = p.adjustments.first, a.category == .progression, p.adjustments.count == 1 {
+            switch a.change {
+            case .weight(let id, _), .reps(let id, _), .sets(let id, _):
+                evidence = strengthEvidence(exerciseId: id, strength: i.strength, units: i.units, now: i.now)
+                evidence.append(.init(id: evidence.count, label: "Pain areas holding progression", value: i.painAreas.isEmpty ? "none" : i.painAreas.joined(separator: ", ")))
+            default: break
+            }
+        }
+        if evidence.isEmpty { note = "The records the rule used are named in its reason above. They are not listed one by one for this kind of change." }
+        let can = !p.adjustments.isEmpty
+        let needs: String
+        if !can { needs = "Advice only: the Coach cannot make this change for you. You can change it yourself in your plan or your profile." }
+        else if p.reason == .heldIncrease { needs = "Why this needs you: an increase in weight, reps, sets, intervals or ride time is never applied automatically. It waits for your approval." }
+        else { needs = "Why this needs you: \(p.reason.title.lowercased()) — the Coach may not change this on its own." }
+        return CoachReviewModel(title: title, stateTag: can ? "NEEDS YOUR APPROVAL" : "ADVICE ONLY", changes: changes, text: p.text, why: p.why, evidence: evidence, evidenceNote: note,
+                                elseChanges: can ? "Only what is shown above. The rest of this session and of your week stays as planned." : "Nothing. Your plan stays as it is.",
+                                needsYou: needs, canApprove: can)
+    }
+
+    /// What the plan holds NOW for the thing an adjustment is about — read from the planned session, not from the
+    /// adjustment's own sentence. nil when the session or the exercise is not in the plan.
+    static func plannedNow(_ adj: PlanAdjustment, workout w: Workout?, entries: [ExerciseEntry], units u: AppSettings.Units) -> String? {
+        guard let w else { return nil }
+        let day = AdaptationExplainer.day(w.date)
+        func line(_ id: String) -> String? {
+            guard let e = entries.first(where: { $0.exerciseId == id }), !e.sets.isEmpty else { return nil }
+            return "In your plan now · \(day): \(e.name) \(setsText(e.sets))" + (top(e.sets).map { " @ \(WeightFmt.text($0, u))" } ?? "")
+        }
+        switch adj.change {
+        case .weight(let id, _), .reps(let id, _), .sets(let id, _): return line(id)
+        case .replace(_, let newId, _, _): return line(newId)
+        case .minutes: return "In your plan now · \(day): \(w.displayTitle), \(w.minutes) min"
+        case .intervalReps: return w.effectiveIntervalReps.map { "In your plan now · \(day): \(w.displayTitle), \($0) intervals" }
+        case .kind: return "In your plan now · \(day): \(w.kind.title), \(w.minutes) min"
+        }
     }
 }

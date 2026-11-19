@@ -92,6 +92,8 @@ struct AdjustmentsView: View {
     /// Redesign: how "Not now" is recorded when the Coach page presents this list (nil = straight to the Coach's file).
     var onPostpone: ((String) -> Void)? = nil
     @State private var postponedTick = 0
+    /// Redesign: a suggestion is approved on the "Review change" page (before / after and evidence), not from this row.
+    @State private var review: PreviewRefString? = nil
     @State private var confirmRestore = false
     @State private var openWhy: Set<String> = []
     /// Review P3-11: "It's fine now" asks once more before releasing a concerning-pain hold.
@@ -150,6 +152,12 @@ struct AdjustmentsView: View {
         }
         .accessibilityIdentifier("adjustmentsView")
         .navigationTitle("Coach adjustments").navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $review) { r in
+            CoachReviewScreen(proposalId: r.id, onPostpone: { id in
+                if let f = onPostpone { f(id) } else { CoachPostpone.record(id, directory: store.dir) }
+                postponedTick += 1
+            }).cyThemeRoot()
+        }
         .onChange(of: store.settings.autoAdapt) { _, _ in _ = store.runAdaptation() }
         .confirmationDialog(confirmPainArea.map { painReleaseTitle($0) } ?? "", isPresented: Binding(get: { confirmPainArea != nil }, set: { if !$0 { confirmPainArea = nil } }), titleVisibility: .visible) {
             if let area = confirmPainArea {
@@ -206,7 +214,10 @@ struct AdjustmentsView: View {
             Text(p.text).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             Text(p.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
-                if !p.adjustments.isEmpty { Button("Accept") { _ = store.acceptAdaptiveProposal(p) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large) }
+                if CyProduct.redesign {
+                    Button("Review") { review = PreviewRefString(id: p.id) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
+                        .accessibilityIdentifier("adjustmentReview")
+                } else if !p.adjustments.isEmpty { Button("Accept") { _ = store.acceptAdaptiveProposal(p) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large) }
                 if CyProduct.redesign {
                     // one meaning everywhere: Not now postpones (the suggestion stays open); Decline rejects
                     if !CoachPostpone.ids(store.dir).contains(p.id) {
