@@ -1,2 +1,2 @@
-b48f6c5875ee9d8e44029c5b1144c7cf85e7f50a
-Approved by the owner in writing, 19 Nov 2026 12:19 (Dubai): Cyclift Lab 0.1.0 build 5 from this commit only, internal testers only, limited Lab preview (not final UI acceptance, not a production release). Signed-build check run 4 passed on this commit. Lab run 43: 12 of 13 screen checks passed.
+9b9d3a6878bcc44473178bca2df0ca0432384fdb
+Approved by the owner in writing, 19 Nov 2026 17:07 (Dubai): Cyclift Lab 0.1.0 build 6 from this exact commit only, internal testers only; nothing newer (P06, onboarding page 3) may be included. Gates on this commit: Lab run 44 (13 of 13, isolation ok), signed-build check run 5, iOS run 301 (journeys and redesigned main app).

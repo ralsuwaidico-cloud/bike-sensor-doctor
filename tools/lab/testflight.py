@@ -62,19 +62,20 @@ def main():
     text = (f"CYCLIFT LAB — internal preview, demo data only. Build {n}, commit {commit}. Not a release of Cyclift and not final design.\n\n"
             "WHAT IT IS: the redesigned Cyclift on a made-up demo athlete. It cannot reach your real Cyclift data, Apple Health, "
             "Bluetooth sensors, GPS or any account. Everything you do stays inside this app; Profile > Data, Help & About can delete it or restore the demo.\n\n"
-            "NEW SINCE BUILD 4: Plan follows the approved B1 sheet with the header glow corrected; Home, Plan and the Coach page now show the same Coach item, "
-            "and a finding is no longer labelled as a suggestion to review; the Lab tag is compact and pages clear the bottom bar.\n\n"
-            "TRY: Home and its pages; Plan; the Train ball > today's strength session > Start > log sets > minimise and resume > Finish > Save > optional review; "
-            "the Coach page; Progress; Profile and the six themes; onboarding after deleting the data.\n\n"
-            "HOW IT WAS CHECKED: Lab run 43 on this exact commit passed 12 of 13 simulator checks, and the signed build passed its isolation check. The one failed "
-            "check had a mistake in the check itself; because of it, the last step of the Coach's Not now sequence (opening the approval sheet and accepting) "
-            "was NOT tested on this commit.\n\n"
-            "KNOWN LIMITATIONS: Home v2.3 is provisional, not an approved design. Coach 'Not now' is incomplete: on the Coach page it postpones the suggestion, but on "
-            "the approval sheet the same button still dismisses it; the demo athlete normally has no open suggestion, so you may not meet it at all. "
+            "NEW SINCE BUILD 5: Profile pages rebuilt to the Profile v2.0 sheets (Personal details, Type & experience, Equipment & restrictions, Strength preferences, "
+            "Recovery & pauses, Heart rate, Power, Cycling & sources, Units, Notifications & display, Coach, Data, Help & About, Where your data lives); "
+            "onboarding page 2 matched to its sheet; Coach 'Not now' now postpones everywhere, with a separate Decline; the new Profile pages follow the iPhone text size.\n\n"
+            "TRY: Profile (tap the avatar on Home) and each of its pages; edit your name, equipment, recovery or athlete type and see the plan preview before anything changes; "
+            "Home; Plan; the Train ball > today's strength session > Start > log sets > Finish > Save > optional review; the Coach page; Progress; onboarding after deleting the data.\n\n"
+            "HOW IT WAS CHECKED: on this exact commit, Lab run 44 passed 13 of 13 simulator checks with Lab isolation ok, the signed build passed its isolation check, and the "
+            "main app's three journeys and redesigned-main-app checks passed.\n\n"
+            "KNOWN LIMITATIONS: The Profile sheets are themselves pending review, so these pages are candidates, not approved designs. Home v2.3 and onboarding pages 1 and 3-7 are provisional. "
+            "Every device reads unavailable in Cyclift Lab by design. The demo athlete normally has no open Coach suggestion, so you may not meet 'Not now'. "
+            "Heart-rate and power zone names and counts follow the app's existing model, not the sheet. Delete all data still uses the existing confirmation. "
             "Cycling is a labelled demonstration with simulated figures and saves nothing. The Coach follows written rules; AI chat is not connected. "
-            "Progress shows no stage (stage criteria are not approved) and draws its ring more simply than the approved sheet. Profile's inner pages are the older screens. "
-            "Plan was not re-checked on smaller iPhones or at large text sizes. Apple Watch, devices, Arabic and data import are not in this build. "
-            "Tested only in the iOS Simulator before this build: please report anything that looks or behaves wrong on your iPhone.")
+            "Progress shows no stage and draws its ring more simply than the approved sheet. One earlier test run lost two typed letters in Personal details and it was not reproduced: "
+            "please tell me if typing ever drops characters. Apple Watch, devices, Arabic and data import are not in this build. "
+            "Tested only in the iOS Simulator (the focused checks on an iPhone 15 Pro simulator); no small-iPhone check was run: please report anything that looks or behaves wrong on your iPhone.")
     st, res = asc.call("GET", f"/v1/builds/{build['id']}/betaBuildLocalizations", query={"limit": 20})
     locs = res.get("data", []) if st == 200 else []
     if locs: st, res = asc.call("PATCH", f"/v1/betaBuildLocalizations/{locs[0]['id']}", {"data": {"type": "betaBuildLocalizations", "id": locs[0]["id"], "attributes": {"whatsNew": text}}})
