@@ -1,0 +1,46 @@
+FAST focused Lab check — selected: LabFastPlan LabFastCoach
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from b53afcbf · files changed since then: 44
+TIME setup: 15s
+  timing: SwiftCompile (15 tasks) | 664.746 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 99.789 seconds
+  timing: SwiftEmitModule (2 tasks) | 10.782 seconds
+  timing: SwiftDriver (2 tasks) | 9.708 seconds
+  timing: Ld (18 tasks) | 6.520 seconds
+  timing: GenerateAssetSymbols (1 task) | 4.025 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.052 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.305 seconds
+  stages: packages at 201s · packages prepared at 246s · dependency graph at 246s · inputs at 247s · build description at 247s · first link at 306s · asset catalogue at 311s · first Swift step at 408s · finished at 625s
+  compiled in this run: 135 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 626s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 8s
+	 Executed 3 tests, with 0 failures (0 unexpected) in 421.623 (421.628) seconds
+	 Executed 3 tests, with 10 failures (0 unexpected) in 457.716 (457.721) seconds
+	 Executed 6 tests, with 10 failures (0 unexpected) in 879.339 (879.351) seconds
+	 Executed 6 tests, with 10 failures (0 unexpected) in 879.339 (879.352) seconds
+Lab/UITests/LabFastPlan.swift:143: error: -[CycliftLabUITests.LabFastPlan testAddGoalCancelLeavesGoalUnchanged] : XCTAssertTrue failed - required: still one goal, Fitness (You have 2 goals · main: Fitness)
+Lab/UITests/LabFastPlan.swift:157: error: -[CycliftLabUITests.LabFastPlan testAddGoalApprovePersists] : XCTAssertTrue failed - required: the goal line shows the new main goal and one more (Strength +2, Hybrid · 6 training days a week)
+Lab/UITests/LabFastPlan.swift:164: error: -[CycliftLabUITests.LabFastPlan testAddGoalApprovePersists] : XCTAssertTrue failed - required: two goals, main Strength (You have 3 goals · main: Strength)
+Lab/UITests/LabFastPlan.swift:172: error: -[CycliftLabUITests.LabFastPlan testAddGoalApprovePersists] : XCTAssertTrue failed - required: the approved goal is still there after a relaunch (Strength +2, Hybrid · 6 training days a week)
+Lab/UITests/LabFastPlan.swift:60: error: -[CycliftLabUITests.LabFastPlan testAddGoalApprovePersists] : XCTAssertTrue failed - required: the demo athlete's one goal is named (You have 2 goals · main: Fitness)
+Lab/UITests/LabFastPlan.swift:60: error: -[CycliftLabUITests.LabFastPlan testAddGoalCancelLeavesGoalUnchanged] : XCTAssertTrue failed - required: the demo athlete's one goal is named (You have 2 goals · main: Fitness)
+Lab/UITests/LabFastPlan.swift:87: error: -[CycliftLabUITests.LabFastPlan testAddGoalApprovePersists] : XCTAssertEqual failed: ("Fitness (main) · Maintain") is not equal to ("Fitness") - required: 'Now' is the athlete's current goal
+Lab/UITests/LabFastPlan.swift:87: error: -[CycliftLabUITests.LabFastPlan testAddGoalCancelLeavesGoalUnchanged] : XCTAssertEqual failed: ("Fitness (main) · Maintain") is not equal to ("Fitness") - required: 'Now' is the athlete's current goal
+Test Case '-[CycliftLabUITests.LabFastCoach testApproveShowsTheOutcomeAndThePlanCarriesIt]' passed (211.086 seconds).
+Test Case '-[CycliftLabUITests.LabFastCoach testDeclineIsRecordedAndThePlanIsUnchanged]' passed (100.600 seconds).
+Test Case '-[CycliftLabUITests.LabFastCoach testNotNowPostponesAndStaysOpen]' passed (109.938 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testAddGoalApprovePersists]' failed (122.833 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testAddGoalCancelLeavesGoalUnchanged]' failed (273.817 seconds).
+Test Case '-[CycliftLabUITests.LabFastPlan testRecurringPlan]' passed (61.065 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 1002s
+LAB-NOTE coach approve after approval: You, Your decision, You, 15:36. Goblet squat: 25 kg → 26 kg per hand Approved by you 19 Nov 15:36. Your plan carries it now.   | In your plan now · Thu 19 Nov: Goblet squat 3 × 10 @ 26 kg
+LAB-NOTE coach approve after reopening: You, Your decision, You, 15:36. Goblet squat: 25 kg → 26 kg per hand Approved by you 19 Nov 15:36. Your plan carries it now.   | In your plan now · Thu 19 Nov: Goblet squat 3 × 10 @ 26 kg
+LAB-NOTE coach review: Now: 25 kg, 3 × 10 | Proposed: 26 kg, 3 × 10 · +1 kg (4 %) | Tue 10 Nov · 3 × 10 @ 25 kg: effort 7 | Fri 13 Nov · 3 × 10 @ 25 kg: effort 7
+LAB-NOTE plan goal preview: now 'Fitness (main) · Maintain' → after 'Strength (main) · Fitness · Maintain'; headline '3 planned days would change'
+LAB-NOTE recurring plan rows: Monday, Strength, 20 min | Tuesday, Ride, 1 h 26 min | Wednesday, Strength, 20 min | Thursday, Ride, 1 h 26 min | Friday, Strength, 20 min | Saturday, Ride, 2 h 8 min | Sunday, Rest || Availability & preferences, 6 days · 6 h of 6 h || warning: ''
+TIME total on the Mac: 1653s
+commit dfdaf1fb3dd23ffb08839d7b8febe59cc0c5e9b4  branch ios/lab
