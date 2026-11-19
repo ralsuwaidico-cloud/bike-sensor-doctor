@@ -172,7 +172,7 @@ struct PlanScreen: View {
 
     /// With a goal: its name and context (the row opens the details) and the explicit "Add a goal" control of sheet B1
     /// (owner's decision of 18 Nov 2026). Without a goal: a clear "Set your goal" state with one action.
-    /// Both controls open the one existing goal page; there is no second goal editor.
+    /// Both controls open the redesigned goal sheet (B3 / B4, PlanGoalFlow), which writes through the one goal model.
     private var programRow: some View {
         let hasGoal = data.goalTitle != nil
         let layout = large ? AnyLayout(VStackLayout(alignment: .leading, spacing: CySpace.xs)) : AnyLayout(HStackLayout(spacing: CySpace.s))
@@ -476,8 +476,10 @@ struct PlanScreen: View {
 
     // MARK: Recurring Plan
 
+    /// Sheet B2 (v0.6): seven 46 pt weekday rows 3 pt apart, then the availability row 7 pt below them (measured on the
+    /// sheet at 393 pt width). The rows' words come from PlanV2Adapter: the athlete's own week, nothing sampled.
     private var recurring: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 3) {
             ForEach(data.recurring) { row in recurringRow(row) }
             Button(action: { act("Availability & preferences") }) {
                 HStack(spacing: CySpace.s) {
@@ -508,7 +510,7 @@ struct PlanScreen: View {
             .accessibilityElement(children: .combine)
             .accessibilityValue(data.availabilityWarning ?? "")
             .accessibilityIdentifier("planAvailability")
-            .padding(.top, 2)
+            .padding(.top, 4)
         }
         .padding(.top, CySpace.s)
     }
