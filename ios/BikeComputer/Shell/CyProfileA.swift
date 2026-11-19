@@ -91,6 +91,12 @@ struct CyProfilePersonalDetails: View {
                         .focused($focus, equals: 2).frame(width: max(30, CGFloat(weightText.count) * 12.5 + 6), alignment: .leading)
                         .accessibilityLabel("Weight in \(units == .imperial ? "pounds" : "kilograms")").accessibilityIdentifier("personalWeight")
                     if !weightText.isEmpty { Text(units == .imperial ? "lb" : "kg").font(valueFont).foregroundStyle(CyTheme.ink) }
+                    // the number pad has no return key; Done sits in the row itself (a bar above the keyboard kept the
+                    // screen permanently animating: fast check 2 lost three 60-second waits to it)
+                    if focus == 2 {
+                        Button("Done") { focus = nil }.font(.body.weight(.semibold)).foregroundStyle(CyTheme.ink)
+                            .padding(.leading, 10).frame(minHeight: CyTheme.minTap).accessibilityIdentifier("keyboardDone")
+                    }
                 }
             }
             Text("Age is needed for heart-rate zones; weight for watts per kilogram. Each value shows where it came from.")
@@ -101,7 +107,6 @@ struct CyProfilePersonalDetails: View {
             }
         }
         .modifier(CyBarSave(enabled: changed, id: "personalSave", action: save))
-        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil }.accessibilityIdentifier("keyboardDone") } }
         .accessibilityIdentifier("profilePersonalPage")
         .onAppear {
             guard !loaded else { return }

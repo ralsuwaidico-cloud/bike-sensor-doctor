@@ -18,12 +18,30 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 200      # the kept build's commit must be comparable with this one
       - uses: actions/cache@v4
         with:
           path: ios/build/spm
           key: spm-v1-${{ hashFiles('ios/project.yml') }}
+      - id: x
+        name: Xcode identity for the kept build
+        run: echo "v=$(xcodebuild -version | tr -d '\n ' | tr -c 'A-Za-z0-9.' '-')-$(xcrun --sdk iphonesimulator --show-sdk-version)" >> "$GITHUB_OUTPUT"
+      - name: Restore the build kept from an earlier fast run (development build only; never signed, no secrets)
+        uses: actions/cache/restore@v4
+        with:
+          path: ios/build/lab-dd
+          key: labdd-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.x.outputs.v }}-Debug-${{ hashFiles('ios/project-lab.yml', 'ios/project.yml') }}-${{ github.sha }}
+          restore-keys: |
+            labdd-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.x.outputs.v }}-Debug-${{ hashFiles('ios/project-lab.yml', 'ios/project.yml') }}-
       - name: Build once, run the selected screen checks
         run: bash ios/ci/lab-fast.sh "$(head -1 tools/lab/FAST_REQUEST)"
+      - name: Keep this build for the next fast run
+        if: always() && hashFiles('ios/build/lab-dd/.built-sha') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: ios/build/lab-dd
+          key: labdd-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.x.outputs.v }}-Debug-${{ hashFiles('ios/project-lab.yml', 'ios/project.yml') }}-${{ github.sha }}
       - name: Keep the evidence
         if: always()
         uses: actions/upload-artifact@v4
