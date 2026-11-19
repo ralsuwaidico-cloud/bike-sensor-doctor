@@ -11,8 +11,9 @@ import SwiftUI
 
 private enum CyP2 {
     static let margin: CGFloat = 24
-    static let title = Font.system(size: 16.5, weight: .semibold)
-    static let summary = Font.system(size: 13.5)
+    // sizes from the sheets at the standard text size; they follow the athlete's iPhone text-size setting (CyDyn)
+    static var title: Font { CyDyn.f(16.5, .semibold) }
+    static var summary: Font { CyDyn.f(13.5) }
 }
 
 /// What a row does, shown the same way everywhere (one meaning each).
@@ -40,7 +41,7 @@ struct CyProfileRow<Destination: View>: View {
     }
     private var label: some View {
         HStack(spacing: 14) {
-            if let icon { Image(systemName: icon).font(.system(size: 20, weight: .regular)).foregroundStyle(CyTheme.ink).frame(width: 28).accessibilityHidden(true) }
+            if let icon { Image(systemName: icon).font(CyDyn.f(20)).foregroundStyle(CyTheme.ink).frame(minWidth: 28).accessibilityHidden(true) }
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(CyP2.title).foregroundStyle(kind == .notAvailable ? CyTheme.ink2 : CyTheme.ink).fixedSize(horizontal: false, vertical: true)
                 if let summary, !summary.isEmpty { Text(summary).font(CyP2.summary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true) }
@@ -59,7 +60,7 @@ struct CyProfileRow<Destination: View>: View {
     }
     private var chevron: some View { Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(CyTheme.ink3).accessibilityHidden(true) }
     private func tag(_ t: String) -> some View {
-        Text(t).font(.system(size: 11.5, weight: .semibold)).foregroundStyle(CyTheme.ink2)
+        Text(t).font(CyDyn.f(11.5, .semibold)).fixedSize().foregroundStyle(CyTheme.ink2)
             .padding(.horizontal, 7).padding(.vertical, 3).overlay(RoundedRectangle(cornerRadius: 6).stroke(CyTheme.line, lineWidth: 1))
     }
 }
@@ -79,8 +80,8 @@ struct CyProfilePage<Content: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text(title).font(.system(size: 32, weight: .bold)).foregroundStyle(CyTheme.ink).accessibilityAddTraits(.isHeader)
-                if let purpose { Text(purpose).font(CyP2.summary).foregroundStyle(CyTheme.ink2).padding(.top, 4) }
+                Text(title).font(CyDyn.f(32, .bold)).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
+                if let purpose, !purpose.isEmpty { Text(purpose).font(CyP2.summary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 4) }
                 Spacer().frame(height: 14)
                 content()
             }
@@ -118,12 +119,12 @@ struct CyProfileLanding: View {
                     HStack(spacing: 16) {
                         ZStack {
                             Circle().stroke(CyTheme.ink, lineWidth: 1.5).frame(width: 60, height: 60)
-                            Text(initials).font(.system(size: 20, weight: .semibold)).foregroundStyle(CyTheme.ink2)
+                            Text(initials).font(CyDyn.f(20, .semibold)).foregroundStyle(CyTheme.ink2).lineLimit(1).minimumScaleFactor(0.5).frame(width: 50)
                         }
                         .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(store.profile.name.isEmpty ? "Athlete" : store.profile.name).font(.system(size: 26, weight: .bold)).foregroundStyle(CyTheme.ink).lineLimit(2)
-                            Text(identityLine).font(.system(size: 15)).foregroundStyle(CyTheme.ink2)
+                            Text(store.profile.name.isEmpty ? "Athlete" : store.profile.name).font(CyDyn.f(26, .bold)).foregroundStyle(CyTheme.ink).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                            Text(identityLine).font(CyDyn.f(15)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .padding(.top, 14).padding(.bottom, 10)
@@ -253,21 +254,15 @@ struct CyProfilePerformance: View {
 
 // MARK: - D · Devices & Connections
 
+/// Sheet P06 D. The rows and every page behind them: Shell/CyProfileDevices.swift.
 struct CyProfileDevices: View {
     var body: some View {
         CyProfilePage(title: "Devices & Connections", purpose: CycliftLab.isLab ? "Cyclift Lab is a demonstration: it connects to nothing." : "What Cyclift is connected to.") {
             CyProfileRows {
-                if CycliftLab.isLab {
-                    ForEach(["Apple Health", "Apple Watch", "Cyclift BikeComputer", "Heart-rate sensors", "Power meters", "Other sensors"], id: \.self) { name in
-                        CyProfileRow(title: name, summary: "Unavailable — switched off in Cyclift Lab", kind: .notAvailable, id: "profileDevice-\(name)")
-                    }
-                    CyProfileRow(title: "Cyclift Watch", summary: "Unavailable — a future device", kind: .notAvailable, id: "profileDevice-watch")
-                    CyProfileRow(title: "This iPhone", summary: "Bluetooth and location are not used in Cyclift Lab", kind: .fact, id: "profileDevice-phone")
-                } else {
-                    CyProfileDeviceFamilies()
-                }
+                if CycliftLab.isLab { CyProfileDeviceFamiliesLab() } else { CyProfileDeviceFamilies() }
             }
         }
+        .accessibilityIdentifier("profileDevicesPage")
     }
 }
 
@@ -294,7 +289,7 @@ struct CyProfilePreferences: View {
                 CyProfileRow(title: "Notifications", summary: "Ride recording notice", id: "profileNotifications") { CyProfileNotificationsDisplay() }
                 CyProfileRow(title: "Coach", summary: "Rules-based · never changes the plan without your approval", id: "profileCoach") { CyProfileCoachPreferences() }
                 CyProfileRow(title: "Training display", summary: "Keep screen on, ride tiles, ride display", id: "profileDisplay") { CyProfileNotificationsDisplay() }
-                CyProfileRow(title: "Accessibility", summary: "Follows your iPhone's text size, contrast and motion settings", kind: .fact, id: "profileAccessibility")
+                CyProfileRow(title: "Accessibility", summary: "Follows your iPhone's text size, contrast and motion settings", id: "profileAccessibility") { CyProfileNotificationsDisplay() }
             }
         }
     }
@@ -320,8 +315,8 @@ struct CyProfileThemes: View {
     private func row(_ title: String, _ sub: String, _ on: Bool) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.system(size: 16.5, weight: .semibold)).foregroundStyle(CyTheme.ink)
-                Text(sub).font(.system(size: 13.5)).foregroundStyle(CyTheme.ink2)
+                Text(title).font(CyDyn.f(16.5, .semibold)).foregroundStyle(CyTheme.ink)
+                Text(sub).font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             if on { Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(CyTheme.ink).accessibilityLabel("selected") }
@@ -332,59 +327,6 @@ struct CyProfileThemes: View {
 
 // MARK: - F · Data, Help & About
 
-/// Sheet P06 in the main app: one row per device family with its real state on the right. Pairing, repair, sync and
-/// device settings keep their existing screens behind these rows (DevicesScreen, HealthConnectionDetail, diagnostics).
-struct CyProfileDeviceFamilies: View {
-    @EnvironmentObject private var store: Store
-    @EnvironmentObject private var hub: SensorHub
-    @EnvironmentObject private var device: DeviceLink
-    @EnvironmentObject private var health: HealthAccess
-
-    private var rows: [ProfileDeviceRow] {
-        let states = UITestSupport.deviceStatesForDisplay() ?? hub.deviceStates
-        let sensors = hub.ble.paired.map { DeviceCards.Sensor(id: $0.sourceId, name: $0.name, provides: $0.kinds.map(\.title).joined(separator: ", "),
-                                                              hasHR: $0.kinds.contains(.heartRate), hasPower: $0.kinds.contains(.power), hasCadence: $0.kinds.contains(.speedCadence)) }
-        let cards = DeviceCards.build(states: states, mode: store.profile.trainingMode, bleSensors: sensors, healthAvailable: health.available, boardRemembered: device.remembered)
-        return ProfileDeviceRows.build(cards: cards, healthAvailable: health.available, cycling: store.profile.trainingMode.includesCycling)
-    }
-
-    var body: some View {
-        ForEach(rows) { r in
-            switch r.opens {
-            case .health: NavigationLink { HealthConnectionDetail() } label: { label(r) }.buttonStyle(.plain).accessibilityIdentifier("profileDevice-\(r.id)")
-            case .devices: NavigationLink { DevicesScreen() } label: { label(r) }.buttonStyle(.plain).accessibilityIdentifier("profileDevice-\(r.id)")
-            case .diagnostics: NavigationLink { PipelineDiagnosticsView() } label: { label(r) }.buttonStyle(.plain).accessibilityIdentifier("profileDevice-\(r.id)")
-            case .nothing: label(r).accessibilityIdentifier("profileDevice-\(r.id)")
-            }
-        }
-    }
-
-    private func label(_ r: ProfileDeviceRow) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(r.title).font(CyDyn.f(16.5, .semibold)).foregroundStyle(r.opens == .nothing ? CyTheme.ink2 : CyTheme.ink)
-                    Text(r.summary).font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 8)
-                if let s = r.state {
-                    HStack(spacing: 5) {
-                        Image(systemName: s.symbol).font(.system(size: 11, weight: .bold)).accessibilityHidden(true)
-                        Text(s.word).font(CyDyn.f(13, .semibold))
-                    }
-                    .foregroundStyle(s == .receiving || s == .connected ? CyTheme.ink : CyTheme.ink2)
-                }
-                if r.opens != .nothing { Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(CyTheme.ink3).accessibilityHidden(true) }
-            }
-            .frame(minHeight: 60).contentShape(Rectangle())
-            Rectangle().fill(CyTheme.line).frame(height: 1).accessibilityHidden(true)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(r.title), \(r.state?.word ?? ""). \(r.summary)")
-        .accessibilityAddTraits(r.opens == .nothing ? [] : .isButton)
-    }
-}
-
 struct CyProfileData: View {
     var body: some View {
         // Sheet P08. Export and Delete keep their existing, protected controls (the page behind "profileSettings");
@@ -394,12 +336,27 @@ struct CyProfileData: View {
             CyProfileRows {
                 CyProfileRow(title: "Where your data lives", summary: "Only on this iPhone", id: "profileDataWhere") { CyProfileDataLives() }
                 CyProfileRow(title: "Export my data", summary: "One file with everything", id: "profileExport") { SettingsPage() }
-                CyProfileRow(title: "Permissions", summary: "One view of all permissions is not in the app", kind: .notAvailable, id: "profilePermissions")
+                CyProfileRow(title: "Permissions", summary: CycliftLab.isLab ? "Not used in Cyclift Lab" : "Bluetooth · location · Health · notifications", id: "profilePermissions") { CyDevicePhonePage(permissions: true) }
                 CyProfileRow(title: "Delete all data", summary: "Asks you to confirm and states what is removed", id: "profileSettings") { SettingsPage() }
             }
             CyGroupLabel(text: "HELP")
             CyProfileRows {
-                CyProfileRow(title: "How Cyclift works", summary: "Plan, numbers, devices, diagnostics, support", id: "profileHelp") { HelpSupportPage() }
+                CyProfileRow(title: "How Cyclift works", summary: "Plan, numbers, devices, support", id: "profileHelp") { HelpSupportPage() }
+                // the existing diagnostics page, as it is (sheet F: "Diagnostics — what the phone is receiving")
+                CyProfileRow(title: "Diagnostics", summary: "What the phone is receiving", id: "profileDiagnostics") { PipelineDiagnosticsView() }
+                if let mail = SupportInfo.mailURL {
+                    // leaves the app for Mail (the same link as the Help page's "Contact support")
+                    Link(destination: mail) {
+                        HStack(spacing: 10) {
+                            Text("Contact support").font(CyDyn.f(16.5, .semibold)).foregroundStyle(CyTheme.ink)
+                            Spacer(minLength: 8)
+                            Image(systemName: "arrow.up.right").font(.footnote.weight(.semibold)).foregroundStyle(CyTheme.ink3).accessibilityHidden(true)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading).contentShape(Rectangle())
+                    }
+                    .overlay(alignment: .bottom) { Rectangle().fill(CyTheme.line).frame(height: 1).accessibilityHidden(true) }
+                    .accessibilityIdentifier("profileSupport")
+                }
             }
             CyGroupLabel(text: "ABOUT")
             CyProfileRows {
