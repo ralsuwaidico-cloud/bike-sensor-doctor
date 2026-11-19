@@ -43,6 +43,10 @@ say "RESULT sign: ok (App Store signing, $(stat -f%z "$IPA") bytes)"
 mkdir -p "$OUT/ipa"; (cd "$OUT/ipa" && unzip -q "$IPA")
 APP="$OUT/ipa/Payload/CycliftLab.app"
 codesign --verify --strict "$APP" 2>/dev/null && say "  ok   signature valid" || { say "  FAIL signature invalid"; exit 1; }
+# Simulator-only test settings must not exist in a build for a real phone (owner, 19 Nov 2026): the setting that gives
+# Profile > Devices display states is compiled only for the simulator, and this proves it on the signed app itself.
+SIMONLY=$(for f in "$APP"/CycliftLab "$APP"/Frameworks/*.dylib "$APP"/*.dylib; do [ -f "$f" ] && strings -a "$f"; done 2>/dev/null | grep -c "BC_UITEST_DEVICE_STATES" || true)
+[ "${SIMONLY:-0}" = "0" ] && say "  ok   simulator-only device-state setting is not in the signed app" || { say "  FAIL the simulator-only device-state setting is present in the signed app ($SIMONLY)"; exit 1; }
 codesign -d --entitlements - --xml "$APP" 2>/dev/null > "$OUT/ent.plist"
 plutil -convert json -o "$OUT/Info.json" "$APP/Info.plist"
 python3 - "$OUT/ent.plist" "$OUT/Info.json" "$APP" "$APPLE_TEAM_ID" "$VERSION" "$BUILD" <<'PY' | scrub
