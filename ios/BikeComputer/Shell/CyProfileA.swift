@@ -88,7 +88,7 @@ struct CyProfilePersonalDetails: View {
             CyFieldRow(label: "Weight", source: sourceLine(.weight, set: weight != nil, edited: weightText != (storedWeight.map { AthleteTypeEditor.weightString($0, units) } ?? ""))) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     TextField("Not set", text: $weightText).keyboardType(.decimalPad).font(valueFont).foregroundStyle(CyTheme.ink)
-                        .focused($focus, equals: 2).fixedSize()
+                        .focused($focus, equals: 2).frame(width: max(30, CGFloat(weightText.count) * 12.5 + 6), alignment: .leading)
                         .accessibilityLabel("Weight in \(units == .imperial ? "pounds" : "kilograms")").accessibilityIdentifier("personalWeight")
                     if !weightText.isEmpty { Text(units == .imperial ? "lb" : "kg").font(valueFont).foregroundStyle(CyTheme.ink) }
                 }
@@ -156,21 +156,21 @@ struct CyProfileTypeExperience: View {
     var body: some View {
         CyProfilePage(title: "Type & experience") {
             group("ATHLETE TYPE", id: "typeMode") {
-                CySegmentedControl(options: [(TrainingMode.cycling, "Cycling"), (TrainingMode.strength, "Strength"), (TrainingMode.hybrid, "Hybrid")], selection: $mode)
+                CyChoiceBar(options: [(TrainingMode.cycling, "Cycling"), (TrainingMode.strength, "Strength"), (TrainingMode.hybrid, "Hybrid")], selection: $mode)
             }
             if mode == .hybrid {
                 group("HYBRID BALANCE", id: "typeBalance") {
-                    CySegmentedControl(options: [(TrainingPriority.cycling, "Cycling"), (TrainingPriority.balanced, "Balanced"), (TrainingPriority.strength, "Strength")], selection: $priority)
+                    CyChoiceBar(options: [(TrainingPriority.cycling, "Cycling"), (TrainingPriority.balanced, "Balanced"), (TrainingPriority.strength, "Strength")], selection: $priority)
                 }
             }
             if mode.includesCycling {
                 group("RIDING EXPERIENCE", id: "typeRiding") {
-                    CySegmentedControl(options: RiderProfile.Level.allCases.map { ($0, ProfileText.level($0)) }, selection: $riding)
+                    CyChoiceBar(options: RiderProfile.Level.allCases.map { ($0, ProfileText.level($0)) }, selection: $riding)
                 }
             }
             if mode.includesLifting {
                 group("LIFTING EXPERIENCE", id: "typeLifting") {
-                    CySegmentedControl(options: StrengthPrefs.Experience.allCases.map { ($0, ProfileText.strengthLevel($0)) }, selection: $lifting)
+                    CyChoiceBar(options: StrengthPrefs.Experience.allCases.map { ($0, ProfileText.strengthLevel($0)) }, selection: $lifting)
                 }
             }
             Text("Changing these changes your plan. You will see a preview and approve it first.")
@@ -192,8 +192,6 @@ struct CyProfileTypeExperience: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title).font(.system(size: 12, weight: .semibold)).tracking(0.8).foregroundStyle(CyTheme.ink2).accessibilityAddTraits(.isHeader)
             control()
-                .padding(3)
-                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(CyTheme.line, lineWidth: 1))
                 .accessibilityElement(children: .contain).accessibilityIdentifier(id)
         }
         .padding(.top, 18)

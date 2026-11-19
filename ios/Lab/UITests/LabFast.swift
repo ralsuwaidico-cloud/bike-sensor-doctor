@@ -94,4 +94,28 @@ final class LabFast: XCTestCase {
         XCTAssertFalse(app.buttons["typeSave"].firstMatch.isEnabled, "Save is unlit until something changes")
         shot("p03-A3-type-experience")
     }
+
+    /// Profile sheet P04: Training Setup, Equipment & restrictions (chips and the restriction rows) and
+    /// Recovery & pauses (the three-way recovery control and the pause row). Nothing is changed.
+    func testProfileTrainingSetupPages() {
+        let app = launch()
+        let avatar = app.buttons["homeAvatar"].firstMatch
+        XCTAssertTrue(avatar.waitForExistence(timeout: 8), "required: the Home avatar"); avatar.tap(); app.settleForScreenshot(1)
+        let b = el(app, "profileSectionB")
+        XCTAssertTrue(b.waitForExistence(timeout: 8), "required: Training Setup on the landing"); b.tap(); app.settleForScreenshot(1)
+        shot("p04-B-training-setup")
+        let equipment = el(app, "profileEquipment")
+        XCTAssertTrue(equipment.waitForExistence(timeout: 8), "required: Equipment row"); equipment.tap(); app.settleForScreenshot(1)
+        XCTAssertTrue(el(app, "profileEquipmentPage").waitForExistence(timeout: 8) || el(app, "equipmentChips").exists, "required: the Equipment page")
+        let chips = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'equip-'"))
+        XCTAssertGreaterThanOrEqual(chips.count, 4, "required: equipment is offered as chips")
+        XCTAssertTrue(el(app, "equipExcluded").exists, "required: the restrictions row")
+        shot("p04-B1-equipment")
+        app.navigationBars.buttons.firstMatch.tap(); app.settleForScreenshot(1)
+        let recovery = el(app, "profileHealthSafety")
+        XCTAssertTrue(recovery.waitForExistence(timeout: 8), "required: Recovery & pauses row"); recovery.tap(); app.settleForScreenshot(1)
+        XCTAssertTrue(el(app, "recoveryCapacity").waitForExistence(timeout: 8), "required: the recovery control")
+        XCTAssertTrue(el(app, "healthPause").exists, "required: Pause training row")
+        shot("p04-B3-recovery-pauses")
+    }
 }

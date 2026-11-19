@@ -218,12 +218,12 @@ struct CyProfileSetup: View {
             CyProfileRows {
                 CyProfileRow(title: "Equipment & restrictions", summary: store.equipment.owned.isEmpty ? "Bodyweight only" : "\(store.equipment.owned.count) items owned", id: "profileEquipment") {
                     // the existing equipment editor; on close the edit becomes one plan proposal (preview → approve → undo)
-                    EquipmentPage()
+                    CyProfileEquipment()
                         .onAppear { if equipmentAtOpen == nil { equipmentAtOpen = store.equipment } }
                         .onDisappear { if let old = equipmentAtOpen { equipmentAtOpen = nil; planPreview = store.proposeEquipmentEdit(from: old) } }
                 }
                 CyProfileRow(title: "Strength preferences", summary: store.strengthPrefs.prefersSupersets == true ? "Supersets on" : "Split, goal, supersets", id: "profilePreferences") { TrainingPreferencesPage() }
-                CyProfileRow(title: "Recovery, pauses & health check", summary: HealthSafetyPage.summary(store.profile).isEmpty ? "No pause" : HealthSafetyPage.summary(store.profile), id: "profileHealthSafety") { HealthSafetyPage() }
+                CyProfileRow(title: "Recovery, pauses & health check", summary: HealthSafetyPage.summary(store.profile).isEmpty ? "No pause" : HealthSafetyPage.summary(store.profile), id: "profileHealthSafety") { CyProfileRecoveryPauses() }
                 CyProfileRow(title: "Goals", summary: ProfileText.goals(store.profile), kind: .plan, id: "profileGoal") { GoalsPage() }
                 CyProfileRow(title: "Training schedule", summary: "Weekly calendar and recurring plan", kind: .plan, id: "profileWeek") { WeekPage() }
                 CyProfileRow(title: "Saved routines", summary: "\(store.templates.count) routine\(store.templates.count == 1 ? "" : "s")", kind: .plan, id: "profileRoutines") { TemplatesView() }
