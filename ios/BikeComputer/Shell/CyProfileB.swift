@@ -15,7 +15,7 @@ struct CyChoiceBar<T: Hashable>: View {
             ForEach(Array(options.enumerated()), id: \.offset) { pair in
                 let on = pair.element.0 == selection
                 Button { selection = pair.element.0 } label: {
-                    Text(pair.element.1).font(.system(size: 15, weight: .semibold)).lineLimit(2).minimumScaleFactor(0.8).multilineTextAlignment(.center)
+                    Text(pair.element.1).font(CyDyn.f(15, .semibold)).lineLimit(2).minimumScaleFactor(0.8).multilineTextAlignment(.center)
                         .foregroundStyle(on ? CyTheme.canvas : CyTheme.ink2)
                         .frame(maxWidth: .infinity, minHeight: 38)
                         .background(on ? CyTheme.ink : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -34,7 +34,7 @@ struct CyChoiceBar<T: Hashable>: View {
 struct CyGroupLabel: View {
     let text: String
     var body: some View {
-        Text(text).font(.system(size: 12, weight: .semibold)).tracking(0.8).foregroundStyle(CyTheme.ink2)
+        Text(text).font(CyDyn.f(12, .semibold)).tracking(0.8).foregroundStyle(CyTheme.ink2)
             .padding(.top, 18).padding(.bottom, 8).accessibilityAddTraits(.isHeader)
     }
 }
@@ -49,7 +49,7 @@ struct CyProfileEquipment: View {
                 ForEach(EquipmentProfile.allOptions, id: \.self) { e in
                     let on = store.equipment.owned.contains(e)
                     Button { if on { store.equipment.owned.remove(e) } else { store.equipment.owned.insert(e) } } label: {
-                        Text(e.capitalized).font(.system(size: 15, weight: .semibold))
+                        Text(e.capitalized).font(CyDyn.f(15, .semibold))
                             .foregroundStyle(on ? CyTheme.canvas : CyTheme.ink2)
                             .padding(.horizontal, 15).frame(minHeight: CyTheme.minTap)
                             .background(on ? CyTheme.ink : Color.clear, in: Capsule())
@@ -69,7 +69,7 @@ struct CyProfileEquipment: View {
                 }
             }
             Text("Changing equipment changes your plan — preview and approve first.")
-                .font(.system(size: 13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 14)
+                .font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 14)
         }
         .accessibilityIdentifier("profileEquipmentPage")
     }
@@ -112,7 +112,7 @@ struct CyProfileRecoveryPauses: View {
             (Text("A pause stops planned sessions without deleting history. ").foregroundColor(CyTheme.ink2)
              + Text("Cyclift gives training guidance, not medical advice. ").foregroundColor(CyTheme.ink).fontWeight(.semibold)
              + Text("Stop and get medical advice if you feel chest pain, dizziness or unusual breathlessness.").foregroundColor(CyTheme.ink2))
-                .font(.system(size: 13.5)).fixedSize(horizontal: false, vertical: true).padding(.top, 14)
+                .font(CyDyn.f(13.5)).fixedSize(horizontal: false, vertical: true).padding(.top, 14)
         }
         .accessibilityIdentifier("profileRecoveryPage")
         .sheet(item: $preview) { r in PlanChangeSheet(proposalId: r.id) }

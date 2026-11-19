@@ -144,6 +144,16 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(el(app, "powerMeter").exists, "required: the power-meter row")
         XCTAssertTrue(app.buttons["powerEdit"].firstMatch.exists, "required: Edit in the bar")
         shot("p05-C2-power")
+        back(app)
+        let cadence = el(app, "profileCadence")
+        XCTAssertTrue(cadence.waitForExistence(timeout: 8), "required: Cadence row"); cadence.tap()
+        for id in ["cadenceLow", "cadenceHigh", "bikeName", "wheelMm", "hrSource"] { XCTAssertTrue(el(app, id).waitForExistence(timeout: 8), "required: \(id)") }
+        let low = el(app, "cadenceLow"), before = low.staticTexts.matching(NSPredicate(format: "label ENDSWITH 'rpm'")).firstMatch.label
+        low.buttons["Increment"].firstMatch.tap()
+        let after = low.staticTexts.matching(NSPredicate(format: "label ENDSWITH 'rpm'")).firstMatch.label
+        XCTAssertNotEqual(before, after, "required: the cadence stepper changes the stored value (\(before) → \(after))")
+        low.buttons["Decrement"].firstMatch.tap()
+        shot("p05-C3-cycling-sources")
     }
 
     private func openProfileSection(_ app: XCUIApplication, _ id: String) {

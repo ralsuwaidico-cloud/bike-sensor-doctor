@@ -29,10 +29,10 @@ private struct CyFieldRow<Value: View>: View {
     @ViewBuilder var value: () -> Value
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.system(size: 13)).foregroundStyle(CyTheme.ink2)
+            Text(label).font(CyDyn.f(13)).foregroundStyle(CyTheme.ink2)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 value().frame(maxWidth: .infinity, alignment: .leading)
-                Text(source).font(.system(size: 13)).foregroundStyle(CyTheme.ink2).lineLimit(2).multilineTextAlignment(.trailing)
+                Text(source).font(CyDyn.f(13)).foregroundStyle(CyTheme.ink2).lineLimit(2).multilineTextAlignment(.trailing)
             }
             .frame(minHeight: CyTheme.minTap)
             Rectangle().fill(CyTheme.ink2).frame(height: 1).accessibilityHidden(true)
@@ -58,7 +58,7 @@ struct CyProfilePersonalDetails: View {
         name.trimmingCharacters(in: .whitespaces) != store.profile.name || dob != store.profile.dateOfBirth
             || weightText != (storedWeight.map { AthleteTypeEditor.weightString($0, units) } ?? "")
     }
-    private var valueFont: Font { .system(size: 20, weight: .semibold) }
+    private var valueFont: Font { CyDyn.f(20, .semibold) }
 
     var body: some View {
         CyProfilePage(title: "Personal details") {
@@ -100,10 +100,10 @@ struct CyProfilePersonalDetails: View {
                 }
             }
             Text("Age is needed for heart-rate zones; weight for watts per kilogram. Each value shows where it came from.")
-                .font(.system(size: 13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 14)
+                .font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 14)
             if store.profile.provenance(.dateOfBirth).needsConfirmation || store.profile.provenance(.weight).needsConfirmation {
                 Text("A value came from an earlier version and could not be verified. Please confirm or re-enter it.")
-                    .font(.system(size: 13.5)).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true).padding(.top, 8)
+                    .font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true).padding(.top, 8)
             }
         }
         .modifier(CyBarSave(enabled: changed, id: "personalSave", action: save))
@@ -179,7 +179,7 @@ struct CyProfileTypeExperience: View {
                 }
             }
             Text("Changing these changes your plan. You will see a preview and approve it first.")
-                .font(.system(size: 13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 18)
+                .font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 18)
         }
         .modifier(CyBarSave(enabled: changed, id: "typeSave", action: save))
         .accessibilityIdentifier("profileTypePage")
@@ -195,7 +195,7 @@ struct CyProfileTypeExperience: View {
 
     private func group<C: View>(_ title: String, id: String, @ViewBuilder _ control: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.system(size: 12, weight: .semibold)).tracking(0.8).foregroundStyle(CyTheme.ink2).accessibilityAddTraits(.isHeader)
+            Text(title).font(CyDyn.f(12, .semibold)).tracking(0.8).foregroundStyle(CyTheme.ink2).accessibilityAddTraits(.isHeader)
             control()
                 .accessibilityElement(children: .contain).accessibilityIdentifier(id)
         }

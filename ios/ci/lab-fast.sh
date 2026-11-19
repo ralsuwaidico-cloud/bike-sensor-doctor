@@ -13,15 +13,24 @@ say "FAST focused Lab check — selected: $TESTS"
 T0=$SECONDS
 command -v xcodegen >/dev/null || brew install xcodegen >/dev/null 2>&1
 xcodegen generate --spec project-lab.yml > "$OUT/xcodegen.txt" 2>&1 || { say "RESULT generate: FAILED"; tail -20 "$OUT/xcodegen.txt"; exit 1; }
-SIM=$(xcrun simctl list devices available -j | python3 -c '
+# Primary device (owner decision, 19 Nov 2026): iPhone 15 Pro, 393 x 852 pt. Used if the runner has one or can create
+# one on its newest iOS; otherwise the newest iPhone is used and the report says so (never silently).
+PICK=$(xcrun simctl list devices available -j | python3 -c '
 import json,sys
-d=json.load(sys.stdin)["devices"]; best=None
+d=json.load(sys.stdin)["devices"]; best=None; pro=None
 for rt,devs in d.items():
     if ".iOS-" not in rt: continue
     ver=tuple(int(x) for x in rt.split(".iOS-")[1].split("-"))
     for x in devs:
-        if x["name"].startswith("iPhone") and "SE" not in x["name"] and (best is None or ver>best[0]): best=(ver,x["udid"],x["name"])
-print(best[1] if best else "")')
+        if x["name"]=="iPhone 15 Pro" and (pro is None or ver>pro[0]): pro=(ver,x["udid"],x["name"],rt)
+        if x["name"].startswith("iPhone") and "SE" not in x["name"] and (best is None or ver>best[0]): best=(ver,x["udid"],x["name"],rt)
+c=pro or best
+print("|".join([c[1],c[2],best[3] if best else ""]) if c else "")')
+SIM=${PICK%%|*}; SIMNAME=$(echo "$PICK" | cut -d'|' -f2); RT=$(echo "$PICK" | cut -d'|' -f3)
+if [ "$SIMNAME" != "iPhone 15 Pro" ] && [ -n "$RT" ]; then
+  NEW=$(xcrun simctl create "iPhone 15 Pro" com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro "$RT" 2>/dev/null) && [ -n "$NEW" ] && SIM=$NEW && SIMNAME="iPhone 15 Pro"
+fi
+say "DEVICE: $SIMNAME$([ "$SIMNAME" = "iPhone 15 Pro" ] || echo "  (iPhone 15 Pro not available on this runner)")"
 [ -n "$SIM" ] || { say "RESULT: no simulator"; exit 1; }
 xcrun simctl boot "$SIM" >/dev/null 2>&1 &      # the simulator starts while the app compiles
 # ---- build kept from an earlier fast run (restored by the workflow), so only changed files are compiled again ----
