@@ -7,20 +7,25 @@ import SwiftUI
 // Everything here is the app's existing state and routing: the session comes from the same HomeToday the Hub and Home
 // use, and every button performs an existing HomeAction. The panel starts nothing by itself.
 //
-// NOT IN THIS STEP (and not pretended): the redesigned strength recorder and cycling screens; the Mobility, Stretch,
-// Breathing and sauna shortcuts (the app has no such sessions to open); the "sensor unavailable" row beyond the line
-// the Hub already shows; minimising a ride (blocked by the cycling safety gate).
+// Shortcuts (06b P1–P4): the sheet draws Cycling · Strength · Mobility · Stretch (and Breathing · Log sauna on a rest
+// day). Shown here: Cycling (the Ride screen; in Cyclift Lab the labelled demonstration) and Strength (today's strength
+// sessions, the athlete's routines, or logging a session — Shell/CyStrengthPicker.swift).
+// NOT SHOWN, AND NOT PRETENDED: Mobility, Stretch, Breathing and Log sauna — the app has no recorder or record for
+// them (sheet 06d marks all recovery modes as future capabilities); the "sensor unavailable" row beyond the line the
+// Hub already shows; minimising a ride (blocked by the cycling safety gate).
 
 struct CyTrainPanel: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var recorder: RideRecorder
     var perform: (HomeAction) -> Void
     var freeRide: () -> Void
-    var otherSession: () -> Void
+    /// Opens the strength chooser (today's sessions, routines, log a session).
+    var strength: () -> Void
     var expand: () -> Void
     var close: () -> Void
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var dts
+    @ObservedObject private var memory = CyRecorderMemory.shared
 
     var body: some View {
         let h = store.homeToday(recorderActive: recorder.isActive)
@@ -53,18 +58,18 @@ struct CyTrainPanel: View {
         switch h.layout {
         case .single(let s):
             session(s)
-            if s.status == .inProgress { quiet("One session at a time") } else { shortcuts }
+            if s.status == .inProgress { quiet(activeNote(isRide: s.isRide)) } else { shortcuts }
         case .multi(let rows):
             let main = rows.first { $0.status == .inProgress } ?? rows.first { $0.status == .planned } ?? rows[0]
             session(main)
             ForEach(rows.filter { $0.id != main.id }) { other(_: $0) }
-            if main.status == .inProgress { quiet("One session at a time") } else { shortcuts }
+            if main.status == .inProgress { quiet(activeNote(isRide: main.isRide)) } else { shortcuts }
         case .rest:
             heading(left: "Today", right: "Rest day", title: "Rest is the plan", line: "Nothing to do. Optional, if you want to:")
             shortcuts
         case .freeSession:
             running(title: "Strength session", tag: "Strength · recording", action: .resumeStrength(nil))
-            quiet("One session at a time")
+            quiet(activeNote(isRide: false))
         case .hold(let hold):
             heading(left: "Today", right: "Paused", title: "Training is paused", line: hold.title)
             primary(.holdInfo, isRide: false)
@@ -108,23 +113,48 @@ struct CyTrainPanel: View {
         }
     }
 
-    /// A session in progress: its clock from the session's own start time, and Resume. Nothing else can be started.
+    /// Whether the session in progress is paused (06c P6), read from the session itself.
+    private func isPaused(isRide: Bool) -> Bool { isRide ? recorder.state == .paused : store.activeSession?.pausedAt != nil }
+    /// P5 "One session at a time" · P6 "Finish from the workout screen".
+    private func activeNote(isRide: Bool) -> String { isPaused(isRide: isRide) ? "Finish from the workout screen" : "One session at a time" }
+
+    /// A session in progress: its clock (working time, pauses excluded — the same figure the recorder shows), what is
+    /// on now, and Resume. Nothing else can be started.
     private func running(title: String, tag: String, action: HomeAction, isRide: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            tagLine(tag, ride: isRide)
+        let paused = isPaused(isRide: isRide)
+        return VStack(alignment: .leading, spacing: 4) {
+            tagLine(paused ? tag.replacingOccurrences(of: "recording", with: "paused") : tag, ride: isRide)
             Text(title).font(CyFont.display).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader).accessibilityIdentifier("trainPanelTitle")
             if isRide {
-                Text(clock(recorder.elapsedS)).font(.system(.largeTitle, design: .rounded).weight(.heavy)).monospacedDigit().foregroundStyle(theme.textPrimary)
-            } else if let start = store.activeSession?.startedAt {
+                Text(clock(recorder.elapsedS)).font(.system(.largeTitle, design: .rounded).weight(.heavy)).monospacedDigit()
+                    .foregroundStyle(paused ? theme.textSecondary : theme.textPrimary)
+            } else if let session = store.activeSession {
                 TimelineView(.periodic(from: .now, by: 1)) { c in
-                    Text(clock(max(0, Int(c.date.timeIntervalSince(start))))).font(.system(.largeTitle, design: .rounded).weight(.heavy)).monospacedDigit().foregroundStyle(theme.textPrimary)
-                        .accessibilityLabel("Session time \(clock(max(0, Int(c.date.timeIntervalSince(start)))))")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(clock(session.elapsedSeconds(now: c.date))).font(.system(.largeTitle, design: .rounded).weight(.heavy)).monospacedDigit()
+                            .foregroundStyle(paused ? theme.textSecondary : theme.textPrimary)
+                            .accessibilityLabel("Session time \(clock(session.elapsedSeconds(now: c.date)))")
+                            .accessibilityIdentifier("trainPanelClock")
+                        Text(nowLine(session, now: c.date)).font(CyFont.callout).foregroundStyle(theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("trainPanelNow")
+                    }
                 }
-                .accessibilityIdentifier("trainPanelClock")
             }
             primary(action, isRide: isRide, title: "Resume").padding(.top, 4)
         }
+    }
+    /// "Goblet squat · set 2 of 3 · rest 0:31" (P5) — or "Paused · time is not counting" (P6). Read from the session.
+    private func nowLine(_ s: StrengthSession, now: Date) -> String {
+        if s.pausedAt != nil { return memory.restoredSession == s.id ? "Restored after the app closed · paused" : "Paused · time is not counting" }
+        let es = s.exercises ?? []
+        guard let p = NextSet.pick(es) else { return "All sets logged · finish from the workout screen" }
+        var line = "\(es[p.entry].name) · \(p.label == nil ? "set" : "round") \(p.set + 1) of \(es[p.entry].sets.count)"
+        if let end = memory.restEndsAt {
+            let left = Int(end.timeIntervalSince(now).rounded(.up))
+            if left > 0 { line += " · rest " + String(format: "%d:%02d", left / 60, left % 60) }
+        }
+        return line
     }
 
     private func other(_ s: HomeSession) -> some View {
@@ -169,9 +199,11 @@ struct CyTrainPanel: View {
         let layout = dts.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
         return layout {
             if store.profile.trainingMode != .strength {
-                shortcut("Free ride", "bicycle", id: "trainPanelRide", action: freeRide)
+                shortcut("Cycling", "bicycle", id: "trainPanelRide", action: freeRide)
             }
-            shortcut("Other session", "plus", id: "trainPanelOtherSession", action: otherSession)
+            if store.profile.trainingMode != .cycling {
+                shortcut("Strength", "dumbbell", id: "trainPanelStrength", action: strength)
+            }
         }
     }
     private func shortcut(_ title: String, _ icon: String, id: String, action: @escaping () -> Void) -> some View {

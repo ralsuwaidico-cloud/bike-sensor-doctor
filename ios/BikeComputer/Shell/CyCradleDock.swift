@@ -12,8 +12,10 @@ import UIKit
 // side margin 14 (applied by the caller), silhouette about 90 high, three equal tab regions 48 high.
 // PROVISIONAL, stated on screen where it matters: the Train emblem is not selected (the dashed ring is the labelled
 // placeholder); the specification names the Inter typeface, which the app does not bundle — the system face is used.
-// NOT IMPLEMENTED here: minimised-session timer states other than "active", Arabic ordering, the compact panel (the
-// ball opens the existing hub until Training Hub v1.4 is built).
+// Train ball states (sheet F4): idle, panel open, strength recording, ride recording, paused, completion pending,
+// save unsuccessful or uncertain, interrupted and restored — drawn below from `CyTrainBallState` by ring and badge in
+// the ordinary text colour (shape and line, never hue; the same drawing serves High Contrast). Rings never animate.
+// NOT IMPLEMENTED here: Arabic ordering.
 
 enum CyCradleMetrics {
     static let ball: CGFloat = 72
@@ -98,27 +100,7 @@ struct CyCradleShape: Shape {
     }
 }
 
-/// What the Train ball shows. Position and size never change; states differ by ring and badge, never by colour alone.
-enum CyTrainBallState: Equatable {
-    case idle
-    /// A strength session is in progress: elapsed seconds.
-    case active(Int)
-    /// A ride is being recorded (the ball returns to the Ride screen; ride minimisation is blocked by the safety gate).
-    case recording
-
-    /// MM:SS under one hour, "1h04" style from one hour (approved timer rule).
-    static func clock(_ s: Int) -> String {
-        let s = max(0, s)
-        return s < 3600 ? String(format: "%02d:%02d", s / 60, s % 60) : String(format: "%dh%02d", s / 3600, (s % 3600) / 60)
-    }
-    var spoken: String {
-        switch self {
-        case .idle: return "Train, no active session"
-        case .active(let s): return "Strength workout in progress, \(max(1, s / 60)) minutes elapsed"
-        case .recording: return "Ride recording"
-        }
-    }
-}
+// What the Train ball shows is the pure `CyTrainBallState` (Shell/CyTrainBallState.swift), built from the real session.
 
 struct CyCradleDock: View {
     /// The app's numbered pages (unchanged): 0 Home, 1 Plan, 3 Progress. Profile (4) and Ride (2) have no tab; Home stays
@@ -189,35 +171,97 @@ struct CyCradleDock: View {
     private var trainBall: some View {
         Button(action: onTrain) {
             ZStack {
-                Circle().fill(BC.accent)
-                switch ball {
-                case .idle:
-                    // emblem: Pending Selection — the dashed ring is the labelled placeholder from the specification
-                    Circle().stroke(BC.onAccent, style: StrokeStyle(lineWidth: 2.2, dash: [4.5, 3.5])).frame(width: 20, height: 20)
-                case .active(let s):
-                    Text(CyTrainBallState.clock(s)).font(.system(size: 16.5, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(BC.onAccent)
-                    Circle().stroke(CyTheme.ink, style: StrokeStyle(lineWidth: 2.6, dash: [9, 4])).padding(-2.7)      // segmented ring in the 5-pt gap
-                case .recording:
-                    Image(systemName: "bicycle").font(.system(size: 20, weight: .bold)).foregroundStyle(BC.onAccent)
-                    Circle().stroke(CyTheme.ink, lineWidth: 2.6).padding(-2.7)                                        // solid ring
-                }
+                ballFace
+                ballRing
             }
-            .overlay(alignment: .topLeading) {
-                if ball != .idle {
-                    Circle().fill(CyTheme.canvas).frame(width: 20, height: 20)
-                        .overlay(Circle().stroke(CyTheme.ink, lineWidth: 1.5))
-                        .overlay(Circle().fill(CyTheme.ink).frame(width: 8, height: 8))
-                        .offset(x: -4, y: -4)
-                }
-            }
+            .overlay(alignment: .topLeading) { ballBadge }
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(ball.spoken)
-        .accessibilityHint("Opens training")
+        .accessibilityValue(ball.timerText ?? "")
+        .accessibilityHint(ball.hint)
         .accessibilityIdentifier("centreButton")               // the Train control keeps the identifier the tests know
         .accessibilitySortPriority(0)
-        .accessibilityShowsLargeContentViewer { Label("Train", systemImage: "figure.strengthtraining.traditional") }
+        .accessibilityShowsLargeContentViewer { Label(ball.timerText ?? "Train", systemImage: "figure.strengthtraining.traditional") }
+    }
+
+    /// The ball itself: filled, or an outline while the panel is open; inside it the time or the placeholder mark.
+    @ViewBuilder private var ballFace: some View {
+        if ball == .panelOpen {
+            Circle().fill(CyTheme.canvas)
+            Circle().strokeBorder(CyTheme.ink, lineWidth: 2)
+            placeholder(CyTheme.ink)
+        } else {
+            Circle().fill(BC.accent)
+            if let t = ball.timerText { timerText(t) } else { placeholder(BC.onAccent) }
+        }
+    }
+    /// Emblem: Pending Selection — the dashed ring is the labelled placeholder from the specification.
+    private func placeholder(_ c: Color) -> some View {
+        Circle().stroke(c, style: StrokeStyle(lineWidth: 2.2, dash: [4.5, 3.5])).frame(width: 20, height: 20)
+    }
+    /// 16.5 pt in both formats; the text never shrinks. From one hour the "h" is drawn small ("1h04").
+    private func timerText(_ t: String) -> some View {
+        let big = Font.system(size: 16.5, weight: .bold, design: .rounded)
+        let small = Font.system(size: 11, weight: .bold, design: .rounded)
+        let parts = t.components(separatedBy: "h")
+        let text: Text = parts.count == 2 ? Text(parts[0]).font(big) + Text("h").font(small) + Text(parts[1]).font(big) : Text(t).font(big)
+        return text.monospacedDigit().foregroundStyle(BC.onAccent).lineLimit(1).fixedSize()
+    }
+    private var ringLine: StrokeStyle { StrokeStyle(lineWidth: 2.6, lineCap: .butt) }
+    /// The state ring, radius 38.7 pt, wholly inside the 5 pt gap between the ball and the cradle.
+    @ViewBuilder private var ballRing: some View {
+        switch ball.ring {
+        case .none:
+            EmptyView()
+        case .segmented:
+            Circle().stroke(CyTheme.ink, style: StrokeStyle(lineWidth: 2.6, dash: [9, 4])).padding(-2.7)
+        case .solid:
+            Circle().stroke(CyTheme.ink, lineWidth: 2.6).padding(-2.7)
+        case .split:
+            ZStack {
+                Circle().trim(from: 0.04, to: 0.46).stroke(CyTheme.ink, style: ringLine)
+                Circle().trim(from: 0.54, to: 0.96).stroke(CyTheme.ink, style: ringLine)
+            }
+            .rotationEffect(.degrees(-45)).padding(-2.7)
+        case .threeQuarter:
+            Circle().trim(from: 0, to: 0.75).stroke(CyTheme.ink, style: ringLine).rotationEffect(.degrees(-90)).padding(-2.7)
+        case .dotted:
+            Circle().stroke(CyTheme.ink, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, dash: [0.1, 6])).padding(-2.7)
+        }
+    }
+    /// The badge at the ball's outer top-left: dot, pause bars, "…", "!" or "↺".
+    @ViewBuilder private var ballBadge: some View {
+        if ball.badge != .none {
+            ZStack {
+                Circle().fill(CyTheme.canvas)
+                Circle().stroke(CyTheme.ink, lineWidth: 1.5)
+                badgeMark
+            }
+            .frame(width: 20, height: 20)
+            .offset(x: -4, y: -4)
+            .accessibilityHidden(true)
+        }
+    }
+    @ViewBuilder private var badgeMark: some View {
+        switch ball.badge {
+        case .none:
+            EmptyView()
+        case .dot:
+            Circle().fill(CyTheme.ink).frame(width: 8, height: 8)
+        case .pauseBars:
+            HStack(spacing: 2.5) {
+                Capsule().fill(CyTheme.ink).frame(width: 2.5, height: 9)
+                Capsule().fill(CyTheme.ink).frame(width: 2.5, height: 9)
+            }
+        case .ellipsis:
+            Image(systemName: "ellipsis").font(.system(size: 9, weight: .heavy)).foregroundStyle(CyTheme.ink)
+        case .exclamation:
+            Text("!").font(.system(size: 13, weight: .heavy, design: .rounded)).foregroundStyle(CyTheme.ink)
+        case .restore:
+            Image(systemName: "arrow.counterclockwise").font(.system(size: 10, weight: .heavy)).foregroundStyle(CyTheme.ink)
+        }
     }
 }
 
