@@ -1,0 +1,16 @@
+FAST focused Lab check — selected: LabFast/testProfileAthletePages LabFast/testProfileTrainingSetupPages
+TIME setup: 75s
+RESULT build (app + screen checks, once): ok
+TIME build: 717s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 23s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 222.304 (222.311) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 222.304 (222.314) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 222.304 (222.317) seconds
+Test Case '-[CycliftLabUITests.LabFast testProfileAthletePages]' passed (173.221 seconds).
+Test Case '-[CycliftLabUITests.LabFast testProfileTrainingSetupPages]' passed (49.083 seconds).
+RESULT selected screen checks: ok
+TIME tests: 383s
+TIME total on the Mac: 1201s
+commit 9ac773bef8598f8903d565cc5fa645c654d9c4b0  branch ios/lab
