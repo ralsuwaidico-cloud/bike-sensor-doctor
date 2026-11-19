@@ -1,0 +1,43 @@
+FAST focused Lab check — selected: LabFastProfile LabFastProgress LabFastOnboarding
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 6e09c041 · files changed since then: 1
+TIME setup: 11s
+  timing: SwiftCompile (6 tasks) | 196.958 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 65.275 seconds
+  timing: Ld (18 tasks) | 5.103 seconds
+  timing: SwiftEmitModule (2 tasks) | 4.922 seconds
+  timing: SwiftDriver (2 tasks) | 3.094 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.369 seconds
+  timing: SwiftDriver Compilation (2 tasks) | 0.196 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.134 seconds
+  stages: packages at 158s · packages prepared at 188s · dependency graph at 188s · inputs at 189s · build description at 189s · first link at 196s · first Swift step at 196s · asset catalogue at 198s · finished at 393s
+  compiled in this run: 21 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 394s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 9s
+	 Executed 13 tests, with 0 failures (0 unexpected) in 2874.066 (2874.089) seconds
+	 Executed 13 tests, with 0 failures (0 unexpected) in 2874.066 (2874.092) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 528.221 (528.225) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 1016.016 (1016.023) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 1329.828 (1329.838) seconds
+Test Case '-[CycliftLabUITests.LabFastOnboarding testLargeTextPages]' passed (242.038 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (286.183 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testAppPreferencesRows]' passed (196.530 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testAthleteProfileRows]' passed (120.892 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testDataHelpAboutRows]' passed (224.263 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testDevicesRowsAndPagesInLab]' passed (276.390 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testPerformanceRows]' passed (135.874 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testPermissionsPageInLabAsksForNothing]' passed (42.727 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testProfileRowsDoNotOverlapAtLargeText]' passed (178.177 seconds).
+Test Case '-[CycliftLabUITests.LabFastProfile testTrainingSetupRows]' passed (154.975 seconds).
+Test Case '-[CycliftLabUITests.LabFastProgress testEveryControlOpensItsPage]' passed (819.947 seconds).
+Test Case '-[CycliftLabUITests.LabFastProgress testMoreMenuEntriesOpenRealPages]' passed (113.400 seconds).
+Test Case '-[CycliftLabUITests.LabFastProgress testSectionsArePresent]' passed (82.670 seconds).
+RESULT selected screen checks: ok
+TIME tests: 3001s
+LAB-NOTE progress sections: Endurance development, 2 h 54, min a week,  About the same as the 4 weeks before · Cycling · riding time · average of th | Strength development, 18, kg,  About the same as the 2 sessions before · Dumbbell bench press · recorded top set 18 kg × | Training consistency, 14, of 14 weeks, Weeks with at least one session. Particip | Time in heart-rate zones, 81, %, in zones 1–2 · 36 h recorded · heart-rate zones, from the zone totals saved with 32 rides
+LAB-NOTE progress: the end of the page was reached after 3 swipes in all
+TIME total on the Mac: 3425s
+commit 60a33d60b3354aad7f43ff389e35ecccc02c1b51  branch ios/lab

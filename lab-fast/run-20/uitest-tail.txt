@@ -1,0 +1,300 @@
+    t =    39.51s Checking existence of `"progressMenuHeartRate" Button`
+    t =    40.99s Tap "progressMenuAnalytics" Button
+    t =    40.99s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    41.00s     Find the "progressMenuAnalytics" Button
+    t =    41.13s     Check for interrupting elements affecting "progressMenuAnalytics" Button
+    t =    41.32s     Synthesize event
+    t =    41.64s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    41.97s Waiting 8.0s for "progressAnalyticsPage" Any to exist
+    t =    43.00s     Checking `Expect predicate `existsNoRetry == 1` for object "progressAnalyticsPage" Any`
+    t =    43.00s         Checking existence of `"progressAnalyticsPage" Any`
+    t =    44.06s Checking existence of `"progressMenuAnalytics" Button`
+    t =    45.63s Waiting 4.0s for Button (First Match) to exist
+    t =    46.67s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    46.67s         Checking existence of `Button (First Match)`
+    t =    46.73s Find the Button (First Match)
+    t =    46.82s Find the "BackButton" Button
+    t =    46.92s Checking existence of `"BackButton" Button`
+    t =    47.00s Find the "BackButton" Button
+    t =    47.07s Tap "BackButton" Button
+    t =    47.07s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    47.07s     Find the "BackButton" Button
+    t =    47.14s     Check for interrupting elements affecting "BackButton" Button
+    t =    47.30s     Synthesize event
+    t =    47.61s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    48.62s Waiting 6.0s for "progressMenu" Button to exist
+    t =    49.69s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenu" Button`
+    t =    49.69s         Checking existence of `"progressMenu" Button`
+    t =    49.93s Find the "progressMenu" Button
+    t =    50.13s Find the "progressMenu" Button
+    t =    50.33s Tap "progressMenu" Button
+    t =    50.34s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    50.34s     Find the "progressMenu" Button
+    t =    50.52s     Check for interrupting elements affecting "progressMenu" Button
+    t =    51.10s     Synthesize event
+    t =    51.41s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    51.83s Waiting 5.0s for "progressMenuHistory" Button to exist
+    t =    52.87s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenuHistory" Button`
+    t =    52.87s         Checking existence of `"progressMenuHistory" Button`
+    t =    53.06s Find the "progressMenuHistory" Button
+    t =    53.21s Find the "progressMenuHistory" Button
+    t =    53.35s Checking existence of `"progressMenuHistory" Button`
+    t =    53.51s Find the "progressMenuHistory" Button
+    t =    53.87s Tap "progressMenuHistory" Button
+    t =    53.87s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    53.90s     Find the "progressMenuHistory" Button
+    t =    54.03s     Check for interrupting elements affecting "progressMenuHistory" Button
+    t =    54.29s     Synthesize event
+    t =    54.59s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    54.75s Waiting 8.0s for "progressHistoryPage" Any to exist
+    t =    55.84s     Checking `Expect predicate `existsNoRetry == 1` for object "progressHistoryPage" Any`
+    t =    55.84s         Checking existence of `"progressHistoryPage" Any`
+    t =    56.86s Checking existence of `"progressMenuHistory" Button`
+    t =    58.67s Waiting 4.0s for Button (First Match) to exist
+    t =    59.67s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    59.67s         Checking existence of `Button (First Match)`
+    t =    59.71s Find the Button (First Match)
+    t =    59.78s Find the "BackButton" Button
+    t =    59.87s Checking existence of `"BackButton" Button`
+    t =    59.95s Find the "BackButton" Button
+    t =    60.04s Tap "BackButton" Button
+    t =    60.04s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    60.04s     Find the "BackButton" Button
+    t =    60.11s     Check for interrupting elements affecting "BackButton" Button
+    t =    60.32s     Synthesize event
+    t =    60.64s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    61.62s Waiting 6.0s for "progressMenu" Button to exist
+    t =    62.65s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenu" Button`
+    t =    62.65s         Checking existence of `"progressMenu" Button`
+    t =    63.00s Find the "progressMenu" Button
+    t =    63.80s Find the "progressMenu" Button
+    t =    64.20s Tap "progressMenu" Button
+    t =    64.20s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    64.20s     Find the "progressMenu" Button
+    t =    64.44s     Check for interrupting elements affecting "progressMenu" Button
+    t =    64.81s     Synthesize event
+    t =    65.11s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    65.55s Waiting 5.0s for "progressMenuEvolution" Button to exist
+    t =    66.61s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenuEvolution" Button`
+    t =    66.61s         Checking existence of `"progressMenuEvolution" Button`
+    t =    66.70s Find the "progressMenuEvolution" Button
+    t =    66.81s Find the "progressMenuEvolution" Button
+    t =    66.90s Checking existence of `"progressMenuEvolution" Button`
+    t =    67.02s Find the "progressMenuEvolution" Button
+    t =    67.14s Tap "progressMenuEvolution" Button
+    t =    67.14s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    67.15s     Find the "progressMenuEvolution" Button
+    t =    67.25s     Check for interrupting elements affecting "progressMenuEvolution" Button
+    t =    67.49s     Synthesize event
+    t =    67.79s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    68.80s Waiting 8.0s for "evolutionDetailsTitle" Any to exist
+    t =    69.82s     Checking `Expect predicate `existsNoRetry == 1` for object "evolutionDetailsTitle" Any`
+    t =    69.82s         Checking existence of `"evolutionDetailsTitle" Any`
+    t =    70.15s Checking existence of `"progressMenuEvolution" Button`
+    t =    70.72s Waiting 4.0s for Button (First Match) to exist
+    t =    71.77s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    71.77s         Checking existence of `Button (First Match)`
+    t =    71.81s Find the Button (First Match)
+    t =    71.91s Find the "BackButton" Button
+    t =    72.00s Checking existence of `"BackButton" Button`
+    t =    72.07s Find the "BackButton" Button
+    t =    72.16s Tap "BackButton" Button
+    t =    72.17s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    72.17s     Find the "BackButton" Button
+    t =    72.23s     Check for interrupting elements affecting "BackButton" Button
+    t =    72.39s     Synthesize event
+    t =    72.99s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    73.88s Waiting 6.0s for "progressMenu" Button to exist
+    t =    74.94s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenu" Button`
+    t =    74.94s         Checking existence of `"progressMenu" Button`
+    t =    75.23s Find the "progressMenu" Button
+    t =    76.04s Find the "progressMenu" Button
+    t =    76.36s Tap "progressMenu" Button
+    t =    76.36s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    76.36s     Find the "progressMenu" Button
+    t =    76.70s     Check for interrupting elements affecting "progressMenu" Button
+    t =    77.31s     Synthesize event
+    t =    77.61s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    78.14s Waiting 5.0s for "progressMenuPower" Button to exist
+    t =    79.19s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenuPower" Button`
+    t =    79.19s         Checking existence of `"progressMenuPower" Button`
+    t =    79.36s Find the "progressMenuPower" Button
+    t =    79.71s Find the "progressMenuPower" Button
+    t =    79.90s Checking existence of `"progressMenuPower" Button`
+    t =    80.07s Find the "progressMenuPower" Button
+    t =    80.21s Tap "progressMenuPower" Button
+    t =    80.21s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    80.22s     Find the "progressMenuPower" Button
+    t =    80.38s     Check for interrupting elements affecting "progressMenuPower" Button
+    t =    80.81s     Synthesize event
+    t =    81.13s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    82.81s Waiting 8.0s for "ftpValue" Any to exist
+    t =    83.82s     Checking `Expect predicate `existsNoRetry == 1` for object "ftpValue" Any`
+    t =    83.82s         Checking existence of `"ftpValue" Any`
+    t =    84.62s Checking existence of `"progressMenuPower" Button`
+    t =    85.98s Waiting 4.0s for Button (First Match) to exist
+    t =    87.04s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    87.04s         Checking existence of `Button (First Match)`
+    t =    87.12s Find the Button (First Match)
+    t =    87.27s Find the "BackButton" Button
+    t =    87.78s Checking existence of `"BackButton" Button`
+    t =    87.89s Find the "BackButton" Button
+    t =    88.02s Tap "BackButton" Button
+    t =    88.02s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    88.03s     Find the "BackButton" Button
+    t =    88.16s     Check for interrupting elements affecting "BackButton" Button
+    t =    88.69s     Synthesize event
+    t =    89.04s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    90.15s Waiting 6.0s for "progressMenu" Button to exist
+    t =    91.17s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenu" Button`
+    t =    91.18s         Checking existence of `"progressMenu" Button`
+    t =    91.64s Find the "progressMenu" Button
+    t =    92.91s Find the "progressMenu" Button
+    t =    93.74s Tap "progressMenu" Button
+    t =    93.74s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    93.74s     Find the "progressMenu" Button
+    t =    94.34s     Check for interrupting elements affecting "progressMenu" Button
+    t =    94.99s     Synthesize event
+    t =    95.31s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    95.80s Waiting 5.0s for "progressMenuHeartRate" Button to exist
+    t =    96.82s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenuHeartRate" Button`
+    t =    96.82s         Checking existence of `"progressMenuHeartRate" Button`
+    t =    97.22s Find the "progressMenuHeartRate" Button
+    t =    97.79s Find the "progressMenuHeartRate" Button
+    t =    98.22s Checking existence of `"progressMenuHeartRate" Button`
+    t =    98.56s Find the "progressMenuHeartRate" Button
+    t =    99.34s Tap "progressMenuHeartRate" Button
+    t =    99.34s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    99.35s     Find the "progressMenuHeartRate" Button
+    t =    99.64s     Check for interrupting elements affecting "progressMenuHeartRate" Button
+    t =   100.20s     Synthesize event
+    t =   100.53s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   101.99s Waiting 8.0s for "hrMaximum" Any to exist
+    t =   103.02s     Checking `Expect predicate `existsNoRetry == 1` for object "hrMaximum" Any`
+    t =   103.02s         Checking existence of `"hrMaximum" Any`
+    t =   104.21s Checking existence of `"progressMenuHeartRate" Button`
+    t =   105.90s Waiting 4.0s for Button (First Match) to exist
+    t =   106.95s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =   106.95s         Checking existence of `Button (First Match)`
+    t =   107.01s Find the Button (First Match)
+    t =   107.21s Find the "BackButton" Button
+    t =   107.34s Checking existence of `"BackButton" Button`
+    t =   107.46s Find the "BackButton" Button
+    t =   107.98s Tap "BackButton" Button
+    t =   107.98s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   107.99s     Find the "BackButton" Button
+    t =   108.10s     Check for interrupting elements affecting "BackButton" Button
+    t =   108.76s     Synthesize event
+    t =   109.09s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   110.03s Waiting 6.0s for "progressMenu" Button to exist
+    t =   111.07s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenu" Button`
+    t =   111.07s         Checking existence of `"progressMenu" Button`
+    t =   111.44s Find the "progressMenu" Button
+    t =   112.09s Find the "progressMenu" Button
+    t =   112.98s Tear Down
+Test Case '-[CycliftLabUITests.LabFastProgress testMoreMenuEntriesOpenRealPages]' passed (113.400 seconds).
+Test Case '-[CycliftLabUITests.LabFastProgress testSectionsArePresent]' started.
+    t =     0.00s Start Test at 2026-11-19 20:53:44.708
+    t =     0.05s Set Up
+    t =     0.06s Open com.ralsuwaidico.cycliftlab
+    t =     0.06s     Launch com.ralsuwaidico.cycliftlab
+    t =     0.06s         Terminate com.ralsuwaidico.cycliftlab:41000
+    t =     2.60s         Setting up automation session
+    t =     6.47s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    12.03s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    13.09s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    13.09s         Checking existence of `"homeGreeting" Any`
+    t =    14.10s Find the "homeGreeting" Any
+    t =    15.21s Waiting 8.0s for "Progress" Button to exist
+    t =    16.24s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =    16.24s         Checking existence of `"Progress" Button`
+    t =    16.44s Checking existence of `"Progress" Button`
+    t =    16.50s Tap "Progress" Button
+    t =    16.51s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    16.51s     Find the "Progress" Button
+    t =    16.56s     Check for interrupting elements affecting "Progress" Button
+    t =    16.88s     Synthesize event
+    t =    17.21s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    18.24s Waiting 8.0s for "evolutionTrack" Any to exist
+    t =    19.28s     Checking `Expect predicate `existsNoRetry == 1` for object "evolutionTrack" Any`
+    t =    19.28s         Checking existence of `"evolutionTrack" Any`
+    t =    19.77s Waiting 6.0s for "progressTitle" Any to exist
+    t =    20.80s     Checking `Expect predicate `existsNoRetry == 1` for object "progressTitle" Any`
+    t =    20.80s         Checking existence of `"progressTitle" Any`
+    t =    21.10s Waiting 6.0s for "progressMenu" Any to exist
+    t =    22.15s     Checking `Expect predicate `existsNoRetry == 1` for object "progressMenu" Any`
+    t =    22.15s         Checking existence of `"progressMenu" Any`
+    t =    22.81s Waiting 6.0s for "heroIdentity" Any to exist
+    t =    23.87s     Checking `Expect predicate `existsNoRetry == 1` for object "heroIdentity" Any`
+    t =    23.87s         Checking existence of `"heroIdentity" Any`
+    t =    24.43s Waiting 6.0s for "heroStage" Any to exist
+    t =    25.49s     Checking `Expect predicate `existsNoRetry == 1` for object "heroStage" Any`
+    t =    25.49s         Checking existence of `"heroStage" Any`
+    t =    26.54s Waiting 6.0s for "evolutionTrack" Any to exist
+    t =    27.58s     Checking `Expect predicate `existsNoRetry == 1` for object "evolutionTrack" Any`
+    t =    27.58s         Checking existence of `"evolutionTrack" Any`
+    t =    28.13s Waiting 6.0s for "progressV23" Any to exist
+    t =    29.18s     Checking `Expect predicate `existsNoRetry == 1` for object "progressV23" Any`
+    t =    29.18s         Checking existence of `"progressV23" Any`
+    t =    30.07s Waiting 6.0s for "progressDevelopmentIntro" Any to exist
+    t =    31.10s     Checking `Expect predicate `existsNoRetry == 1` for object "progressDevelopmentIntro" Any`
+    t =    31.10s         Checking existence of `"progressDevelopmentIntro" Any`
+    t =    32.37s Waiting 6.0s for "progressEndurance" Any to exist
+    t =    33.42s     Checking `Expect predicate `existsNoRetry == 1` for object "progressEndurance" Any`
+    t =    33.42s         Checking existence of `"progressEndurance" Any`
+    t =    34.25s Waiting 6.0s for "progressStrengthDevelopment" Any to exist
+    t =    35.29s     Checking `Expect predicate `existsNoRetry == 1` for object "progressStrengthDevelopment" Any`
+    t =    35.29s         Checking existence of `"progressStrengthDevelopment" Any`
+    t =    36.09s Waiting 6.0s for "progressConsistency" Any to exist
+    t =    37.15s     Checking `Expect predicate `existsNoRetry == 1` for object "progressConsistency" Any`
+    t =    37.15s         Checking existence of `"progressConsistency" Any`
+    t =    38.15s Waiting 6.0s for "progressZones" Any to exist
+    t =    39.20s     Checking `Expect predicate `existsNoRetry == 1` for object "progressZones" Any`
+    t =    39.20s         Checking existence of `"progressZones" Any`
+    t =    40.14s Waiting 6.0s for "progressNextEvolution" Any to exist
+    t =    41.16s     Checking `Expect predicate `existsNoRetry == 1` for object "progressNextEvolution" Any`
+    t =    41.16s         Checking existence of `"progressNextEvolution" Any`
+    t =    42.08s Waiting 6.0s for "progressOpenAnalytics" Any to exist
+    t =    43.11s     Checking `Expect predicate `existsNoRetry == 1` for object "progressOpenAnalytics" Any`
+    t =    43.11s         Checking existence of `"progressOpenAnalytics" Any`
+    t =    44.16s Waiting 6.0s for "progressEvolutionTimeline" Any to exist
+    t =    45.18s     Checking `Expect predicate `existsNoRetry == 1` for object "progressEvolutionTimeline" Any`
+    t =    45.18s         Checking existence of `"progressEvolutionTimeline" Any`
+    t =    46.52s Waiting 6.0s for "progressOpenHistory" Any to exist
+    t =    47.55s     Checking `Expect predicate `existsNoRetry == 1` for object "progressOpenHistory" Any`
+    t =    47.55s         Checking existence of `"progressOpenHistory" Any`
+    t =    48.82s Find the "heroStage" Any
+    t =    50.33s Checking existence of `"heroGeneration" Any`
+    t =    52.59s Checking existence of `"headerGeneration" Any`
+    t =    54.77s Find the "progressNextEvolution" Any
+    t =    55.93s Find the "progressEvolutionTimeline" Any
+    t =    57.31s Checking existence of `"progressZonesMissing" Any`
+    t =    60.15s Find the "progressEndurance" Any
+    t =    61.42s Find the "progressStrengthDevelopment" Any
+    t =    63.25s Find the "progressConsistency" Any
+    t =    65.90s Find the "progressZones" Any
+    t =    68.09s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    68.09s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    68.17s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    68.66s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    68.86s     Synthesize event
+    t =    69.29s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    72.70s Find the "progressOpenHistory" Button
+    t =    74.29s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    74.29s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    74.30s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    74.52s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    74.70s     Synthesize event
+    t =    75.15s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    76.72s Find the "progressOpenHistory" Button
+    t =    77.33s Swipe up Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    77.33s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    77.39s     Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =    77.52s     Check for interrupting elements affecting "Cyclift Lab" Application
+    t =    77.69s     Synthesize event
+    t =    78.14s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    79.48s Find the "progressOpenHistory" Button
+    t =    81.56s Find the "cradleDock" Any
+    t =    81.65s Find the "progressOpenHistory" Button
+    t =    82.42s Tear Down
+Test Case '-[CycliftLabUITests.LabFastProgress testSectionsArePresent]' passed (82.670 seconds).
