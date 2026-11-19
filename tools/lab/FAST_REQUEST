@@ -1,2 +1,2 @@
-LabFast/testProfileAthletePages LabFast/testProfileTrainingSetupPages LabFast/testProfilePerformancePages LabFast/testProfileEditsNeedApproval LabFast/testEquipmentAtLargeText
-Fast run 5: first run on a kept build (P05 pages, edit-approval and large-text checks added since run 4) (19 Nov 2026).
+LabFast/testProfilePerformancePages LabFast/testEquipmentAtLargeText LabFast/testProfileAthletePages
+Fast run 6: iPhone 15 Pro; P05 Cycling & sources; text-size scaling of the new Profile pages; build timing summary (19 Nov 2026).
