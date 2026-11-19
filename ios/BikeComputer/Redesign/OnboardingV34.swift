@@ -433,8 +433,12 @@ struct OnboardingV34View: View {
             ForEach(GoalInfo.choices(for: mode)) { group in
                 VStack(alignment: .leading, spacing: CySpace.s) {
                     Text("\(group.title.uppercased()) GOALS").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                        ForEach(group.goals) { g in goalCell(g) }
+                    // two to a row; an odd last goal takes the full width, as on the sheet
+                    let pairs = stride(from: 0, to: group.goals.count, by: 2).map { Array(group.goals[$0..<min($0 + 2, group.goals.count)]) }
+                    VStack(spacing: 6) {
+                        ForEach(Array(pairs.enumerated()), id: \.offset) { row in
+                            HStack(spacing: 6) { ForEach(row.element) { g in goalCell(g) } }
+                        }
                     }
                 }
             }
@@ -457,8 +461,10 @@ struct OnboardingV34View: View {
     }
     private func levelRow<T: Hashable>(_ title: String, id: String, options: [(T, String)], selection: Binding<T>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(CyFont.headline).foregroundStyle(theme.textPrimary)
-            CyChoiceBar(options: options, selection: selection).accessibilityIdentifier(id)
+            HStack(spacing: CySpace.m) {
+                Text(title).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).frame(width: 74, alignment: .leading)
+                CyChoiceBar(options: options, selection: selection).accessibilityIdentifier(id)
+            }
         }
     }
     /// One goal of sheet Y3: a compact cell. Chosen and main = filled in the sport's colour with a filled star; chosen
@@ -475,11 +481,11 @@ struct OnboardingV34View: View {
                 a.primaryGoal = a.primaryGoal.flatMap { list.contains($0) ? $0 : nil } ?? list.first
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(g.title).font(CyFont.headline).foregroundStyle(main ? theme.background : theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
-                    Text(GoalInfo.line(g)).font(CyFont.footnote).foregroundStyle(main ? theme.background.opacity(0.8) : theme.textSecondary).lineLimit(2).minimumScaleFactor(0.85)
+                    Text(g.title).font(CyDyn.f(15, .semibold)).foregroundStyle(main ? theme.background : theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(GoalInfo.line(g)).font(CyDyn.f(11.5)).foregroundStyle(main ? theme.background.opacity(0.8) : theme.textSecondary).lineLimit(1).minimumScaleFactor(0.75)
                 }
-                .padding(.horizontal, 12).padding(.vertical, 8).padding(.trailing, on ? 30 : 0)
-                .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+                .padding(.horizontal, 11).padding(.vertical, 6).padding(.trailing, on ? 30 : 0)
+                .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(main ? tint : theme.surface))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(on && !main ? tint : Color.clear, lineWidth: 1.5))
                 .contentShape(Rectangle())
