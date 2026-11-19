@@ -109,6 +109,13 @@ enum LabDemoData {
         // LAB_FRESH_DEMO=1 (screen tests): start this launch from a fresh demo athlete, so each journey is independent of
         // what an earlier test left behind. Lab only; it touches Lab's own folder and nothing else.
         if ProcessInfo.processInfo.environment["LAB_FRESH_DEMO"] == "1" { try? Data().write(to: restore) }
+        // LAB_NEW_ATHLETE=1 (screen tests): start this launch with no athlete at all, exactly as after "Delete all data",
+        // so an onboarding screen can be checked without first deleting through the interface. Lab's own folder only.
+        if ProcessInfo.processInfo.environment["LAB_NEW_ATHLETE"] == "1" {
+            if let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) { for f in files { try? fm.removeItem(at: f) } }
+            try? Data().write(to: seeded)
+            return
+        }
         if fm.fileExists(atPath: restore.path) {
             if let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) { for f in files { try? fm.removeItem(at: f) } }
             try? fm.removeItem(at: restore); try? fm.removeItem(at: seeded)

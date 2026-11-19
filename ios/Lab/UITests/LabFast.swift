@@ -259,4 +259,38 @@ final class LabFast: XCTestCase {
         for id in ["coachDuringRides", "coachTalk", "coachAutoAdapt", "coachAdjustments"] { XCTAssertTrue(el(app, id).waitForExistence(timeout: 8), "required: \(id)") }
         shot("p07-E3-coach")
     }
+
+    /// Onboarding page 2, the Athletic Roster (sheet Z2): no sport → one → two, the lead control, Continue.
+    /// Starts with no athlete (fixture LAB_NEW_ATHLETE), so nothing has to be deleted through the interface first.
+    func testOnboardingRoster() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_NEW_ATHLETE"] = "1"; app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launch()
+        let start = app.buttons["onboardingContinue"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 30), "required: a new athlete starts at Welcome"); start.tap()
+        let next = app.buttons["onboardingNext"].firstMatch, name = app.textFields["onbName"].firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 8), "required: the name field"); name.tap(); name.typeText("Sam")
+        XCTAssertEqual(name.value as? String, "Sam", "required: the field holds what was typed")
+        let done = app.buttons["keyboardDone"].firstMatch; if done.waitForExistence(timeout: 2) { done.tap() }
+        XCTAssertTrue(next.isEnabled, "required: Continue after a name"); next.tap()
+        XCTAssertTrue(app.staticTexts["rosterEmptyHeadline"].firstMatch.waitForExistence(timeout: 8), "required: the empty roster headline")
+        XCTAssertFalse(next.isEnabled, "required: Continue needs a sport Cyclift can plan")
+        shot("z2-0-roster-empty")
+        app.buttons["rosterAdd-roadCycling"].firstMatch.tap()
+        XCTAssertTrue(el(app, "rosterMain-roadCycling").waitForExistence(timeout: 5), "required: the first sport becomes the main sport")
+        XCTAssertFalse(el(app, "rosterLead").exists, "one domain: no lead control"); XCTAssertTrue(next.isEnabled, "required: Continue with one sport")
+        shot("z2-1-roster-one")
+        app.buttons["rosterAdd-strength"].firstMatch.tap()
+        XCTAssertTrue(el(app, "rosterMain-strength").waitForExistence(timeout: 5), "required: strength is the second main sport")
+        let lead = el(app, "rosterLead")
+        XCTAssertTrue(lead.waitForExistence(timeout: 5), "required: two domains show the lead control")
+        XCTAssertTrue(lead.buttons["Balanced"].firstMatch.isSelected, "required: Balanced is the default")
+        shot("z2-2-roster-two")
+        lead.buttons["Strength-led"].firstMatch.tap()
+        XCTAssertTrue(lead.buttons["Strength-led"].firstMatch.isSelected, "required: the lead can be changed")
+        XCTAssertTrue(el(app, "rosterBrowse").exists, "required: Browse all activities")
+        next.tap()
+        XCTAssertTrue(app.staticTexts["onboardingProgress"].firstMatch.label.hasPrefix("3 of 7"), "required: Continue goes to page 3")
+        shot("y3-goals")
+    }
 }

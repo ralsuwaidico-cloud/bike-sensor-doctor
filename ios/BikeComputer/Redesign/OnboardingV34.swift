@@ -292,18 +292,27 @@ struct OnboardingV34View: View {
         return VStack(alignment: .leading, spacing: CySpace.l) {
             heading(2, "Sports", "What do you train?")
             if v.mainEndurance == nil && v.mainStrength == nil {
-                Text(v.hasOnlyUnsupported ? "No planned sport yet" : "Start with the sport you train most.")
-                    .font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("rosterEmptyHeadline")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(v.hasOnlyUnsupported ? "No planned sport yet" : "Start with the sport you train most.")
+                        .font(.system(.title2, design: .default).weight(.bold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("rosterEmptyHeadline")
+                    Text("You can add others next. Sports Cyclift can plan and record are listed first.")
+                        .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                }
             } else {
                 VStack(alignment: .leading, spacing: CySpace.s) {
-                    provenance("●", v.mainEndurance != nil && v.mainStrength != nil ? "Main sports" : "Main sport")
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(v.mainEndurance != nil && v.mainStrength != nil ? "MAIN SPORTS" : "MAIN SPORT").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
+                            .accessibilityAddTraits(.isHeader)
+                        Spacer(minLength: CySpace.s)
+                        Text("suggested · Continue confirms").font(CyFont.caption).foregroundStyle(theme.textSecondary)
+                    }
                     let leadStrength = a.priority == .strength
                     let mains = (leadStrength ? [v.mainStrength, v.mainEndurance] : [v.mainEndurance, v.mainStrength]).compactMap { $0 }
                     ForEach(mains) { m in mainRow(m, dimmed: v.showsLead && ((a.priority == .strength && m.domain == .endurance) || (a.priority == .cycling && m.domain == .strength))) }
                     if v.showsLead {
-                        CySegmentedControl(options: [(TrainingPriority.cycling, "Endurance-led"), (TrainingPriority.balanced, "Balanced"), (TrainingPriority.strength, "Strength-led")],
-                                           selection: Binding(get: { a.priority ?? .balanced }, set: { a.priority = $0 }))
+                        CyChoiceBar(options: [(TrainingPriority.cycling, "Endurance-led"), (TrainingPriority.balanced, "Balanced"), (TrainingPriority.strength, "Strength-led")],
+                                    selection: Binding(get: { a.priority ?? .balanced }, set: { a.priority = $0 }))
                             .accessibilityIdentifier("rosterLead")
                     }
                 }
@@ -316,20 +325,26 @@ struct OnboardingV34View: View {
             }
             if !v.suggestions.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("ADD TO YOUR ROSTER").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).padding(.bottom, CySpace.s)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(v.mainEndurance == nil && v.mainStrength == nil ? "CYCLIFT CAN PLAN AND RECORD THESE" : "ADD TO YOUR ROSTER")
+                            .font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
+                        Spacer(minLength: CySpace.s)
+                        if v.mainEndurance != nil || v.mainStrength != nil { Text("suggestions").font(CyFont.caption).foregroundStyle(theme.textSecondary) }
+                    }
+                    .padding(.bottom, CySpace.s)
                     ForEach(v.suggestions) { x in rosterRow(x, inRoster: false) }
                 }
             }
             Button { library = true } label: {
-                HStack {
-                    Image(systemName: "magnifyingglass").accessibilityHidden(true)
-                    Text("Browse all activities").font(CyFont.label)
+                HStack(spacing: CySpace.m) {
+                    Image(systemName: "magnifyingglass").frame(width: 26).accessibilityHidden(true)
+                    Text("Browse all activities").font(CyFont.headline)
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).accessibilityHidden(true)
+                    Text("search · categories").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(theme.textSecondary).accessibilityHidden(true)
                 }
                 .foregroundStyle(theme.textPrimary)
-                .padding(.horizontal, CySpace.l).frame(maxWidth: .infinity, minHeight: 52)
-                .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(theme.border, lineWidth: 1))
+                .frame(maxWidth: .infinity, minHeight: 52)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -338,17 +353,16 @@ struct OnboardingV34View: View {
     }
 
     private func mainRow(_ x: RosterActivity, dimmed: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: CySpace.s) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(x.title).font(.system(dimmed ? .title2 : .title, design: .rounded).weight(.heavy))
-                    .foregroundStyle(dimmed ? theme.textSecondary : theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                Text("\(x.capability.mark) \(x.capability.words) · main \(x.domain.title.lowercased()) sport").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        HStack(alignment: .center, spacing: CySpace.m) {
+            Image(systemName: Self.symbol(x)).font(.body.weight(.semibold))
+                .foregroundStyle(x.domain == .strength ? theme.strength : theme.endurance).frame(width: 26).accessibilityHidden(true)
+            Text(x.title).font(.system(.title2, design: .default).weight(.bold))
+                .foregroundStyle(dimmed ? theme.textSecondary : theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel("\(x.title). \(x.capability.words), main \(x.domain.title.lowercased()) sport")
             Spacer(minLength: CySpace.s)
             removeButton(x)
         }
-        .frame(minHeight: 52)
+        .frame(minHeight: CyHit.min)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("rosterMain-\(x.id)")
     }
@@ -356,6 +370,7 @@ struct OnboardingV34View: View {
     private func rosterRow(_ x: RosterActivity, inRoster: Bool) -> some View {
         HStack(spacing: CySpace.s) {
             if inRoster {
+                Image(systemName: Self.symbol(x)).foregroundStyle(theme.textSecondary).frame(width: 26).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) { rowText(x) }
                 Spacer(minLength: CySpace.s)
                 if x.capability.plannable, let s = x.sport {
@@ -368,10 +383,11 @@ struct OnboardingV34View: View {
                 removeButton(x)
             } else {
                 Button { if let s = x.sport { setSports(AthleticRoster.adding(s, to: sports)) } } label: {
-                    HStack(spacing: CySpace.s) {
+                    HStack(spacing: CySpace.m) {
+                        Image(systemName: Self.symbol(x)).foregroundStyle(theme.textSecondary).frame(width: 26).accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) { rowText(x) }
                         Spacer(minLength: CySpace.s)
-                        Image(systemName: "plus.circle").font(.title3).foregroundStyle(theme.accent).accessibilityHidden(true)
+                        Image(systemName: "plus.circle").font(.title3).foregroundStyle(theme.textPrimary).accessibilityHidden(true)
                     }
                     .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading).contentShape(Rectangle())
                 }
@@ -382,6 +398,15 @@ struct OnboardingV34View: View {
         }
         .frame(minHeight: 52)
         .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
+    }
+    /// A plain symbol per activity (sheet Z2 draws one beside every row). Decorative: the name is always written.
+    private static func symbol(_ x: RosterActivity) -> String {
+        switch x.id {
+        case "strength": return "dumbbell"
+        case "indoorCycling": return "figure.indoor.cycle"
+        case "roadCycling", "mountainBike", "commuting", "gravel": return "bicycle"
+        default: return x.domain == .strength ? "figure.strengthtraining.traditional" : x.domain == .endurance ? "figure.run" : "figure.mind.and.body"
+        }
     }
     @ViewBuilder private func rowText(_ x: RosterActivity) -> some View {
         Text(x.title).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
