@@ -83,6 +83,10 @@ struct StrengthRecorderV14: View {
         nonmutating set { memory.unconfirmed = newValue }
     }
     @State private var correcting = false
+    /// The ··· page of plain buttons, and the choice made on it. The choice is carried out once that page has closed
+    /// (a second page cannot be opened reliably while the first is still closing).
+    @State private var options = false
+    @State private var pendingOption: CyRecorderOption? = nil
     @State private var checks = 0
     @State private var lastCheck: SaveCheck? = nil
     /// After a confirmed save: the saved session, shown until the athlete leaves or opens the optional review.
@@ -107,6 +111,7 @@ struct StrengthRecorderV14: View {
         .onAppear { if let m = memory.lastLogged, m.sessionId != store.activeSession?.id { memory.clear() } }
         .sheet(isPresented: $allExercises, onDismiss: refreshLogged) { StrengthSessionView(legacy: true) }
         .sheet(isPresented: $correcting, onDismiss: refreshLogged) { StrengthCorrectV14().cyThemeRoot() }
+        .sheet(isPresented: $options, onDismiss: runPendingOption) { optionsSheet }
         .fullScreenCover(isPresented: $review, onDismiss: { dismiss() }) {
             if let s = saved { ReviewV14(target: .strength(s.id)) { review = false }.cyThemeRoot() }
         }
@@ -410,24 +415,15 @@ struct StrengthRecorderV14: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("recorderNext")
             Spacer(minLength: 8)
-            Menu {
-                if let p = NextSet.pick(es) {
-                    Button { skip(p, wholeExercise: false) } label: { Label("Skip this set", systemImage: "forward.end") }
-                    Button { skip(p, wholeExercise: true) } label: { Label("Skip this exercise", systemImage: "forward.end.alt") }
-                    Menu {
-                        Button("Ordinary reps and weight") { setKind(p, .ordinary) }
-                        Button("Timed hold") { setKind(p, .timed) }
-                        Button("Bodyweight plus added weight") { setKind(p, .added) }
-                        Button("Assisted (band or machine)") { setKind(p, .assisted) }
-                    } label: { Label("This exercise is…", systemImage: "slider.horizontal.3") }
-                }
-                Button { correcting = true } label: { Label("Correct a logged set", systemImage: "pencil") }
-                Button { allExercises = true } label: { Label("All exercises · correct a set", systemImage: "list.bullet") }
-                Button(role: .destructive) { confirmDiscard = true } label: { Label("Discard workout", systemImage: "trash") }
-            } label: {
+            // Fast checks 15 and 17 (iPhone 15 Pro simulator): this was a pull-down Menu, and its row "Correct a logged set"
+            // could not be pressed ("failed to compute hit point … Activation point invalid"); the Progress menu failed the
+            // same way, and Lab's own theme menu had already been replaced for choices that did not take effect. The same
+            // choices, with the same wording, are now plain buttons on a short page (CyRecorderOptionsSheet below).
+            Button { options = true } label: {
                 Image(systemName: "ellipsis").font(.body.weight(.bold)).foregroundStyle(theme.textPrimary)
                     .frame(width: CyHit.min, height: CyHit.min).contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Options").accessibilityIdentifier("recorderOptions")
         }
         .padding(.top, CySpace.s)
@@ -476,6 +472,26 @@ struct StrengthRecorderV14: View {
         memory.restEndsAt = rest.flatMap { $0 > 0 ? Date().addingTimeInterval(TimeInterval($0)) : nil }
     }
     /// Skips the set on screen, or every set of its exercise that is still waiting. A skipped set is never "done".
+    private var optionsSheet: some View {
+        CyRecorderOptionsSheet(hasOpenSet: NextSet.pick(store.activeSession?.exercises ?? []) != nil) { o in
+            pendingOption = o; options = false
+        }
+        .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).cyThemeRoot()
+    }
+    private func runPendingOption() {
+        guard let o = pendingOption else { return }
+        pendingOption = nil
+        let pick = NextSet.pick(store.activeSession?.exercises ?? [])
+        switch o {
+        case .skipSet: if let p = pick { skip(p, wholeExercise: false) }
+        case .skipExercise: if let p = pick { skip(p, wholeExercise: true) }
+        case .kind(let k): if let p = pick { setKind(p, k) }
+        case .correct: correcting = true
+        case .allExercises: allExercises = true
+        case .discard: confirmDiscard = true
+        }
+    }
+
     private func skip(_ p: NextSet.Pick, wholeExercise: Bool) {
         guard let s = store.activeSession, let es = s.exercises, es.indices.contains(p.entry) else { return }
         let targets = wholeExercise ? es[p.entry].sets.indices.filter { es[p.entry].sets[$0].isOpen } : [p.set]
@@ -649,5 +665,85 @@ struct StrengthRecorderV14: View {
         if skipped > 0 { rows.append(CyFinishRow(label: "Skipped", value: "\(skipped) set\(skipped == 1 ? "" : "s") · not counted as done", id: "saveSkipped")) }
         if let m = marked { rows.append(CyFinishRow(label: "Plan", value: m ? (f?.state == .partial ? "Marked done · partial" : "Marked done") : "Not marked done", id: "savedPlan")) }
         return CySavedPage(subtitle: f?.savedLine ?? "\(title) · \(sets) sets", rows: rows, onReview: { review = true }, onDone: { dismiss() })
+    }
+}
+
+// MARK: the recorder's ··· options — plain buttons (see the note at `recorderOptions`)
+
+enum CyRecorderOption {
+    case skipSet, skipExercise, kind(SetEntry.Kind), correct, allExercises, discard
+}
+
+/// The choices the ··· menu held, in the same order and with the same wording. "This exercise is…" opens its four
+/// choices in place, as the submenu did. Nothing is changed here: the recorder carries out the choice after this page
+/// has closed.
+struct CyRecorderOptionsSheet: View {
+    let hasOpenSet: Bool
+    let choose: (CyRecorderOption) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.cyTheme) private var theme
+    @State private var kinds = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if hasOpenSet { openSetRows }
+                    row("Correct a logged set", "pencil", id: "recorderOptCorrect") { choose(.correct) }
+                    row("All exercises · correct a set", "list.bullet", id: "recorderOptAllExercises") { choose(.allExercises) }
+                    row("Discard workout", "trash", id: "recorderOptDiscard", danger: true) { choose(.discard) }
+                }
+                .padding(.horizontal, CySpace.l).padding(.bottom, CySpace.l)
+            }
+        }
+        .background(theme.background.ignoresSafeArea())
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("recorderOptionsSheet")
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Options").font(CyFont.title).foregroundStyle(theme.textPrimary)
+                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("recorderOptionsTitle")
+            Spacer(minLength: 8)
+            Button("Close") { dismiss() }
+                .font(CyFont.label.weight(.semibold)).foregroundStyle(theme.accent)
+                .frame(minWidth: CyHit.min, minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
+                .accessibilityIdentifier("recorderOptionsClose")
+        }
+        .padding(.horizontal, CySpace.l).padding(.top, CySpace.l).padding(.bottom, CySpace.s)
+    }
+
+    @ViewBuilder private var openSetRows: some View {
+        row("Skip this set", "forward.end", id: "recorderOptSkipSet") { choose(.skipSet) }
+        row("Skip this exercise", "forward.end.alt", id: "recorderOptSkipExercise") { choose(.skipExercise) }
+        row("This exercise is…", "slider.horizontal.3", id: "recorderOptKind") { kinds.toggle() }
+        if kinds {
+            kindRow("Ordinary reps and weight", .ordinary)
+            kindRow("Timed hold", .timed)
+            kindRow("Bodyweight plus added weight", .added)
+            kindRow("Assisted (band or machine)", .assisted)
+        }
+    }
+
+    private func kindRow(_ title: String, _ k: SetEntry.Kind) -> some View {
+        row(title, nil, id: "recorderOptKind-\(k.rawValue)") { choose(.kind(k)) }
+    }
+
+    private func row(_ title: String, _ icon: String?, id: String, danger: Bool = false, _ action: @escaping () -> Void) -> some View {
+        let ink = danger ? theme.danger : theme.textPrimary
+        return Button(action: action) {
+            HStack(spacing: CySpace.m) {
+                Text(title).font(CyFont.body).foregroundStyle(ink).fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                if let icon { Image(systemName: icon).foregroundStyle(ink).accessibilityHidden(true) }
+            }
+            .padding(.leading, icon == nil ? CySpace.l : 0)
+            .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
+        .accessibilityLabel(title).accessibilityIdentifier(id)
     }
 }

@@ -228,11 +228,14 @@ final class LabFastTrain: XCTestCase {
         func openCorrection() {
             let options = app.buttons["recorderOptions"].firstMatch
             XCTAssertTrue(options.waitForExistence(timeout: 5), "required: the ··· options"); options.tap()
-            let item = app.buttons["Correct a logged set"].firstMatch
+            // Fast checks 15 and 17: "Correct a logged set" was a row of a pull-down menu and could not be pressed on the
+            // simulator ("failed to compute hit point"), also after waiting for the menu. The options are now plain
+            // buttons on a page; the row is found by its identifier and must still carry the same wording.
+            let item = app.buttons["recorderOptCorrect"].firstMatch
             XCTAssertTrue(item.waitForExistence(timeout: 5), "required: 'Correct a logged set' under ···")
-            // fast check 15: the tap landed while the menu was still opening ("not hittable"); wait for the menu to settle
+            XCTAssertEqual(item.label, "Correct a logged set", "required: the option keeps its wording")
             var w = 0; while !item.isHittable && w < 10 { app.settleForScreenshot(0.3); w += 1 }
-            XCTAssertTrue(item.isHittable, "required: the menu item can be pressed"); item.tap()
+            XCTAssertTrue(item.isHittable, "required: the option can be pressed"); item.tap()
             XCTAssertTrue(el(app, "correctTitle").waitForExistence(timeout: 8), "required: the correction page")
         }
         openCorrection()
