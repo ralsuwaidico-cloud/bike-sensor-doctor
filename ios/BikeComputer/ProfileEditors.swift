@@ -207,9 +207,7 @@ struct AthleteTypeEditor: View {
     static func weightString(_ kg: Double, _ u: AppSettings.Units) -> String { u == .imperial ? String(format: "%.0f", kg * 2.20462) : (kg == kg.rounded() ? String(Int(kg)) : String(format: "%.1f", kg)) }
     /// A typed weight in the shown unit → kg within 30–200 kg; anything else = not set.
     static func parseWeight(_ s: String, _ u: AppSettings.Units) -> Double? {
-        guard let v = Double(s.replacingOccurrences(of: ",", with: ".")) else { return nil }
-        let kg = u == .imperial ? v / 2.20462 : v
-        return (30...200).contains(kg) ? (kg * 10).rounded() / 10 : nil
+        BodyMeasure.parseWeightKg(s, imperial: u == .imperial)
     }
 }
 

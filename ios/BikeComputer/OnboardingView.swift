@@ -308,6 +308,7 @@ enum OnboardingFlow {
         }
         x.dateOfBirth = p.dateOfBirth
         x.weightKg = p.provenance(.weight).source == .unknown ? nil : p.weightKg
+        x.heightCm = p.heightCm.flatMap { BodyMeasure.heightRangeCm.contains($0) ? $0 : nil }
         if !p.goals.isEmpty { x.goals = p.goals; x.primaryGoal = p.primaryGoal }
         let mode = x.mode ?? p.trainingMode
         if let k = OnboardingWeek.kinds(of: store.availability, mode: mode, twoADay: true), p.weekIsExplicit == true { x.week = k }

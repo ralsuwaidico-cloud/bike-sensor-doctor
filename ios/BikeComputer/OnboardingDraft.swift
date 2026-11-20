@@ -295,6 +295,8 @@ struct OnboardingAnswers: Equatable {
     var priority: TrainingPriority? = nil
     var dateOfBirth: Date? = nil
     var weightKg: Double? = nil
+    /// Height in whole centimetres (the stored unit). nil leaves the stored value untouched; never a default.
+    var heightCm: Int? = nil
     /// Onboarding v3.4 roster: the stored sports list, in roster order (the first plannable sport of a domain is its
     /// main sport — see AthleticRoster). nil leaves the stored list untouched.
     var sports: [RiderProfile.Sport]? = nil
@@ -328,6 +330,7 @@ struct OnboardingAnswers: Equatable {
         // re-applying the same value never re-dates it (resume and keystrokes call this repeatedly)
         if let d = dateOfBirth, d != x.profile.dateOfBirth || x.profile.provenance(.dateOfBirth).source != .entered { x.profile.setDateOfBirth(d, at: now) }
         if let w = weightKg, w != x.profile.weightKg || x.profile.provenance(.weight).source != .entered { x.profile.setWeight(w, source: .entered, at: now) }
+        if let h = heightCm, BodyMeasure.heightRangeCm.contains(h) { x.profile.heightCm = h }
         if let g = goals, !g.isEmpty {
             x.profile.goals = g
             x.profile.primaryGoal = (primaryGoal.flatMap { g.contains($0) ? $0 : nil }) ?? g.first
@@ -548,5 +551,97 @@ enum ProfileDeviceRows {
         if cycling { for f in ProfileSensorFamily.allCases { out.append(ProfileDeviceRow(id: f.rawValue, title: f.title, summary: off, state: .unavailable, opens: .sensors)) } }
         out.append(ProfileDeviceRow(id: "phone", title: "This iPhone", summary: "Bluetooth and location are not used in Cyclift Lab", state: nil, opens: .phone))
         return out
+    }
+}
+
+
+// MARK: - Body measurements (About you, Profile › Personal details)
+//
+// Owner decision, 20 Nov 2026 (Screen 2): the athlete may give height as well as weight; BMI is weight in kilograms
+// divided by height in metres squared. It is a description only: it is never a body-fat figure and never an input to
+// training load. Nothing here is estimated: a missing or out-of-range measurement gives no BMI at all.
+// Stored units: kilograms (Double, one decimal) and whole centimetres (Int) — `RiderProfile.weightKg` / `.heightCm`.
+enum BodyMeasure {
+    /// Heights accepted from the athlete. Outside it the entry is treated as not given (same rule as weight, 30–200 kg).
+    static let heightRangeCm: ClosedRange<Int> = 120...230
+    static let weightRangeKg: ClosedRange<Double> = 30...200
+    static let cmPerInch = 2.54
+
+    static let lbPerKg = 2.20462
+    /// A typed weight in the shown unit → kilograms to one decimal within 30–200 kg; anything else = not given.
+    /// (The rule the app already had in the editors; they now call this one.)
+    static func parseWeightKg(_ s: String, imperial: Bool) -> Double? {
+        guard let v = Double(s.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")) else { return nil }
+        let kg = imperial ? v / lbPerKg : v
+        return weightRangeKg.contains(kg) ? (kg * 10).rounded() / 10 : nil
+    }
+    /// A typed height in centimetres ("178", "178.4", "178,4") → whole centimetres, or nil.
+    static func parseHeightCm(_ s: String) -> Int? {
+        let t = s.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        guard !t.isEmpty, let v = Double(t), v.isFinite else { return nil }
+        let cm = Int(v.rounded())
+        return heightRangeCm.contains(cm) ? cm : nil
+    }
+    /// Typed feet and inches → whole centimetres, or nil. Feet are required; blank inches mean 0; inches must be 0…11.
+    static func heightCm(feet: String, inches: String) -> Int? {
+        let f = feet.trimmingCharacters(in: .whitespaces), i = inches.trimmingCharacters(in: .whitespaces)
+        guard let ft = Int(f), ft >= 0 else { return nil }
+        let inch: Int
+        if i.isEmpty { inch = 0 } else { guard let v = Int(i), (0...11).contains(v) else { return nil }; inch = v }
+        let cm = Int((Double(ft * 12 + inch) * cmPerInch).rounded())
+        return heightRangeCm.contains(cm) ? cm : nil
+    }
+    /// Whole centimetres → feet and inches (nearest inch).
+    static func feetInches(_ cm: Int) -> (feet: Int, inches: Int) {
+        let total = Int((Double(cm) / cmPerInch).rounded())
+        return (total / 12, total % 12)
+    }
+    /// "178 cm" or "5 ft 10 in".
+    static func heightText(_ cm: Int, imperial: Bool) -> String {
+        if imperial { let x = feetInches(cm); return "\(x.feet) ft \(x.inches) in" }
+        return "\(cm) cm"
+    }
+    /// BMI = kg / m², to one decimal. nil unless BOTH measurements are present and inside their accepted ranges.
+    static func bmi(weightKg: Double?, heightCm: Int?) -> Double? {
+        guard let w = weightKg, let h = heightCm, weightRangeKg.contains(w), heightRangeCm.contains(h) else { return nil }
+        let m = Double(h) / 100
+        return (w / (m * m) * 10).rounded() / 10
+    }
+
+    // Date of birth typed as day, month and year (Gregorian, whatever calendar the iPhone is set to).
+    enum BirthIssue: Equatable { case incomplete, notADate, future, tooYoung, tooOld
+        var text: String {
+            switch self {
+            case .incomplete: return "Enter day, month and a four-digit year."
+            case .notADate: return "That date does not exist."
+            case .future: return "A date of birth cannot be in the future."
+            case .tooYoung: return "Cyclift is for athletes aged 13 and over."
+            case .tooOld: return "Please check the year."
+            }
+        }
+    }
+    enum BirthEntry: Equatable { case date(Date), issue(BirthIssue) }
+    static let minAge = 13, maxAge = 100
+    static var gregorian: Calendar { var c = Calendar(identifier: .gregorian); c.timeZone = TimeZone.current; return c }
+    /// Validates the three typed parts: a real calendar date (leap years included), not in the future, age 13–100 —
+    /// the same limits the earlier date wheel had.
+    static func birthDate(day: String, month: String, year: String, now: Date = Date()) -> BirthEntry {
+        let ds = day.trimmingCharacters(in: .whitespaces), ms = month.trimmingCharacters(in: .whitespaces), ys = year.trimmingCharacters(in: .whitespaces)
+        guard let d = Int(ds), let m = Int(ms), let y = Int(ys), ys.count == 4 else { return .issue(.incomplete) }
+        let cal = gregorian
+        var c = DateComponents(); c.year = y; c.month = m; c.day = d; c.hour = 12
+        guard (1...12).contains(m), (1...31).contains(d), let date = cal.date(from: c) else { return .issue(.notADate) }
+        let back = cal.dateComponents([.year, .month, .day], from: date)
+        guard back.year == y, back.month == m, back.day == d else { return .issue(.notADate) }      // 31 Apr, 29 Feb in a common year
+        if date > now { return .issue(.future) }
+        let age = cal.dateComponents([.year], from: date, to: now).year ?? 0
+        if age < minAge { return .issue(.tooYoung) }
+        if age > maxAge { return .issue(.tooOld) }
+        return .date(date)
+    }
+    /// The three parts of a stored date, for showing it again in the entry sheet.
+    static func birthParts(_ date: Date) -> (day: String, month: String, year: String) {
+        let c = gregorian.dateComponents([.year, .month, .day], from: date)
+        return (String(c.day ?? 0), String(c.month ?? 0), String(c.year ?? 0))
     }
 }

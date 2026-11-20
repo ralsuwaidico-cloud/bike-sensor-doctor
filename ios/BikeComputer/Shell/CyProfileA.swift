@@ -5,7 +5,8 @@ import SwiftUI
 //   A3 Type & experience  — four labelled three-way controls; Save in the bar; the plan change is previewed first
 // They store through exactly the same calls as the pages they replace in the redesign (PersonalPage,
 // TypeExperiencePage in ProfileScreens.swift, which the existing app keeps). Nothing new is stored.
-// Not drawn here because the app has no such value today (sheet note "NOT IN APP TODAY"): Height.
+// Height (owner decision 20 Nov 2026, Screen 2): entered on About you and editable here, in the same row style as
+// Weight. The date-of-birth control on this page is unchanged and awaits its own review.
 
 private struct CyBarSave: ViewModifier {
     let enabled: Bool
@@ -47,6 +48,9 @@ struct CyProfilePersonalDetails: View {
     @State private var name = ""
     @State private var dob: Date? = nil
     @State private var weightText = ""
+    @State private var heightText = ""
+    @State private var feetText = ""
+    @State private var inchText = ""
     @State private var editingDOB = false
     @State private var loaded = false
     @FocusState private var focus: Int?
@@ -54,9 +58,14 @@ struct CyProfilePersonalDetails: View {
     private var units: AppSettings.Units { store.settings.units }
     private var storedWeight: Double? { store.profile.provenance(.weight).source == .unknown ? nil : store.profile.weightKg }
     private var weight: Double? { AthleteTypeEditor.parseWeight(weightText, units) }
+    private var storedHeight: Int? { store.profile.heightCm.flatMap { BodyMeasure.heightRangeCm.contains($0) ? $0 : nil } }
+    private var height: Int? { units == .imperial ? BodyMeasure.heightCm(feet: feetText, inches: inchText) : BodyMeasure.parseHeightCm(heightText) }
+    private var heightTyped: Bool { units == .imperial ? !(feetText.isEmpty && inchText.isEmpty) : !heightText.isEmpty }
+    /// An emptied height clears it; a typed one must be valid before it counts as a change.
+    private var heightChanged: Bool { heightTyped ? (height != nil && height != storedHeight) : storedHeight != nil }
     private var changed: Bool {
         name.trimmingCharacters(in: .whitespaces) != store.profile.name || dob != store.profile.dateOfBirth
-            || weightText != (storedWeight.map { AthleteTypeEditor.weightString($0, units) } ?? "")
+            || weightText != (storedWeight.map { AthleteTypeEditor.weightString($0, units) } ?? "") || heightChanged
     }
     private var valueFont: Font { CyDyn.f(20, .semibold) }
 
@@ -99,6 +108,29 @@ struct CyProfilePersonalDetails: View {
                     }
                 }
             }
+            CyFieldRow(label: "Height", source: heightTyped ? (height == nil ? "check the value" : "entered by you") : "not set") {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    if units == .imperial {
+                        TextField("–", text: $feetText).keyboardType(.numberPad).font(valueFont).foregroundStyle(CyTheme.ink)
+                            .focused($focus, equals: 3).frame(width: 30, alignment: .leading)
+                            .accessibilityLabel("Height, feet").accessibilityIdentifier("personalHeightFeet")
+                        Text("ft").font(valueFont).foregroundStyle(CyTheme.ink)
+                        TextField("–", text: $inchText).keyboardType(.numberPad).font(valueFont).foregroundStyle(CyTheme.ink)
+                            .focused($focus, equals: 4).frame(width: 36, alignment: .leading)
+                            .accessibilityLabel("Height, inches").accessibilityIdentifier("personalHeightInches")
+                        Text("in").font(valueFont).foregroundStyle(CyTheme.ink)
+                    } else {
+                        TextField("Not set", text: $heightText).keyboardType(.numberPad).font(valueFont).foregroundStyle(CyTheme.ink)
+                            .focused($focus, equals: 3).frame(width: max(30, CGFloat(heightText.count) * 12.5 + 6), alignment: .leading)
+                            .accessibilityLabel("Height in centimetres").accessibilityIdentifier("personalHeight")
+                        if !heightText.isEmpty { Text("cm").font(valueFont).foregroundStyle(CyTheme.ink) }
+                    }
+                    if focus == 3 || focus == 4 {
+                        Button("Done") { focus = nil }.font(.body.weight(.semibold)).foregroundStyle(CyTheme.ink)
+                            .padding(.leading, 10).frame(minHeight: CyTheme.minTap).accessibilityIdentifier("keyboardDone")
+                    }
+                }
+            }
             Text("Age is needed for heart-rate zones; weight for watts per kilogram. Each value shows where it came from.")
                 .font(CyDyn.f(13.5)).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).padding(.top, 14)
             if store.profile.provenance(.dateOfBirth).needsConfirmation || store.profile.provenance(.weight).needsConfirmation {
@@ -113,6 +145,7 @@ struct CyProfilePersonalDetails: View {
             loaded = true
             name = store.profile.name; dob = store.profile.dateOfBirth
             weightText = storedWeight.map { AthleteTypeEditor.weightString($0, units) } ?? ""
+            if let cm = storedHeight { heightText = String(cm); let fi = BodyMeasure.feetInches(cm); feetText = String(fi.feet); inchText = String(fi.inches) }
         }
     }
 
@@ -136,6 +169,7 @@ struct CyProfilePersonalDetails: View {
             if dob != p.dateOfBirth { p.setDateOfBirth(dob) }
             let cur = p.provenance(.weight).source == .unknown ? nil : p.weightKg
             if weight != cur { p.setWeight(weight) }
+            if heightChanged { p.heightCm = heightTyped ? height : nil }
         }
         dismiss()
     }

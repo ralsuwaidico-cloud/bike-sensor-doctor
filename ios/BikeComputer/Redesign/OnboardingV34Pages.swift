@@ -161,9 +161,11 @@ struct OnbAboutPage: View {
     /// A weight already read from Apple Health with permission: offered, never applied silently.
     var healthWeight: (kg: Double, date: Date)? = nil
     @State private var weightText = ""
+    @State private var heightText = ""          // centimetres (Metric)
+    @State private var feetText = ""            // feet and inches (Imperial)
+    @State private var inchText = ""
     @State private var showDOB = false
-    @State private var dobDraft: Date? = nil
-    private enum Field: Hashable { case name, weight }
+    private enum Field: Hashable { case name, weight, height, feet, inches }
     @FocusState private var focus: Field?
     @Environment(\.cyTheme) private var theme
 
@@ -172,14 +174,27 @@ struct OnbAboutPage: View {
             nameRow
             separator
             dobRow
-            if showDOB { dobPicker }
             separator
             weightRow
             healthOffer
+            separator
+            heightRow
             unitsBlock
         }
-        .onAppear { if let w = a.weightKg { weightText = AthleteTypeEditor.weightString(w, units) } }
-        .onChange(of: units) { _, u in if let w = a.weightKg { weightText = AthleteTypeEditor.weightString(w, u) } }
+        .onAppear { if let w = a.weightKg { weightText = AthleteTypeEditor.weightString(w, units) }; showHeight(units) }
+        // a units change shows the SAME stored measurements in the other unit; it never rewrites what is stored
+        .onChange(of: units) { _, u in if let w = a.weightKg { weightText = AthleteTypeEditor.weightString(w, u) }; showHeight(u) }
+        .sheet(isPresented: $showDOB) {
+            OnbBirthSheet(current: a.dateOfBirth) { a.dateOfBirth = $0 }
+                .presentationDetents([.height(OnbBirthSheet.height)])
+                .presentationDragIndicator(.hidden)
+                .cyThemeRoot()
+        }
+    }
+    private func showHeight(_ u: AppSettings.Units) {
+        guard let cm = a.heightCm else { return }
+        heightText = String(cm)
+        let fi = BodyMeasure.feetInches(cm); feetText = String(fi.feet); inchText = String(fi.inches)
     }
     private var separator: some View { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
 
@@ -197,7 +212,7 @@ struct OnbAboutPage: View {
     }
 
     private var dobRow: some View {
-        Button { showDOB.toggle(); focus = nil } label: {
+        Button { focus = nil; showDOB = true } label: {
             HStack(spacing: CySpace.m) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Date of birth").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
@@ -214,34 +229,6 @@ struct OnbAboutPage: View {
         .accessibilityLabel("Date of birth, \(a.dateOfBirth.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "not set"). For heart-rate zones, optional")
         .accessibilityIdentifier("onbDOB")
     }
-    /// Nothing is saved until the wheel is moved (never a default date).
-    private var dobPicker: some View {
-        VStack(spacing: 0) {
-            DatePicker("Date of birth", selection: Binding(get: { dobDraft ?? a.dateOfBirth ?? AthleteTypeEditor.dobNeutral }, set: { dobDraft = $0 }),
-                       in: AthleteTypeEditor.dobRange, displayedComponents: .date)
-                .datePickerStyle(.wheel).labelsHidden().frame(maxWidth: .infinity)
-            HStack {
-                if a.dateOfBirth != nil {
-                    Button("Clear") { a.dateOfBirth = nil; dobDraft = nil; showDOB = false }
-                        .font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textSecondary)
-                        .frame(minHeight: CyHit.min).buttonStyle(.plain)
-                        .accessibilityIdentifier("onbDOBClear")
-                }
-                Spacer()
-                Button("Done") {
-                    if let d = dobDraft { a.dateOfBirth = d }
-                    showDOB = false
-                }
-                .font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary)
-                .padding(.horizontal, 18).frame(minHeight: CyHit.min)
-                .background(Capsule().fill(theme.surface2))
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("onbDOBDone")
-            }
-            .padding(.bottom, 10)
-        }
-    }
-
     private var weightRow: some View {
         HStack(spacing: CySpace.m) {
             VStack(alignment: .leading, spacing: 2) {
@@ -265,6 +252,39 @@ struct OnbAboutPage: View {
         }
         .padding(.vertical, 10).frame(minHeight: 56)
     }
+    /// Height: centimetres on Metric, feet and inches on Imperial. Stored in whole centimetres either way.
+    private var heightRow: some View {
+        HStack(spacing: CySpace.m) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Height").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
+                Text("for BMI · optional").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
+            }
+            .accessibilityElement(children: .combine)
+            Spacer(minLength: CySpace.s)
+            if units == .imperial {
+                heightField($feetText, .feet, width: 40, label: "Height, feet", id: "onbHeightFeet") { a.heightCm = BodyMeasure.heightCm(feet: feetText, inches: inchText) }
+                heightUnit("ft")
+                heightField($inchText, .inches, width: 40, label: "Height, inches", id: "onbHeightInches") { a.heightCm = BodyMeasure.heightCm(feet: feetText, inches: inchText) }
+                heightUnit("in")
+            } else {
+                heightField($heightText, .height, width: 96, label: "Height in centimetres", id: "onbHeight") { a.heightCm = BodyMeasure.parseHeightCm(heightText) }
+                heightUnit("cm").accessibilityIdentifier("onbHeightUnit")
+            }
+        }
+        .padding(.vertical, 10).frame(minHeight: 56)
+    }
+    private func heightField(_ text: Binding<String>, _ f: Field, width: CGFloat, label: String, id: String, typed: @escaping () -> Void) -> some View {
+        TextField(f == .height ? "Not set" : "–", text: Binding(get: { text.wrappedValue }, set: { text.wrappedValue = $0; typed() }))
+            .keyboardType(.numberPad).multilineTextAlignment(.trailing)
+            .font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
+            .focused($focus, equals: f)
+            .frame(width: width)
+            .accessibilityLabel(label)
+            .accessibilityIdentifier(id)
+    }
+    private func heightUnit(_ u: String) -> some View {
+        Text(u).font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
+    }
     @ViewBuilder private var healthOffer: some View {
         if let h = healthWeight, a.weightKg == nil {
             HStack {
@@ -285,6 +305,89 @@ struct OnbAboutPage: View {
                 .accessibilityIdentifier("onbUnits")
         }
         .padding(.top, CySpace.s)
+    }
+}
+
+// MARK: - Date of birth: day, month and year, typed (owner decision 20 Nov 2026 — the date wheel is rejected)
+
+/// A short sheet with three number fields. The year is typed directly; nothing scrolls. Done stores a date only when
+/// it is a real date, not in the future and within the app's age limits; Cancel changes nothing.
+struct OnbBirthSheet: View {
+    static let height: CGFloat = 264
+    let current: Date?
+    let store: (Date?) -> Void
+    @State private var day = ""
+    @State private var month = ""
+    @State private var year = ""
+    private enum Part: Hashable { case day, month, year }
+    @FocusState private var focus: Part?
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.cyTheme) private var theme
+
+    private var entry: BodyMeasure.BirthEntry { BodyMeasure.birthDate(day: day, month: month, year: year) }
+    private var typedSomething: Bool { !day.isEmpty || !month.isEmpty || !year.isEmpty }
+    /// Shown only once all three parts are there, so the sheet does not complain while the athlete is still typing.
+    private var issue: String? {
+        guard !day.isEmpty, !month.isEmpty, year.count >= 4, case .issue(let i) = entry else { return nil }
+        return i.text
+    }
+    private var valid: Date? { if case .date(let d) = entry { return d }; return nil }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CySpace.m) {
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .font(CyDyn.f(16)).foregroundStyle(theme.textSecondary).frame(minHeight: CyHit.min)
+                    .accessibilityIdentifier("onbDOBCancel")
+                Spacer()
+                Text("Date of birth").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button("Done") { if let d = valid { store(d); dismiss() } }
+                    .font(CyDyn.f(16, .semibold)).foregroundStyle(valid == nil ? theme.textSecondary.opacity(0.5) : theme.accent)
+                    .frame(minHeight: CyHit.min).disabled(valid == nil)
+                    .accessibilityIdentifier("onbDOBDone")
+            }
+            HStack(spacing: CySpace.m) {
+                part("Day", "DD", $day, .day, limit: 2, id: "onbDOBDay")
+                part("Month", "MM", $month, .month, limit: 2, id: "onbDOBMonth")
+                part("Year", "YYYY", $year, .year, limit: 4, id: "onbDOBYear").frame(maxWidth: .infinity)
+            }
+            Text(issue ?? " ").font(CyDyn.f(13)).foregroundStyle(theme.warning)
+                .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("onbDOBIssue").accessibilityHidden(issue == nil)
+            if current != nil {
+                Button("Clear date of birth") { store(nil); dismiss() }
+                    .font(CyDyn.f(14, .semibold)).foregroundStyle(theme.textSecondary).frame(minHeight: CyHit.min)
+                    .accessibilityIdentifier("onbDOBClear")
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, CySpace.l).padding(.top, CySpace.s)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(theme.surface.ignoresSafeArea())
+        .onAppear {
+            if let c = current { let p = BodyMeasure.birthParts(c); day = p.day; month = p.month; year = p.year }
+            focus = .day
+        }
+    }
+
+    private func part(_ title: String, _ hint: String, _ text: Binding<String>, _ p: Part, limit: Int, id: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased()).font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityHidden(true)
+            TextField(hint, text: Binding(get: { text.wrappedValue }, set: { v in
+                let digits = String(v.filter(\.isNumber).prefix(limit))
+                text.wrappedValue = digits
+                // two digits of a day or month are complete: move on, so the date is typed in one run
+                if digits.count == limit, focus == p { if p == .day { focus = .month } else if p == .month { focus = .year } }
+            }))
+            .keyboardType(.numberPad).multilineTextAlignment(.center)
+            .font(CyDyn.f(22, .semibold)).foregroundStyle(theme.textPrimary)
+            .focused($focus, equals: p)
+            .frame(minWidth: p == .year ? 96 : 64, minHeight: 52)
+            .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.surface2))
+            .accessibilityLabel(title)
+            .accessibilityIdentifier(id)
+        }
     }
 }
 
