@@ -770,11 +770,13 @@ struct OnboardingV34View: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(g.title).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
-                        Text(g.line).font(CyDyn.f(11.5)).foregroundStyle(theme.textSecondary).lineLimit(dts.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.75)
+                        // fast check 31: "Feel better, move more" was cut to "move…" on a selected card; the star now takes
+                        // less room and the line may shrink a little further before it would ever be cut
+                        Text(g.line).font(CyDyn.f(11.5)).foregroundStyle(theme.textSecondary).lineLimit(dts.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.7)
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.leading, 8).padding(.trailing, on ? 34 : 8).padding(.vertical, 5)
+                .padding(.leading, 8).padding(.trailing, on ? 28 : 6).padding(.vertical, 5)
                 .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(on ? tint.opacity(0.14) : theme.surface))
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(on ? tint : theme.separator, lineWidth: on ? 1.5 : 1))
@@ -788,10 +790,10 @@ struct OnboardingV34View: View {
                 Button { var s = sel; s.setMain(g.id); setGoals(s) } label: {
                     Image(systemName: main ? "star.fill" : "star").font(.caption.weight(.bold))
                         .foregroundStyle(main ? theme.background : tint)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 22, height: 22)
                         .background(Circle().fill(main ? tint : Color.clear))
                         .overlay(Circle().strokeBorder(main ? Color.clear : tint, lineWidth: 1))
-                        .frame(width: 38, height: CyHit.min).contentShape(Rectangle())
+                        .frame(width: 30, height: CyHit.min).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(main ? "\(g.title) is the main goal" : "Make \(g.title) the main goal")
