@@ -120,6 +120,26 @@ extension XCUIApplication {
         return false
     }
 
+    /// Onboarding › About you. Since the owner's decision of 20 Nov 2026 (18:24) a new athlete must give a date of birth,
+    /// a weight and a height as well as a name before Continue is enabled; checks that only typed a name now also enter
+    /// these. The date is typed into the day / month / year sheet (fields are empty when nothing is stored).
+    func fillAboutYouMeasurements(day: String = "12", month: String = "3", year: String = "1990", weight: String = "70", height: String = "175",
+                                  file: StaticString = #filePath, line: UInt = #line) {
+        func hideKeyboard() { let d = buttons["keyboardDone"].firstMatch; if d.waitForExistence(timeout: 2) { d.tap() } }
+        let dob = descendants(matching: .any).matching(identifier: "onbDOB").firstMatch
+        XCTAssertTrue(dob.waitForExistence(timeout: 8), "required: the date of birth row", file: file, line: line); dob.tap()
+        for (id, text) in [("onbDOBDay", day), ("onbDOBMonth", month), ("onbDOBYear", year)] {
+            let f = textFields[id].firstMatch
+            XCTAssertTrue(f.waitForExistence(timeout: 6), "required: date field \(id)", file: file, line: line); f.tap(); f.typeText(text)
+        }
+        let done = buttons["onbDOBDone"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 4) && done.isEnabled, "required: Done accepts \(day)/\(month)/\(year)", file: file, line: line); done.tap()
+        let w = textFields["onbWeight"].firstMatch
+        XCTAssertTrue(w.waitForExistence(timeout: 6), "required: the weight field", file: file, line: line); w.tap(); w.typeText(weight); hideKeyboard()
+        let h = textFields["onbHeight"].firstMatch
+        XCTAssertTrue(h.waitForExistence(timeout: 6), "required: the height field", file: file, line: line); h.tap(); h.typeText(height); hideKeyboard()
+    }
+
     /// Short pause before a screenshot so animations and charts have finished drawing. Screenshots only — never used to
     /// wait for an element (use `waitForExistence` / `waitUntilSettled` for that).
     func settleForScreenshot(_ seconds: TimeInterval = 1) {

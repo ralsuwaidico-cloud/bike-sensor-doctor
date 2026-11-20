@@ -608,6 +608,39 @@ enum BodyMeasure {
         return (w / (m * m) * 10).rounded() / 10
     }
 
+    // About you for a NEW athlete (owner decision 20 Nov 2026, 18:24): first name, date of birth, weight and height are
+    // all required before Continue. This is only the onboarding rule: an existing athlete's record is never rejected or
+    // rewritten because a measurement is missing, and Profile keeps accepting a blank height.
+    static func aboutYouComplete(name: String?, dateOfBirth: Date?, weightKg: Double?, heightCm: Int?) -> Bool {
+        aboutYouPrompt(name: name, dateOfBirth: dateOfBirth, weightKg: weightKg, heightCm: heightCm) == nil
+    }
+    /// One sentence naming what is still needed, or nil when all four are there and valid.
+    static func aboutYouPrompt(name: String?, dateOfBirth: Date?, weightKg: Double?, heightCm: Int?) -> String? {
+        var need: [String] = []
+        if (name ?? "").trimmingCharacters(in: .whitespaces).isEmpty { need.append("first name") }
+        if dateOfBirth == nil { need.append("date of birth") }
+        if !(weightKg.map { weightRangeKg.contains($0) } ?? false) { need.append("weight") }
+        if !(heightCm.map { heightRangeCm.contains($0) } ?? false) { need.append("height") }
+        guard !need.isEmpty else { return nil }
+        let list = need.count == 1 ? need[0] : need.dropLast().joined(separator: ", ") + " and " + need[need.count - 1]
+        return "Add your \(list) to continue."
+    }
+    /// Why a typed weight is not accepted, in the unit shown; nil when it is blank or valid.
+    static func weightIssue(_ text: String, imperial: Bool) -> String? {
+        guard !text.trimmingCharacters(in: .whitespaces).isEmpty, parseWeightKg(text, imperial: imperial) == nil else { return nil }
+        return imperial ? "Weight must be between 67 and 440 lb." : "Weight must be between 30 and 200 kg."
+    }
+    /// Why a typed height is not accepted, in the unit shown; nil when it is blank or valid.
+    static func heightIssue(cm text: String) -> String? {
+        guard !text.trimmingCharacters(in: .whitespaces).isEmpty, parseHeightCm(text) == nil else { return nil }
+        return "Height must be between 120 and 230 cm."
+    }
+    static func heightIssue(feet: String, inches: String) -> String? {
+        let blank = feet.trimmingCharacters(in: .whitespaces).isEmpty && inches.trimmingCharacters(in: .whitespaces).isEmpty
+        guard !blank, heightCm(feet: feet, inches: inches) == nil else { return nil }
+        return "Height must be between 4 ft 0 in and 7 ft 6 in, with inches from 0 to 11."
+    }
+
     // Date of birth typed as day, month and year (Gregorian, whatever calendar the iPhone is set to).
     enum BirthIssue: Equatable { case incomplete, notADate, future, tooYoung, tooOld
         var text: String {

@@ -73,6 +73,9 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 8), "required: the name field"); field.tap(); field.typeText(name)
         XCTAssertEqual(field.value as? String, name, "required: the field holds what was typed")
         hideKeyboard(app)
+        // owner decision 20 Nov 2026, 18:24: date of birth, weight and height are required as well as the name
+        XCTAssertFalse(app.buttons["onboardingNext"].firstMatch.isEnabled, "required: a name alone is not enough")
+        app.fillAboutYouMeasurements()
     }
     private func rosterAndGoal(_ app: XCUIApplication) {
         let next = app.buttons["onboardingNext"].firstMatch
@@ -87,16 +90,11 @@ final class LabFastOnboarding: XCTestCase {
         for id in ["onbCyclingLevel", "onbStrengthLevel"] { need(app, id, "level row") }
     }
 
-    private func retype(_ app: XCUIApplication, _ f: XCUIElement, _ text: String) {
-        XCTAssertTrue(f.waitForExistence(timeout: 6), "required: field \(f.identifier)")
-        f.tap()
-        let n = (f.value as? String).map { $0 == f.placeholderValue ? 0 : $0.count } ?? 0
-        if n > 0 { f.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: n)) }
-        f.typeText(text)
-    }
-    /// Screen 2, owner decision of 20 Nov 2026: four fields (name, date of birth, weight, height); the date is typed as
-    /// day, month and year in a short sheet (no wheel); height in cm or feet/inches; units never change what is stored;
-    /// Back and Continue keep the answers; they are still there after the app is closed and opened again.
+    /// Screen 2 as approved on 20 Nov 2026 (17:09, revised 18:24): four REQUIRED fields — name, date of birth, weight,
+    /// height; Continue stays disabled, and the page says what is missing, until all four are valid; no "optional"
+    /// labels and no paragraph; the date is typed as day, month and year in a short sheet (no wheel); a compact
+    /// "Units: Metric" menu; units never change what is stored; Back and Continue keep the answers; they are still
+    /// there after the app is closed and opened again.
     func testAboutYouMeasurements() {
         let app = launch()
         let start = app.buttons["onboardingContinue"].firstMatch
@@ -108,53 +106,89 @@ final class LabFastOnboarding: XCTestCase {
         if !app.staticTexts["onboardingProgress"].firstMatch.waitForExistence(timeout: 8) { shot("onb-0-hold-did-not-start") }
         page(app, 1)
         let next = app.buttons["onboardingNext"].firstMatch
-        XCTAssertFalse(next.isEnabled, "required: Continue waits for a name")
+        need(app, "onbCoachLine", "the line that says what is missing")
+        // once the page is complete the line is empty and may not be an element at all
+        func lineText() -> String { let e = el(app, "onbCoachLine"); return e.exists ? e.label : "" }
+        func says(_ words: [String], _ what: String) { let t = lineText(); for w in words { XCTAssertTrue(t.contains(w), "required: \(what) — the page names '\(w)' (\(t))") } }
+        XCTAssertFalse(next.isEnabled, "required: Continue is disabled on an empty page")
+        says(["first name", "date of birth", "weight", "height"], "empty page")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'optional'")).firstMatch.exists, "required: no 'optional' label on the page")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Only your name is needed'")).firstMatch.exists, "required: the old paragraph is gone")
+        app.settleForScreenshot(1); shot("onb-1-about-empty")
+
         let name = app.textFields["onbName"].firstMatch
         XCTAssertTrue(name.waitForExistence(timeout: 8), "required: the name field"); name.tap(); name.typeText("Sam"); hideKeyboard(app)
-        XCTAssertTrue(next.isEnabled, "required: a name alone is enough to continue")
+        XCTAssertFalse(next.isEnabled, "required: a name alone does not enable Continue")
+        XCTAssertFalse(lineText().contains("first name"), "required: the name is no longer listed as missing (\(lineText()))")
 
-        // date of birth: a short sheet with three typed parts, no wheel anywhere
+        // date of birth: a short sheet with three typed parts, no wheel anywhere. Each rejected date is typed into a
+        // freshly opened sheet (fast check 26 retyped into filled fields and garbled two of its three cases).
         let dob = need(app, "onbDOB", "date of birth row")
         XCTAssertTrue(dob.label.lowercased().contains("not set"), "required: no date is pre-filled (\(dob.label))")
-        dob.tap()
         let d = app.textFields["onbDOBDay"].firstMatch, m = app.textFields["onbDOBMonth"].firstMatch, y = app.textFields["onbDOBYear"].firstMatch
-        let done = app.buttons["onbDOBDone"].firstMatch
-        XCTAssertTrue(d.waitForExistence(timeout: 6) && m.exists && y.exists, "required: day, month and year fields")
-        XCTAssertEqual(app.pickerWheels.count, 0, "required: no date wheel")
-        XCTAssertTrue(app.staticTexts["onbTitle"].firstMatch.exists, "required: the sheet does not cover the whole page")
-        retype(app, d, "31"); retype(app, m, "4"); retype(app, y, "1990")
-        XCTAssertFalse(done.isEnabled, "required: 31 April cannot be saved")
-        XCTAssertTrue(el(app, "onbDOBIssue").label.contains("does not exist"), "required: the reason is shown (\(el(app, "onbDOBIssue").label))")
-        retype(app, d, "29"); retype(app, m, "2"); retype(app, y, "1999")
-        XCTAssertFalse(done.isEnabled, "required: 29 February 1999 cannot be saved")
-        retype(app, y, "2090")
-        XCTAssertFalse(done.isEnabled, "required: a future birthday cannot be saved")
-        app.settleForScreenshot(1); shot("onb-1-dob-sheet-invalid")
-        app.buttons["onbDOBCancel"].firstMatch.tap()
-        XCTAssertTrue(dob.waitForExistence(timeout: 6) && dob.label.lowercased().contains("not set"), "required: Cancel stores nothing (\(dob.label))")
-        dob.tap()
-        XCTAssertTrue(d.waitForExistence(timeout: 6), "required: the sheet opens again")
-        retype(app, d, "29"); retype(app, m, "2"); retype(app, y, "2000")
+        let done = app.buttons["onbDOBDone"].firstMatch, cancel = app.buttons["onbDOBCancel"].firstMatch
+        func type(_ dd: String, _ mm: String, _ yy: String) {
+            dob.tap()
+            XCTAssertTrue(d.waitForExistence(timeout: 6) && m.exists && y.exists, "required: day, month and year fields")
+            d.tap(); d.typeText(dd); m.tap(); m.typeText(mm); y.tap(); y.typeText(yy)
+            XCTAssertEqual(d.value as? String, dd, "the day field holds what was typed"); XCTAssertEqual(m.value as? String, mm, "the month field holds what was typed")
+            XCTAssertEqual(y.value as? String, yy, "the year field holds what was typed")
+        }
+        for (dd, mm, yy, why, words) in [("31", "4", "1990", "31 April", "does not exist"), ("29", "2", "1999", "29 February 1999", "does not exist"), ("1", "1", "2090", "a future birthday", "future")] {
+            type(dd, mm, yy)
+            XCTAssertEqual(app.pickerWheels.count, 0, "required: no date wheel")
+            XCTAssertTrue(app.staticTexts["onbTitle"].firstMatch.exists, "required: the sheet does not cover the whole page")
+            XCTAssertFalse(done.isEnabled, "required: \(why) cannot be saved")
+            XCTAssertTrue(el(app, "onbDOBIssue").label.contains(words), "required: the reason for \(why) is shown (\(el(app, "onbDOBIssue").label))")
+            if dd == "1" { app.settleForScreenshot(1); shot("onb-1-dob-sheet-invalid") }
+            cancel.tap()
+            XCTAssertTrue(dob.waitForExistence(timeout: 6) && dob.label.lowercased().contains("not set"), "required: Cancel stores nothing (\(dob.label))")
+        }
+        type("29", "2", "2000")
         XCTAssertTrue(done.isEnabled, "required: 29 February 2000 is a real date")
         app.settleForScreenshot(1); shot("onb-1-dob-sheet")
         done.tap()
         XCTAssertTrue(dob.waitForExistence(timeout: 6) && dob.label.contains("2000") && dob.label.contains("29"), "required: the chosen date is shown on the page (\(dob.label))")
+        XCTAssertFalse(next.isEnabled, "required: name and date alone do not enable Continue")
+        says(["weight", "height"], "after name and date")
 
-        // weight and height, Metric then Imperial and back
+        // weight and height: an out-of-range entry is named and blocks Continue; valid entries enable it
         let weight = app.textFields["onbWeight"].firstMatch, height = app.textFields["onbHeight"].firstMatch
         XCTAssertTrue(weight.exists && height.exists, "required: weight and height fields")
         weight.tap(); weight.typeText("70"); hideKeyboard(app)
-        height.tap(); height.typeText("175"); hideKeyboard(app)
+        XCTAssertFalse(next.isEnabled, "required: three of four do not enable Continue")
+        says(["height"], "after name, date and weight")
+        height.tap(); height.typeText("17")
+        XCTAssertFalse(next.isEnabled, "required: an impossible height does not enable Continue")
+        says(["between 120 and 230 cm"], "an impossible height")
+        height.typeText("5"); hideKeyboard(app)                                     // still in the field, cursor at the end: 17 → 175
+        XCTAssertEqual(lineText(), "", "required: nothing is listed as missing once the page is complete")
+        XCTAssertEqual(height.value as? String, "175", "the height field holds 175 (\(String(describing: height.value)))")
+        XCTAssertTrue(next.isEnabled, "required: all four valid values enable Continue")
         XCTAssertEqual(el(app, "onbHeightUnit").label, "cm", "required: height is asked in centimetres on Metric")
         app.settleForScreenshot(1); shot("onb-1-about")
-        let units = need(app, "onbUnits", "the units choice")
-        units.buttons["Imperial"].firstMatch.tap()
+
+        // the compact units menu
+        let units = need(app, "onbUnits", "the compact units selector")
+        XCTAssertTrue(units.label.contains("Metric"), "required: a new athlete starts on Metric (\(units.label))")
+        XCTAssertLessThan(units.frame.width, 200, "required: the selector is compact, not full width (\(units.frame.width) pt)")
+        func choose(_ u: String) {
+            units.tap()
+            let item = app.buttons[u].firstMatch
+            XCTAssertTrue(item.waitForExistence(timeout: 5), "required: the menu offers \(u)")
+            if u == "Imperial" { app.settleForScreenshot(1); shot("onb-1-units-menu") }
+            item.tap()
+            let ok = NSPredicate(format: "label CONTAINS %@", u)
+            XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: ok, object: units)], timeout: 5), .completed, "required: the selector shows \(u) (\(units.label))")
+        }
+        choose("Imperial")
         let feet = app.textFields["onbHeightFeet"].firstMatch, inches = app.textFields["onbHeightInches"].firstMatch
         XCTAssertTrue(feet.waitForExistence(timeout: 6) && inches.exists, "required: Imperial asks for feet and inches")
         XCTAssertEqual(feet.value as? String, "5", "required: 175 cm is shown as 5 ft"); XCTAssertEqual(inches.value as? String, "9", "required: … 9 in")
         XCTAssertEqual(weight.value as? String, "154", "required: 70 kg is shown as 154 lb")
+        XCTAssertTrue(next.isEnabled, "required: still complete in Imperial")
         app.settleForScreenshot(1); shot("onb-1-about-imperial")
-        units.buttons["Metric"].firstMatch.tap()
+        choose("Metric")
         XCTAssertTrue(height.waitForExistence(timeout: 6), "required: Metric shows centimetres again")
         XCTAssertEqual(height.value as? String, "175", "required: changing units never changes the height itself")
         XCTAssertEqual(weight.value as? String, "70", "required: changing units never changes the weight itself")
@@ -164,6 +198,7 @@ final class LabFastOnboarding: XCTestCase {
         app.buttons["onboardingBack"].firstMatch.tap(); page(app, 1)
         XCTAssertEqual(name.value as? String, "Sam"); XCTAssertEqual(weight.value as? String, "70"); XCTAssertEqual(height.value as? String, "175")
         XCTAssertTrue(dob.label.contains("2000"), "required: the date is still shown after Back (\(dob.label))")
+        XCTAssertTrue(next.isEnabled, "required: still complete after Back")
 
         // closed and opened again (no new-athlete fixture this time): the same answers are read back from storage
         app.terminate()
@@ -175,6 +210,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(again.textFields["onbHeight"].firstMatch.value as? String, "175", "required: the height was saved")
         let dob2 = el(again, "onbDOB")
         XCTAssertTrue(dob2.label.contains("2000") && dob2.label.contains("29"), "required: the date of birth was saved (\(dob2.label))")
+        XCTAssertTrue(again.buttons["onboardingNext"].firstMatch.isEnabled, "required: the reopened page is complete")
         again.settleForScreenshot(1); shot("onb-1-about-reopened")
     }
 
@@ -185,29 +221,16 @@ final class LabFastOnboarding: XCTestCase {
         let next = app.buttons["onboardingNext"].firstMatch
         reachGoals(app, name: "Sam")
 
-        // 1 · About you: name, date of birth, weight, units
+        // 1 · About you (filled by reachGoals: name, 12 Mar 1990, 70 kg, 175 cm). Its details are checked by
+        // testAboutYouMeasurements; here: the page is complete and carries no removed text.
         XCTAssertEqual(app.staticTexts["onbTitle"].firstMatch.label, "About you", "required: page 1 title")
-        need(app, "onbDOB", "date of birth row")
-        XCTAssertTrue(app.textFields["onbHeight"].firstMatch.exists, "required: the height field")
-        let weight = app.textFields["onbWeight"].firstMatch
-        XCTAssertTrue(weight.exists, "required: the weight field")
-        let units = need(app, "onbUnits", "the units choice")
-        let metric = units.buttons["Metric"].firstMatch, imperial = units.buttons["Imperial"].firstMatch
-        XCTAssertTrue(metric.exists && imperial.exists, "required: Metric and Imperial")
-        XCTAssertTrue(metric.isSelected, "required: a new athlete starts on Metric")
-        weight.tap(); weight.typeText("70"); hideKeyboard(app)
-        XCTAssertEqual(el(app, "onbWeightUnit").label, "kg", "required: weight is asked in kilograms on Metric")
-        imperial.tap()
-        XCTAssertTrue(imperial.isSelected, "required: the units choice changes")
-        XCTAssertEqual(el(app, "onbWeightUnit").label, "lb", "required: Imperial shows pounds")
-        XCTAssertEqual(weight.value as? String, "154", "required: the same weight is shown in pounds (\(String(describing: weight.value)))")
-        app.settleForScreenshot(1); shot("onb-1-about-imperial")
-        metric.tap()
-        XCTAssertTrue(metric.isSelected, "required: units can be set back")
-        XCTAssertEqual(weight.value as? String, "70", "required: changing units never changes the weight itself (\(String(describing: weight.value)))")
-        XCTAssertTrue(need(app, "onbCoachLine", "the line above the button").label.contains("Nothing is estimated from blanks"), "required: page 1 wording")
-        app.settleForScreenshot(1); shot("onb-1-about")
-        XCTAssertTrue(next.isEnabled, "required: Continue after a name"); next.tap()
+        need(app, "onbDOB", "date of birth row"); need(app, "onbUnits", "the compact units selector")
+        XCTAssertEqual(app.textFields["onbWeight"].firstMatch.value as? String, "70", "required: the weight entered")
+        XCTAssertEqual(app.textFields["onbHeight"].firstMatch.value as? String, "175", "required: the height entered")
+        // the owner removed this paragraph on 20 Nov 2026 (18:24); the earlier check required it
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Nothing is estimated from blanks'")).firstMatch.exists, "required: the old page 1 paragraph is gone")
+        app.settleForScreenshot(1); shot("onb-1-about-journey")
+        XCTAssertTrue(next.isEnabled, "required: Continue once all four are given"); next.tap()
 
         // 2 · Athletic Roster, 3 · Goals
         rosterAndGoal(app)
@@ -347,7 +370,7 @@ final class LabFastOnboarding: XCTestCase {
         let app = launch(arguments: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"])
         let next = app.buttons["onboardingNext"].firstMatch
         reachGoals(app, name: "Sam")
-        XCTAssertTrue(next.isEnabled, "required: Continue after a name"); next.tap()
+        XCTAssertTrue(next.isEnabled, "required: Continue once all four are given"); next.tap()
         rosterAndGoal(app)
         app.settleForScreenshot(1); shot("onb-large-3-goals")
         _ = app.reveal(el(app, "onbStrengthLevel"), top: 110, bottomMargin: 300)

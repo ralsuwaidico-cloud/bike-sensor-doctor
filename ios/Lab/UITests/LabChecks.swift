@@ -859,6 +859,9 @@ final class LabChecks: XCTestCase {
         let name = app.textFields["onbName"].firstMatch
         XCTAssertTrue(name.waitForExistence(timeout: 8)); name.tap(); name.typeText("Sam")
         let done = app.buttons["keyboardDone"].firstMatch; if done.waitForExistence(timeout: 3) { done.tap() }
+        // owner decision 20 Nov 2026, 18:24: date of birth, weight and height are required as well as the name
+        XCTAssertFalse(next.isEnabled, "page 1: a name alone is not enough")
+        app.fillAboutYouMeasurements()
         shot("journey-1-about"); XCTAssertTrue(next.isEnabled); next.tap()
         // 2 Athletic Roster
         page(2); XCTAssertFalse(next.isEnabled, "page 2: Continue needs a sport Cyclift can plan")

@@ -43,7 +43,10 @@ final class RedesignMainTests: XCTestCase {
         let name = app.textFields["onbName"].firstMatch
         must(name, "name field"); name.tap(); name.typeText("Sam")
         let done = app.buttons["keyboardDone"].firstMatch; if done.waitForExistence(timeout: 3) { done.tap() }   // optional control
-        must(next, "Continue"); XCTAssertTrue(next.isEnabled); next.tap()
+        // owner decision 20 Nov 2026, 18:24: date of birth, weight and height are required as well as the name
+        must(next, "Continue"); XCTAssertFalse(next.isEnabled, "a name alone is not enough")
+        app.fillAboutYouMeasurements()
+        XCTAssertTrue(next.isEnabled); next.tap()
         page(2)
         let road = app.buttons["rosterAdd-roadCycling"].firstMatch, gym = app.buttons["rosterAdd-strength"].firstMatch
         must(road, "Road cycling in the roster suggestions"); road.tap()

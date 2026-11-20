@@ -160,6 +160,8 @@ struct OnbAboutPage: View {
     @Binding var units: AppSettings.Units
     /// A weight already read from Apple Health with permission: offered, never applied silently.
     var healthWeight: (kg: Double, date: Date)? = nil
+    /// Why what is typed in Weight or Height is not accepted (nil when both are blank or valid). The page shows it.
+    @Binding var entryIssue: String?
     @State private var weightText = ""
     @State private var heightText = ""          // centimetres (Metric)
     @State private var feetText = ""            // feet and inches (Imperial)
@@ -179,17 +181,26 @@ struct OnbAboutPage: View {
             healthOffer
             separator
             heightRow
-            unitsBlock
+            unitsRow
         }
-        .onAppear { if let w = a.weightKg { weightText = AthleteTypeEditor.weightString(w, units) }; showHeight(units) }
+        .onAppear { if let w = a.weightKg { weightText = AthleteTypeEditor.weightString(w, units) }; showHeight(units); noteIssue() }
         // a units change shows the SAME stored measurements in the other unit; it never rewrites what is stored
-        .onChange(of: units) { _, u in if let w = a.weightKg { weightText = AthleteTypeEditor.weightString(w, u) }; showHeight(u) }
+        .onChange(of: units) { _, u in if let w = a.weightKg { weightText = AthleteTypeEditor.weightString(w, u) }; showHeight(u); noteIssue() }
+        .onChange(of: weightText) { _, _ in noteIssue() }
+        .onChange(of: heightText) { _, _ in noteIssue() }
+        .onChange(of: feetText) { _, _ in noteIssue() }
+        .onChange(of: inchText) { _, _ in noteIssue() }
         .sheet(isPresented: $showDOB) {
             OnbBirthSheet(current: a.dateOfBirth) { a.dateOfBirth = $0 }
                 .presentationDetents([.height(OnbBirthSheet.height)])
                 .presentationDragIndicator(.hidden)
                 .cyThemeRoot()
         }
+    }
+    private func noteIssue() {
+        let imperial = units == .imperial
+        entryIssue = BodyMeasure.weightIssue(weightText, imperial: imperial)
+            ?? (imperial ? BodyMeasure.heightIssue(feet: feetText, inches: inchText) : BodyMeasure.heightIssue(cm: heightText))
     }
     private func showHeight(_ u: AppSettings.Units) {
         guard let cm = a.heightCm else { return }
@@ -214,10 +225,7 @@ struct OnbAboutPage: View {
     private var dobRow: some View {
         Button { focus = nil; showDOB = true } label: {
             HStack(spacing: CySpace.m) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Date of birth").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
-                    Text("for heart-rate zones · optional").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
-                }
+                Text("Date of birth").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
                 Spacer(minLength: CySpace.s)
                 Text(a.dateOfBirth.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "Select date")
                     .font(CyDyn.f(16, .semibold)).foregroundStyle(a.dateOfBirth == nil ? theme.accent : theme.textPrimary)
@@ -226,16 +234,12 @@ struct OnbAboutPage: View {
             .padding(.vertical, 10).frame(minHeight: 56).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Date of birth, \(a.dateOfBirth.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "not set"). For heart-rate zones, optional")
+        .accessibilityLabel("Date of birth, \(a.dateOfBirth.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "not set")")
         .accessibilityIdentifier("onbDOB")
     }
     private var weightRow: some View {
         HStack(spacing: CySpace.m) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Weight").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
-                Text("for loads and W/kg · optional").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
-            }
-            .accessibilityElement(children: .combine)
+            Text("Weight").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
             Spacer(minLength: CySpace.s)
             TextField("Not set", text: Binding(get: { weightText }, set: { v in
                 weightText = v
@@ -255,11 +259,7 @@ struct OnbAboutPage: View {
     /// Height: centimetres on Metric, feet and inches on Imperial. Stored in whole centimetres either way.
     private var heightRow: some View {
         HStack(spacing: CySpace.m) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Height").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
-                Text("for BMI · optional").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
-            }
-            .accessibilityElement(children: .combine)
+            Text("Height").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
             Spacer(minLength: CySpace.s)
             if units == .imperial {
                 heightField($feetText, .feet, width: 40, label: "Height, feet", id: "onbHeightFeet") { a.heightCm = BodyMeasure.heightCm(feet: feetText, inches: inchText) }
@@ -298,13 +298,28 @@ struct OnbAboutPage: View {
             }
         }
     }
-    private var unitsBlock: some View {
-        VStack(alignment: .leading, spacing: CySpace.s) {
-            OnbGroupHeader(mark: .none, title: "Units")
-            CyChoiceBar(options: [(AppSettings.Units.metric, "Metric"), (AppSettings.Units.imperial, "Imperial")], selection: $units)
-                .accessibilityIdentifier("onbUnits")
+    /// "Units: Metric ▾" — a small native menu under the two measurements it applies to (owner decision 20 Nov 2026,
+    /// 18:24; the full-width Metric / Imperial bar was rejected as too large). It changes the app's one units setting.
+    private var unitsRow: some View {
+        HStack {
+            Spacer(minLength: 0)
+            Menu {
+                Picker("Units", selection: $units) {
+                    Text("Metric").tag(AppSettings.Units.metric)
+                    Text("Imperial").tag(AppSettings.Units.imperial)
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Text("Units:").foregroundStyle(theme.textSecondary)
+                    Text(units == .imperial ? "Imperial" : "Metric").foregroundStyle(theme.textPrimary)
+                    Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(theme.textSecondary)
+                }
+                .font(CyDyn.f(14, .semibold))
+                .frame(minHeight: CyHit.min).contentShape(Rectangle())
+            }
+            .accessibilityLabel("Units, \(units == .imperial ? "Imperial" : "Metric")")
+            .accessibilityIdentifier("onbUnits")
         }
-        .padding(.top, CySpace.s)
     }
 }
 

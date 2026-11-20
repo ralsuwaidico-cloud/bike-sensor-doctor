@@ -106,6 +106,49 @@ final class BodyMeasureTests: XCTestCase {
         XCTAssertNil(BodyMeasure.parseWeightKg("60", imperial: true), "60 lb is 27 kg, below the accepted range")
     }
 
+    // MARK: About you is complete only with all four (owner decision 20 Nov 2026, 18:24)
+
+    func testAboutYouNeedsAllFour() {
+        let dob = day(1990, 3, 12)
+        XCTAssertTrue(BodyMeasure.aboutYouComplete(name: "Sam", dateOfBirth: dob, weightKg: 70, heightCm: 175))
+        XCTAssertNil(BodyMeasure.aboutYouPrompt(name: "Sam", dateOfBirth: dob, weightKg: 70, heightCm: 175))
+        XCTAssertFalse(BodyMeasure.aboutYouComplete(name: "  ", dateOfBirth: dob, weightKg: 70, heightCm: 175))
+        XCTAssertFalse(BodyMeasure.aboutYouComplete(name: "Sam", dateOfBirth: nil, weightKg: 70, heightCm: 175))
+        XCTAssertFalse(BodyMeasure.aboutYouComplete(name: "Sam", dateOfBirth: dob, weightKg: nil, heightCm: 175))
+        XCTAssertFalse(BodyMeasure.aboutYouComplete(name: "Sam", dateOfBirth: dob, weightKg: 70, heightCm: nil))
+        XCTAssertFalse(BodyMeasure.aboutYouComplete(name: "Sam", dateOfBirth: dob, weightKg: 0, heightCm: 175), "zero is not a weight")
+        XCTAssertFalse(BodyMeasure.aboutYouComplete(name: "Sam", dateOfBirth: dob, weightKg: 70, heightCm: -5), "a negative height is not a height")
+    }
+    func testAboutYouSaysWhatIsMissing() {
+        let dob = day(1990, 3, 12)
+        XCTAssertEqual(BodyMeasure.aboutYouPrompt(name: nil, dateOfBirth: nil, weightKg: nil, heightCm: nil), "Add your first name, date of birth, weight and height to continue.")
+        XCTAssertEqual(BodyMeasure.aboutYouPrompt(name: "Sam", dateOfBirth: nil, weightKg: 70, heightCm: nil), "Add your date of birth and height to continue.")
+        XCTAssertEqual(BodyMeasure.aboutYouPrompt(name: "Sam", dateOfBirth: dob, weightKg: 70, heightCm: nil), "Add your height to continue.")
+    }
+    func testTypedMeasurementIssues() {
+        XCTAssertNil(BodyMeasure.weightIssue("", imperial: false)); XCTAssertNil(BodyMeasure.weightIssue("70", imperial: false))
+        XCTAssertEqual(BodyMeasure.weightIssue("500", imperial: false), "Weight must be between 30 and 200 kg.")
+        XCTAssertEqual(BodyMeasure.weightIssue("20", imperial: true), "Weight must be between 67 and 440 lb.")
+        XCTAssertNotNil(BodyMeasure.parseWeightKg("67", imperial: true)); XCTAssertNotNil(BodyMeasure.parseWeightKg("440", imperial: true))
+        XCTAssertNil(BodyMeasure.parseWeightKg("66", imperial: true)); XCTAssertNil(BodyMeasure.parseWeightKg("441", imperial: true))
+        XCTAssertNil(BodyMeasure.heightIssue(cm: "")); XCTAssertNil(BodyMeasure.heightIssue(cm: "175"))
+        XCTAssertEqual(BodyMeasure.heightIssue(cm: "17"), "Height must be between 120 and 230 cm.")
+        XCTAssertNil(BodyMeasure.heightIssue(feet: "", inches: "")); XCTAssertNil(BodyMeasure.heightIssue(feet: "5", inches: "9"))
+        XCTAssertNotNil(BodyMeasure.heightIssue(feet: "5", inches: "14")); XCTAssertNotNil(BodyMeasure.heightIssue(feet: "9", inches: "0"))
+        XCTAssertNotNil(BodyMeasure.heightCm(feet: "4", inches: "0")); XCTAssertNotNil(BodyMeasure.heightCm(feet: "7", inches: "6"))
+        XCTAssertNil(BodyMeasure.heightCm(feet: "3", inches: "11")); XCTAssertNil(BodyMeasure.heightCm(feet: "7", inches: "7"))
+    }
+    /// An athlete from an older version, whose record has no height, is still a readable, usable athlete: the
+    /// new-athlete rule is a question the onboarding page asks, never a check applied to stored records.
+    func testAnExistingAthleteWithoutHeightIsNotRejected() throws {
+        var old = RiderProfile(); old.name = "Sam"; old.setWeight(72.5); old.setDateOfBirth(day(1990, 3, 12))
+        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(old)) as! [String: Any]
+        json.removeValue(forKey: "heightCm")
+        let read = try JSONDecoder().decode(RiderProfile.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(read.name, "Sam"); XCTAssertEqual(read.weightKg, 72.5); XCTAssertNotNil(read.dateOfBirth); XCTAssertNil(read.heightCm)
+        XCTAssertTrue(read.linkValidationIssues().isEmpty, "a missing height is not a validation problem for an existing record")
+    }
+
     // MARK: the athlete record
 
     /// Onboarding writes a given height into the athlete record; a blank one leaves the record alone; height never

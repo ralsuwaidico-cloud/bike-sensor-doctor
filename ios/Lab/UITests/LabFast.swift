@@ -289,7 +289,9 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(name.waitForExistence(timeout: 8), "required: the name field"); name.tap(); name.typeText("Sam")
         XCTAssertEqual(name.value as? String, "Sam", "required: the field holds what was typed")
         let done = app.buttons["keyboardDone"].firstMatch; if done.waitForExistence(timeout: 2) { done.tap() }
-        XCTAssertTrue(next.isEnabled, "required: Continue after a name"); next.tap()
+        XCTAssertFalse(next.isEnabled, "required: a name alone is no longer enough (owner decision 20 Nov 2026, 18:24)")
+        app.fillAboutYouMeasurements()
+        XCTAssertTrue(next.isEnabled, "required: Continue after name, date of birth, weight and height"); next.tap()
         XCTAssertTrue(app.staticTexts["rosterEmptyHeadline"].firstMatch.waitForExistence(timeout: 8), "required: the empty roster headline")
         XCTAssertFalse(next.isEnabled, "required: Continue needs a sport Cyclift can plan")
         shot("z2-0-roster-empty")

@@ -33,6 +33,8 @@ struct OnboardingV34View: View {
     @State private var holdProgress: CGFloat = 0
     @State private var holding = false
     @State private var welcomeLeaving = false
+    /// About you: why a typed weight or height is not accepted (shown above Continue).
+    @State private var aboutIssue: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var a = OnboardingAnswers()
     @State private var ftpKnown = false
@@ -132,7 +134,8 @@ struct OnboardingV34View: View {
 
     private var canContinue: Bool {
         switch page {
-        case 1: return !(a.name ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+        // owner decision 20 Nov 2026, 18:24: a new athlete gives all four — name, date of birth, weight, height
+        case 1: return aboutIssue == nil && BodyMeasure.aboutYouComplete(name: a.name, dateOfBirth: a.dateOfBirth, weightKg: a.weightKg, heightCm: a.heightCm)
         case 2: return roster.mode != nil
         case 3: return !(a.goals ?? []).isEmpty
         case 4: return !OnboardingWeek.feasibility(a.week ?? proposedWeek, mode: mode, ride: a.rideMinutes ?? OnboardingWeek.defaultRideMinutes,
@@ -270,7 +273,11 @@ struct OnboardingV34View: View {
                              after: page == 4 ? " Change the week here; the button returns you to the blueprint." : " Change it here; the button returns you to the blueprint.")
         }
         switch page {
-        case 1: return CoachLine(mark: "●", tint: theme.textPrimary, before: "Only your name is needed. ", strong: "Nothing is estimated from blanks", after: " — a missing weight stays unknown.")
+        case 1:
+            // the earlier paragraph is removed (owner decision 18:24). This zone now only says what still has to be
+            // entered or corrected, and is empty once the page is complete.
+            if let issue = aboutIssue { return CoachLine(mark: "", tint: theme.warning, strong: issue) }
+            return CoachLine(mark: "", tint: theme.textSecondary, before: BodyMeasure.aboutYouPrompt(name: a.name, dateOfBirth: a.dateOfBirth, weightKg: a.weightKg, heightCm: a.heightCm) ?? "")
         case 2:
             if roster.mode == nil { return CoachLine(mark: "", tint: theme.textSecondary, before: roster.hasOnlyUnsupported ? "Your interests are saved. Add a sport Cyclift can plan to continue." : "Choose the sport you train most. Your plan is built around it.") }
             return CoachLine(mark: "◆", tint: theme.accent, before: "\(AthleticRoster.identityLine(sports, priority: a.priority)). " + (roster.mode == .hybrid ? "Rides and strength share one week; the lead decides the mix." : "Your week is built from this sport."))
@@ -438,7 +445,7 @@ struct OnboardingV34View: View {
     private var pageAbout: some View {
         VStack(alignment: .leading, spacing: CySpace.m) {
             heading(1, "You", "About you")
-            OnbAboutPage(a: $a, units: $store.settings.units, healthWeight: healthWeightOffer)
+            OnbAboutPage(a: $a, units: $store.settings.units, healthWeight: healthWeightOffer, entryIssue: $aboutIssue)
         }
     }
     /// A weight already read from Apple Health (with permission) is offered, never applied silently.
