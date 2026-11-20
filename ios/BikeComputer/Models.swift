@@ -1054,7 +1054,7 @@ final class Store: ObservableObject {
         // atomic write (before: up to three writes, resumable but partial on disk in between). Same result, never partial.
         transaction { w12CleanupIfNeeded() }        // one-time, logged, recoverable (see above); a no-op once it has run
         if generatePlan { ensurePlan(); refreshRideSafety() }
-        // schema-2 upgrade: coach-generated future sessions are rebuilt by the personalised planner (never edited ones)
+        // schema-2 upgrade: coach-generated future sessions are rebuilt by the personalized planner (never edited ones)
         if migrated { refreshGeneratedSessions(); persist() }
         // RC3 (schema 3): profile fields only — no session is changed without a before/after preview (rc3 MIG rules)
         if rc3Migrated, !migrated { persist() }
@@ -1284,6 +1284,18 @@ final class Store: ObservableObject {
         guard !gone.isEmpty else { return 0 }
         plan.removeAll { w in gone.contains { $0.id == w.id } }
         migrationLog.append("W12: removed \(gone.count) generated session(s) dated before the plan's approval on \(s.shortDay)")
+        return gone.count
+    }
+    /// The profile-only outcome: the sessions and rest days generated before the athlete finished setting up (from the
+    /// default profile at first launch) were never chosen or approved, on any date, so none may stay as a plan.
+    /// Removes every never-done, unrecorded plan entry and returns how many. Done or marked sessions, and everything
+    /// in `rides` / `strength`, are untouched.
+    @discardableResult
+    func dropUnapprovedPlan(calendar cal: Calendar = .current) -> Int {
+        let gone = plan.filter { !$0.done && $0.completion != .marked && !hasRecord(on: $0.date, calendar: cal) }
+        guard !gone.isEmpty else { return 0 }
+        plan.removeAll { w in gone.contains { $0.id == w.id } }
+        migrationLog.append("Profile-only: removed \(gone.count) generated plan entr\(gone.count == 1 ? "y" : "ies") that were never approved")
         return gone.count
     }
     // MARK: - W12 one-time cleanup of historical placeholders (owner-approved in principle, 4 Nov 2026)

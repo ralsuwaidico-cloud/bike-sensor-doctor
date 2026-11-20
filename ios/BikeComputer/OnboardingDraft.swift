@@ -718,7 +718,7 @@ enum OnboardingOutcome {
         commit(x, to: store)
         store.updateProfile { $0.profileOnly = true }
         store.onboardingStage = 0
-        store.dropUnapprovedSessions(before: Date())             // placeholders from before approval never become a plan
+        store.dropUnapprovedPlan()                               // placeholders from before set-up never become a plan, on any date
         store.onboarded = true
     }
 }

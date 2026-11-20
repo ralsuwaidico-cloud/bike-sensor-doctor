@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Personalised strength programming (quality release). Deterministic rules, no model, every decision explained.
+// MARK: - Personalized strength programming (quality release). Deterministic rules, no model, every decision explained.
 //
 // Inputs: goal, hybrid priority, strength experience, split / session type, weekly frequency, session minutes,
 // equipment (incl. custom items and temporary unavailability), favourites and swap preferences, recent and planned

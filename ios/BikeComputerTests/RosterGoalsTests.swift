@@ -90,7 +90,7 @@ final class RosterGoalsTests: XCTestCase {
         var r = RosterGoals.Selection(); r.toggle("runPace")
         let run = RosterGoals.explanation(main: r.main, roster: ["running"], selection: r)
         XCTAssertEqual(run?.title, "Pace · main goal")
-        XCTAssertEqual(run?.text, "Your running goals are saved. Personalised running plans are coming soon. You can finish setting up without a training plan.")
+        XCTAssertEqual(run?.text, "Your running goals are saved. Personalized running plans are coming soon. You can finish setting up without a training plan.")
         // the general goal for a runner is not explained with riding and lifting
         var f = RosterGoals.Selection(); f.toggle("fitness")
         let fit = RosterGoals.explanation(main: f.main, roster: ["running"], selection: f)?.text ?? ""
@@ -98,10 +98,10 @@ final class RosterGoalsTests: XCTestCase {
         // a running goal beside a planned sport, no cycling goal chosen: how to get a plan is said; nothing is chosen
         var mix = RosterGoals.Selection(); mix.toggle("runPace")
         XCTAssertEqual(RosterGoals.explanation(main: mix.main, roster: ["running", "roadCycling"], selection: mix)?.text,
-                       "Your running goals are saved. Personalised running plans are coming soon. Choose a goal for a sport Cyclift plans today if you also want a plan now.")
+                       "Your running goals are saved. Personalized running plans are coming soon. Choose a goal for a sport Cyclift plans today if you also want a plan now.")
         mix.toggle("endurance")
         XCTAssertEqual(RosterGoals.explanation(main: mix.main, roster: ["running", "roadCycling"], selection: mix)?.text,
-                       "Your running goals are saved. Personalised running plans are coming soon. Your plan today follows Endurance.")
+                       "Your running goals are saved. Personalized running plans are coming soon. Your plan today follows Endurance.")
         // no saved-only explanation ever carries a prescription or technical wording
         for g in RosterGoals.all where g.planner == nil {
             var x = RosterGoals.Selection(); x.toggle(g.id)
@@ -139,6 +139,20 @@ final class RosterGoalsTests: XCTestCase {
         let again = Store(directory: d)                       // a real launch, plan generation switched on
         XCTAssertTrue(again.onboarded); XCTAssertTrue(again.profile.isProfileOnly); XCTAssertTrue(again.plan.isEmpty, "the next launch creates nothing")
         XCTAssertEqual(again.profile.activityGoals, ["runPace", "runDistance"])
+    }
+    /// Found on the simulator (focused check 32): the app generates a week from the default profile at first launch,
+    /// before set-up, and the future part of it stayed on Home, Plan and Train as a cycling plan the runner never chose.
+    func testProfileOnlyLeavesNoGeneratedWeekBehind() {
+        let (s, _) = freshStore()
+        s.ensurePlan()
+        XCTAssertFalse(s.plan.isEmpty, "the starting point: a week generated before set-up")
+        var sel = RosterGoals.Selection(); sel.toggle("runPace"); sel.toggle("runDistance")
+        var a = OnboardingAnswers(); a.name = "Sam"; a.activities = ["running"]; a.goalIDs = sel.ids; a.mainGoalID = sel.main
+        OnboardingOutcome.createProfileOnly(a, store: s)
+        XCTAssertTrue(s.plan.isEmpty, "no generated session or rest day stays, on any date")
+        XCTAssertEqual(ProfileOnlyText.identity(s.profile), "Runner")
+        XCTAssertEqual(ProfileOnlyText.goalTitle(s.profile), "Pace + 1 more")
+        XCTAssertEqual(ProfileOnlyText.saved(s.profile), "Your running goals are saved. Personalized running plans are coming soon.")
     }
     /// The marker of an athlete without a plan is additive, off by default, and survives saving.
     func testProfileOnlyMarker() throws {

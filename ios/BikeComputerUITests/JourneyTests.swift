@@ -1,7 +1,7 @@
 import XCTest
 
 /// V1 end-to-end journey (owner, 2 Nov): install → onboarding (name once) → type/experience/goals → week → devices
-/// skipped → personalised plan → Approve → Home → Profile keeps every answer → Plan shows the same week → relaunch keeps
+/// skipped → personalized plan → Approve → Home → Profile keeps every answer → Plan shows the same week → relaunch keeps
 /// everything. Three personas, no devices. Every assertion is on data the screens show, not on screenshots.
 /// `BC_JOURNEY_PERSONA` (CI recording) limits the run to one persona; `LAYOUT_DIR` saves screenshots.
 final class JourneyTests: XCTestCase {
@@ -119,7 +119,7 @@ final class JourneyTests: XCTestCase {
         shot(app, "\(p.tag)-05-ecosystem")
         XCTAssertTrue(app.buttons["onboardingSkip"].firstMatch.tapWhenSettled())
 
-        // 6 — the personalised plan: counts match the week built on C, a first workout of the right sport
+        // 6 — the personalized plan: counts match the week built on C, a first workout of the right sport
         XCTAssertTrue(app.staticTexts["Your training system · 5 of 5"].waitForExistence(timeout: 10), "\(p.tag): stage E")
         XCTAssertTrue(app.descendants(matching: .any)["onbDash"].firstMatch.waitForExistence(timeout: 5))
         let ridesE = Int(stat(app, "rides"))

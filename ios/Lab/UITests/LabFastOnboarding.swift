@@ -468,16 +468,23 @@ final class LabFastOnboarding: XCTestCase {
         let greeting = el(app, "homeGreeting")
         XCTAssertTrue(greeting.waitForExistence(timeout: 20), "required: Home opens after Create my profile")
         XCTAssertTrue(greeting.label.contains("Sam"), "required: Home greets the athlete (\(greeting.label))")
+        // Added after focused check 32, where a cycling week generated before set-up stayed on Home and Plan:
+        // nothing the runner did not choose may be shown as theirs.
+        let notTheirs = NSPredicate(format: "label CONTAINS[c] 'first ride' OR label CONTAINS[c] 'of 1 sessions' OR label CONTAINS[c] 'training days a week' OR label CONTAINS[c] 'recurring plan' OR label CONTAINS[c] '· Cycling'")
+        XCTAssertFalse(app.staticTexts.matching(notTheirs).firstMatch.exists, "required: Home shows no cycling plan, session or type the runner did not choose")
         app.settleForScreenshot(2); shot("profile-only-1-home")
         let dock = el(app, "cradleDock")
         dock.buttons["Plan"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["planTitle"].firstMatch.waitForExistence(timeout: 10), "required: the Plan screen opens")
+        XCTAssertFalse(app.staticTexts.matching(notTheirs).firstMatch.exists, "required: Plan shows no cycling goal, week or rest day the runner did not choose")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'plans coming soon'")).firstMatch.exists, "required: Plan says the goals are saved and plans are coming")
         app.settleForScreenshot(2); shot("profile-only-2-plan")
         app.buttons["centreButton"].firstMatch.tap()
         let panel = need(app, "trainPanel", "the Train panel")
         let said = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'no plan'")).firstMatch
         XCTAssertTrue(said.waitForExistence(timeout: 6), "required: Train says there is no plan (nothing is offered as today's session)")
         _ = panel
+        XCTAssertFalse(app.buttons["trainPanelPrimary"].firstMatch.exists, "required: a cycling/strength plan set-up is not offered to an athlete whose sports cannot be planned yet")
         app.settleForScreenshot(1); shot("profile-only-3-train")
 
         // the next launch creates nothing either

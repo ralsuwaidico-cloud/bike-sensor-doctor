@@ -252,10 +252,10 @@ enum AthleticRoster {
         }
         if acts.count > 2 {
             if unplanned.isEmpty { return "Cyclift plans and records all \(acts.count) today." }
-            if planned.isEmpty { return "All \(acts.count) are saved to your roster. Personalised plans for them are coming soon." }
+            if planned.isEmpty { return "All \(acts.count) are saved to your roster. Personalized plans for them are coming soon." }
             return "Cyclift plans and records \(planned.count) of your \(acts.count) activities today. Plans for the other \(unplanned.count == 1 ? "one" : "\(unplanned.count)") are coming soon."
         }
-        if planned.isEmpty { return "\(list(unplanned)) \(unplanned.count == 1 ? "is" : "are") saved to your roster. Personalised plans are coming soon." }
+        if planned.isEmpty { return "\(list(unplanned)) \(unplanned.count == 1 ? "is" : "are") saved to your roster. Personalized plans are coming soon." }
         if unplanned.isEmpty { return "Cyclift plans and records \(list(planned)) today." }
         return "Cyclift plans and records \(list(planned)) today. \(list(unplanned)) is saved; plans are coming soon."
     }
@@ -398,16 +398,44 @@ enum RosterGoals {
         let sport = sportWord(g)
         if canPlan(roster: ids, selection: selection) {
             if let p = g.planner { return (head, GoalInfo.effect(p)) }
-            return (head, "Your \(sport) goals are saved. Personalised \(sport) plans are coming soon. Your plan today follows \(selection.plannerMain?.title ?? "your other goals").")
+            return (head, "Your \(sport) goals are saved. Personalized \(sport) plans are coming soon. Your plan today follows \(selection.plannerMain?.title ?? "your other goals").")
         }
         if g.planner != nil, g.family != nil {
             // a planner goal, but its sport is not one this roster can be planned for (cannot happen with today's groups)
-            return (head, "Your goals are saved. Personalised plans are coming soon.")
+            return (head, "Your goals are saved. Personalized plans are coming soon.")
         }
-        let saved = g.family == nil ? "Your goals are saved. Personalised plans for your sports are coming soon."
-                                    : "Your \(sport) goals are saved. Personalised \(sport) plans are coming soon."
+        let saved = g.family == nil ? "Your goals are saved. Personalized plans for your sports are coming soon."
+                                    : "Your \(sport) goals are saved. Personalized \(sport) plans are coming soon."
         // a roster Cyclift could plan, but no goal of a planned sport was chosen: say how to get a plan, choose nothing
         if AthleticRoster.view(ids).mode != nil { return (head, saved + " Choose a goal for a sport Cyclift plans today if you also want a plan now.") }
         return (head, saved + " You can finish setting up without a training plan.")
+    }
+}
+
+// MARK: - An athlete without a training plan (profile-only), outside onboarding
+//
+// What Home, Plan and Train say about an athlete who finished setting up without a plan. Everything is read from what
+// the athlete chose; no cycling or strength type, goal or week is shown, because none was chosen.
+enum ProfileOnlyText {
+    /// "Runner", "Multisport athlete" … from the saved roster. nil when no roster is stored.
+    static func identity(_ p: RiderProfile) -> String? {
+        let ids = p.activities ?? []
+        return ids.isEmpty ? nil : AthleticRoster.identity(ids)
+    }
+    /// The main goal, and how many more are saved: "Pace + 1 more". nil when no goal is stored.
+    static func goalTitle(_ p: RiderProfile) -> String? {
+        let ids = p.activityGoals ?? []
+        guard let main = RosterGoals.goal(p.mainGoalID ?? ids.first ?? "") else { return nil }
+        let more = ids.filter { $0 != main.id && RosterGoals.goal($0) != nil }.count
+        return more == 0 ? main.title : "\(main.title) + \(more) more"
+    }
+    static let goalDetail = "Goals saved · plans coming soon"
+    /// "Your running goals are saved. Personalized running plans are coming soon."
+    static func saved(_ p: RiderProfile) -> String {
+        let fams = Set((p.activityGoals ?? []).compactMap { RosterGoals.goal($0)?.family })
+        guard fams.count == 1, let f = fams.first else { return "Your goals are saved. Personalized plans for your sports are coming soon." }
+        let sport: String
+        switch f { case .walking: sport = "walking"; case .recovery: sport = "mobility and recovery"; default: sport = f.title.lowercased() }
+        return "Your \(sport) goals are saved. Personalized \(sport) plans are coming soon."
     }
 }

@@ -74,8 +74,13 @@ struct CyTrainPanel: View {
             heading(left: "Today", right: "Paused", title: "Training is paused", line: hold.title)
             primary(.holdInfo, isRide: false)
         case .first:
-            heading(left: "Today", right: "Nothing planned", title: "Choose an activity", line: "There is no plan yet.")
-            primary(.createPlan, isRide: false)
+            if store.profile.isProfileOnly {
+                // an athlete without a training plan: say what is saved, and do not offer a cycling/strength plan set-up
+                heading(left: "Today", right: "Nothing planned", title: "Choose an activity", line: "There is no plan yet. " + ProfileOnlyText.saved(store.profile))
+            } else {
+                heading(left: "Today", right: "Nothing planned", title: "Choose an activity", line: "There is no plan yet.")
+                primary(.createPlan, isRide: false)
+            }
             shortcuts
         }
     }

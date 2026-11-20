@@ -251,7 +251,7 @@ extension Store {
     }
 
     // MARK: B — coach-built sessions (with or without a chosen split; "Coach decides" included — audit G-04)
-    /// Quality release: built by the personalised planner (StrengthPlanner) — goal, priority, experience, equipment,
+    /// Quality release: built by the personalized planner (StrengthPlanner) — goal, priority, experience, equipment,
     /// preferences, logged performance and the rides around the session — with its reasons stored for "Why?".
     func programmedSession(_ w: Workout, ctx: PlannerContext? = nil) -> Workout {
         guard profile.trainingMode.includesLifting, w.kind == .strength, w.templateId == nil, w.plannedEntries == nil else { return w }

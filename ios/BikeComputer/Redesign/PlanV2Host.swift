@@ -45,6 +45,14 @@ enum PlanV2Adapter {
         let trainingDays = avail.days.filter { $0.activity != .rest }.count
         let this = store.planWeekSummary(weekOf: now, now: now, recorderActive: recorderActive, calendar: cal)
         let coach = store.homeCoach(now: now, postponed: CoachPostpone.ids(store.dir))
+        // An athlete without a training plan (profile-only): their own saved goals, and no recurring week — the
+        // suggested cycling/strength week was never chosen, so it is not shown as theirs.
+        if p.isProfileOnly {
+            return PlanData(goalTitle: ProfileOnlyText.goalTitle(p), goalDetail: ProfileOnlyText.goalDetail, weeks: weeks,
+                            suggestion: nil, suggestionHeading: "COACH SUGGESTS", suggestionAction: "Review",
+                            recurring: [], availability: "No training plan yet", availabilityWarning: nil, programName: nil,
+                            note: CycliftLab.isLab ? "Cyclift Lab · demo athlete" : nil, noPlanNote: ProfileOnlyText.saved(p))
+        }
         return PlanData(goalTitle: p.effectiveGoals.isEmpty ? nil : ProfileText.goals(p),
                         goalDetail: "\(ProfileText.mode(p.trainingMode)) · \(trainingDays) training day\(trainingDays == 1 ? "" : "s") a week",
                         weeks: weeks,

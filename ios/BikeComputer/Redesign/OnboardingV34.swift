@@ -232,8 +232,8 @@ struct OnboardingV34View: View {
                 .font(.caption.weight(.bold)).foregroundStyle(theme.textPrimary)
         } else if i == 2 {
             HStack(spacing: 2) {
-                if mode.includesCycling { Image(systemName: "bicycle") }
-                if mode.includesLifting { Image(systemName: "dumbbell") }
+                // the athlete's own main sport(s) — a runner is never drawn as a cyclist (seen in focused check 32)
+                ForEach(roster.mains.prefix(2)) { Image(systemName: Self.symbol($0)) }
             }
             .font(.caption2.weight(.semibold)).foregroundStyle(theme.textPrimary)
         } else if i == 3 {
@@ -898,8 +898,8 @@ struct OnboardingV34View: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("NO TRAINING PLAN YET").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
                 Text(all.contains { $0.planning != nil }
-                     ? "Your profile, sports and goals are saved. No training plan is created, because you chose no goal for a sport Cyclift plans today. Personalised plans for your other sports are coming soon."
-                     : "Your profile, sports and goals are saved. No training plan is created: personalised plans for your sports are coming soon. Nothing is scheduled for you.")
+                     ? "Your profile, sports and goals are saved. No training plan is created, because you chose no goal for a sport Cyclift plans today. Personalized plans for your other sports are coming soon."
+                     : "Your profile, sports and goals are saved. No training plan is created: personalized plans for your sports are coming soon. Nothing is scheduled for you.")
                     .font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("blueprintNoPlan")
             }

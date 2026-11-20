@@ -286,7 +286,7 @@ extension Store {
         return Home21Data(
             dateLine: HomeDashboardModel.dateLine(now),
             name: profile.name.trimmingCharacters(in: .whitespaces),
-            athleteType: mode == .hybrid ? "Hybrid" : mode.title,
+            athleteType: profile.isProfileOnly ? ProfileOnlyText.identity(profile) : (mode == .hybrid ? "Hybrid" : mode.title),
             initials: HomeV23Builder.initials(profile.name),
             consistency: HomeV23Builder.consistency(total: week.total, missed: missed, hasPlan: hasPlan),
             mix: CyMixModel(endurance: mode == .strength && riding.planned == 0 && riding.completed == 0 ? none : HomeV23Builder.leg(riding),

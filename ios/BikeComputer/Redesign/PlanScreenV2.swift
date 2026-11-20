@@ -84,6 +84,8 @@ struct PlanData {
     var programName: String? = nil
     /// Shown under the screen when the data is not the athlete's own (e.g. "Cyclift Lab · demo athlete"). nil = nothing.
     var note: String? = nil
+    /// For an athlete without a training plan: the plain sentence shown in place of a recurring week. nil = has a plan.
+    var noPlanNote: String? = nil
 }
 
 // (The prototype's sample scenarios are not carried over: the screen is fed from the athlete record by PlanV2Adapter.)
@@ -517,6 +519,11 @@ struct PlanScreen: View {
     /// sheet at 393 pt width). The rows' words come from PlanV2Adapter: the athlete's own week, nothing sampled.
     private var recurring: some View {
         VStack(spacing: 3) {
+            if let n = data.noPlanNote {
+                Text("No recurring plan yet. " + n).font(.footnote).foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                    .padding(CySpace.m).accessibilityIdentifier("planNoPlan")
+            }
             ForEach(data.recurring) { row in recurringRow(row) }
             Button(action: { act("Availability & preferences") }) {
                 HStack(spacing: CySpace.s) {

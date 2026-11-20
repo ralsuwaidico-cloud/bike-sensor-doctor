@@ -1,7 +1,7 @@
 import XCTest
 @testable import BikeComputer
 
-/// Quality release (ios/QUALITY_RELEASE.md): workout state model, one query layer, migration, undo, personalised
+/// Quality release (ios/QUALITY_RELEASE.md): workout state model, one query layer, migration, undo, personalized
 /// strength planner, swaps, FTP confidence and the weekly chart maths. Fixtures mirror the owner's report: a Full body
 /// session planned for TOMORROW shown as "completed" after a workout finished with no set ticked (1 min log).
 final class QualityReleaseTests: XCTestCase {
@@ -264,7 +264,7 @@ final class QualityReleaseTests: XCTestCase {
         XCTAssertEqual(again.strength.count, 1); XCTAssertNil(again.strength[0].needsReview)
     }
 
-    // MARK: - 4. Personalised planner
+    // MARK: - 4. Personalized planner
 
     func testDifferentProfilesGetDifferentPrograms() {
         var beginnerCyclist = hybridProfile(); beginnerCyclist.priority = .cycling
