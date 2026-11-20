@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "20 Nov 2026, 22:10 (Dubai)"
+UPDATED = "20 Nov 2026, 23:15 (Dubai)"
 
 SCREENS = [
     dict(
@@ -145,5 +145,64 @@ SCREENS = [
                  ("20 Nov 2026, 22:00", "Approved exactly as shown in 02_about_you_revision.png, commit 9dd5a862: visually approved and functionally verified "
                   "on the iPhone 15 Pro simulator. All four fields stay mandatory; compact units selector, direct date entry, validation and persistence "
                   "preserved. No further visual changes without the owner's approval.", "IN FORCE")],
+    ),
+    dict(
+        number=3, id="ONB-03", name="Athletic Roster",
+        location="Onboarding · page 2 of 7, after About You. Opens the activity library as a sheet (\"Browse all activities\").",
+        approved_on="20 Nov 2026, 23:04 (visual baseline Z2 / Z3; multisport product requirement)",
+        status="APPROVED DESIGN AND REQUIREMENTS — implementation and verification pending. NOT functionally complete",
+        reference="Onboarding v3.4 design sheets Z2 (the page) and Z3 (the activity library), selected as the page 2 baseline on 15 Nov 2026 "
+                  "and approved as the Screen 3 visual baseline on 20 Nov 2026. The sheets are illustrative drawings; they predate the "
+                  "multisport requirement, so their example activities and capability groupings are not binding.",
+        wording=[("Page title", "What do you train? (as on sheet Z2)"),
+                 ("Library title", "All activities (as on sheet Z3)"),
+                 ("Capability wording", "Must state truthfully what Cyclift can plan and record for each activity. An unsupported activity is never called \"planned and recorded\"."),
+                 ("Note", "Individual strings were not approved one by one; they follow the sheets unless the multisport requirement changes them.")],
+        design=["Use the Z2 / Z3 visual structure: clean sport list, compact selection controls, searchable activity library, clear distinction "
+                "between main and additional activities, sport-specific options where relevant, simple Continue action.",
+                "No complex configuration controls on this screen; the initial roster is fast and easy to complete.",
+                "PRODUCT REQUIREMENT — Cyclift is a multi-sport athletic platform, not a cycling-and-strength application with a list of other interests.",
+                "Multiple sports and activities can be selected, with no arbitrary two-sport limit.",
+                "Variants and disciplines within each sport, for example: Cycling — road, indoor, mountain, gravel, commuting; Strength — gym, free "
+                "weights, machines, bodyweight, calisthenics; Running — road, treadmill, trail; Swimming — pool, open water; Walking and hiking; "
+                "Mobility, stretching and recovery; other activities through an extensible activity catalogue. Variants are not treated as "
+                "interchangeable when their training requirements differ.",
+                "Athlete identity derives from the activities actually selected (Cycling + Strength → Cycling/Strength hybrid; Running + Strength → "
+                "Running/Strength hybrid; Cycling + Running + Swimming → Multisport/endurance athlete; Running only → Runner; multiple activities → "
+                "Multisport athlete). No athlete is forced into Cycling, Strength or Cycling + Strength.",
+                "The athlete can choose a main sport or training priority without losing additional activities."],
+        mandatory=["Three separate concepts in the model: selected activities (what the athlete practises), supported recording (what Cyclift can "
+                   "measure or log), supported planning (what Cyclift can schedule and prescribe).",
+                   "An activity the planner or recorder does not support is retained as a selection where technically safe, with the limitation "
+                   "clearly disclosed; no training plans or measurements are manufactured for it.",
+                   "Retained: sport selection and removal; main sport or priority selection; additional activities; hybrid balance where relevant; "
+                   "activity search and categories; persistence in the authoritative athlete model; supported cycling and strength planning and recording.",
+                   "Working features are not broken and existing athlete records are not silently altered. Any model change is additive and backward-compatible.",
+                   "CURRENTLY SUPPORTED (existing engines): cycling and gym strength planning and recording.",
+                   "SEPARATE IMPLEMENTATION REQUIREMENTS — NOT COMPLETED FEATURES: sport-specific planning and recording for running, swimming, "
+                   "walking and hiking, mobility and recovery, bodyweight and calisthenics, and discipline-specific cycling. No fake functionality; "
+                   "no new training engines are to be started during the screen review."],
+        rejected=["Builds 6 and 7's page and library presentation as the visual baseline (the Z2 / Z3 structure was chosen).",
+                  "Treating Cyclift as a cycling-and-strength application with other sports as mere interests.",
+                  "An arbitrary two-sport limit; forcing every athlete into Cycling, Strength or Cycling + Strength.",
+                  "Calling an unsupported activity \"planned and recorded\"."],
+        commits="Not yet implemented. The page in builds 6 and 7 (commit 19340b09) is the earlier cycling-and-strength roster.",
+        stages=[("Approved design", "YES", "Owner, 20 Nov 2026 23:04: Z2 / Z3 visual baseline and the multisport requirement."),
+                ("Implemented in code", "NOT YET", "The approved presentation and the minimum safe athlete-selection changes are not written yet."),
+                ("Compiled", "NOT YET", ""),
+                ("Simulator-verified", "NOT YET", "Not to be marked functionally complete until selected activities persist correctly and the screen reports its capabilities accurately."),
+                ("Physically verified on iPhone", "NO", "")],
+        visual_verification="PENDING — no implementation screenshot exists yet.",
+        functional_verification="PENDING.",
+        remaining=["Implement the approved presentation and the minimum safe selection changes; show the iPhone 15 Pro screenshot.",
+                   "Engineering review to record: what the existing sport registry, athlete model, planner and recorders can support through "
+                   "configuration, and what needs a new training engine.",
+                   "Downstream development to document: planning and recording for each sport that is selectable but unsupported."],
+        images=[("S03_roster_Z2_two_sports.png", "APPROVED VISUAL BASELINE. Sheet Z2, two main sports with the balance control (actual sheet image; activities shown are illustrative)."),
+                ("S03_roster_Z2_empty.png", "APPROVED VISUAL BASELINE. Sheet Z2, nothing selected yet."),
+                ("S03_roster_Z3_library.png", "APPROVED VISUAL BASELINE. Sheet Z3, the activity library.")],
+        history=[("15 Nov 2026", "Onboarding v3.4 Athletic Roster selected as the page 2 design baseline (sheets Z1–Z6).", "IN FORCE (visual)"),
+                 ("20 Nov 2026, 23:04", "Z2 / Z3 approved as the Screen 3 visual baseline. Product requirement changed: multi-sport, extensible athletic "
+                  "roster; identity from selected activities; selection, recording and planning kept as separate concepts; no fake support.", "IN FORCE")],
     ),
 ]
