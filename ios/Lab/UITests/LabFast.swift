@@ -282,6 +282,7 @@ final class LabFast: XCTestCase {
         app.launch()
         let start = app.buttons["onboardingContinue"].firstMatch
         XCTAssertTrue(start.waitForExistence(timeout: 30), "required: a new athlete starts at Welcome")
+        app.settleForScreenshot(2)      // fast check 25: let the launch finish before the hold begins
         // Welcome is held for three seconds since the owner's Screen 1 decision of 20 Nov 2026; a tap no longer starts onboarding.
         start.press(forDuration: 3.6)
         let next = app.buttons["onboardingNext"].firstMatch, name = app.textFields["onbName"].firstMatch

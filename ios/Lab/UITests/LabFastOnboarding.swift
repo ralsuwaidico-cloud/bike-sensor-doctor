@@ -101,7 +101,11 @@ final class LabFastOnboarding: XCTestCase {
         let app = launch()
         let start = app.buttons["onboardingContinue"].firstMatch
         XCTAssertTrue(start.waitForExistence(timeout: 30), "required: a new athlete starts at Welcome")
+        // fast check 25: a hold begun the instant the control first existed (the app still finishing its launch) did
+        // not open page 1; the seven-page check, which touches the screen first, did. Let the launch finish first.
+        app.settleForScreenshot(2)
         start.press(forDuration: 3.6)
+        if !app.staticTexts["onboardingProgress"].firstMatch.waitForExistence(timeout: 8) { shot("onb-0-hold-did-not-start") }
         page(app, 1)
         let next = app.buttons["onboardingNext"].firstMatch
         XCTAssertFalse(next.isEnabled, "required: Continue waits for a name")
