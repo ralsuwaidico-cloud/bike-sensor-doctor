@@ -1,0 +1,30 @@
+FAST focused Lab check — selected: LabFastOnboarding/testAboutYouMeasurements LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from c67e1883 · files changed since then: 7
+TIME setup: 42s
+  timing: CompileAssetCatalogVariant (1 task) | 197.569 seconds
+  timing: SwiftCompile (7 tasks) | 74.072 seconds
+  timing: SwiftDriver (16 tasks) | 36.280 seconds
+  timing: SwiftEmitModule (2 tasks) | 8.955 seconds
+  timing: Ld (18 tasks) | 7.299 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 4.895 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.241 seconds
+  timing: SwiftDriver Compilation (16 tasks) | 0.384 seconds
+  stages: packages at 243s · packages prepared at 312s · dependency graph at 312s · inputs at 313s · build description at 313s · first Swift step at 328s · first link at 332s · asset catalogue at 343s · finished at 546s
+  compiled in this run: 33 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 549s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 23s
+	 Executed 2 tests, with 2 failures (0 unexpected) in 417.698 (417.703) seconds
+	 Executed 2 tests, with 2 failures (0 unexpected) in 417.698 (417.706) seconds
+	 Executed 2 tests, with 2 failures (0 unexpected) in 417.698 (417.708) seconds
+Lab/UITests/LabFastOnboarding.swift:39: error: -[CycliftLabUITests.LabFastOnboarding testAboutYouMeasurements] : XCTAssertTrue failed - required: the page counter
+Lab/UITests/LabFastOnboarding.swift:42: error: -[CycliftLabUITests.LabFastOnboarding testAboutYouMeasurements] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type StaticText` -> `Elements matching predicate '"onboardingProgress" IN identifiers'`, given input App element pid: 18136
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAboutYouMeasurements]' failed (43.429 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (374.269 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 548s
+TIME total on the Mac: 1165s
+commit 783fe6bb59a9baa2a8e9939a7e4b16c0aa2c5dca  branch ios/lab
