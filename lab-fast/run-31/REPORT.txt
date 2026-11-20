@@ -1,0 +1,31 @@
+FAST focused Lab check — selected: LabFastOnboarding/testGoalsForACyclingAndStrengthAthlete LabFastOnboarding/testGoalsForARunner LabFastOnboarding/testLargeTextPages LabFastOnboarding/testAthleticRosterIsMultiSport LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 39a398f1 · files changed since then: 9
+TIME setup: 65s
+  timing: SwiftCompile (9 tasks) | 751.062 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 112.878 seconds
+  timing: SwiftDriver (16 tasks) | 38.961 seconds
+  timing: SwiftEmitModule (2 tasks) | 9.558 seconds
+  timing: Ld (18 tasks) | 7.553 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.492 seconds
+  timing: Copy (17 tasks) | 0.772 seconds
+  timing: SwiftDriver Compilation (16 tasks) | 0.383 seconds
+  stages: packages at 179s · packages prepared at 203s · dependency graph at 203s · inputs at 204s · build description at 204s · first Swift step at 218s · first link at 222s · asset catalogue at 236s · finished at 658s
+  compiled in this run: 98 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 660s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 8s
+	 Executed 5 tests, with 0 failures (0 unexpected) in 1184.974 (1184.983) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 1184.974 (1184.985) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 1184.974 (1184.986) seconds
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAthleticRosterIsMultiSport]' passed (251.516 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testGoalsForACyclingAndStrengthAthlete]' passed (145.240 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testGoalsForARunner]' passed (92.419 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testLargeTextPages]' passed (341.840 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (353.959 seconds).
+RESULT selected screen checks: ok
+TIME tests: 1309s
+TIME total on the Mac: 2050s
+commit 23ec48934a2158e69d979e186531440dbf5315a2  branch ios/lab
