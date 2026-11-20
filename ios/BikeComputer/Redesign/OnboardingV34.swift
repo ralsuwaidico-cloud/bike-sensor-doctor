@@ -325,7 +325,9 @@ struct OnboardingV34View: View {
     // one headline, one supporting line and a circular control that is HELD for three seconds; the screen then
     // dissolves and About you appears. No logo, app name, legend or explanatory paragraph. Do not add to it.
     // What "Get started" did is kept exactly: the athlete continues without an account and page 1 opens.
-    // The hero is the app's existing flat singularity (the same one Progress draws); it does not move.
+    // The hero is a still image of the singularity exactly as the approved Progress design sheets draw it: produced by
+    // the sheets' own drawing routine (baseline form, no generation implied), one image per theme. It does not move.
+    // If an image is ever missing, the flat singularity Progress draws stands in.
 
     static let holdSeconds: Double = 3
 
@@ -334,9 +336,7 @@ struct OnboardingV34View: View {
             ScrollView {
                 VStack(spacing: 0) {
                     Spacer(minLength: 24)
-                    SingularityPlaceholder(diameter: min(200, geo.size.width * 0.5), detail: 1)
-                        .frame(height: min(200, geo.size.width * 0.5) * 1.25)
-                        .accessibilityHidden(true)
+                    welcomeHero(side: min(320, geo.size.width * 0.8))
                     Spacer(minLength: 28).frame(maxHeight: 44)
                     VStack(spacing: 14) {
                         Text("Start your journey to a better lifestyle")
@@ -362,6 +362,21 @@ struct OnboardingV34View: View {
         .scaleEffect(welcomeLeaving && !reduceMotion ? 1.04 : 1)
         .blur(radius: welcomeLeaving && !reduceMotion ? 8 : 0)
         .allowsHitTesting(!welcomeLeaving)
+    }
+
+    @ViewBuilder private func welcomeHero(side: CGFloat) -> some View {
+        let name = "SingularityHero-\(theme.id.rawValue)"
+        Group {
+            if UIImage(named: name) != nil {
+                // the image carries its own soft glow to its edges; the layout reserves the body only
+                Image(name).resizable().interpolation(.high).scaledToFit()
+                    .frame(width: side, height: side)
+                    .frame(height: side * 0.72)
+            } else {
+                SingularityPlaceholder(diameter: side * 0.6, detail: 1).frame(height: side * 0.72)
+            }
+        }
+        .accessibilityHidden(true)
     }
 
     private var holdToStart: some View {
@@ -395,6 +410,7 @@ struct OnboardingV34View: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Hold to start")
         .accessibilityHint("Press and hold for 3 seconds")
+        .accessibilityValue(holdProgress > 0 ? "Holding" : "Not started")
         .accessibilityAddTraits(.isButton)
         // VoiceOver and Switch Control cannot hold a control for three seconds; their activation starts onboarding.
         .accessibilityAction { startOnboarding() }

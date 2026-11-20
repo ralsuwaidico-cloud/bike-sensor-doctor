@@ -62,7 +62,10 @@ final class LabFastOnboarding: XCTestCase {
         start.press(forDuration: 1.2)
         XCTAssertFalse(app.textFields["onbName"].firstMatch.waitForExistence(timeout: 2), "required: a hold released early does not start onboarding")
         XCTAssertTrue(start.exists, "still on Welcome after the early release")
-        start.press(forDuration: 3.6)
+        XCTAssertEqual(start.value as? String, "Not started", "required: the ring is empty again after an early release")
+        // a finger that drifts a little during the hold must not cancel it: press, move about 10 pt, keep holding
+        let finger = start.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+        finger.press(forDuration: 1.0, thenDragTo: finger.withOffset(CGVector(dx: 8, dy: 6)), withVelocity: .slow, thenHoldForDuration: 3.0)
         page(app, 1)
         let field = app.textFields["onbName"].firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 8), "required: the name field"); field.tap(); field.typeText(name)
