@@ -160,7 +160,7 @@ def pdf():
                   Paragraph("Shown for information. These screenshots are NOT the approved design and have not been visually verified by the owner." if impl
                             else "Shown for the record only. This is where the approved design came from; it is not the canonical design.",
                             ParagraphStyle("w", parent=BODY, textColor=WARN)), Spacer(1, 4 * mm),
-                  image_row(other, width, 150 * mm)]
+                  image_row(other[:4], width, 150 * mm)]
         S += [PageBreak(), Paragraph(f"Screen {s['number']} — {esc(s['name'])} · record", H1),
               Paragraph(f"<b>Design reference:</b> {esc(s['reference'])}", BODY),
               Paragraph("Exact approved wording", H2)]

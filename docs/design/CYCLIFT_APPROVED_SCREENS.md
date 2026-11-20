@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 20 Nov 2026, 23:15 (Dubai) · Screens recorded: 3
+Last updated: 21 Nov 2026, 00:10 (Dubai) · Screens recorded: 3
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -14,7 +14,7 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 |---|---|---|---|---|---|---|---|
 | 1 | ONB-01 | Welcome | YES | YES | YES | YES — with limits | NO |
 | 2 | ONB-02 | About You | YES | YES | YES | YES — visual and functional | NO |
-| 3 | ONB-03 | Athletic Roster | YES | NOT YET | NOT YET | NOT YET | NO |
+| 3 | ONB-03 | Athletic Roster | YES | YES — selection only | YES | FUNCTION: PARTLY. VISUAL: NOT YET | NO |
 
 ---
 
@@ -180,9 +180,9 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 
 - **Navigation location:** Onboarding · page 2 of 7, after About You. Opens the activity library as a sheet ("Browse all activities").
 - **Approval date:** 20 Nov 2026, 23:04 (visual baseline Z2 / Z3; multisport product requirement)
-- **Approval status:** APPROVED DESIGN AND REQUIREMENTS — implementation and verification pending. NOT functionally complete
+- **Approval status:** APPROVED DESIGN AND REQUIREMENTS — implemented; owner's visual verification pending. NOT functionally complete
 - **Original design reference and source:** Onboarding v3.4 design sheets Z2 (the page) and Z3 (the activity library), selected as the page 2 baseline on 15 Nov 2026 and approved as the Screen 3 visual baseline on 20 Nov 2026. The sheets are illustrative drawings; they predate the multisport requirement, so their example activities and capability groupings are not binding.
-- **Implementation commit:** Not yet implemented. The page in builds 6 and 7 (commit 19340b09) is the earlier cycling-and-strength roster.
+- **Implementation commit:** 43027d27 (catalogue, selection, identity, storage, Z2 / Z3 presentation), checked at e32920dc; support sentence shortened in 1a414ccb, not yet re-checked (branch ios/lab). Not in any TestFlight build.
 
 ### Exact approved wording
 
@@ -222,25 +222,33 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 | Stage | State | Evidence |
 |---|---|---|
 | Approved design | YES | Owner, 20 Nov 2026 23:04: Z2 / Z3 visual baseline and the multisport requirement. |
-| Implemented in code | NOT YET | The approved presentation and the minimum safe athlete-selection changes are not written yet. |
-| Compiled | NOT YET |  |
-| Simulator-verified | NOT YET | Not to be marked functionally complete until selected activities persist correctly and the screen reports its capabilities accurately. |
-| Physically verified on iPhone | NO |  |
+| Implemented in code | YES — selection only | Catalogue of 20 activities in six sports; any number selectable; any can be main; identity derived from the selection; planning and recording support stated per activity; one additive stored field. No new planner or recorder was built. |
+| Compiled | YES | Fast check 28 (run 44800348772) built the Lab app at commit e32920dc. |
+| Simulator-verified | FUNCTION: PARTLY. VISUAL: NOT YET | iPhone 15 Pro simulator, Obsidian, fast check 28, roster check PASSED: six sports offered with none preselected; running says it is not planned or recorded and is never called planned and recorded; Runner identity; a runner-only roster cannot continue and says why; adding sports removes none; identities Running/Strength hybrid and Multisport athlete; balance control with cycling and strength; library search and categories; six activities selected at once; any activity made main without losing others; removal; roster kept after Back and Continue and after closing and reopening. In the same run the seven-page journey check FAILED on one expectation written for the old identity text ("Road cycling + Gym training"); the check was corrected and is being re-run (fast check 29). |
+| Physically verified on iPhone | NO | Nothing on this screen has been checked on a real iPhone. |
 
-- **Visual verification:** PENDING — no implementation screenshot exists yet.
-- **Functional verification:** PENDING.
+- **Visual verification:** PENDING. Implementation screenshots sent to the owner; no verdict yet. Known visual points: the sentence above Continue was cut off with many activities (shortened in 1a414ccb, not yet re-checked); capability lines wrap to two rows; with six starter rows the Browse row sits at the fold.
+- **Functional verification:** PARTLY, simulator only (fast check 28). Logic tests: 15 for the roster (578 in all passing): catalogue, truthful capability, unlimited selection, any activity main, identity examples, training type from plannable activities only, additive storage, older records unchanged.
 
 ### Remaining work or limitations
 
-- Implement the approved presentation and the minimum safe selection changes; show the iPhone 15 Pro screenshot.
-- Engineering review to record: what the existing sport registry, athlete model, planner and recorders can support through configuration, and what needs a new training engine.
-- Downstream development to document: planning and recording for each sport that is selectable but unsupported.
+- Owner's visual verdict on the implementation.
+- OWNER DECISION NEEDED — an athlete whose roster has nothing Cyclift can plan (for example a runner) cannot continue onboarding: pages 3–7 and the plan need a stored training type of cycling, strength or hybrid. Letting them through needs a 'roster without a plan' path across those pages and the plan model.
+- Deviations from the sheets, for the owner to accept or reject: the library groups by sport (sheet Z3 groups by capability); the empty page offers one activity per sport (sheet Z2 lists cycling and gym only); page 7's "Interests" label now reads "In your roster · not planned yet"; the "Recovery interests" row of sheet Z2 is not built (recovery activities are ordinary selections).
+- ENGINEERING FINDING — supported through configuration today: every cycling discipline (one cycling planner and recorder); gym, free weights, machines (one strength planner and recorder).
+- ENGINEERING FINDING — needs a real new training engine, NOT built: running, swimming, walking and hiking, mobility and recovery, bodyweight and calisthenics; and discipline-specific cycling (indoor, mountain, gravel, commuting are planned as general cycling).
+- Not checked: redesigned main app, full Lab regression, large text, other themes, real iPhone. Profile's older "Other sports" list still shows only the earlier closed list (kept in step with the roster; its redesign belongs to the Profile review).
+- An older build does not see the newer selections (it reads the earlier sports list, which still receives every activity it can name).
 
 ### Images
 
 - `assets/S03_roster_Z2_two_sports.png` — APPROVED VISUAL BASELINE. Sheet Z2, two main sports with the balance control (actual sheet image; activities shown are illustrative).
 - `assets/S03_roster_Z2_empty.png` — APPROVED VISUAL BASELINE. Sheet Z2, nothing selected yet.
 - `assets/S03_roster_Z3_library.png` — APPROVED VISUAL BASELINE. Sheet Z3, the activity library.
+- `assets/S03_impl_roster-empty_sim_e32920dc.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED BY THE OWNER. Nothing selected. iPhone 15 Pro simulator, Obsidian, commit e32920dc (fast check 28).
+- `assets/S03_impl_roster-runner_sim_e32920dc.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. Runner only, same run.
+- `assets/S03_impl_library_sim_e32920dc.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. The activity library, same run.
+- `assets/S03_impl_roster-multisport_sim_e32920dc.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. Six activities, same run (scrolled).
 
 ### Decision history
 
