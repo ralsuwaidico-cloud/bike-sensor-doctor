@@ -1,0 +1,29 @@
+FAST focused Lab check — selected: LabFastOnboarding/testAthleticRosterIsMultiSport LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 9dd5a862 · files changed since then: 9
+TIME setup: 37s
+  timing: SwiftCompile (10 tasks) | 805.049 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 101.684 seconds
+  timing: SwiftDriver (16 tasks) | 52.849 seconds
+  timing: SwiftEmitModule (2 tasks) | 9.799 seconds
+  timing: Ld (18 tasks) | 7.779 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.358 seconds
+  timing: SwiftDriver Compilation (16 tasks) | 0.696 seconds
+  timing: Copy (17 tasks) | 0.488 seconds
+  stages: packages at 278s · packages prepared at 306s · dependency graph at 306s · inputs at 306s · build description at 306s · first Swift step at 325s · first link at 331s · asset catalogue at 353s · finished at 849s
+  compiled in this run: 101 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 850s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 4s
+	 Executed 2 tests, with 1 failure (0 unexpected) in 582.950 (582.954) seconds
+	 Executed 2 tests, with 1 failure (0 unexpected) in 582.950 (582.955) seconds
+	 Executed 2 tests, with 1 failure (0 unexpected) in 582.950 (582.961) seconds
+Lab/UITests/LabFastOnboarding.swift:425: error: -[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan] : XCTAssertTrue failed - required: the roster line (Cycling/Strength hybrid · balanced)
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAthleticRosterIsMultiSport]' passed (240.033 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' failed (342.917 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 698s
+TIME total on the Mac: 1592s
+commit e32920dc3e04010323ac81706e9cae5e8b564ebf  branch ios/lab
