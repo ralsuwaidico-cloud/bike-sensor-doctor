@@ -324,6 +324,8 @@ struct OnboardingV34View: View {
     // Owner's approved direction for this screen, 20 Nov 2026 ("Screen 1 final decision"): the singularity as the hero,
     // one headline, one supporting line and a circular control that is HELD for three seconds; the screen then
     // dissolves and About you appears. No logo, app name, legend or explanatory paragraph. Do not add to it.
+    // Visually approved by the owner on 20 Nov 2026 (16:59) with this wording: "Your evolution starts here." /
+    // "Your goals. Your training. A better you, every day." / "Hold to begin" / "Hold for 3 seconds". Do not change it.
     // What "Get started" did is kept exactly: the athlete continues without an account and page 1 opens.
     // The hero is a still image of the singularity exactly as the approved Progress design sheets draw it: produced by
     // the sheets' own drawing routine (baseline form, no generation implied), one image per theme. It does not move.
@@ -339,11 +341,11 @@ struct OnboardingV34View: View {
                     welcomeHero(side: min(320, geo.size.width * 0.8))
                     Spacer(minLength: 28).frame(maxHeight: 44)
                     VStack(spacing: 14) {
-                        Text("Start your journey to a better lifestyle")
+                        Text("Your evolution starts here.")
                             .font(.system(.title, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary)
                             .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader).accessibilityIdentifier("onbWelcomeHeadline")
-                        Text("See where you fit in the athletic world, and build a routine around your life.")
+                        Text("Your goals. Your training. A better you, every day.")
                             .font(CyFont.body).foregroundStyle(theme.textSecondary)
                             .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("onbWelcomeLine")
@@ -403,12 +405,12 @@ struct OnboardingV34View: View {
                 }
             }
             VStack(spacing: 3) {
-                Text("Hold to start").font(CyFont.headline).foregroundStyle(theme.textPrimary)
+                Text("Hold to begin").font(CyFont.headline).foregroundStyle(theme.textPrimary)
                 Text("Hold for 3 seconds").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Hold to start")
+        .accessibilityLabel("Hold to begin")
         .accessibilityHint("Press and hold for 3 seconds")
         .accessibilityValue(holdProgress > 0 ? "Holding" : "Not started")
         .accessibilityAddTraits(.isButton)

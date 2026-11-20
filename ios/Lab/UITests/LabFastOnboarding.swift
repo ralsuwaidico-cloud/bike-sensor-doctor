@@ -52,7 +52,9 @@ final class LabFastOnboarding: XCTestCase {
         // Owner's Screen 1 decision, 20 Nov 2026: hero, headline, one line, and a control HELD for three seconds.
         // The earlier check tapped "Get started"; a tap must now do nothing, and so must a hold released early.
         XCTAssertTrue(app.staticTexts["onbWelcomeHeadline"].firstMatch.exists, "required: the welcome headline")
-        XCTAssertEqual(app.staticTexts["onbWelcomeHeadline"].firstMatch.label, "Start your journey to a better lifestyle")
+        XCTAssertEqual(app.staticTexts["onbWelcomeHeadline"].firstMatch.label, "Your evolution starts here.")
+        XCTAssertEqual(app.staticTexts["onbWelcomeLine"].firstMatch.label, "Your goals. Your training. A better you, every day.")
+        XCTAssertEqual(start.label, "Hold to begin", "the approved control label")
         XCTAssertTrue(app.staticTexts["onbWelcomeLine"].firstMatch.exists, "required: the supporting line")
         XCTAssertFalse(app.staticTexts["Cyclift"].exists, "the app name is not on the welcome screen")
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Seven short pages' OR label CONTAINS[c] 'declared by you'")).firstMatch.exists, "the old paragraph and legend are gone")
