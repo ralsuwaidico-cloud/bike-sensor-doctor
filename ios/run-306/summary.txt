@@ -1,0 +1,4 @@
+BikeComputer iOS CI — run 306 — scope full — jobs: quick=skipped test=success release=skipped testflight=skipped
+
+GATE flows: ok
+commit 3b326a3dc2fca60e3314866b932fe47b6137380c  branch ios/lab  job failure
