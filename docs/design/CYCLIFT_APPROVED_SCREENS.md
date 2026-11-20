@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 21 Nov 2026, 00:10 (Dubai) · Screens recorded: 3
+Last updated: 21 Nov 2026, 01:00 (Dubai) · Screens recorded: 3
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -182,7 +182,7 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 - **Approval date:** 20 Nov 2026, 23:04 (visual baseline Z2 / Z3; multisport product requirement)
 - **Approval status:** APPROVED DESIGN AND REQUIREMENTS — implemented; owner's visual verification pending. NOT functionally complete
 - **Original design reference and source:** Onboarding v3.4 design sheets Z2 (the page) and Z3 (the activity library), selected as the page 2 baseline on 15 Nov 2026 and approved as the Screen 3 visual baseline on 20 Nov 2026. The sheets are illustrative drawings; they predate the multisport requirement, so their example activities and capability groupings are not binding.
-- **Implementation commit:** 43027d27 (catalogue, selection, identity, storage, Z2 / Z3 presentation), checked at e32920dc; support sentence shortened in 1a414ccb, not yet re-checked (branch ios/lab). Not in any TestFlight build.
+- **Implementation commit:** 43027d27 (catalogue, selection, identity, storage, Z2 / Z3 presentation), support sentence shortened in 1a414ccb; checked at 39a398f1 (branch ios/lab). Not in any TestFlight build.
 
 ### Exact approved wording
 
@@ -223,11 +223,11 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 |---|---|---|
 | Approved design | YES | Owner, 20 Nov 2026 23:04: Z2 / Z3 visual baseline and the multisport requirement. |
 | Implemented in code | YES — selection only | Catalogue of 20 activities in six sports; any number selectable; any can be main; identity derived from the selection; planning and recording support stated per activity; one additive stored field. No new planner or recorder was built. |
-| Compiled | YES | Fast check 28 (run 44800348772) built the Lab app at commit e32920dc. |
-| Simulator-verified | FUNCTION: PARTLY. VISUAL: NOT YET | iPhone 15 Pro simulator, Obsidian, fast check 28, roster check PASSED: six sports offered with none preselected; running says it is not planned or recorded and is never called planned and recorded; Runner identity; a runner-only roster cannot continue and says why; adding sports removes none; identities Running/Strength hybrid and Multisport athlete; balance control with cycling and strength; library search and categories; six activities selected at once; any activity made main without losing others; removal; roster kept after Back and Continue and after closing and reopening. In the same run the seven-page journey check FAILED on one expectation written for the old identity text ("Road cycling + Gym training"); the check was corrected and is being re-run (fast check 29). |
+| Compiled | YES | Fast check 30 (run 44808739059) built the Lab app at commit 39a398f1. |
+| Simulator-verified | FUNCTION: PARTLY. VISUAL: NOT YET | iPhone 15 Pro simulator, Obsidian. Roster check PASSED in fast checks 28 and 30 (run 44808739059, commit 39a398f1): six sports offered with none preselected; running says it is not planned or recorded and is never called planned and recorded; Runner identity; a runner-only roster cannot continue and says why; adding sports removes none; identities Running/Strength hybrid and Multisport athlete; balance control with cycling and strength; library search and categories; six activities selected at once; any activity made main without losing others; removal; roster kept after Back and Continue and after closing and reopening. The seven-page journey FAILED once in fast check 28 on an expectation written for the old identity text ("Road cycling + Gym training"); with that expectation corrected it PASSED in fast check 29 (run 44805193425, commit 170f90e2). |
 | Physically verified on iPhone | NO | Nothing on this screen has been checked on a real iPhone. |
 
-- **Visual verification:** PENDING. Implementation screenshots sent to the owner; no verdict yet. Known visual points: the sentence above Continue was cut off with many activities (shortened in 1a414ccb, not yet re-checked); capability lines wrap to two rows; with six starter rows the Browse row sits at the fold.
+- **Visual verification:** PENDING. Implementation screenshots sent to the owner; no verdict yet. Known visual points: the sentence above Continue was cut off with many activities (shortened in 1a414ccb; reads in full in fast check 30); capability lines wrap to two rows; with six starter rows the Browse row sits at the fold.
 - **Functional verification:** PARTLY, simulator only (fast check 28). Logic tests: 15 for the roster (578 in all passing): catalogue, truthful capability, unlimited selection, any activity main, identity examples, training type from plannable activities only, additive storage, older records unchanged.
 
 ### Remaining work or limitations
@@ -248,7 +248,7 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 - `assets/S03_impl_roster-empty_sim_e32920dc.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED BY THE OWNER. Nothing selected. iPhone 15 Pro simulator, Obsidian, commit e32920dc (fast check 28).
 - `assets/S03_impl_roster-runner_sim_e32920dc.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. Runner only, same run.
 - `assets/S03_impl_library_sim_e32920dc.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. The activity library, same run.
-- `assets/S03_impl_roster-multisport_sim_e32920dc.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. Six activities, same run (scrolled).
+- `assets/S03_impl_roster-multisport_sim_39a398f1.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. Five activities with trail running as the main sport, commit 39a398f1 (fast check 30).
 
 ### Decision history
 

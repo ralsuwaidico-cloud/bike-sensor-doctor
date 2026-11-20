@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "21 Nov 2026, 00:10 (Dubai)"
+UPDATED = "21 Nov 2026, 01:00 (Dubai)"
 
 SCREENS = [
     dict(
@@ -186,20 +186,20 @@ SCREENS = [
                   "Treating Cyclift as a cycling-and-strength application with other sports as mere interests.",
                   "An arbitrary two-sport limit; forcing every athlete into Cycling, Strength or Cycling + Strength.",
                   "Calling an unsupported activity \"planned and recorded\"."],
-        commits="43027d27 (catalogue, selection, identity, storage, Z2 / Z3 presentation), checked at e32920dc; support sentence shortened in 1a414ccb, not yet re-checked (branch ios/lab). Not in any TestFlight build.",
+        commits="43027d27 (catalogue, selection, identity, storage, Z2 / Z3 presentation), support sentence shortened in 1a414ccb; checked at 39a398f1 (branch ios/lab). Not in any TestFlight build.",
         stages=[("Approved design", "YES", "Owner, 20 Nov 2026 23:04: Z2 / Z3 visual baseline and the multisport requirement."),
                 ("Implemented in code", "YES — selection only", "Catalogue of 20 activities in six sports; any number selectable; any can be main; identity derived from the "
                  "selection; planning and recording support stated per activity; one additive stored field. No new planner or recorder was built."),
-                ("Compiled", "YES", "Fast check 28 (run 44800348772) built the Lab app at commit e32920dc."),
-                ("Simulator-verified", "FUNCTION: PARTLY. VISUAL: NOT YET", "iPhone 15 Pro simulator, Obsidian, fast check 28, roster check PASSED: six sports offered with none "
+                ("Compiled", "YES", "Fast check 30 (run 44808739059) built the Lab app at commit 39a398f1."),
+                ("Simulator-verified", "FUNCTION: PARTLY. VISUAL: NOT YET", "iPhone 15 Pro simulator, Obsidian. Roster check PASSED in fast checks 28 and 30 (run 44808739059, commit 39a398f1): six sports offered with none "
                  "preselected; running says it is not planned or recorded and is never called planned and recorded; Runner identity; a runner-only roster "
                  "cannot continue and says why; adding sports removes none; identities Running/Strength hybrid and Multisport athlete; balance control with "
                  "cycling and strength; library search and categories; six activities selected at once; any activity made main without losing others; removal; "
-                 "roster kept after Back and Continue and after closing and reopening. In the same run the seven-page journey check FAILED on one expectation "
-                 "written for the old identity text (\"Road cycling + Gym training\"); the check was corrected and is being re-run (fast check 29)."),
+                 "roster kept after Back and Continue and after closing and reopening. The seven-page journey FAILED once in fast check 28 on an expectation written for the old identity text "
+                 "(\"Road cycling + Gym training\"); with that expectation corrected it PASSED in fast check 29 (run 44805193425, commit 170f90e2)."),
                 ("Physically verified on iPhone", "NO", "Nothing on this screen has been checked on a real iPhone.")],
         visual_verification="PENDING. Implementation screenshots sent to the owner; no verdict yet. Known visual points: the sentence above Continue was cut off with "
-                            "many activities (shortened in 1a414ccb, not yet re-checked); capability lines wrap to two rows; with six starter rows the Browse row sits at the fold.",
+                            "many activities (shortened in 1a414ccb; reads in full in fast check 30); capability lines wrap to two rows; with six starter rows the Browse row sits at the fold.",
         functional_verification="PARTLY, simulator only (fast check 28). Logic tests: 15 for the roster (578 in all passing): catalogue, truthful capability, unlimited "
                                 "selection, any activity main, identity examples, training type from plannable activities only, additive storage, older records unchanged.",
         remaining=["Owner's visual verdict on the implementation.",
@@ -221,7 +221,7 @@ SCREENS = [
                 ("S03_impl_roster-empty_sim_e32920dc.png", "IMPLEMENTATION — NOT YET VISUALLY VERIFIED BY THE OWNER. Nothing selected. iPhone 15 Pro simulator, Obsidian, commit e32920dc (fast check 28)."),
                 ("S03_impl_roster-runner_sim_e32920dc.png", "IMPLEMENTATION — NOT YET VISUALLY VERIFIED. Runner only, same run."),
                 ("S03_impl_library_sim_e32920dc.png", "IMPLEMENTATION — NOT YET VISUALLY VERIFIED. The activity library, same run."),
-                ("S03_impl_roster-multisport_sim_e32920dc.png", "IMPLEMENTATION — NOT YET VISUALLY VERIFIED. Six activities, same run (scrolled).")],
+                ("S03_impl_roster-multisport_sim_39a398f1.png", "IMPLEMENTATION — NOT YET VISUALLY VERIFIED. Five activities with trail running as the main sport, commit 39a398f1 (fast check 30).")],
         history=[("15 Nov 2026", "Onboarding v3.4 Athletic Roster selected as the page 2 design baseline (sheets Z1–Z6).", "IN FORCE (visual)"),
                  ("20 Nov 2026, 23:04", "Z2 / Z3 approved as the Screen 3 visual baseline. Product requirement changed: multi-sport, extensible athletic "
                   "roster; identity from selected activities; selection, recording and planning kept as separate concepts; no fake support.", "IN FORCE")],
