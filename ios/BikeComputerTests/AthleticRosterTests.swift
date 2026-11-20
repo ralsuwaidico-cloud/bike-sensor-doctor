@@ -108,8 +108,15 @@ final class AthleticRosterTests: XCTestCase {
         XCTAssertNil(AthleticRoster.supportLine([]))
         XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength"]), "Cyclift will plan and record Road cycling and Gym training.")
         XCTAssertEqual(AthleticRoster.supportLine(["running"]), "Road running is in your roster. Cyclift cannot plan or record it yet.")
-        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "running", "hiking"]),
-                       "Cyclift will plan and record Road cycling. Road running and Hiking stay in your roster, not planned or recorded yet.")
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "running"]), "Cyclift will plan and record Road cycling. Road running is not planned or recorded yet.")
+        // more than two activities are counted, so the sentence is always read in full on the page
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "running", "hiking"]), "Cyclift will plan and record 1 of your 3 activities. The other 2 are not planned or recorded yet.")
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength", "gravel", "running"]), "Cyclift will plan and record 3 of your 4 activities. The other one is not planned or recorded yet.")
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength", "gravel"]), "Cyclift will plan and record all 3 activities.")
+        XCTAssertEqual(AthleticRoster.supportLine(["running", "hiking", "openWater"]), "All 3 are in your roster. Cyclift cannot plan or record them yet.")
+        for ids in [["roadCycling", "running"], AthleticRoster.library.map(\.id), ["running", "hiking", "openWater"]] {
+            XCTAssertLessThan((AthleticRoster.supportLine(ids) ?? "").count, 100, "short enough for the line above Continue")
+        }
     }
 
     // MARK: storage — additive, older records and older builds unharmed

@@ -239,7 +239,9 @@ enum AthleticRoster {
         return "\(name) · \(p == .strength ? "strength-led" : p == .cycling ? "endurance-led" : "balanced")"
     }
 
-    /// What Cyclift can and cannot do for this roster today, in one honest sentence (nil for an empty roster).
+    /// What Cyclift can and cannot do for this roster today, in one honest sentence (nil for an empty roster). Kept
+    /// short enough to be read in full above the Continue button: up to two activities are named, more are counted
+    /// (fast check 28 showed the longer wording cut off on screen).
     static func supportLine(_ ids: [String]) -> String? {
         let acts = unique(ids).compactMap { activity($0) }
         guard !acts.isEmpty else { return nil }
@@ -247,8 +249,13 @@ enum AthleticRoster {
         func list(_ xs: [RosterActivity]) -> String {
             let t = xs.map(\.title); return t.count <= 1 ? (t.first ?? "") : t.dropLast().joined(separator: ", ") + " and " + t[t.count - 1]
         }
+        if acts.count > 2 {
+            if unplanned.isEmpty { return "Cyclift will plan and record all \(acts.count) activities." }
+            if planned.isEmpty { return "All \(acts.count) are in your roster. Cyclift cannot plan or record them yet." }
+            return "Cyclift will plan and record \(planned.count) of your \(acts.count) activities. The other \(unplanned.count == 1 ? "one is" : "\(unplanned.count) are") not planned or recorded yet."
+        }
         if planned.isEmpty { return "\(list(unplanned)) \(unplanned.count == 1 ? "is" : "are") in your roster. Cyclift cannot plan or record \(unplanned.count == 1 ? "it" : "them") yet." }
         if unplanned.isEmpty { return "Cyclift will plan and record \(list(planned))." }
-        return "Cyclift will plan and record \(list(planned)). \(list(unplanned)) \(unplanned.count == 1 ? "stays" : "stay") in your roster, not planned or recorded yet."
+        return "Cyclift will plan and record \(list(planned)). \(list(unplanned)) is not planned or recorded yet."
     }
 }
