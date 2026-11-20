@@ -1,12 +1,32 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 21 Nov 2026, 01:30 (Dubai) · Screens recorded: 4
+Last updated: 21 Nov 2026, 02:00 (Dubai) · Screens recorded: 4
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
 The five statuses below are separate facts and are never treated as interchangeable: **Approved design · Implemented in code · Compiled · Simulator-verified · Physically verified on iPhone.**
 
 The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in `assets/`.
+
+## Approved product direction
+
+**Cyclift is a universal multisport athlete platform** (owner, 21 Nov 2026 — `decisions/2026-11-21_universal-multisport-product-direction.md`). Every catalogue activity is selectable and any can be the primary sport; goals follow the selected sports; every athlete completes onboarding, with a plan where planning exists and profile-only otherwise; nothing is fabricated and no cycling or strength programme is assigned silently.
+
+Five things are always distinguished, and a sport being selectable never means the rest exists:
+
+| Sport / discipline | Selectable in the UI | Profile and goal storage | Workout planning | Recording | AI Coach |
+|---|---|---|---|---|---|
+| Road cycling | Yes | Yes | Yes — existing rules-based planner | Yes — cycling recorder | No — rules-based Coach only |
+| Indoor, mountain, gravel, commuting cycling | Yes | Yes | As general cycling only | As a cycling ride | No |
+| Gym strength | Yes | Yes | Yes — existing rules-based planner | Yes — strength recorder | No — rules-based Coach only |
+| Free weights, machines | Yes | Yes | As gym training only | As gym training | No |
+| Bodyweight, calisthenics | Yes | Yes | No | No | No |
+| Running (road, trail, treadmill) | Yes | Yes | No | No | No |
+| Swimming (pool, open water) | Yes | Yes | No | No | No |
+| Walking, hiking | Yes | Yes | No | No | No |
+| Mobility, stretching, recovery | Yes | Yes | No | No | No |
+
+The goal categories for sports without a planner are PROVISIONAL until the owner reviews them.
 
 ## Summary
 

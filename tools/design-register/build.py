@@ -2,7 +2,7 @@
 """Writes docs/design/CYCLIFT_APPROVED_SCREENS.md and .pdf from screens.py. No CI, no simulator: existing assets only."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from screens import SCREENS, UPDATED
+from screens import SCREENS, UPDATED, CAPABILITY
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
@@ -29,6 +29,14 @@ def markdown():
          "The five statuses below are separate facts and are never treated as interchangeable: "
          "**Approved design · Implemented in code · Compiled · Simulator-verified · Physically verified on iPhone.**", "",
          "The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in `assets/`.", "",
+         "## Approved product direction", "",
+         "**Cyclift is a universal multisport athlete platform** (owner, 21 Nov 2026 — `decisions/2026-11-21_universal-multisport-product-direction.md`). "
+         "Every catalogue activity is selectable and any can be the primary sport; goals follow the selected sports; every athlete completes onboarding, "
+         "with a plan where planning exists and profile-only otherwise; nothing is fabricated and no cycling or strength programme is assigned silently.", "",
+         "Five things are always distinguished, and a sport being selectable never means the rest exists:", "",
+         "| Sport / discipline | Selectable in the UI | Profile and goal storage | Workout planning | Recording | AI Coach |", "|---|---|---|---|---|---|"]
+    L += ["| " + " | ".join(r) + " |" for r in CAPABILITY]
+    L += ["", "The goal categories for sports without a planner are PROVISIONAL until the owner reviews them.", "",
          "## Summary", "",
          "| # | ID | Screen | " + " | ".join(STAGES) + " |", "|---|---|---|" + "---|" * len(STAGES)]
     for s in SCREENS:
@@ -141,7 +149,21 @@ def pdf():
     t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("BACKGROUND", (0, 0), (-1, 0), SOFT),
                            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
     S += [t, Spacer(1, 4 * mm),
-          Paragraph("All checks so far ran in the iOS Simulator (iPhone 15 Pro, Obsidian). Nothing in this book has been verified on a physical iPhone.", SMALL)]
+          Paragraph("All checks so far ran in the iOS Simulator (iPhone 15 Pro, Obsidian). Nothing in this book has been verified on a physical iPhone.", SMALL),
+          PageBreak(), Paragraph("Approved product direction", H1),
+          Paragraph("<b>Cyclift is a universal multisport athlete platform</b> (owner, 21 Nov 2026). Every catalogue activity is selectable and any can be the primary "
+                    "sport; goals follow the selected sports; every athlete completes onboarding — with a plan where planning exists, profile-only otherwise. Nothing "
+                    "is fabricated, and no cycling or strength programme is assigned silently.", BODY), Spacer(1, 3 * mm),
+          Paragraph("Five separate facts per sport. A sport being selectable never means the rest exists.", BODY), Spacer(1, 2 * mm)]
+    crow = [[Paragraph(x, CELLB) for x in ["Sport / discipline", "Selectable in the UI", "Profile and goal storage", "Workout planning", "Recording", "AI Coach"]]]
+    for r in CAPABILITY:
+        crow.append([Paragraph(esc(r[0]), CELLB)] + [Paragraph(esc(v), ParagraphStyle("cv", parent=CELL, textColor=GOOD if v.startswith("Yes") else (WARN if v.startswith("As") else BAD))) for v in r[1:]])
+    ct = Table(crow, colWidths=[42 * mm] + [(width - 42 * mm) / 5] * 5, repeatRows=1)
+    ct.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("BACKGROUND", (0, 0), (-1, 0), SOFT),
+                            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
+    S += [ct, Spacer(1, 3 * mm),
+          Paragraph("\"Yes\" in the first two columns means implemented in code on the development branch; verification is recorded under Screens 3 and 4. "
+                    "Goal categories for sports without a planner are provisional until the owner reviews them. Nothing here is in a TestFlight build.", SMALL)]
     for s in SCREENS:
         S += [PageBreak(), Paragraph(f"Screen {s['number']} — {esc(s['name'])}", H1),
               Paragraph(f"{s['id']} · {esc(s['location'])}", SMALL), Spacer(1, 2 * mm),

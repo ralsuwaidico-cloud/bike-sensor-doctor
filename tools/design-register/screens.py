@@ -4,7 +4,20 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "21 Nov 2026, 01:30 (Dubai)"
+UPDATED = "21 Nov 2026, 02:00 (Dubai)"
+
+# Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
+CAPABILITY = [
+    ("Road cycling", "Yes", "Yes", "Yes — existing rules-based planner", "Yes — cycling recorder", "No — rules-based Coach only"),
+    ("Indoor, mountain, gravel, commuting cycling", "Yes", "Yes", "As general cycling only", "As a cycling ride", "No"),
+    ("Gym strength", "Yes", "Yes", "Yes — existing rules-based planner", "Yes — strength recorder", "No — rules-based Coach only"),
+    ("Free weights, machines", "Yes", "Yes", "As gym training only", "As gym training", "No"),
+    ("Bodyweight, calisthenics", "Yes", "Yes", "No", "No", "No"),
+    ("Running (road, trail, treadmill)", "Yes", "Yes", "No", "No", "No"),
+    ("Swimming (pool, open water)", "Yes", "Yes", "No", "No", "No"),
+    ("Walking, hiking", "Yes", "Yes", "No", "No", "No"),
+    ("Mobility, stretching, recovery", "Yes", "Yes", "No", "No", "No"),
+]
 
 SCREENS = [
     dict(
