@@ -300,6 +300,9 @@ struct OnboardingAnswers: Equatable {
     /// Onboarding v3.4 roster: the stored sports list, in roster order (the first plannable sport of a domain is its
     /// main sport — see AthleticRoster). nil leaves the stored list untouched.
     var sports: [RiderProfile.Sport]? = nil
+    /// The multi-sport roster (owner decision 20 Nov 2026): catalogue identifiers in roster order, first = main sport.
+    /// nil leaves the stored selection untouched. When given, the older `sports` list is written from it as well.
+    var activities: [String]? = nil
     // Stage B
     var goals: [GoalID]? = nil
     var primaryGoal: GoalID? = nil
@@ -324,7 +327,10 @@ struct OnboardingAnswers: Equatable {
             case .hybrid: x.profile.priority = priority ?? .balanced
             }
         } else if let p = priority, x.profile.trainingMode == .hybrid { x.profile.priority = p }
-        if let s = sports { x.profile.sports = s }
+        if let ids = activities {
+            x.profile.activities = AthleticRoster.unique(ids.filter { AthleticRoster.activity($0) != nil })
+            x.profile.sports = AthleticRoster.legacySports(ids)
+        } else if let s = sports { x.profile.sports = s }
         if let l = cyclingLevel { x.profile.level = l }
         if let s = strengthLevel { x.strengthPrefs.experience = s; x.profile.confirmStrengthLevel = nil }
         // re-applying the same value never re-dates it (resume and keystrokes call this repeatedly)

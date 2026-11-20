@@ -214,6 +214,120 @@ final class LabFastOnboarding: XCTestCase {
         again.settleForScreenshot(1); shot("onb-1-about-reopened")
     }
 
+    /// Screen 3 as approved on 20 Nov 2026 (23:04): a multi-sport roster. Any number of activities, any of them main,
+    /// identity from what was selected, every row saying truthfully what Cyclift plans and records, a searchable
+    /// library with categories, and the selection still there after Back, Continue and reopening the app.
+    func testAthleticRosterIsMultiSport() {
+        let app = launch()
+        let start = app.buttons["onboardingContinue"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 30), "required: a new athlete starts at Welcome")
+        app.settleForScreenshot(2)
+        start.press(forDuration: 3.6)
+        page(app, 1)
+        let name = app.textFields["onbName"].firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 8), "required: the name field"); name.tap(); name.typeText("Sam"); hideKeyboard(app)
+        app.fillAboutYouMeasurements()
+        let next = app.buttons["onboardingNext"].firstMatch
+        XCTAssertTrue(next.isEnabled, "required: About you complete"); next.tap()
+        page(app, 2)
+        func lineText() -> String { let e = el(app, "onbCoachLine"); return e.exists ? e.label : "" }
+        func identity() -> String { let e = app.staticTexts["rosterIdentity"].firstMatch; return e.waitForExistence(timeout: 5) ? e.label : "" }
+
+        // nothing selected: one activity per sport is offered, none preselected, each with its honest capability
+        XCTAssertTrue(app.staticTexts["rosterEmptyHeadline"].firstMatch.waitForExistence(timeout: 8), "required: the empty roster headline")
+        XCTAssertFalse(next.isEnabled, "required: Continue needs a selection")
+        for id in ["roadCycling", "strength", "running", "swimming", "walking", "mobility"] {
+            XCTAssertTrue(app.buttons["rosterAdd-\(id)"].firstMatch.exists, "required: \(id) is offered before anything is chosen")
+        }
+        XCTAssertTrue(app.buttons["rosterAdd-roadCycling"].firstMatch.label.contains("Planned · recorded"), "road cycling says it is planned and recorded")
+        let run = app.buttons["rosterAdd-running"].firstMatch
+        XCTAssertTrue(run.label.contains("not planned or recorded yet"), "required: running says it is not planned or recorded (\(run.label))")
+        XCTAssertFalse(run.label.lowercased().contains("planned and recorded"), "required: running is never called planned and recorded")
+        app.settleForScreenshot(1); shot("onb-2-roster-empty")
+
+        // a runner: running is the main sport, named truthfully; Cyclift builds no plan from it
+        tap(app, run, "add road running")
+        let mainRun = need(app, "rosterMain-running", "running as the main sport")
+        XCTAssertEqual(identity(), "Runner", "required: identity comes from the selection")
+        XCTAssertTrue(lineText().contains("cannot plan or record"), "required: the limitation is stated (\(lineText()))")
+        XCTAssertFalse(el(app, "rosterLead").exists, "no balance control without two planned sports")
+        XCTAssertFalse(next.isEnabled, "nothing Cyclift can plan yet: no plan is manufactured, Continue stays unavailable")
+        _ = mainRun
+        app.settleForScreenshot(1); shot("onb-2-roster-runner")
+
+        // adding sports never removes one; the plan comes from what Cyclift can plan
+        tap(app, app.buttons["rosterAdd-strength"].firstMatch, "add gym training")
+        XCTAssertEqual(identity(), "Running/Strength hybrid")
+        need(app, "rosterMain-running", "running is still the main sport"); need(app, "rosterMain-strength", "gym training is planned")
+        XCTAssertTrue(next.isEnabled, "required: Continue once something can be planned")
+        tap(app, app.buttons["rosterAdd-roadCycling"].firstMatch, "add road cycling")
+        XCTAssertEqual(identity(), "Multisport athlete")
+        need(app, "rosterLead", "the balance control for cycling and strength")
+        for id in ["running", "strength", "roadCycling"] { need(app, "rosterMain-\(id)", "\(id) is in the roster") }
+
+        // the library: search, categories, every discipline selectable, honest wording
+        tap(app, app.buttons["rosterBrowse"].firstMatch, "Browse all activities")
+        let search = app.textFields["librarySearch"].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 8), "required: the library's search field")
+        need(app, "libraryCategory", "the category tabs")
+        XCTAssertTrue(app.buttons["library-gravel"].firstMatch.exists && app.buttons["library-indoorCycling"].firstMatch.exists, "required: cycling disciplines are listed")
+        app.settleForScreenshot(1); shot("onb-2-library")
+        search.tap(); search.typeText("trail")
+        let trail = app.buttons["library-trailRunning"].firstMatch
+        XCTAssertTrue(trail.waitForExistence(timeout: 5), "required: search finds trail running")
+        XCTAssertFalse(app.buttons["library-gravel"].firstMatch.exists, "search narrows the list")
+        XCTAssertTrue(trail.label.contains("not planned or recorded yet"), "required: honest wording in the library (\(trail.label))")
+        trail.tap()
+        XCTAssertEqual(trail.value as? String, "In your roster", "required: the tick shows it is selected")
+        search.tap(); search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 5))
+        let cats = el(app, "libraryCategory")
+        cats.buttons["Strength"].firstMatch.tap()
+        let cali = app.buttons["library-calisthenics"].firstMatch
+        XCTAssertTrue(cali.waitForExistence(timeout: 5), "required: the Strength category lists calisthenics")
+        XCTAssertFalse(app.buttons["library-trailRunning"].firstMatch.exists, "the category narrows the list")
+        cali.tap()
+        cats.buttons["Endurance"].firstMatch.tap()
+        let gravel = app.buttons["library-gravel"].firstMatch
+        XCTAssertTrue(gravel.waitForExistence(timeout: 5), "required: the Endurance category lists gravel")
+        XCTAssertTrue(gravel.label.contains("general cycling"), "required: gravel says it is planned as general cycling (\(gravel.label))")
+        gravel.tap()
+        let done = app.buttons["libraryDone"].firstMatch
+        XCTAssertTrue(done.label.contains("6"), "required: six activities selected, no two-sport limit (\(done.label))")
+        done.tap()
+
+        // back on the page: all six, main and additional kept apart; any of them can be made main
+        for id in ["trailRunning", "calisthenics", "gravel"] {
+            let row = app.buttons["rosterMakeMain-\(id)"].firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 6), "required: \(id) is listed under Also training with Make main")
+        }
+        tap(app, app.buttons["rosterMakeMain-trailRunning"].firstMatch, "make trail running the main sport")
+        need(app, "rosterMain-trailRunning", "trail running is the main sport")
+        for id in ["strength", "roadCycling"] { need(app, "rosterMain-\(id)", "\(id) is still planned") }
+        for id in ["running", "calisthenics", "gravel"] { XCTAssertTrue(app.buttons["rosterRemove-\(id)"].firstMatch.exists, "required: \(id) was not lost by changing the main sport") }
+        XCTAssertEqual(identity(), "Multisport athlete")
+        _ = app.reveal(el(app, "rosterMain-trailRunning"), top: 110, bottomMargin: 230)
+        app.settleForScreenshot(1); shot("onb-2-roster-multisport")
+        tap(app, app.buttons["rosterRemove-calisthenics"].firstMatch, "remove calisthenics")
+        XCTAssertFalse(app.buttons["rosterRemove-calisthenics"].firstMatch.waitForExistence(timeout: 2), "required: removal works")
+
+        // Continue and Back keep the roster; so does closing and reopening the app
+        XCTAssertTrue(next.isEnabled); next.tap(); page(app, 3)
+        app.buttons["onboardingBack"].firstMatch.tap(); page(app, 2)
+        need(app, "rosterMain-trailRunning", "the main sport after Back")
+        app.terminate()
+        let again = XCUIApplication(); again.launchEnvironment["LAB_THEME"] = "obsidian"; again.launch()
+        let counter = again.staticTexts["onboardingProgress"].firstMatch
+        XCTAssertTrue(counter.waitForExistence(timeout: 30), "required: onboarding resumes after reopening")
+        if counter.label.hasPrefix("3 of 7") { again.buttons["onboardingBack"].firstMatch.tap() }
+        page(again, 2)
+        XCTAssertTrue(el(again, "rosterMain-trailRunning").waitForExistence(timeout: 8), "required: the main sport was saved")
+        for id in ["strength", "roadCycling"] { XCTAssertTrue(el(again, "rosterMain-\(id)").exists, "required: \(id) was saved") }
+        for id in ["running", "gravel"] { XCTAssertTrue(again.buttons["rosterRemove-\(id)"].firstMatch.exists, "required: \(id) was saved") }
+        XCTAssertFalse(again.buttons["rosterRemove-calisthenics"].firstMatch.exists, "required: the removed activity stayed removed")
+        XCTAssertEqual(again.staticTexts["rosterIdentity"].firstMatch.label, "Multisport athlete", "required: the identity is derived again from the saved roster")
+        again.settleForScreenshot(1); shot("onb-2-roster-reopened")
+    }
+
     /// All seven pages: each page's required elements, the units choice, a day edit on page 4, a Blueprint group opened
     /// and returned from, then Approve → Home with the entered name → Plan with the approved sessions.
     func testSevenPagesApproveHomePlan() {

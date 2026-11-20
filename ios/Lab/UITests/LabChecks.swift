@@ -878,7 +878,9 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(app.buttons["library-running"].firstMatch.waitForExistence(timeout: 8), "the library opens")
         let sauna = app.descendants(matching: .any).matching(identifier: "library-sauna").firstMatch
         var n = 0; while !sauna.exists && n < 4 { app.swipeUp(); n += 1 }
-        XCTAssertTrue(sauna.exists && sauna.label.contains("Coming later"), "an activity that cannot be stored says so and is not a button")
+        // Owner decision 20 Nov 2026 (23:04, multi-sport roster): every catalogue activity can be selected; one Cyclift
+        // does not support says so in words. The earlier check required "Coming later" and that it could not be chosen.
+        XCTAssertTrue(sauna.exists && sauna.label.contains("not planned or recorded yet"), "an unsupported activity says so in words (\(sauna.label))")
         shot("journey-2c-library")
         app.buttons["libraryDone"].firstMatch.tap()
         XCTAssertTrue(next.waitForExistence(timeout: 8) && next.isEnabled); next.tap()

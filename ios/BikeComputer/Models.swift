@@ -44,6 +44,12 @@ struct RiderProfile: Codable, Equatable {
     var restHR: Int? = nil
     var lthr: Int? = nil
     var sports: [Sport] = [.roadCycling]
+    /// The athlete's selected activities — catalogue identifiers (`AthleticRoster.library`), in roster order; the first
+    /// is the main sport. nil = never saved (a record from before the multi-sport roster): the roster is then read from
+    /// `sports`. Added 20 Nov 2026; additive — an older build ignores the key and keeps reading `sports`, which still
+    /// receives every activity it can name. A selection is not a claim of support: planning and recording capability
+    /// live in the catalogue, not here.
+    var activities: [String]? = nil
     /// Monotonic version of the shared athlete settings; bumped on every change the rider makes. Drives profile sync.
     var version: UInt32 = 1
     var updatedAt: Date = Date()
@@ -221,6 +227,7 @@ struct RiderProfile: Codable, Equatable {
         restHR = try c.decodeIfPresent(Int.self, forKey: .restHR)
         lthr = try c.decodeIfPresent(Int.self, forKey: .lthr)
         sports = (try? c.decodeIfPresent([Sport].self, forKey: .sports)) ?? [.roadCycling]
+        activities = try? c.decodeIfPresent([String].self, forKey: .activities)
         version = try c.decodeIfPresent(UInt32.self, forKey: .version) ?? 1
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
         gender = try c.decodeIfPresent(String.self, forKey: .gender)

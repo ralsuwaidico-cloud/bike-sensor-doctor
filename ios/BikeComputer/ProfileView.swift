@@ -123,7 +123,7 @@ struct SportsPicker: View {
         List {
             ForEach(RiderProfile.Sport.allCases, id: \.self) { sp in
                 let on = store.profile.sports.contains(sp)
-                Button { if on { store.profile.sports.removeAll { $0 == sp } } else { store.profile.sports.append(sp) } } label: { HStack { Text(sp.title).foregroundStyle(.primary); Spacer(); if on { Image(systemName: "checkmark").foregroundStyle(BC.accent) } } }
+                Button { AthleticRoster.toggleLegacy(sp, in: &store.profile) } label: { HStack { Text(sp.title).foregroundStyle(.primary); Spacer(); if on { Image(systemName: "checkmark").foregroundStyle(BC.accent) } } }
             }
             Section { Text("Other sports count toward your weekly load so the plan does not overload the bike days.").font(.footnote).foregroundStyle(.secondary) }
         }.navigationTitle("Sports")

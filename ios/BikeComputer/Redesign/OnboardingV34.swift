@@ -53,7 +53,8 @@ struct OnboardingV34View: View {
     /// Stored as 201…207 so a reopened setup returns to its page (the five-stage screen uses 101…105).
     private static let stageBase = 200
 
-    private var sports: [RiderProfile.Sport] { a.sports ?? [] }
+    /// The roster: selected activity identifiers in roster order (first = main sport).
+    private var sports: [String] { a.activities ?? [] }
     private var roster: AthleticRoster.Page { AthleticRoster.view(sports) }
     private var mode: TrainingMode { a.mode ?? store.profile.trainingMode }
 
@@ -112,19 +113,19 @@ struct OnboardingV34View: View {
         let r = OnboardingFlow.storedAnswers(store, pastFirstStage: page >= 3)
         var x = r.answers
         // the roster is the stored sports list once the athlete has been on Page 2; before that nothing is preselected
-        if page >= 2 { x.sports = AthleticRoster.unique(store.profile.sports) }
+        if page >= 2 { x.activities = AthleticRoster.roster(of: store.profile) }
         a = x
         ftpKnown = r.ftpKnown
         if let w = r.ftpWatts { ftpText = String(w) }
     }
 
     /// Every roster change also sets the stored training type and lead that the roster means.
-    private var sportsBinding: Binding<[RiderProfile.Sport]> {
+    private var sportsBinding: Binding<[String]> {
         Binding(get: { sports }, set: { new in setSports(new) })
     }
-    private func setSports(_ new: [RiderProfile.Sport]) {
+    private func setSports(_ new: [String]) {
         var x = a
-        x.sports = AthleticRoster.unique(new)
+        x.activities = AthleticRoster.unique(new)
         let m = AthleticRoster.view(new).mode
         x.mode = m
         x.priority = m == .hybrid ? (a.priority ?? .balanced) : nil
@@ -279,8 +280,14 @@ struct OnboardingV34View: View {
             if let issue = aboutIssue { return CoachLine(mark: "", tint: theme.warning, strong: issue) }
             return CoachLine(mark: "", tint: theme.textSecondary, before: BodyMeasure.aboutYouPrompt(name: a.name, dateOfBirth: a.dateOfBirth, weightKg: a.weightKg, heightCm: a.heightCm) ?? "")
         case 2:
-            if roster.mode == nil { return CoachLine(mark: "", tint: theme.textSecondary, before: roster.hasOnlyUnsupported ? "Your interests are saved. Add a sport Cyclift can plan to continue." : "Choose the sport you train most. Your plan is built around it.") }
-            return CoachLine(mark: "◆", tint: theme.accent, before: "\(AthleticRoster.identityLine(sports, priority: a.priority)). " + (roster.mode == .hybrid ? "Rides and strength share one week; the lead decides the mix." : "Your week is built from this sport."))
+            // Multi-sport roster (owner decision 20 Nov 2026): the line names the athlete from what was selected and
+            // says truthfully what Cyclift plans and records for it today.
+            guard !roster.isEmpty else { return CoachLine(mark: "", tint: theme.textSecondary, before: "Choose what you train. You can add as many activities as you like.") }
+            let support = AthleticRoster.supportLine(sports) ?? ""
+            if roster.mode == nil {
+                return CoachLine(mark: "◆", tint: theme.accent, strong: AthleticRoster.identity(sports) + ". ", after: support + " To build a training plan today, add cycling or gym training.")
+            }
+            return CoachLine(mark: "◆", tint: theme.accent, strong: AthleticRoster.identityLine(sports, priority: a.priority) + ". ", after: support)
         case 3:
             guard let g = a.primaryGoal ?? a.goals?.first else { return CoachLine(mark: "", tint: theme.textSecondary, before: "Pick at least one goal. The main goal shapes the sessions the Coach proposes.") }
             return CoachLine(mark: "◆", tint: theme.accent, strong: "Main goal: \(g.title).", after: " \(GoalInfo.effect(g))")
@@ -461,25 +468,26 @@ struct OnboardingV34View: View {
         let v = roster
         return VStack(alignment: .leading, spacing: CySpace.l) {
             heading(2, "Sports", "What do you train?")
-            if v.mainEndurance == nil && v.mainStrength == nil {
+            if v.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(v.hasOnlyUnsupported ? "No planned sport yet" : "Start with the sport you train most.")
+                    Text("Start with the sport you train most.")
                         .font(.system(.title2, design: .default).weight(.bold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("rosterEmptyHeadline")
-                    Text("You can add others next. Sports Cyclift can plan and record are listed first.")
+                    Text("Add as many as you like. Each one says what Cyclift can plan and record for it today.")
                         .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                 }
             } else {
                 VStack(alignment: .leading, spacing: CySpace.s) {
                     HStack(alignment: .firstTextBaseline) {
-                        Text(v.mainEndurance != nil && v.mainStrength != nil ? "MAIN SPORTS" : "MAIN SPORT").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
+                        Text(v.mains.count > 1 ? "MAIN SPORTS" : "MAIN SPORT").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
                             .accessibilityAddTraits(.isHeader)
                         Spacer(minLength: CySpace.s)
-                        Text("suggested · Continue confirms").font(CyFont.caption).foregroundStyle(theme.textSecondary)
+                        Text(AthleticRoster.identity(sports)).font(CyFont.caption).foregroundStyle(theme.textSecondary)
+                            .accessibilityIdentifier("rosterIdentity")
                     }
-                    let leadStrength = a.priority == .strength
-                    let mains = (leadStrength ? [v.mainStrength, v.mainEndurance] : [v.mainEndurance, v.mainStrength]).compactMap { $0 }
-                    ForEach(mains) { m in mainRow(m, dimmed: v.showsLead && ((a.priority == .strength && m.domain == .endurance) || (a.priority == .cycling && m.domain == .strength))) }
+                    ForEach(v.mains) { m in
+                        mainRow(m, dimmed: v.showsLead && ((a.priority == .strength && m.planning == .cycling) || (a.priority == .cycling && m.planning == .strength)))
+                    }
                     if v.showsLead {
                         CyChoiceBar(options: [(TrainingPriority.cycling, "Endurance-led"), (TrainingPriority.balanced, "Balanced"), (TrainingPriority.strength, "Strength-led")],
                                     selection: Binding(get: { a.priority ?? .balanced }, set: { a.priority = $0 }))
@@ -489,17 +497,22 @@ struct OnboardingV34View: View {
             }
             if !v.also.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
-                    provenance("●", "Also training").padding(.bottom, CySpace.s)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("ALSO TRAINING").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
+                        Spacer(minLength: CySpace.s)
+                        Text("\(v.also.count)").font(CyFont.caption).foregroundStyle(theme.textSecondary).accessibilityHidden(true)
+                    }
+                    .padding(.bottom, CySpace.s)
                     ForEach(v.also) { x in rosterRow(x, inRoster: true) }
                 }
             }
             if !v.suggestions.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .firstTextBaseline) {
-                        Text(v.mainEndurance == nil && v.mainStrength == nil ? "CYCLIFT CAN PLAN AND RECORD THESE" : "ADD TO YOUR ROSTER")
+                        Text(v.isEmpty ? "CHOOSE AN ACTIVITY" : "ADD TO YOUR ROSTER")
                             .font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
                         Spacer(minLength: CySpace.s)
-                        if v.mainEndurance != nil || v.mainStrength != nil { Text("suggestions").font(CyFont.caption).foregroundStyle(theme.textSecondary) }
+                        if !v.isEmpty { Text("suggestions").font(CyFont.caption).foregroundStyle(theme.textSecondary) }
                     }
                     .padding(.bottom, CySpace.s)
                     ForEach(v.suggestions) { x in rosterRow(x, inRoster: false) }
@@ -526,9 +539,16 @@ struct OnboardingV34View: View {
         HStack(alignment: .center, spacing: CySpace.m) {
             Image(systemName: Self.symbol(x)).font(.body.weight(.semibold))
                 .foregroundStyle(x.domain == .strength ? theme.strength : theme.endurance).frame(width: 26).accessibilityHidden(true)
-            Text(x.title).font(.system(.title2, design: .default).weight(.bold))
-                .foregroundStyle(dimmed ? theme.textSecondary : theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityLabel("\(x.title). \(x.capability.words), main \(x.domain.title.lowercased()) sport")
+            VStack(alignment: .leading, spacing: 2) {
+                Text(x.title).font(.system(.title2, design: .default).weight(.bold))
+                    .foregroundStyle(dimmed ? theme.textSecondary : theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                // an activity Cyclift cannot plan says so under its name, also when it is the main sport
+                if x.planning == nil {
+                    Text("\(x.capability.mark) \(x.capabilityWords)").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(x.title). \(x.capabilityWords). Main sport")
             Spacer(minLength: CySpace.s)
             removeButton(x)
         }
@@ -543,26 +563,26 @@ struct OnboardingV34View: View {
                 Image(systemName: Self.symbol(x)).foregroundStyle(theme.textSecondary).frame(width: 26).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) { rowText(x) }
                 Spacer(minLength: CySpace.s)
-                if x.capability.plannable, let s = x.sport {
-                    Button("Make main") { setSports(AthleticRoster.makingMain(s, in: sports)) }
-                        .font(CyFont.caption.weight(.semibold)).foregroundStyle(theme.accent)
-                        .frame(minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
-                        .accessibilityLabel("Make \(x.title) the main \(x.domain.title.lowercased()) sport")
-                        .accessibilityIdentifier("rosterMakeMain-\(x.id)")
-                }
+                // any selected activity can be the main sport; nothing else is removed
+                Button("Make main") { setSports(AthleticRoster.makingMain(x.id, in: sports)) }
+                    .font(CyFont.caption.weight(.semibold)).foregroundStyle(theme.accent)
+                    .frame(minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
+                    .accessibilityLabel("Make \(x.title) the main sport")
+                    .accessibilityIdentifier("rosterMakeMain-\(x.id)")
                 removeButton(x)
             } else {
-                Button { if let s = x.sport { setSports(AthleticRoster.adding(s, to: sports)) } } label: {
+                Button { setSports(AthleticRoster.adding(x.id, to: sports)) } label: {
                     HStack(spacing: CySpace.m) {
                         Image(systemName: Self.symbol(x)).foregroundStyle(theme.textSecondary).frame(width: 26).accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) { rowText(x) }
                         Spacer(minLength: CySpace.s)
-                        Image(systemName: "plus.circle").font(.title3).foregroundStyle(theme.textPrimary).accessibilityHidden(true)
+                        Image(systemName: "plus").font(.footnote.weight(.bold)).foregroundStyle(theme.textPrimary)
+                            .frame(width: 30, height: 30).background(Circle().fill(theme.surface2)).accessibilityHidden(true)
                     }
                     .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Add \(x.title). \(x.capability.words)")
+                .accessibilityLabel("Add \(x.title). \(x.capabilityWords)")
                 .accessibilityIdentifier("rosterAdd-\(x.id)")
             }
         }
@@ -572,18 +592,25 @@ struct OnboardingV34View: View {
     /// A plain symbol per activity (sheet Z2 draws one beside every row). Decorative: the name is always written.
     private static func symbol(_ x: RosterActivity) -> String {
         switch x.id {
-        case "strength": return "dumbbell"
+        case "strength", "freeWeights": return "dumbbell"
         case "indoorCycling": return "figure.indoor.cycle"
-        case "roadCycling", "mountainBike", "commuting", "gravel": return "bicycle"
-        default: return x.domain == .strength ? "figure.strengthtraining.traditional" : x.domain == .endurance ? "figure.run" : "figure.mind.and.body"
+        default: break
+        }
+        switch x.family {
+        case .cycling: return "bicycle"
+        case .strength: return "figure.strengthtraining.traditional"
+        case .running: return "figure.run"
+        case .swimming: return "figure.pool.swim"
+        case .walking: return x.id == "hiking" ? "figure.hiking" : "figure.walk"
+        case .recovery: return "figure.mind.and.body"
         }
     }
     @ViewBuilder private func rowText(_ x: RosterActivity) -> some View {
         Text(x.title).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-        Text("\(x.capability.mark) \(x.capability.words)").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+        Text("\(x.capability.mark) \(x.capabilityWords)").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
     }
     private func removeButton(_ x: RosterActivity) -> some View {
-        Button { if let s = x.sport { setSports(AthleticRoster.removing(s, from: sports)) } } label: {
+        Button { setSports(AthleticRoster.removing(x.id, from: sports)) } label: {
             Image(systemName: "xmark").font(.footnote.weight(.bold)).foregroundStyle(theme.textSecondary)
                 .frame(width: CyHit.min, height: CyHit.min).contentShape(Rectangle())
         }
@@ -769,9 +796,7 @@ struct OnboardingV34View: View {
                                         role: main ? "main" : x.capability.plannable ? "" : "interest",
                                         strength: x.domain == .strength, main: main, interest: !x.capability.plannable)
         }
-        let leadStrength = a.priority == .strength
-        let mains = (leadStrength ? [v.mainStrength, v.mainEndurance] : [v.mainEndurance, v.mainStrength]).compactMap { $0 }
-        return mains.map { mark($0, main: true) } + v.also.map { mark($0, main: false) }
+        return v.mains.map { mark($0, main: true) } + v.also.map { mark($0, main: false) }
     }
     /// What the athlete declared, each with the page that changes it.
     private func blueprintCells(_ v: AthleticRoster.Page, main: GoalID?, others: [GoalID]) -> [OnbBlueprintModel.Cell] {
@@ -785,8 +810,9 @@ struct OnboardingV34View: View {
             out.append(.init(id: "ftp", title: "FTP", value: value, page: 5))
         }
         out.append(.init(id: "planChanges", title: "Plan changes", value: store.settings.autoAdapt ? "Auto-apply reductions" : "Always ask me", page: 5))
-        let interests = v.also.filter { !$0.capability.plannable }.map(\.title)
-        if !interests.isEmpty { out.append(.init(id: "interests", title: "Interests", value: interests.joined(separator: " · "), page: 2)) }
+        // selected activities Cyclift does not plan yet — part of the athlete's roster, not "interests" (20 Nov 2026)
+        let unplanned = (v.mains + v.also).filter { !$0.capability.plannable }.map(\.title)
+        if !unplanned.isEmpty { out.append(.init(id: "interests", title: "In your roster · not planned yet", value: unplanned.joined(separator: " · "), page: 2)) }
         return out
     }
     private var measuredLine: String {
@@ -805,75 +831,89 @@ struct OnboardingV34View: View {
 
 // MARK: - The activity library (a sheet over Page 2)
 
+// Sheet Z3's structure — title with Done, one search field, category tabs, plain rows with a tick circle — over the
+// multi-sport catalogue (owner decision 20 Nov 2026): activities are grouped by sport, every discipline of a sport is
+// listed, any of them can be selected, and each row says what Cyclift plans and records for it today.
 struct RosterLibrarySheet: View {
-    @Binding var sports: [RiderProfile.Sport]
+    @Binding var sports: [String]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.cyTheme) private var theme
     @State private var query = ""
     @State private var domain: RosterDomain? = nil
 
+    private static let categories: [(RosterDomain?, String)] = [(nil, "All"), (.endurance, "Endurance"), (.strength, "Strength"), (.recovery, "Recovery")]
     private var shown: [RosterActivity] {
-        AthleticRoster.library.filter { x in
-            (domain == nil || x.domain == domain) && (query.trimmingCharacters(in: .whitespaces).isEmpty || x.title.localizedCaseInsensitiveContains(query.trimmingCharacters(in: .whitespaces)))
+        let q = query.trimmingCharacters(in: .whitespaces)
+        return AthleticRoster.library.filter { x in
+            (domain == nil || x.domain == domain) && (q.isEmpty || x.title.localizedCaseInsensitiveContains(q) || x.family.title.localizedCaseInsensitiveContains(q))
         }
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Picker("Category", selection: $domain) {
-                        Text("All").tag(RosterDomain?.none)
-                        ForEach(RosterDomain.allCases, id: \.self) { d in Text(d.title).tag(RosterDomain?.some(d)) }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("libraryCategory")
-                }
-                .listRowBackground(Color.clear)
-                ForEach(RosterCapability.allCases, id: \.rawValue) { cap in
-                    let rows = shown.filter { $0.capability == cap }
-                    if !rows.isEmpty {
-                        Section("\(cap.mark) \(cap.words)") {
+        VStack(alignment: .leading, spacing: CySpace.m) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("All activities").font(.system(.title3, design: .default).weight(.bold)).foregroundStyle(theme.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: CySpace.s)
+                Button("Done · \(sports.count)") { dismiss() }
+                    .font(CyFont.headline).foregroundStyle(theme.accent).frame(minHeight: CyHit.min).contentShape(Rectangle())
+                    .accessibilityIdentifier("libraryDone")
+            }
+            HStack(spacing: CySpace.s) {
+                Image(systemName: "magnifyingglass").foregroundStyle(theme.textSecondary).accessibilityHidden(true)
+                TextField("Search activities", text: $query)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search)
+                    .foregroundStyle(theme.textPrimary)
+                    .accessibilityIdentifier("librarySearch")
+            }
+            .padding(.horizontal, CySpace.m).frame(minHeight: CyHit.min)
+            .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.surface2))
+            CyChoiceBar(options: Self.categories, selection: $domain)
+                .accessibilityIdentifier("libraryCategory")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(RosterFamily.allCases, id: \.self) { fam in
+                        let rows = shown.filter { $0.family == fam }
+                        if !rows.isEmpty {
+                            Text(fam.title.uppercased()).font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
+                                .padding(.top, CySpace.m).padding(.bottom, 4).accessibilityAddTraits(.isHeader)
                             ForEach(rows) { x in row(x) }
                         }
                     }
+                    if shown.isEmpty {
+                        Text("No activity matches. Nothing typed here is saved as a sport.")
+                            .font(CyFont.footnote).foregroundStyle(theme.textSecondary).padding(.top, CySpace.l)
+                            .accessibilityIdentifier("libraryNoMatch")
+                    }
                 }
-                if shown.isEmpty {
-                    Text("No activity matches. Nothing typed here is saved as a sport.").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                }
+                .padding(.bottom, CySpace.xl)
             }
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search activities")
-            .navigationTitle("All activities").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done · \(sports.count)") { dismiss() }.accessibilityIdentifier("libraryDone") } }
+            .scrollDismissesKeyboard(.immediately)
         }
+        .padding(.horizontal, CySpace.l).padding(.top, CySpace.l)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(theme.surface.ignoresSafeArea())
+        .presentationDragIndicator(.visible)
     }
 
-    @ViewBuilder private func row(_ x: RosterActivity) -> some View {
-        if let s = x.sport, x.capability.selectable {
-            let on = sports.contains(s)
-            Button { sports = on ? AthleticRoster.removing(s, from: sports) : AthleticRoster.adding(s, to: sports) } label: {
-                HStack {
-                    Text(x.title).foregroundStyle(theme.textPrimary)
-                    Spacer(minLength: 8)
-                    Image(systemName: on ? "checkmark.circle.fill" : "circle").foregroundStyle(on ? theme.accent : theme.textTertiary).accessibilityHidden(true)
+    private func row(_ x: RosterActivity) -> some View {
+        let on = sports.contains(x.id)
+        return Button { sports = on ? AthleticRoster.removing(x.id, from: sports) : AthleticRoster.adding(x.id, to: sports) } label: {
+            HStack(spacing: CySpace.m) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(x.title).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                    Text("\(x.capability.mark) \(x.capabilityWords)").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(minHeight: CyHit.min).contentShape(Rectangle())
+                Spacer(minLength: CySpace.s)
+                Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.title3)
+                    .foregroundStyle(on ? theme.accent : theme.textTertiary).accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(x.title).accessibilityValue(on ? "In your roster" : "Not in your roster")
-            .accessibilityAddTraits(on ? .isSelected : [])
-            .accessibilityIdentifier("library-\(x.id)")
-        } else {
-            // known, but the app cannot store it yet: shown so the athlete sees it is coming, never selectable
-            HStack {
-                Text(x.title).foregroundStyle(theme.textSecondary)
-                Spacer(minLength: 8)
-                Text("Coming later").font(CyFont.caption).foregroundStyle(theme.textTertiary)
-            }
-            .frame(minHeight: CyHit.min)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(x.title). Coming later, cannot be chosen yet")
-            .accessibilityIdentifier("library-\(x.id)")
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading).contentShape(Rectangle())
+            .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(x.title). \(x.capabilityWords)").accessibilityValue(on ? "In your roster" : "Not in your roster")
+        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityIdentifier("library-\(x.id)")
     }
 }
