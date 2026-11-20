@@ -310,6 +310,12 @@ enum OnboardingFlow {
         x.weightKg = p.provenance(.weight).source == .unknown ? nil : p.weightKg
         x.heightCm = p.heightCm.flatMap { BodyMeasure.heightRangeCm.contains($0) ? $0 : nil }
         if !p.goals.isEmpty { x.goals = p.goals; x.primaryGoal = p.primaryGoal }
+        // every selected goal, planned and saved-only, with the one main goal (21 Nov 2026)
+        let savedOnly = p.activityGoals ?? []
+        if !p.goals.isEmpty || !savedOnly.isEmpty {
+            x.goalIDs = p.goals.map(\.rawValue) + savedOnly
+            x.mainGoalID = p.mainGoalID ?? p.primaryGoal?.rawValue
+        }
         let mode = x.mode ?? p.trainingMode
         if let k = OnboardingWeek.kinds(of: store.availability, mode: mode, twoADay: true), p.weekIsExplicit == true { x.week = k }
         x.rideMinutes = p.cyclingSessionMinutes

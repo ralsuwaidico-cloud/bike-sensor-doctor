@@ -259,3 +259,131 @@ enum AthleticRoster {
         return "Cyclift will plan and record \(list(planned)). \(list(unplanned)) is not planned or recorded yet."
     }
 }
+
+// MARK: - Goals for the roster (onboarding Screen 4 — owner decision of 21 Nov 2026, 00:30)
+//
+// The Goals page follows the athlete's actual roster: cycling goals for a cyclist, strength goals for a strength
+// athlete, running goals for a runner, and so on. Two kinds of goal are kept apart, as the decision requires:
+//   • PLANNED — a goal the existing planner builds sessions for (`planner` is its stored `GoalID`).
+//   • SAVED ONLY — a goal the athlete can record for a sport Cyclift does not plan yet. It is stored and shown, and
+//     it prescribes nothing: no session, load or measure is ever derived from it.
+// Any number of goals can be chosen; exactly one of them is the main goal.
+
+struct RosterGoal: Identifiable, Equatable {
+    /// Stored identifier. A planned goal uses its `GoalID` raw value, so both kinds share one main-goal field.
+    let id: String
+    let title: String
+    /// What the goal means, in a few words (shown on the card).
+    let line: String
+    let icon: String
+    /// nil = general.
+    let family: RosterFamily?
+    /// The planner goal behind it; nil = saved only.
+    let planner: GoalID?
+}
+
+enum RosterGoals {
+    struct Group: Identifiable, Equatable {
+        var id: String { title }
+        let title: String
+        let family: RosterFamily?
+        /// True when the planner builds sessions for these goals with this roster.
+        let planned: Bool
+        let goals: [RosterGoal]
+    }
+
+    private static func planner(_ g: GoalID, _ family: RosterFamily?) -> RosterGoal {
+        RosterGoal(id: g.rawValue, title: g.title, line: GoalInfo.line(g), icon: GoalInfo.icon(g), family: family, planner: g)
+    }
+    private static func saved(_ id: String, _ title: String, _ line: String, _ icon: String, _ family: RosterFamily) -> RosterGoal {
+        RosterGoal(id: id, title: title, line: line, icon: icon, family: family, planner: nil)
+    }
+    static let cycling: [RosterGoal] = [GoalID.endurance, .power, .climbing, .sprint, .event].map { planner($0, .cycling) }
+    static let strength: [RosterGoal] = [GoalID.strength, .muscle, .stamina, .maintain].map { planner($0, .strength) }
+    static let general = planner(.fitness, nil)
+    /// Goals that can be saved for sports without a planner. Titles and lines describe the aim only.
+    static let savedOnly: [RosterFamily: [RosterGoal]] = [
+        .running: [saved("runDistance", "Distance", "Run further", "point.topleft.down.to.point.bottomright.curvepath", .running),
+                   saved("runPace", "Pace", "Run faster", "hare.fill", .running),
+                   saved("runRace", "Race", "Be ready on the day", "flag.fill", .running)],
+        .swimming: [saved("swimDistance", "Distance", "Swim further", "point.topleft.down.to.point.bottomright.curvepath", .swimming),
+                    saved("swimTechnique", "Technique", "Swim more efficiently", "water.waves", .swimming),
+                    saved("swimEvent", "Event", "Be ready on the day", "flag.fill", .swimming)],
+        .walking: [saved("walkDaily", "Daily walking", "Move every day", "figure.walk", .walking),
+                   saved("walkFurther", "Longer walks", "Go further on foot", "figure.hiking", .walking)],
+        .recovery: [saved("mobilityRange", "Mobility", "Move more freely", "figure.mind.and.body", .recovery),
+                    saved("recoveryHabit", "Recovery", "Recover between sessions", "leaf.fill", .recovery)],
+        // strength disciplines Cyclift does not plan (bodyweight, calisthenics) when no gym activity is in the roster
+        .strength: [saved("bodyStrength", "Strength", "Get stronger with bodyweight", "figure.strengthtraining.functional", .strength),
+                    saved("bodySkill", "Skills", "Learn new movements", "figure.gymnastics", .strength)],
+        .cycling: [],
+    ]
+    static var all: [RosterGoal] { cycling + strength + RosterFamily.allCases.flatMap { savedOnly[$0] ?? [] } + [general] }
+    static func goal(_ id: String) -> RosterGoal? { all.first { $0.id == id } }
+
+    /// The goal groups for a roster, in roster order, General last. A sport appears only if the athlete selected it.
+    static func groups(roster ids: [String]) -> [Group] {
+        let v = AthleticRoster.view(ids)
+        var seen = Set<RosterFamily>(), out: [Group] = []
+        for f in AthleticRoster.unique(ids).compactMap({ AthleticRoster.activity($0)?.family }) where seen.insert(f).inserted {
+            switch f {
+            case .cycling: out.append(Group(title: "Cycling", family: f, planned: true, goals: cycling))      // every cycling activity is planned
+            case .strength:
+                if v.mainStrength != nil { out.append(Group(title: "Strength", family: f, planned: true, goals: strength)) }
+                else { out.append(Group(title: "Strength", family: f, planned: false, goals: savedOnly[f] ?? [])) }
+            default: out.append(Group(title: f == .walking ? "Walking" : f == .recovery ? "Mobility & recovery" : f.title, family: f, planned: false, goals: savedOnly[f] ?? []))
+            }
+        }
+        if !out.isEmpty { out.append(Group(title: "General", family: nil, planned: v.mode != nil, goals: [general])) }
+        return out
+    }
+
+    /// The athlete's goals: every selected goal in the order chosen, and the one main goal.
+    struct Selection: Equatable {
+        var ids: [String] = []
+        var main: String? = nil
+
+        /// Choosing a goal adds it; choosing it again removes it. There is always exactly one main goal while any goal
+        /// is selected: the first one chosen until the athlete stars another.
+        mutating func toggle(_ id: String) {
+            if let i = ids.firstIndex(of: id) { ids.remove(at: i) } else { ids.append(id) }
+            settle()
+        }
+        /// Starring a selected goal makes it the main goal. No other goal is removed.
+        mutating func setMain(_ id: String) { if ids.contains(id) { main = id } }
+        /// Drops goals the roster no longer offers (a sport was removed) and repairs the main goal.
+        mutating func keep(offered groups: [Group]) {
+            let ok = Set(groups.flatMap(\.goals).map(\.id))
+            ids = ids.filter { ok.contains($0) }
+            settle()
+        }
+        private mutating func settle() {
+            var seen = Set<String>(); ids = ids.filter { seen.insert($0).inserted }
+            if let m = main, ids.contains(m) { return }
+            main = ids.first
+        }
+        /// The goals the planner receives, in the order chosen.
+        var plannerGoals: [GoalID] { ids.compactMap { RosterGoals.goal($0)?.planner } }
+        /// The planner's main goal: the main goal if the planner knows it, otherwise the first planner goal chosen.
+        var plannerMain: GoalID? { main.flatMap { RosterGoals.goal($0)?.planner } ?? plannerGoals.first }
+        /// Goals stored for sports without a planner.
+        var savedOnly: [String] { ids.filter { RosterGoals.goal($0).map { $0.planner == nil } ?? false } }
+    }
+
+    /// The explanation under the cards. A planned goal gets the planner's own rule (existing text). A saved-only goal,
+    /// or any goal in a roster Cyclift cannot plan, says plainly that nothing is prescribed for it.
+    static func explanation(main id: String?, roster ids: [String], selection: Selection) -> (title: String, text: String)? {
+        guard let id, let g = goal(id) else { return nil }
+        let v = AthleticRoster.view(ids)
+        let sport = g.family.map { $0 == .walking ? "walking" : $0 == .recovery ? "mobility and recovery" : $0.title.lowercased() } ?? "general"
+        let head = "\(g.title) · main goal"
+        guard v.mode != nil else {
+            return (head, "Saved as your main goal. Cyclift cannot plan \(g.family == nil ? "this roster" : sport) yet, so no sessions are prescribed. Add cycling or gym training to build a plan.")
+        }
+        if let p = g.planner { return (head, GoalInfo.effect(p)) }
+        if let other = selection.plannerMain {
+            return (head, "Saved as your main goal. Cyclift does not plan \(sport) yet, so nothing is prescribed for it; your plan follows \(other.title).")
+        }
+        return (head, "Saved as your main goal. Cyclift does not plan \(sport) yet, so nothing is prescribed for it. Choose a goal Cyclift can plan as well.")
+    }
+}

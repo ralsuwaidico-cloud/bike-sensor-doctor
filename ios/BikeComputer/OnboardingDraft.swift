@@ -306,6 +306,10 @@ struct OnboardingAnswers: Equatable {
     // Stage B
     var goals: [GoalID]? = nil
     var primaryGoal: GoalID? = nil
+    /// Every selected goal in the order chosen, planned and saved-only alike (`RosterGoals` identifiers), and the one
+    /// main goal. nil leaves the stored values untouched. `goals` / `primaryGoal` above stay what the planner reads.
+    var goalIDs: [String]? = nil
+    var mainGoalID: String? = nil
     // Stage C
     var week: [DayKind]? = nil
     var rideMinutes: Int? = nil
@@ -342,6 +346,11 @@ struct OnboardingAnswers: Equatable {
             x.profile.primaryGoal = (primaryGoal.flatMap { g.contains($0) ? $0 : nil }) ?? g.first
             if let c = (x.profile.primaryGoal?.cyclingGoal ?? g.compactMap(\.cyclingGoal).first) { x.profile.goal = c }
             if let s = (x.profile.primaryGoal?.strengthGoal ?? g.compactMap(\.strengthGoal).first) { x.strengthPrefs.goal = s }
+        }
+        if let ids = goalIDs {
+            let sel = RosterGoals.Selection(ids: ids, main: mainGoalID)
+            x.profile.activityGoals = sel.savedOnly
+            x.profile.mainGoalID = sel.main.flatMap { ids.contains($0) ? $0 : nil }
         }
         if let w = week {
             OnboardingWeek.write(w, ride: rideMinutes ?? x.profile.cyclingSessionMinutes ?? OnboardingWeek.defaultRideMinutes,

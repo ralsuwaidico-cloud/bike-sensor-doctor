@@ -387,7 +387,7 @@ struct PlanInputs: Codable, Equatable {
         a.name = ""; b.name = ""; a.bikeName = nil; b.bikeName = nil; a.gender = nil; b.gender = nil
         a.version = 0; b.version = 0; a.updatedAt = Date(timeIntervalSince1970: 0); b.updatedAt = a.updatedAt
         a.wheelMm = 0; b.wheelMm = 0; a.hrPrefWatchFirst = false; b.hrPrefWatchFirst = false
-        a.sports = []; b.sports = []; a.activities = nil; b.activities = nil; a.heightCm = nil; b.heightCm = nil
+        a.sports = []; b.sports = []; a.activities = nil; b.activities = nil; a.activityGoals = nil; b.activityGoals = nil; a.mainGoalID = nil; b.mainGoalID = nil; a.heightCm = nil; b.heightCm = nil
         return a != b || availability != o.availability || equipment != o.equipment || strengthPrefs != o.strengthPrefs
     }
 }

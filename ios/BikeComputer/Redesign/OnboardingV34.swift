@@ -131,14 +131,36 @@ struct OnboardingV34View: View {
         x.priority = m == .hybrid ? (a.priority ?? .balanced) : nil
         if x.mode != a.mode { x.week = nil }      // a different training type gets a fresh proposed week
         a = x
+        // goals of a sport that left the roster go with it; the others, and the main goal if it survives, stay
+        if a.goalIDs != nil || a.goals != nil {
+            var sel = goalSelection
+            sel.keep(offered: RosterGoals.groups(roster: x.activities ?? []))
+            if sel != goalSelection { setGoals(sel) }
+        }
+    }
+    /// All selected goals in the order chosen, with the one main goal.
+    private var goalSelection: RosterGoals.Selection {
+        var sel = RosterGoals.Selection(ids: a.goalIDs ?? (a.goals ?? []).map(\.rawValue), main: a.mainGoalID ?? a.primaryGoal?.rawValue)
+        if let m = sel.main, !sel.ids.contains(m) { sel.main = sel.ids.first } else if sel.main == nil { sel.main = sel.ids.first }
+        return sel
+    }
+    /// Writes a selection: the full list and main goal, and — for the planner, unchanged fields — its own goals.
+    private func setGoals(_ sel: RosterGoals.Selection) {
+        var x = a
+        x.goalIDs = sel.ids; x.mainGoalID = sel.main
+        x.goals = sel.plannerGoals; x.primaryGoal = sel.plannerMain
+        a = x
     }
 
     private var canContinue: Bool {
         switch page {
         // owner decision 20 Nov 2026, 18:24: a new athlete gives all four — name, date of birth, weight, height
         case 1: return aboutIssue == nil && BodyMeasure.aboutYouComplete(name: a.name, dateOfBirth: a.dateOfBirth, weightKg: a.weightKg, heightCm: a.heightCm)
-        case 2: return roster.mode != nil
-        case 3: return !(a.goals ?? []).isEmpty
+        // 21 Nov 2026: any roster continues to Goals; cycling and gym training are not a condition of having a roster
+        case 2: return !roster.isEmpty
+        // A plan is only ever built from a goal the planner knows, for a roster it can plan. A roster Cyclift cannot plan
+        // stops here with its goals saved — no week, sessions or plan are invented for it.
+        case 3: return roster.mode != nil && !goalSelection.plannerGoals.isEmpty
         case 4: return !OnboardingWeek.feasibility(a.week ?? proposedWeek, mode: mode, ride: a.rideMinutes ?? OnboardingWeek.defaultRideMinutes,
                                                    lift: a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes, strengthLevel: a.strengthLevel).blocking
         default: return true
@@ -240,12 +262,14 @@ struct OnboardingV34View: View {
 
     // MARK: shared chrome
 
-    private func heading(_ n: Int, _ over: String, _ title: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private func heading(_ n: Int, _ over: String, _ title: String, compact: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 2 : 4) {
             (Text("0\(n)").foregroundColor(theme.accent) + Text(" · \(over.uppercased())").foregroundColor(theme.textSecondary))
                 .font(CyFont.overline).tracking(1.2)
                 .accessibilityLabel("Page \(n), \(over)")
-            Text(title).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
+            // compact (Goals, 21 Nov 2026): one line at standard text sizes so the whole page fits without scrolling
+            Text(title).font(.system(compact ? .title : .largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
+                .lineLimit(compact && !dts.isAccessibilitySize ? 1 : nil).minimumScaleFactor(compact ? 0.75 : 1)
                 .fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("onbTitle")
         }
@@ -308,6 +332,7 @@ struct OnboardingV34View: View {
     private var bottom: some View {
         let line = coachLine
         return VStack(alignment: .leading, spacing: CySpace.s) {
+            if page == 3 { goalExplanation } else {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 if !line.mark.isEmpty { Text(line.mark).font(CyDyn.f(10, .bold)).foregroundStyle(line.tint).accessibilityHidden(true) }
                 (Text(line.before).foregroundColor(theme.textSecondary) + Text(line.strong).fontWeight(.semibold).foregroundColor(theme.textPrimary) + Text(line.after).foregroundColor(theme.textSecondary))
@@ -317,6 +342,7 @@ struct OnboardingV34View: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .clipped()                              // Lab run 13: a long line was drawn over the page above it
                     .accessibilityIdentifier("onbCoachLine")
+            }
             }
             if fromBlueprint, page < Self.pages {
                 CyPrimaryButton(title: "Back to blueprint", isEnabled: canContinue, action: backToBlueprint)
@@ -331,6 +357,26 @@ struct OnboardingV34View: View {
         }
         .padding(.horizontal, CySpace.l).padding(.vertical, 10)
         .background(theme.background)
+    }
+
+    /// Goals page: the selected main goal, named and explained, immediately above Continue (owner decision 21 Nov 2026).
+    /// A planned goal shows the planner's own rule; a goal Cyclift cannot plan says that nothing is prescribed for it.
+    private var goalExplanation: some View {
+        let sel = goalSelection
+        let e = RosterGoals.explanation(main: sel.main, roster: sports, selection: sel)
+        return VStack(alignment: .leading, spacing: 3) {
+            Text((e?.title ?? "Your main goal").uppercased()).font(CyFont.overline).tracking(0.8)
+                .foregroundStyle(e == nil ? theme.textSecondary : theme.accent)
+                .lineLimit(1).minimumScaleFactor(0.8)
+                .accessibilityIdentifier("onbMainGoalTitle")
+            Text(e?.text ?? "Choose one or more goals. The first is your main goal; tap a star to change it.")
+                .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary)
+                .lineLimit(dts.isAccessibilitySize ? 8 : 3, reservesSpace: !dts.isAccessibilitySize)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("onbCoachLine")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("onbGoalExplanation")
     }
 
     // MARK: 0 — Welcome
@@ -621,88 +667,114 @@ struct OnboardingV34View: View {
 
     // MARK: 3 — Goals, then level
 
+    // Owner decision of 21 Nov 2026 (00:30): the Build 6 goal cards — an icon, the goal and what it means, tinted when
+    // chosen, a star for the main goal — made compact so the whole page fits one iPhone 15 Pro screen at standard
+    // text size (it scrolls at larger sizes). The groups follow the roster. The balance question is NOT asked here:
+    // Screen 3 owns it and the stored answer is used unchanged. Levels are asked only for the sports the planner plans.
     private var pageGoals: some View {
-        VStack(alignment: .leading, spacing: CySpace.l) {
-            heading(3, "Goals", "What are you aiming for?")
-            // PROVISIONAL (reference sheet Y3, not approved): compact goal cells and the level rows on one page. The
-            // same answers as before — goals, main goal, cycling and strength level — written through the same model.
-            // The priority ("when time is short, protect") is NOT repeated here: page 2 owns it (later sheet Z2).
-            ForEach(GoalInfo.choices(for: mode)) { group in
-                VStack(alignment: .leading, spacing: CySpace.s) {
-                    Text("\(group.title.uppercased()) GOALS").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
-                    // two to a row; an odd last goal takes the full width, as on the sheet
+        let groups = RosterGoals.groups(roster: sports)
+        return VStack(alignment: .leading, spacing: 10) {
+            heading(3, "Goals", "What are you aiming for?", compact: true)
+            ForEach(groups) { group in
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(group.title.uppercased()) GOALS").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
+                        if !group.planned {
+                            Text("· saved, not planned yet").font(CyFont.caption).foregroundStyle(theme.textSecondary)
+                                .accessibilityIdentifier("goalGroupSavedOnly-\(group.family?.rawValue ?? "general")")
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("goalGroup-\(group.family?.rawValue ?? "general")")
+                    // two to a row; an odd last goal takes half the width beside an empty place
                     let pairs = stride(from: 0, to: group.goals.count, by: 2).map { Array(group.goals[$0..<min($0 + 2, group.goals.count)]) }
                     VStack(spacing: 6) {
                         ForEach(Array(pairs.enumerated()), id: \.offset) { row in
-                            HStack(spacing: 6) { ForEach(row.element) { g in goalCell(g) } }
+                            HStack(spacing: 6) {
+                                ForEach(row.element) { g in goalCard(g, planned: group.planned) }
+                                if row.element.count == 1 { Color.clear.frame(maxWidth: .infinity, maxHeight: 1).accessibilityHidden(true) }
+                            }
                         }
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: CySpace.s) {
-                HStack(alignment: .firstTextBaseline) {
-                    provenance("●", "Your level")
-                    Spacer(minLength: CySpace.s)
-                    Text("declared by you — not measured").font(CyFont.caption).foregroundStyle(theme.textSecondary)
-                }
-                if mode.includesCycling {
-                    levelRow("Cycling", id: "onbCyclingLevel", options: RiderProfile.Level.allCases.map { ($0, ProfileText.level($0)) },
-                             selection: Binding(get: { a.cyclingLevel ?? store.profile.level }, set: { a.cyclingLevel = $0 }))
-                }
-                if mode.includesLifting {
-                    levelRow("Strength", id: "onbStrengthLevel", options: StrengthPrefs.Experience.allCases.map { ($0, ProfileText.strengthLevel($0)) },
-                             selection: Binding(get: { a.strengthLevel ?? store.strengthPrefs.experience ?? .beginner }, set: { a.strengthLevel = $0 }))
+            if roster.mainEndurance != nil || roster.mainStrength != nil {
+                HStack(spacing: CySpace.s) {
+                    if roster.mainEndurance != nil {
+                        levelMenu("Cycling level", id: "onbCyclingLevel", options: RiderProfile.Level.allCases.map { ($0, ProfileText.level($0)) },
+                                  selection: Binding(get: { a.cyclingLevel ?? store.profile.level }, set: { a.cyclingLevel = $0 }))
+                    }
+                    if roster.mainStrength != nil {
+                        levelMenu("Strength level", id: "onbStrengthLevel", options: StrengthPrefs.Experience.allCases.map { ($0, ProfileText.strengthLevel($0)) },
+                                  selection: Binding(get: { a.strengthLevel ?? store.strengthPrefs.experience ?? .beginner }, set: { a.strengthLevel = $0 }))
+                    }
                 }
             }
         }
     }
-    private func levelRow<T: Hashable>(_ title: String, id: String, options: [(T, String)], selection: Binding<T>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: CySpace.m) {
-                Text(title).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).frame(width: 74, alignment: .leading)
-                CyChoiceBar(options: options, selection: selection).accessibilityIdentifier(id)
+    /// A level the planner needs, as one compact native menu ("Cycling level  Intermediate ▾").
+    private func levelMenu<T: Hashable>(_ title: String, id: String, options: [(T, String)], selection: Binding<T>) -> some View {
+        let current = options.first { $0.0 == selection.wrappedValue }?.1 ?? ""
+        return Menu {
+            Picker(title, selection: selection) { ForEach(Array(options.enumerated()), id: \.offset) { o in Text(o.element.1).tag(o.element.0) } }
+        } label: {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title.uppercased()).font(CyFont.overline).tracking(0.6).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
+                HStack(spacing: 4) {
+                    Text(current).font(CyDyn.f(14, .semibold)).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
+                    Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(theme.textSecondary)
+                }
             }
+            .padding(.horizontal, 11).padding(.vertical, 5)
+            .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(theme.surface))
+            .contentShape(Rectangle())
         }
+        .accessibilityLabel("\(title), \(current)")
+        .accessibilityIdentifier(id)
     }
-    /// One goal of sheet Y3: a compact cell. Chosen and main = filled in the sport's colour with a filled star; chosen
-    /// but not main = outlined with an open star; the star is its own control beside the cell, as before.
-    private func goalCell(_ g: GoalID) -> some View {
-        let chosen = a.goals ?? []
-        let on = chosen.contains(g), main = on && a.primaryGoal == g
-        let tint: Color = g.sport == .strength ? theme.strength : g.sport == .cycling ? theme.endurance : theme.recovery
+    /// One goal card (Build 6 design, compact): icon box, title and meaning; chosen = tinted with the sport's colour and
+    /// outlined; the star, beside the card's own button, marks the one main goal and is how it is changed.
+    private func goalCard(_ g: RosterGoal, planned: Bool) -> some View {
+        let sel = goalSelection
+        let on = sel.ids.contains(g.id), main = on && sel.main == g.id
+        let tint: Color = g.family == .strength ? theme.strength : g.family == nil || g.family == .recovery ? theme.recovery : theme.endurance
         return ZStack(alignment: .trailing) {
-            Button {
-                var list = chosen
-                if list.contains(g) { list.removeAll { $0 == g } } else { list.append(g) }
-                a.goals = list
-                a.primaryGoal = a.primaryGoal.flatMap { list.contains($0) ? $0 : nil } ?? list.first
-            } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(g.title).font(CyDyn.f(15, .semibold)).foregroundStyle(main ? theme.background : theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
-                    Text(GoalInfo.line(g)).font(CyDyn.f(11.5)).foregroundStyle(main ? theme.background.opacity(0.8) : theme.textSecondary).lineLimit(1).minimumScaleFactor(0.75)
+            Button { var s = sel; s.toggle(g.id); setGoals(s) } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: g.icon).font(.footnote.weight(.semibold)).foregroundStyle(tint)
+                        .frame(width: 28, height: 28)
+                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(tint.opacity(0.16)))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(g.title).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
+                        Text(g.line).font(CyDyn.f(11.5)).foregroundStyle(theme.textSecondary).lineLimit(dts.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.75)
+                    }
+                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 11).padding(.vertical, 6).padding(.trailing, on ? 30 : 0)
+                .padding(.leading, 8).padding(.trailing, on ? 34 : 8).padding(.vertical, 5)
                 .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(main ? tint : theme.surface))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(on && !main ? tint : Color.clear, lineWidth: 1.5))
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(on ? tint.opacity(0.14) : theme.surface))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(on ? tint : theme.separator, lineWidth: on ? 1.5 : 1))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(g.title), \(GoalInfo.line(g))\(main ? ", main goal" : "")")
+            .accessibilityLabel("\(g.title), \(g.line)\(planned ? "" : ", saved, not planned yet")\(main ? ", main goal" : "")")
             .accessibilityAddTraits(on ? .isSelected : [])
-            .accessibilityIdentifier("goal-\(g.rawValue)")
+            .accessibilityIdentifier("goal-\(g.id)")
             if on {
-                Button { a.primaryGoal = g } label: {
+                Button { var s = sel; s.setMain(g.id); setGoals(s) } label: {
                     Image(systemName: main ? "star.fill" : "star").font(.caption.weight(.bold))
-                        .foregroundStyle(main ? tint : tint)
-                        .frame(width: 26, height: 26)
-                        .background(Circle().fill(main ? theme.background : Color.clear))
+                        .foregroundStyle(main ? theme.background : tint)
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(main ? tint : Color.clear))
                         .overlay(Circle().strokeBorder(main ? Color.clear : tint, lineWidth: 1))
-                        .frame(width: CyHit.min, height: CyHit.min).contentShape(Rectangle())
+                        .frame(width: 38, height: CyHit.min).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(main ? "\(g.title) is the main goal" : "Make \(g.title) the main goal")
-                .accessibilityIdentifier("goalStar-\(g.rawValue)")
+                .accessibilityValue(main ? "Main goal" : "")
+                .accessibilityIdentifier("goalStar-\(g.id)")
             }
         }
     }

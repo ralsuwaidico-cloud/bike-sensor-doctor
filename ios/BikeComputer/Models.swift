@@ -50,6 +50,11 @@ struct RiderProfile: Codable, Equatable {
     /// receives every activity it can name. A selection is not a claim of support: planning and recording capability
     /// live in the catalogue, not here.
     var activities: [String]? = nil
+    /// Goals saved for sports Cyclift does not plan yet (`RosterGoals` identifiers). Never read by the planner. nil = none saved.
+    var activityGoals: [String]? = nil
+    /// The athlete's one main goal across planned and saved-only goals (a `GoalID` raw value or a `RosterGoals`
+    /// identifier). nil = follow `primaryGoal`. Both fields added 21 Nov 2026; additive, ignored by older builds.
+    var mainGoalID: String? = nil
     /// Monotonic version of the shared athlete settings; bumped on every change the rider makes. Drives profile sync.
     var version: UInt32 = 1
     var updatedAt: Date = Date()
@@ -228,6 +233,8 @@ struct RiderProfile: Codable, Equatable {
         lthr = try c.decodeIfPresent(Int.self, forKey: .lthr)
         sports = (try? c.decodeIfPresent([Sport].self, forKey: .sports)) ?? [.roadCycling]
         activities = try? c.decodeIfPresent([String].self, forKey: .activities)
+        activityGoals = try? c.decodeIfPresent([String].self, forKey: .activityGoals)
+        mainGoalID = try? c.decodeIfPresent(String.self, forKey: .mainGoalID)
         version = try c.decodeIfPresent(UInt32.self, forKey: .version) ?? 1
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
         gender = try c.decodeIfPresent(String.self, forKey: .gender)

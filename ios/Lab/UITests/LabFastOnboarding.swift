@@ -251,7 +251,8 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(identity(), "Runner", "required: identity comes from the selection")
         XCTAssertTrue(lineText().contains("cannot plan or record"), "required: the limitation is stated (\(lineText()))")
         XCTAssertFalse(el(app, "rosterLead").exists, "no balance control without two planned sports")
-        XCTAssertFalse(next.isEnabled, "nothing Cyclift can plan yet: no plan is manufactured, Continue stays unavailable")
+        // 21 Nov 2026: a roster Cyclift cannot plan still continues to Goals (it stops there, with no plan built)
+        XCTAssertTrue(next.isEnabled, "required: a runner is not stopped at the roster")
         _ = mainRun
         app.settleForScreenshot(1); shot("onb-2-roster-runner")
 
@@ -259,7 +260,6 @@ final class LabFastOnboarding: XCTestCase {
         tap(app, app.buttons["rosterAdd-strength"].firstMatch, "add gym training")
         XCTAssertEqual(identity(), "Running/Strength hybrid")
         need(app, "rosterMain-running", "running is still the main sport"); need(app, "rosterMain-strength", "gym training is planned")
-        XCTAssertTrue(next.isEnabled, "required: Continue once something can be planned")
         tap(app, app.buttons["rosterAdd-roadCycling"].firstMatch, "add road cycling")
         XCTAssertEqual(identity(), "Multisport athlete")
         need(app, "rosterLead", "the balance control for cycling and strength")
@@ -326,6 +326,140 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertFalse(again.buttons["rosterRemove-calisthenics"].firstMatch.exists, "required: the removed activity stayed removed")
         XCTAssertEqual(again.staticTexts["rosterIdentity"].firstMatch.label, "Multisport athlete", "required: the identity is derived again from the saved roster")
         again.settleForScreenshot(1); shot("onb-2-roster-reopened")
+    }
+
+    /// Welcome and About you, then the roster given, then Continue to Goals.
+    private func reachGoalsPage(_ app: XCUIApplication, roster: [String]) {
+        let start = app.buttons["onboardingContinue"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 30), "required: a new athlete starts at Welcome")
+        app.settleForScreenshot(2)
+        start.press(forDuration: 3.6)
+        page(app, 1)
+        let name = app.textFields["onbName"].firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 8), "required: the name field"); name.tap(); name.typeText("Sam"); hideKeyboard(app)
+        app.fillAboutYouMeasurements()
+        let next = app.buttons["onboardingNext"].firstMatch
+        XCTAssertTrue(next.isEnabled, "required: About you complete"); next.tap()
+        page(app, 2)
+        for id in roster { tap(app, app.buttons["rosterAdd-\(id)"].firstMatch, "add \(id)") }
+        XCTAssertTrue(next.isEnabled, "required: Continue with a roster"); next.tap()
+        page(app, 3)
+    }
+    private func mainGoalTitle(_ app: XCUIApplication) -> String { let e = app.staticTexts["onbMainGoalTitle"].firstMatch; return e.waitForExistence(timeout: 5) ? e.label : "" }
+    private func goalText(_ app: XCUIApplication) -> String { let e = app.staticTexts["onbCoachLine"].firstMatch; return e.exists ? e.label : "" }
+
+    /// Screen 4 as approved on 21 Nov 2026 (00:30), cycling and strength athlete: Build 6 cards made compact so the whole
+    /// page fits one iPhone 15 Pro screen; no balance question; several goals with exactly one main goal; the
+    /// explanation above Continue follows the main goal; everything is kept after Back, Continue and reopening.
+    func testGoalsForACyclingAndStrengthAthlete() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["roadCycling", "strength"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        for g in ["cycling", "strength", "general"] { need(app, "goalGroup-\(g)", "the \(g) goals") }
+        for g in ["running", "swimming", "walking", "recovery"] { XCTAssertFalse(el(app, "goalGroup-\(g)").exists, "required: no \(g) goals for this roster") }
+        XCTAssertFalse(el(app, "rosterLead").exists, "required: the balance is not asked again on this page")
+        XCTAssertFalse(app.buttons["Balanced"].exists || app.buttons["Endurance-led"].exists, "required: no balance control on the Goals page")
+        XCTAssertFalse(next.isEnabled, "required: Continue needs a goal")
+
+        // everything essential is on screen at once: nothing scrolled away, clipped, or under the footer
+        let footer = need(app, "onbGoalExplanation", "the main-goal explanation above Continue")
+        let window = app.windows.firstMatch.frame
+        let title = app.staticTexts["onbTitle"].firstMatch
+        XCTAssertTrue(title.isHittable, "required: the page title is visible")
+        let all = ["endurance", "power", "climbing", "sprint", "event", "strength", "muscle", "stamina", "maintain", "fitness"].map { "goal-\($0)" } + ["onbCyclingLevel", "onbStrengthLevel"]
+        var frames: [(String, CGRect)] = []
+        for id in all {
+            let e = need(app, id, "\(id) on the page")
+            XCTAssertTrue(e.isHittable, "required: \(id) is visible without scrolling")
+            XCTAssertLessThanOrEqual(e.frame.maxY, footer.frame.minY + 1, "required: \(id) is not under the footer (bottom \(e.frame.maxY), footer starts \(footer.frame.minY))")
+            XCTAssertGreaterThanOrEqual(e.frame.minY, title.frame.maxY - 1, "required: \(id) is below the title")
+            XCTAssertGreaterThanOrEqual(e.frame.height, 43, "required: \(id) keeps a full-size touch target (\(e.frame.height) pt)")
+            frames.append((id, e.frame))
+        }
+        for i in frames.indices { for j in frames.indices where j > i {
+            XCTAssertFalse(frames[i].1.insetBy(dx: 1, dy: 1).intersects(frames[j].1.insetBy(dx: 1, dy: 1)), "required: \(frames[i].0) and \(frames[j].0) do not overlap")
+        } }
+        XCTAssertTrue(next.exists && next.frame.maxY <= window.maxY && next.frame.minY >= footer.frame.maxY - 1, "required: Continue is visible below the explanation")
+        app.settleForScreenshot(1); shot("onb-3-goals-hybrid-empty")
+
+        // several goals, one main goal, explained
+        el(app, "goal-muscle").tap()
+        XCTAssertEqual(mainGoalTitle(app), "MUSCLE · MAIN GOAL", "required: the first goal chosen is the main goal")
+        XCTAssertTrue(goalText(app).contains("8–12 reps"), "required: the explanation is the planner's own rule for Muscle (\(goalText(app)))")
+        XCTAssertTrue(next.isEnabled, "required: Continue with a goal Cyclift can plan")
+        el(app, "goal-endurance").tap(); el(app, "goal-fitness").tap()
+        XCTAssertEqual(mainGoalTitle(app), "MUSCLE · MAIN GOAL", "required: adding goals does not move the main goal")
+        for g in ["muscle", "endurance", "fitness"] { XCTAssertTrue(app.buttons["goalStar-\(g)"].firstMatch.exists, "required: \(g) is selected") }
+        XCTAssertEqual(app.buttons["goalStar-muscle"].firstMatch.value as? String, "Main goal"); XCTAssertEqual(app.buttons["goalStar-endurance"].firstMatch.value as? String, "", "required: exactly one main goal")
+        app.settleForScreenshot(1); shot("onb-3-goals-hybrid")
+        app.buttons["goalStar-endurance"].firstMatch.tap()
+        XCTAssertEqual(mainGoalTitle(app), "ENDURANCE · MAIN GOAL", "required: the star changes the main goal")
+        XCTAssertTrue(goalText(app).contains("Zone 2"), "required: the explanation follows the main goal (\(goalText(app)))")
+        for g in ["muscle", "endurance", "fitness"] { XCTAssertTrue(app.buttons["goalStar-\(g)"].firstMatch.exists, "required: changing the main goal deletes no other goal (\(g))") }
+        XCTAssertEqual(app.buttons["goalStar-muscle"].firstMatch.value as? String, ""); XCTAssertEqual(app.buttons["goalStar-endurance"].firstMatch.value as? String, "Main goal")
+        app.settleForScreenshot(1); shot("onb-3-goals-main-changed")
+
+        // a level the planner needs, as one compact menu
+        let level = el(app, "onbStrengthLevel"); level.tap()
+        let inter = app.buttons["Intermediate"].firstMatch
+        XCTAssertTrue(inter.waitForExistence(timeout: 5), "required: the level menu offers Intermediate"); inter.tap()
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS 'Intermediate'"), object: level)], timeout: 5), .completed, "required: the strength level can be changed (\(level.label))")
+
+        // Continue and Back keep it; so does closing and reopening
+        next.tap(); page(app, 4)
+        app.buttons["onboardingBack"].firstMatch.tap(); page(app, 3)
+        XCTAssertEqual(mainGoalTitle(app), "ENDURANCE · MAIN GOAL", "required: the main goal after Back")
+        for g in ["muscle", "endurance", "fitness"] { XCTAssertTrue(app.buttons["goalStar-\(g)"].firstMatch.exists, "required: \(g) after Back") }
+        app.terminate()
+        let again = XCUIApplication(); again.launchEnvironment["LAB_THEME"] = "obsidian"; again.launch()
+        let counter = again.staticTexts["onboardingProgress"].firstMatch
+        XCTAssertTrue(counter.waitForExistence(timeout: 30), "required: onboarding resumes after reopening")
+        if counter.label.hasPrefix("4 of 7") { again.buttons["onboardingBack"].firstMatch.tap() }
+        page(again, 3)
+        XCTAssertEqual(mainGoalTitle(again), "ENDURANCE · MAIN GOAL", "required: the main goal was saved")
+        for g in ["muscle", "endurance", "fitness"] { XCTAssertTrue(again.buttons["goalStar-\(g)"].firstMatch.waitForExistence(timeout: 5), "required: \(g) was saved") }
+        XCTAssertTrue(el(again, "onbStrengthLevel").label.contains("Intermediate"), "required: the level was saved")
+    }
+
+    /// Screen 4, runner only: running goals, marked as saved and not planned; no cycling or strength goals or levels;
+    /// the main goal is explained without any prescription; and no plan can be built from it. Adding a sport Cyclift
+    /// plans brings its goals without losing the running goal.
+    func testGoalsForARunner() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["running"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        need(app, "goalGroup-running", "the running goals")
+        XCTAssertTrue(app.staticTexts["goalGroupSavedOnly-running"].firstMatch.exists || el(app, "goalGroup-running").label.contains("not planned yet"), "required: running goals are marked saved, not planned")
+        for g in ["cycling", "strength"] { XCTAssertFalse(el(app, "goalGroup-\(g)").exists, "required: no \(g) goals for a runner") }
+        for id in ["goal-endurance", "goal-muscle", "onbCyclingLevel", "onbStrengthLevel"] { XCTAssertFalse(el(app, id).exists, "required: \(id) is not asked of a runner") }
+        for id in ["goal-runDistance", "goal-runPace", "goal-runRace"] { need(app, id, "\(id)") }
+        XCTAssertFalse(next.isEnabled)
+        el(app, "goal-runDistance").tap(); el(app, "goal-runPace").tap()
+        app.buttons["goalStar-runPace"].firstMatch.tap()
+        XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: the runner's main goal is named")
+        let text = goalText(app)
+        XCTAssertTrue(text.contains("no sessions are prescribed"), "required: nothing is prescribed for running (\(text))")
+        for word in ["Zone", "reps", "interval", "km", "pace of"] { XCTAssertFalse(text.contains(word), "required: no invented prescription ('\(word)') in: \(text)") }
+        XCTAssertTrue(el(app, "goal-runPace").label.contains("not planned yet"), "required: the card says the goal is saved, not planned")
+        XCTAssertFalse(next.isEnabled, "required: no plan is built from goals Cyclift cannot plan — Continue stays unavailable")
+        app.settleForScreenshot(1); shot("onb-3-goals-runner")
+
+        // the goals are saved and survive Back; a planned sport adds its goals without removing the runner's
+        app.buttons["onboardingBack"].firstMatch.tap(); page(app, 2)
+        need(app, "rosterMain-running", "running is still the main sport")
+        tap(app, app.buttons["rosterAdd-roadCycling"].firstMatch, "add road cycling")
+        app.buttons["onboardingNext"].firstMatch.tap(); page(app, 3)
+        need(app, "goalGroup-running", "running goals are still offered"); need(app, "goalGroup-cycling", "cycling goals now appear")
+        for g in ["runDistance", "runPace"] { XCTAssertTrue(app.buttons["goalStar-\(g)"].firstMatch.waitForExistence(timeout: 5), "required: \(g) was kept") }
+        XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: the main goal was kept")
+        XCTAssertFalse(next.isEnabled, "required: a plan needs a goal Cyclift can plan")
+        XCTAssertTrue(goalText(app).contains("Choose a goal Cyclift can plan"), "required: the page says what is needed (\(goalText(app)))")
+        el(app, "goal-endurance").tap()
+        XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: a planned goal does not take the main goal away")
+        XCTAssertTrue(goalText(app).contains("your plan follows Endurance"), "required: the page says what the plan follows (\(goalText(app)))")
+        XCTAssertTrue(next.isEnabled, "required: Continue once a planned goal is chosen")
+        need(app, "onbCyclingLevel", "the cycling level is asked now"); XCTAssertFalse(el(app, "onbStrengthLevel").exists, "no strength level without a planned strength sport")
+        app.settleForScreenshot(1); shot("onb-3-goals-runner-plus-cycling")
     }
 
     /// All seven pages: each page's required elements, the units choice, a day edit on page 4, a Blueprint group opened

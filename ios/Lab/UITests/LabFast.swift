@@ -326,9 +326,11 @@ final class LabFast: XCTestCase {
         XCTAssertTrue(strength.label.contains("main goal") && !endurance.label.contains("main goal"), "required: the star moves the main goal")
         shot("y3-2-goals-strength-main")
         for id in ["onbCyclingLevel", "onbStrengthLevel"] { XCTAssertTrue(el(app, id).exists, "required: \(id)") }
-        let advanced = el(app, "onbCyclingLevel").buttons["Advanced"].firstMatch
-        _ = app.reveal(advanced, top: 160, bottomMargin: 200); advanced.tap()
-        XCTAssertTrue(advanced.isSelected, "required: the cycling level can be changed")
+        // Owner decision 21 Nov 2026: each level is one compact menu (it was a three-part bar), so the page fits one screen.
+        let level = el(app, "onbCyclingLevel"); level.tap()
+        let advanced = app.buttons["Advanced"].firstMatch
+        XCTAssertTrue(advanced.waitForExistence(timeout: 5), "required: the level menu offers Advanced"); advanced.tap()
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS 'Advanced'"), object: level)], timeout: 5), .completed, "required: the cycling level can be changed (\(level.label))")
         shot("y3-3-levels")
         next.tap()
         XCTAssertTrue(app.staticTexts["onboardingProgress"].firstMatch.label.hasPrefix("4 of 7"), "required: Continue goes to page 4")
