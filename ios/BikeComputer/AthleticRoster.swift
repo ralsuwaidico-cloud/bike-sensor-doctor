@@ -80,7 +80,8 @@ struct RosterActivity: Identifiable, Equatable {
         case (.cycling?, true), (.strength?, true): return "Planned · recorded"
         case (.cycling?, false): return "Planned and recorded as general cycling"
         case (.strength?, false): return "Planned and recorded as gym training"
-        case (nil, _): return recording == nil ? "In your roster · not planned or recorded yet" : "In your roster · recorded, not planned yet"
+        // 21 Nov 2026: said simply and truthfully, never as a classification of the athlete or the sport
+        case (nil, _): return recording == nil ? "In your roster · plans coming soon" : "In your roster · recorded · plans coming soon"
         }
     }
 }
@@ -250,13 +251,13 @@ enum AthleticRoster {
             let t = xs.map(\.title); return t.count <= 1 ? (t.first ?? "") : t.dropLast().joined(separator: ", ") + " and " + t[t.count - 1]
         }
         if acts.count > 2 {
-            if unplanned.isEmpty { return "Cyclift will plan and record all \(acts.count) activities." }
-            if planned.isEmpty { return "All \(acts.count) are in your roster. Cyclift cannot plan or record them yet." }
-            return "Cyclift will plan and record \(planned.count) of your \(acts.count) activities. The other \(unplanned.count == 1 ? "one is" : "\(unplanned.count) are") not planned or recorded yet."
+            if unplanned.isEmpty { return "Cyclift plans and records all \(acts.count) today." }
+            if planned.isEmpty { return "All \(acts.count) are saved to your roster. Personalised plans for them are coming soon." }
+            return "Cyclift plans and records \(planned.count) of your \(acts.count) activities today. Plans for the other \(unplanned.count == 1 ? "one" : "\(unplanned.count)") are coming soon."
         }
-        if planned.isEmpty { return "\(list(unplanned)) \(unplanned.count == 1 ? "is" : "are") in your roster. Cyclift cannot plan or record \(unplanned.count == 1 ? "it" : "them") yet." }
-        if unplanned.isEmpty { return "Cyclift will plan and record \(list(planned))." }
-        return "Cyclift will plan and record \(list(planned)). \(list(unplanned)) is not planned or recorded yet."
+        if planned.isEmpty { return "\(list(unplanned)) \(unplanned.count == 1 ? "is" : "are") saved to your roster. Personalised plans are coming soon." }
+        if unplanned.isEmpty { return "Cyclift plans and records \(list(planned)) today." }
+        return "Cyclift plans and records \(list(planned)) today. \(list(unplanned)) is saved; plans are coming soon."
     }
 }
 
@@ -302,18 +303,22 @@ enum RosterGoals {
     static let strength: [RosterGoal] = [GoalID.strength, .muscle, .stamina, .maintain].map { planner($0, .strength) }
     static let general = planner(.fitness, nil)
     /// Goals that can be saved for sports without a planner. Titles and lines describe the aim only.
+    /// PROVISIONAL (owner, 21 Nov 2026: "initial UI categories … must remain provisional until reviewed").
     static let savedOnly: [RosterFamily: [RosterGoal]] = [
         .running: [saved("runDistance", "Distance", "Run further", "point.topleft.down.to.point.bottomright.curvepath", .running),
                    saved("runPace", "Pace", "Run faster", "hare.fill", .running),
-                   saved("runRace", "Race", "Be ready on the day", "flag.fill", .running)],
-        .swimming: [saved("swimDistance", "Distance", "Swim further", "point.topleft.down.to.point.bottomright.curvepath", .swimming),
-                    saved("swimTechnique", "Technique", "Swim more efficiently", "water.waves", .swimming),
-                    saved("swimEvent", "Event", "Be ready on the day", "flag.fill", .swimming)],
+                   saved("runEndurance", "Endurance", "Keep going longer", "arrow.triangle.2.circlepath", .running),
+                   saved("runRace", "Race preparation", "Be ready on the day", "flag.fill", .running)],
+        .swimming: [saved("swimTechnique", "Technique", "Swim more efficiently", "water.waves", .swimming),
+                    saved("swimEndurance", "Endurance", "Swim further", "arrow.triangle.2.circlepath", .swimming),
+                    saved("swimSpeed", "Speed", "Swim faster", "hare.fill", .swimming),
+                    saved("swimEvent", "Event preparation", "Be ready on the day", "flag.fill", .swimming)],
         .walking: [saved("walkDaily", "Daily walking", "Move every day", "figure.walk", .walking),
                    saved("walkFurther", "Longer walks", "Go further on foot", "figure.hiking", .walking)],
-        .recovery: [saved("mobilityRange", "Mobility", "Move more freely", "figure.mind.and.body", .recovery),
+        .recovery: [saved("flexibility", "Flexibility", "Reach further, more easily", "figure.flexibility", .recovery),
+                    saved("mobilityRange", "Mobility", "Move more freely", "figure.mind.and.body", .recovery),
                     saved("recoveryHabit", "Recovery", "Recover between sessions", "leaf.fill", .recovery)],
-        // strength disciplines Cyclift does not plan (bodyweight, calisthenics) when no gym activity is in the roster
+        // strength disciplines without a plan yet (bodyweight, calisthenics) when no gym activity is in the roster
         .strength: [saved("bodyStrength", "Strength", "Get stronger with bodyweight", "figure.strengthtraining.functional", .strength),
                     saved("bodySkill", "Skills", "Learn new movements", "figure.gymnastics", .strength)],
         .cycling: [],
@@ -370,20 +375,39 @@ enum RosterGoals {
         var savedOnly: [String] { ids.filter { RosterGoals.goal($0).map { $0.planner == nil } ?? false } }
     }
 
-    /// The explanation under the cards. A planned goal gets the planner's own rule (existing text). A saved-only goal,
-    /// or any goal in a roster Cyclift cannot plan, says plainly that nothing is prescribed for it.
+    /// True when a training plan can be built: the roster has an activity an existing engine plans AND the athlete chose
+    /// at least one goal that engine knows. Otherwise onboarding ends profile-only. A goal is never chosen for them.
+    static func canPlan(roster ids: [String], selection: Selection) -> Bool {
+        AthleticRoster.view(ids).mode != nil && !selection.plannerGoals.isEmpty
+    }
+
+    private static func sportWord(_ g: RosterGoal) -> String {
+        switch g.family {
+        case .walking?: return "walking"
+        case .recovery?: return "mobility and recovery"
+        case let f?: return f.title.lowercased()
+        case nil: return ""
+        }
+    }
+    /// The explanation above Continue. A planned goal in a plannable selection gets the planner's own rule (existing
+    /// text). Otherwise it says, simply and truthfully, that the goals are saved and plans are coming soon; nothing is
+    /// prescribed and no figure is given.
     static func explanation(main id: String?, roster ids: [String], selection: Selection) -> (title: String, text: String)? {
         guard let id, let g = goal(id) else { return nil }
-        let v = AthleticRoster.view(ids)
-        let sport = g.family.map { $0 == .walking ? "walking" : $0 == .recovery ? "mobility and recovery" : $0.title.lowercased() } ?? "general"
         let head = "\(g.title) · main goal"
-        guard v.mode != nil else {
-            return (head, "Saved as your main goal. Cyclift cannot plan \(g.family == nil ? "this roster" : sport) yet, so no sessions are prescribed. Add cycling or gym training to build a plan.")
+        let sport = sportWord(g)
+        if canPlan(roster: ids, selection: selection) {
+            if let p = g.planner { return (head, GoalInfo.effect(p)) }
+            return (head, "Your \(sport) goals are saved. Personalised \(sport) plans are coming soon. Your plan today follows \(selection.plannerMain?.title ?? "your other goals").")
         }
-        if let p = g.planner { return (head, GoalInfo.effect(p)) }
-        if let other = selection.plannerMain {
-            return (head, "Saved as your main goal. Cyclift does not plan \(sport) yet, so nothing is prescribed for it; your plan follows \(other.title).")
+        if g.planner != nil, g.family != nil {
+            // a planner goal, but its sport is not one this roster can be planned for (cannot happen with today's groups)
+            return (head, "Your goals are saved. Personalised plans are coming soon.")
         }
-        return (head, "Saved as your main goal. Cyclift does not plan \(sport) yet, so nothing is prescribed for it. Choose a goal Cyclift can plan as well.")
+        let saved = g.family == nil ? "Your goals are saved. Personalised plans for your sports are coming soon."
+                                    : "Your \(sport) goals are saved. Personalised \(sport) plans are coming soon."
+        // a roster Cyclift could plan, but no goal of a planned sport was chosen: say how to get a plan, choose nothing
+        if AthleticRoster.view(ids).mode != nil { return (head, saved + " Choose a goal for a sport Cyclift plans today if you also want a plan now.") }
+        return (head, saved + " You can finish setting up without a training plan.")
     }
 }

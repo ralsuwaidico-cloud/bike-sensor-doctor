@@ -241,7 +241,7 @@ final class LabFastOnboarding: XCTestCase {
         }
         XCTAssertTrue(app.buttons["rosterAdd-roadCycling"].firstMatch.label.contains("Planned · recorded"), "road cycling says it is planned and recorded")
         let run = app.buttons["rosterAdd-running"].firstMatch
-        XCTAssertTrue(run.label.contains("not planned or recorded yet"), "required: running says it is not planned or recorded (\(run.label))")
+        XCTAssertTrue(run.label.contains("plans coming soon"), "required: running says plans are coming soon — owner wording of 21 Nov 2026 (\(run.label))")
         XCTAssertFalse(run.label.lowercased().contains("planned and recorded"), "required: running is never called planned and recorded")
         app.settleForScreenshot(1); shot("onb-2-roster-empty")
 
@@ -249,7 +249,7 @@ final class LabFastOnboarding: XCTestCase {
         tap(app, run, "add road running")
         let mainRun = need(app, "rosterMain-running", "running as the main sport")
         XCTAssertEqual(identity(), "Runner", "required: identity comes from the selection")
-        XCTAssertTrue(lineText().contains("cannot plan or record"), "required: the limitation is stated (\(lineText()))")
+        XCTAssertTrue(lineText().contains("saved to your roster") && lineText().contains("coming soon"), "required: the limitation is stated simply (\(lineText()))")
         XCTAssertFalse(el(app, "rosterLead").exists, "no balance control without two planned sports")
         // 21 Nov 2026: a roster Cyclift cannot plan still continues to Goals (it stops there, with no plan built)
         XCTAssertTrue(next.isEnabled, "required: a runner is not stopped at the roster")
@@ -276,7 +276,7 @@ final class LabFastOnboarding: XCTestCase {
         let trail = app.buttons["library-trailRunning"].firstMatch
         XCTAssertTrue(trail.waitForExistence(timeout: 5), "required: search finds trail running")
         XCTAssertFalse(app.buttons["library-gravel"].firstMatch.exists, "search narrows the list")
-        XCTAssertTrue(trail.label.contains("not planned or recorded yet"), "required: honest wording in the library (\(trail.label))")
+        XCTAssertTrue(trail.label.contains("plans coming soon"), "required: honest wording in the library (\(trail.label))")
         trail.tap()
         XCTAssertEqual(trail.value as? String, "In your roster", "required: the tick shows it is selected")
         search.tap(); search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 5))
@@ -421,45 +421,100 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(el(again, "onbStrengthLevel").label.contains("Intermediate"), "required: the level was saved")
     }
 
-    /// Screen 4, runner only: running goals, marked as saved and not planned; no cycling or strength goals or levels;
-    /// the main goal is explained without any prescription; and no plan can be built from it. Adding a sport Cyclift
-    /// plans brings its goals without losing the running goal.
-    func testGoalsForARunner() {
+    /// A runner completes onboarding (owner decisions of 21 Nov 2026, 00:46 and 00:49): running goals, said to be saved
+    /// with plans coming soon; no cycling or strength goals or levels; nothing prescribed; Goals leads straight to a
+    /// Blueprint that says what is saved; "Create my profile" opens Cyclift with NO training plan, and none appears at
+    /// the next launch. The earlier version of this check required Continue to stay unavailable for a runner.
+    func testARunnerCompletesOnboardingWithoutAPlan() {
         let app = launch()
         reachGoalsPage(app, roster: ["running"])
         let next = app.buttons["onboardingNext"].firstMatch
-        need(app, "goalGroup-running", "the running goals")
-        XCTAssertTrue(app.staticTexts["goalGroupSavedOnly-running"].firstMatch.exists || el(app, "goalGroup-running").label.contains("not planned yet"), "required: running goals are marked saved, not planned")
+        let group = need(app, "goalGroup-running", "the running goals")
+        XCTAssertTrue(group.label.lowercased().contains("coming soon"), "required: running goals are said to be saved, plans coming soon (\(group.label))")
         for g in ["cycling", "strength"] { XCTAssertFalse(el(app, "goalGroup-\(g)").exists, "required: no \(g) goals for a runner") }
         for id in ["goal-endurance", "goal-muscle", "onbCyclingLevel", "onbStrengthLevel"] { XCTAssertFalse(el(app, id).exists, "required: \(id) is not asked of a runner") }
-        for id in ["goal-runDistance", "goal-runPace", "goal-runRace"] { need(app, id, "\(id)") }
-        XCTAssertFalse(next.isEnabled)
+        for id in ["goal-runDistance", "goal-runPace", "goal-runEndurance", "goal-runRace"] { need(app, id, "\(id)") }
+        XCTAssertFalse(next.isEnabled, "required: Continue needs a goal")
         el(app, "goal-runDistance").tap(); el(app, "goal-runPace").tap()
         app.buttons["goalStar-runPace"].firstMatch.tap()
         XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: the runner's main goal is named")
         let text = goalText(app)
-        XCTAssertTrue(text.contains("no sessions are prescribed"), "required: nothing is prescribed for running (\(text))")
-        for word in ["Zone", "reps", "interval", "km", "pace of"] { XCTAssertFalse(text.contains(word), "required: no invented prescription ('\(word)') in: \(text)") }
-        XCTAssertTrue(el(app, "goal-runPace").label.contains("not planned yet"), "required: the card says the goal is saved, not planned")
-        XCTAssertFalse(next.isEnabled, "required: no plan is built from goals Cyclift cannot plan — Continue stays unavailable")
+        XCTAssertTrue(text.contains("Your running goals are saved") && text.contains("coming soon"), "required: saved, plans coming soon (\(text))")
+        for word in ["Zone", "reps", "interval", " km", "FTP", "nsupported", "not supported", "not implemented", "navailable"] {
+            XCTAssertFalse(text.contains(word), "required: no prescription and no technical wording ('\(word)') in: \(text)")
+        }
+        XCTAssertTrue(next.isEnabled, "required: a runner is not blocked on the Goals page")
         app.settleForScreenshot(1); shot("onb-3-goals-runner")
 
-        // the goals are saved and survive Back; a planned sport adds its goals without removing the runner's
-        app.buttons["onboardingBack"].firstMatch.tap(); page(app, 2)
-        need(app, "rosterMain-running", "running is still the main sport")
-        tap(app, app.buttons["rosterAdd-roadCycling"].firstMatch, "add road cycling")
-        app.buttons["onboardingNext"].firstMatch.tap(); page(app, 3)
-        need(app, "goalGroup-running", "running goals are still offered"); need(app, "goalGroup-cycling", "cycling goals now appear")
-        for g in ["runDistance", "runPace"] { XCTAssertTrue(app.buttons["goalStar-\(g)"].firstMatch.waitForExistence(timeout: 5), "required: \(g) was kept") }
-        XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: the main goal was kept")
-        XCTAssertFalse(next.isEnabled, "required: a plan needs a goal Cyclift can plan")
-        XCTAssertTrue(goalText(app).contains("Choose a goal Cyclift can plan"), "required: the page says what is needed (\(goalText(app)))")
+        // straight to a Blueprint that says what is saved; nothing about a week or a session
+        next.tap(); page(app, 7)
+        let create = app.buttons["onbCreateProfile"].firstMatch
+        XCTAssertTrue(create.waitForExistence(timeout: 8), "required: Create my profile")
+        XCTAssertFalse(app.buttons["onbCreatePlan"].firstMatch.exists, "required: there is no plan to approve")
+        XCTAssertEqual(app.staticTexts["onbTitle"].firstMatch.label, "Sam"); XCTAssertEqual(app.staticTexts["blueprintIdentity"].firstMatch.label, "Runner")
+        XCTAssertTrue(need(app, "blueprintSport-running", "running on the Blueprint").label.contains("plans coming soon"), "required: the sport's status is stated")
+        XCTAssertTrue(need(app, "blueprintGoal-runPace", "the main goal on the Blueprint").label.contains("main goal"))
+        need(app, "blueprintGoal-runDistance", "the other goal on the Blueprint")
+        XCTAssertTrue(need(app, "blueprintNoPlan", "the no-plan statement").label.contains("No training plan is created"), "required: the Blueprint says no plan is created")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'First session' OR label CONTAINS[c] 'rides ·' OR label CONTAINS[c] 'sessions a week'")).firstMatch.exists, "required: no week or session on this Blueprint")
+        for i in 4...6 { XCTAssertFalse(app.buttons["railSlot-\(i)"].firstMatch.isEnabled, "required: page \(i) is not offered to an athlete without a plan") }
+        app.settleForScreenshot(1); shot("onb-7-blueprint-profile-only")
+        app.buttons["onboardingBack"].firstMatch.tap(); page(app, 3)
+        XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: Back returns to Goals with the selection kept")
+        next.tap(); page(app, 7)
+
+        // into Cyclift without a plan
+        create.tap()
+        let greeting = el(app, "homeGreeting")
+        XCTAssertTrue(greeting.waitForExistence(timeout: 20), "required: Home opens after Create my profile")
+        XCTAssertTrue(greeting.label.contains("Sam"), "required: Home greets the athlete (\(greeting.label))")
+        app.settleForScreenshot(2); shot("profile-only-1-home")
+        let dock = el(app, "cradleDock")
+        dock.buttons["Plan"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["planTitle"].firstMatch.waitForExistence(timeout: 10), "required: the Plan screen opens")
+        app.settleForScreenshot(2); shot("profile-only-2-plan")
+        app.buttons["centreButton"].firstMatch.tap()
+        let panel = need(app, "trainPanel", "the Train panel")
+        let said = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'no plan'")).firstMatch
+        XCTAssertTrue(said.waitForExistence(timeout: 6), "required: Train says there is no plan (nothing is offered as today's session)")
+        _ = panel
+        app.settleForScreenshot(1); shot("profile-only-3-train")
+
+        // the next launch creates nothing either
+        app.terminate()
+        let again = XCUIApplication(); again.launchEnvironment["LAB_THEME"] = "obsidian"; again.launch()
+        XCTAssertTrue(el(again, "homeGreeting").waitForExistence(timeout: 30), "required: the athlete stays onboarded after reopening")
+        XCTAssertFalse(again.buttons["onboardingContinue"].firstMatch.exists, "required: onboarding does not start again")
+        again.buttons["centreButton"].firstMatch.tap()
+        XCTAssertTrue(again.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'no plan'")).firstMatch.waitForExistence(timeout: 8), "required: still no plan after reopening — none was generated at launch")
+        again.settleForScreenshot(1); shot("profile-only-4-train-reopened")
+    }
+
+    /// Supported and other sports together: a plan is built only from a goal the athlete chose for a planned sport.
+    /// With only a running goal the outcome is profile-only; choosing a cycling goal afterwards leads to Build your week.
+    func testAMixedRosterPlansOnlyTheGoalsChosen() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["running", "roadCycling"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        need(app, "goalGroup-running", "running goals"); need(app, "goalGroup-cycling", "cycling goals")
+        need(app, "onbCyclingLevel", "the cycling level"); XCTAssertFalse(el(app, "onbStrengthLevel").exists, "no strength level without a planned strength sport")
+        el(app, "goal-runPace").tap()
+        XCTAssertTrue(goalText(app).contains("Choose a goal for a sport Cyclift plans today"), "required: how to get a plan is said (\(goalText(app)))")
+        for g in ["endurance", "power", "climbing", "sprint", "event", "fitness"] { XCTAssertFalse(app.buttons["goalStar-\(g)"].firstMatch.exists, "required: \(g) is never selected for the athlete") }
+        next.tap(); page(app, 7)
+        XCTAssertTrue(app.buttons["onbCreateProfile"].firstMatch.waitForExistence(timeout: 8), "required: without a cycling goal no cycling plan is built")
+        XCTAssertTrue(need(app, "blueprintSport-roadCycling", "road cycling on the Blueprint").label.contains("work today"), "required: the Blueprint says cycling planning and recording work")
+        XCTAssertTrue(need(app, "blueprintSport-running", "running on the Blueprint").label.contains("plans coming soon"))
+        app.settleForScreenshot(1); shot("onb-7-blueprint-mixed-profile-only")
+        tap(app, app.buttons["blueprintEditGoals"].firstMatch, "Change goals")
+        page(app, 3)
         el(app, "goal-endurance").tap()
-        XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: a planned goal does not take the main goal away")
-        XCTAssertTrue(goalText(app).contains("your plan follows Endurance"), "required: the page says what the plan follows (\(goalText(app)))")
-        XCTAssertTrue(next.isEnabled, "required: Continue once a planned goal is chosen")
-        need(app, "onbCyclingLevel", "the cycling level is asked now"); XCTAssertFalse(el(app, "onbStrengthLevel").exists, "no strength level without a planned strength sport")
+        XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: the chosen cycling goal does not take the main goal away")
+        XCTAssertTrue(goalText(app).contains("Your plan today follows Endurance"), "required: the page says what the plan follows (\(goalText(app)))")
         app.settleForScreenshot(1); shot("onb-3-goals-runner-plus-cycling")
+        let back = app.buttons["onbBackToBlueprint"].firstMatch
+        XCTAssertTrue(back.waitForExistence(timeout: 6) && back.isEnabled, "required: the way back from the edit"); back.tap()
+        page(app, 4)        // a plan is now possible and its week has never been shown: it is shown before any Blueprint
     }
 
     /// All seven pages: each page's required elements, the units choice, a day edit on page 4, a Blueprint group opened

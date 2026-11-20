@@ -26,7 +26,8 @@ final class AthleticRosterTests: XCTestCase {
             case .strength where ["strength", "freeWeights", "machines"].contains(x.id): XCTAssertEqual(x.planning, .strength, x.id); XCTAssertEqual(x.recording, .strength, x.id)
             default:
                 XCTAssertNil(x.planning, "\(x.id) is not planned"); XCTAssertNil(x.recording, "\(x.id) is not recorded")
-                XCTAssertEqual(x.capabilityWords, "In your roster · not planned or recorded yet", x.id)
+                XCTAssertEqual(x.capabilityWords, "In your roster · plans coming soon", x.id)
+                for bad in ["unsupported", "not supported", "not implemented", "unavailable"] { XCTAssertFalse(x.capabilityWords.lowercased().contains(bad), "\(x.id): no technical or classifying wording") }
                 XCTAssertFalse(x.capabilityWords.lowercased().contains("planned and recorded"), "\(x.id) must never be called planned and recorded")
             }
         }
@@ -104,18 +105,21 @@ final class AthleticRosterTests: XCTestCase {
         XCTAssertEqual(AthleticRoster.identityLine(["roadCycling", "strength"], priority: .strength), "Cycling/Strength hybrid · strength-led")
         XCTAssertEqual(AthleticRoster.identityLine(["running"], priority: .balanced), "Runner")
     }
+    /// Simple and truthful (owner decision 21 Nov 2026): what works today is said as working today; the rest is saved,
+    /// with plans coming soon. Nothing is called available that is not, and no technical wording is used.
     func testSupportLineSaysWhatIsAndIsNotCovered() {
         XCTAssertNil(AthleticRoster.supportLine([]))
-        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength"]), "Cyclift will plan and record Road cycling and Gym training.")
-        XCTAssertEqual(AthleticRoster.supportLine(["running"]), "Road running is in your roster. Cyclift cannot plan or record it yet.")
-        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "running"]), "Cyclift will plan and record Road cycling. Road running is not planned or recorded yet.")
-        // more than two activities are counted, so the sentence is always read in full on the page
-        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "running", "hiking"]), "Cyclift will plan and record 1 of your 3 activities. The other 2 are not planned or recorded yet.")
-        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength", "gravel", "running"]), "Cyclift will plan and record 3 of your 4 activities. The other one is not planned or recorded yet.")
-        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength", "gravel"]), "Cyclift will plan and record all 3 activities.")
-        XCTAssertEqual(AthleticRoster.supportLine(["running", "hiking", "openWater"]), "All 3 are in your roster. Cyclift cannot plan or record them yet.")
-        for ids in [["roadCycling", "running"], AthleticRoster.library.map(\.id), ["running", "hiking", "openWater"]] {
-            XCTAssertLessThan((AthleticRoster.supportLine(ids) ?? "").count, 100, "short enough for the line above Continue")
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength"]), "Cyclift plans and records Road cycling and Gym training today.")
+        XCTAssertEqual(AthleticRoster.supportLine(["running"]), "Road running is saved to your roster. Personalised plans are coming soon.")
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "running"]), "Cyclift plans and records Road cycling today. Road running is saved; plans are coming soon.")
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "running", "hiking"]), "Cyclift plans and records 1 of your 3 activities today. Plans for the other 2 are coming soon.")
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength", "gravel", "running"]), "Cyclift plans and records 3 of your 4 activities today. Plans for the other one are coming soon.")
+        XCTAssertEqual(AthleticRoster.supportLine(["roadCycling", "strength", "gravel"]), "Cyclift plans and records all 3 today.")
+        XCTAssertEqual(AthleticRoster.supportLine(["running", "hiking", "openWater"]), "All 3 are saved to your roster. Personalised plans for them are coming soon.")
+        for ids in [["roadCycling", "running"], AthleticRoster.library.map(\.id), ["running", "hiking", "openWater"], ["running"]] {
+            let t = AthleticRoster.supportLine(ids) ?? ""
+            XCTAssertLessThan(t.count, 105, "short enough for the line above Continue")
+            for bad in ["unsupported", "not supported", "not implemented", "unavailable", "engine", "planner"] { XCTAssertFalse(t.lowercased().contains(bad), "'\(bad)' in: \(t)") }
         }
     }
 

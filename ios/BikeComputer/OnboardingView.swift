@@ -328,14 +328,7 @@ enum OnboardingFlow {
     }
 
     /// Writes the answers into the one authoritative profile (no second copy). Called on every change.
-    static func commit(_ a: OnboardingAnswers, to store: Store) {
-        var x = store.planInputs
-        a.apply(to: &x)
-        store.updateProfile { $0 = x.profile }
-        if store.availability != x.availability { store.availability = x.availability }
-        if store.equipment != x.equipment { store.equipment = x.equipment }
-        if store.strengthPrefs != x.strengthPrefs { store.strengthPrefs = x.strengthPrefs }
-    }
+    static func commit(_ a: OnboardingAnswers, to store: Store) { OnboardingOutcome.commit(a, to: store) }
 
     /// The planner on the inputs Approve will save — nothing persisted.
     static func dryRun(_ a: OnboardingAnswers, store: Store, kinds: [DayKind], ride: Int, lift: Int, weekOffset: Int) -> [Workout] {
@@ -353,6 +346,7 @@ enum OnboardingFlow {
     /// Plan version 1: the same inputs the preview used, generated for this week and next; Home and Plan read `plan`.
     static func approve(_ a: OnboardingAnswers, store: Store) {
         commit(a, to: store)
+        if store.profile.isProfileOnly { store.updateProfile { $0.profileOnly = nil } }      // an approved plan ends the profile-only state
         if store.profile.goals.isEmpty, let g = a.goals { store.updateProfile { $0.goals = g; $0.primaryGoal = a.primaryGoal ?? g.first } }
         store.onboardingStage = 0
         let now = Date()
@@ -364,6 +358,8 @@ enum OnboardingFlow {
                                               summary: ["Plan approved in onboarding: \(OnboardingWeek.rides(a.week ?? [])) rides · \(OnboardingWeek.lifts(a.week ?? [])) lifts a week"], proposalId: nil))
         store.onboarded = true
     }
+
+    static func createProfileOnly(_ a: OnboardingAnswers, store: Store) { OnboardingOutcome.createProfileOnly(a, store: store) }
 }
 
 /// The FTP question (Connect stage): "Don't know" or a typed number in 50–600 W. No watts are ever guessed.

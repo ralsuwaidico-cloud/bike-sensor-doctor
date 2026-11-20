@@ -43,9 +43,9 @@ final class RosterGoalsTests: XCTestCase {
         s.toggle("muscle"); s.toggle("endurance"); XCTAssertNil(s.main); XCTAssertTrue(s.ids.isEmpty)
     }
     func testThePlannerOnlyReceivesItsOwnGoals() {
-        var s = RosterGoals.Selection(); for id in ["runPace", "endurance", "swimDistance", "muscle"] { s.toggle(id) }
+        var s = RosterGoals.Selection(); for id in ["runPace", "endurance", "swimSpeed", "muscle"] { s.toggle(id) }
         XCTAssertEqual(s.main, "runPace")
-        XCTAssertEqual(s.plannerGoals, [.endurance, .muscle]); XCTAssertEqual(s.savedOnly, ["runPace", "swimDistance"])
+        XCTAssertEqual(s.plannerGoals, [.endurance, .muscle]); XCTAssertEqual(s.savedOnly, ["runPace", "swimSpeed"])
         XCTAssertEqual(s.plannerMain, .endurance, "a saved-only main goal leaves the planner on the first goal it knows")
         s.setMain("muscle"); XCTAssertEqual(s.plannerMain, .muscle)
         var only = RosterGoals.Selection(); only.toggle("runRace")
@@ -59,33 +59,96 @@ final class RosterGoalsTests: XCTestCase {
         XCTAssertEqual(s.ids, ["endurance", "muscle"], "nothing is selected on the athlete's behalf when a sport is added")
     }
 
+    /// The provisional categories of the owner's decision of 21 Nov 2026 (not yet reviewed, not approved).
+    func testProvisionalGoalCategories() {
+        func t(_ f: RosterFamily) -> [String] { (RosterGoals.savedOnly[f] ?? []).map(\.title) }
+        XCTAssertEqual(t(.running), ["Distance", "Pace", "Endurance", "Race preparation"])
+        XCTAssertEqual(t(.swimming), ["Technique", "Endurance", "Speed", "Event preparation"])
+        XCTAssertEqual(t(.recovery), ["Flexibility", "Mobility", "Recovery"])
+        XCTAssertEqual(RosterGoals.cycling.map(\.title), ["Endurance", "Power", "Climbing", "Sprint", "Event"])
+        XCTAssertEqual(RosterGoals.strength.map(\.title), ["Strength", "Muscle", "Stamina", "Maintain"])
+    }
+
+    /// A plan exists only for a planned activity AND a goal of its own that the athlete chose. Nothing is chosen for them.
+    func testWhenAPlanCanBeBuilt() {
+        func sel(_ ids: [String]) -> RosterGoals.Selection { var s = RosterGoals.Selection(); ids.forEach { s.toggle($0) }; return s }
+        XCTAssertTrue(RosterGoals.canPlan(roster: ["roadCycling"], selection: sel(["endurance"])))
+        XCTAssertTrue(RosterGoals.canPlan(roster: ["roadCycling", "running"], selection: sel(["runPace", "endurance"])))
+        XCTAssertTrue(RosterGoals.canPlan(roster: ["strength"], selection: sel(["fitness"])), "the general goal is the planner's own")
+        XCTAssertFalse(RosterGoals.canPlan(roster: ["running"], selection: sel(["runPace"])), "a runner has no plan")
+        XCTAssertFalse(RosterGoals.canPlan(roster: ["running"], selection: sel(["fitness"])), "the general goal does not turn a runner into a cyclist")
+        XCTAssertFalse(RosterGoals.canPlan(roster: ["roadCycling", "running"], selection: sel(["runPace"])), "a cycling goal is never added for the athlete")
+        XCTAssertFalse(RosterGoals.canPlan(roster: ["roadCycling"], selection: sel([])))
+    }
+
     func testExplanations() {
         var s = RosterGoals.Selection(); s.toggle("muscle")
         let m = RosterGoals.explanation(main: s.main, roster: ["roadCycling", "strength"], selection: s)
         XCTAssertEqual(m?.title, "Muscle · main goal"); XCTAssertEqual(m?.text, GoalInfo.effect(.muscle), "a planned goal is explained by the planner's own rule")
         XCTAssertNil(RosterGoals.explanation(main: nil, roster: ["roadCycling"], selection: RosterGoals.Selection()))
-        // a runner: nothing is prescribed
+        // a runner: saved, plans coming soon, nothing prescribed
         var r = RosterGoals.Selection(); r.toggle("runPace")
         let run = RosterGoals.explanation(main: r.main, roster: ["running"], selection: r)
         XCTAssertEqual(run?.title, "Pace · main goal")
-        XCTAssertEqual(run?.text, "Saved as your main goal. Cyclift cannot plan running yet, so no sessions are prescribed. Add cycling or gym training to build a plan.")
-        // the general goal in a roster Cyclift cannot plan is not explained with riding and lifting
+        XCTAssertEqual(run?.text, "Your running goals are saved. Personalised running plans are coming soon. You can finish setting up without a training plan.")
+        // the general goal for a runner is not explained with riding and lifting
         var f = RosterGoals.Selection(); f.toggle("fitness")
         let fit = RosterGoals.explanation(main: f.main, roster: ["running"], selection: f)?.text ?? ""
-        XCTAssertTrue(fit.contains("no sessions are prescribed")); XCTAssertFalse(fit.contains("riding") || fit.contains("lifting"))
-        // a saved-only main goal beside a planned sport
+        XCTAssertTrue(fit.contains("coming soon")); XCTAssertFalse(fit.contains("riding") || fit.contains("lifting"))
+        // a running goal beside a planned sport, no cycling goal chosen: how to get a plan is said; nothing is chosen
         var mix = RosterGoals.Selection(); mix.toggle("runPace")
-        XCTAssertTrue(RosterGoals.explanation(main: mix.main, roster: ["running", "roadCycling"], selection: mix)!.text.contains("Choose a goal Cyclift can plan as well"))
+        XCTAssertEqual(RosterGoals.explanation(main: mix.main, roster: ["running", "roadCycling"], selection: mix)?.text,
+                       "Your running goals are saved. Personalised running plans are coming soon. Choose a goal for a sport Cyclift plans today if you also want a plan now.")
         mix.toggle("endurance")
         XCTAssertEqual(RosterGoals.explanation(main: mix.main, roster: ["running", "roadCycling"], selection: mix)?.text,
-                       "Saved as your main goal. Cyclift does not plan running yet, so nothing is prescribed for it; your plan follows Endurance.")
-        // no saved-only explanation ever carries a prescription
+                       "Your running goals are saved. Personalised running plans are coming soon. Your plan today follows Endurance.")
+        // no saved-only explanation ever carries a prescription or technical wording
         for g in RosterGoals.all where g.planner == nil {
             var x = RosterGoals.Selection(); x.toggle(g.id)
             let t = RosterGoals.explanation(main: g.id, roster: ["running", "swimming", "walking", "mobility", "bodyweight"], selection: x)?.text ?? ""
-            XCTAssertTrue(t.contains("no sessions are prescribed"), g.id)
-            for word in ["Zone", "reps", "FTP", "threshold", "sets", " km", "minutes"] { XCTAssertFalse(t.contains(word), "\(g.id): '\(word)'") }
+            XCTAssertTrue(t.contains("are saved") && t.contains("coming soon"), g.id)
+            for word in ["Zone", "reps", "FTP", "threshold", "sets", " km", "minutes", "unsupported", "not supported", "not implemented", "unavailable", "engine", "planner"] {
+                XCTAssertFalse(t.contains(word), "\(g.id): '\(word)'")
+            }
         }
+    }
+
+    private func freshStore() -> (Store, URL) {
+        let d = FileManager.default.temporaryDirectory.appendingPathComponent("profileonly-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return (Store(directory: d, generatePlan: false), d)
+    }
+    /// The whole point of the profile-only outcome: a runner enters the app with their profile, sports and goals saved
+    /// and NO session — not at once, not at the next launch, not when a rebuild is asked for — and with no cycling or
+    /// strength goal or type written on their behalf.
+    func testAProfileOnlyAthleteIsSavedAndNeverGetsAPlan() {
+        let (s, d) = freshStore()
+        var sel = RosterGoals.Selection(); sel.toggle("runPace"); sel.toggle("runDistance")
+        var a = OnboardingAnswers(); a.name = "Sam"; a.activities = ["trailRunning", "running"]
+        a.goalIDs = sel.ids; a.mainGoalID = sel.main; a.goals = sel.plannerGoals; a.primaryGoal = sel.plannerMain
+        let goalsBefore = s.profile.goals, modeBefore = s.profile.trainingMode
+        OnboardingOutcome.createProfileOnly(a, store: s)
+        XCTAssertTrue(s.onboarded); XCTAssertTrue(s.profile.isProfileOnly)
+        XCTAssertEqual(s.profile.name, "Sam"); XCTAssertEqual(s.profile.activities, ["trailRunning", "running"])
+        XCTAssertEqual(s.profile.activityGoals, ["runPace", "runDistance"]); XCTAssertEqual(s.profile.mainGoalID, "runPace")
+        XCTAssertEqual(s.profile.goals, goalsBefore, "no cycling or strength goal is added"); XCTAssertEqual(s.profile.trainingMode, modeBefore, "no training type is assigned")
+        XCTAssertTrue(s.plan.isEmpty, "no session is created")
+        XCTAssertTrue(s.planVersions.isEmpty, "no plan was approved, so none is recorded")
+        s.ensurePlan(); XCTAssertTrue(s.plan.isEmpty, "the daily plan check creates nothing")
+        XCTAssertTrue(s.regenerate(weekOf: Date(), replaceEdited: true).isEmpty); XCTAssertTrue(s.plan.isEmpty, "a rebuild creates nothing")
+        let again = Store(directory: d)                       // a real launch, plan generation switched on
+        XCTAssertTrue(again.onboarded); XCTAssertTrue(again.profile.isProfileOnly); XCTAssertTrue(again.plan.isEmpty, "the next launch creates nothing")
+        XCTAssertEqual(again.profile.activityGoals, ["runPace", "runDistance"])
+    }
+    /// The marker of an athlete without a plan is additive, off by default, and survives saving.
+    func testProfileOnlyMarker() throws {
+        XCTAssertFalse(RiderProfile().isProfileOnly)
+        var p = RiderProfile(); p.profileOnly = true
+        let read = try JSONDecoder().decode(RiderProfile.self, from: JSONEncoder().encode(p))
+        XCTAssertTrue(read.isProfileOnly)
+        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(RiderProfile())) as! [String: Any]
+        json.removeValue(forKey: "profileOnly")
+        XCTAssertFalse(try JSONDecoder().decode(RiderProfile.self, from: JSONSerialization.data(withJSONObject: json)).isProfileOnly, "an older record is an ordinary planned athlete")
     }
 
     func testAnswersStoreBothKindsAndFeedThePlannerOnlyItsOwn() {
@@ -97,7 +160,7 @@ final class RosterGoalsTests: XCTestCase {
         XCTAssertEqual(x.profile.activityGoals, ["runPace"]); XCTAssertEqual(x.profile.mainGoalID, "runPace")
         let read = try! JSONDecoder().decode(RiderProfile.self, from: JSONEncoder().encode(x.profile))
         XCTAssertEqual(read.activityGoals, ["runPace"]); XCTAssertEqual(read.mainGoalID, "runPace"); XCTAssertEqual(read.goals, [.endurance, .muscle])
-        var changed = x; changed.profile.activityGoals = ["swimDistance"]; changed.profile.mainGoalID = "swimDistance"
+        var changed = x; changed.profile.activityGoals = ["swimSpeed"]; changed.profile.mainGoalID = "swimSpeed"
         XCTAssertFalse(changed.planningDiffers(from: x), "saved-only goals are not a planning input")
     }
     func testAnOlderRecordHasNoSavedOnlyGoalsAndReadsUnchanged() throws {

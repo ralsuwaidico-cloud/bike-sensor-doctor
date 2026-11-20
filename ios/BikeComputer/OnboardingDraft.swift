@@ -693,3 +693,32 @@ enum BodyMeasure {
         return (String(c.day ?? 0), String(c.month ?? 0), String(c.year ?? 0))
     }
 }
+
+
+// MARK: - What onboarding writes (kept free of the interface so it is tested without it)
+
+enum OnboardingOutcome {
+    /// Writes the answers into the one athlete record through the same inputs the planner reads.
+    static func commit(_ a: OnboardingAnswers, to store: Store) {
+        var x = store.planInputs
+        a.apply(to: &x)
+        store.updateProfile { $0 = x.profile }
+        if store.availability != x.availability { store.availability = x.availability }
+        if store.equipment != x.equipment { store.equipment = x.equipment }
+        if store.strengthPrefs != x.strengthPrefs { store.strengthPrefs = x.strengthPrefs }
+    }
+
+    /// The profile-only outcome (owner decision 21 Nov 2026): the athlete's profile, sports, goals and preferences are
+    /// saved and they enter Cyclift WITHOUT a training plan, because nothing they chose can be planned today. No
+    /// session is generated, no plan version is recorded, and no cycling or strength goal or type is assigned: the
+    /// stored goals are exactly the ones chosen, and the marker keeps the planner from ever filling the calendar.
+    static func createProfileOnly(_ a: OnboardingAnswers, store: Store) {
+        var x = a
+        x.week = nil; x.mode = nil; x.priority = nil            // nothing plan-shaped is written
+        commit(x, to: store)
+        store.updateProfile { $0.profileOnly = true }
+        store.onboardingStage = 0
+        store.dropUnapprovedSessions(before: Date())             // placeholders from before approval never become a plan
+        store.onboarded = true
+    }
+}

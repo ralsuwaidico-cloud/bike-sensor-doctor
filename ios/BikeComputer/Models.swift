@@ -55,6 +55,12 @@ struct RiderProfile: Codable, Equatable {
     /// The athlete's one main goal across planned and saved-only goals (a `GoalID` raw value or a `RosterGoals`
     /// identifier). nil = follow `primaryGoal`. Both fields added 21 Nov 2026; additive, ignored by older builds.
     var mainGoalID: String? = nil
+    /// True for an athlete who finished onboarding WITHOUT a training plan, because none of the goals they chose can be
+    /// planned by an engine Cyclift has today (owner decision 21 Nov 2026: every athlete completes onboarding; nobody
+    /// is silently given a cycling or strength programme). While it is true no session is ever generated — see
+    /// `Store.ensurePlan` and `Store.regenerate`. nil / false = the ordinary planned athlete. Additive.
+    var profileOnly: Bool? = nil
+    var isProfileOnly: Bool { profileOnly == true }
     /// Monotonic version of the shared athlete settings; bumped on every change the rider makes. Drives profile sync.
     var version: UInt32 = 1
     var updatedAt: Date = Date()
@@ -235,6 +241,7 @@ struct RiderProfile: Codable, Equatable {
         activities = try? c.decodeIfPresent([String].self, forKey: .activities)
         activityGoals = try? c.decodeIfPresent([String].self, forKey: .activityGoals)
         mainGoalID = try? c.decodeIfPresent(String.self, forKey: .mainGoalID)
+        profileOnly = try? c.decodeIfPresent(Bool.self, forKey: .profileOnly)
         version = try c.decodeIfPresent(UInt32.self, forKey: .version) ?? 1
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
         gender = try c.decodeIfPresent(String.self, forKey: .gender)
@@ -1103,6 +1110,8 @@ final class Store: ObservableObject {
     /// already exists is never rebuilt here (a removed session used to trigger a rebuild that dropped hand edits,
     /// assigned routines and done flags). Called at launch and when the calendar day changes.
     func ensurePlan(now: Date = Date()) {
+        // A profile-only athlete has no training plan: nothing is generated for them, at launch or on a new day.
+        guard !profile.isProfileOnly else { return }
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
         let weekday = (cal.component(.weekday, from: today) + 5) % 7   // Monday = 0
@@ -1389,6 +1398,8 @@ final class Store: ObservableObject {
 
     @discardableResult
     func regenerate(weekOf date: Date, replaceEdited: Bool) -> [String] {
+        // A profile-only athlete has no training plan: a rebuild never invents one.
+        guard !profile.isProfileOnly else { return [] }
         let cal = Calendar.current
         let d0 = cal.startOfDay(for: date)
         let wd = (cal.component(.weekday, from: d0) + 5) % 7

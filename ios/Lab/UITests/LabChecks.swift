@@ -880,7 +880,7 @@ final class LabChecks: XCTestCase {
         var n = 0; while !sauna.exists && n < 4 { app.swipeUp(); n += 1 }
         // Owner decision 20 Nov 2026 (23:04, multi-sport roster): every catalogue activity can be selected; one Cyclift
         // does not support says so in words. The earlier check required "Coming later" and that it could not be chosen.
-        XCTAssertTrue(sauna.exists && sauna.label.contains("not planned or recorded yet"), "an unsupported activity says so in words (\(sauna.label))")
+        XCTAssertTrue(sauna.exists && sauna.label.contains("plans coming soon"), "an activity without a plan yet says so simply (wording of 21 Nov 2026) (\(sauna.label))")
         shot("journey-2c-library")
         app.buttons["libraryDone"].firstMatch.tap()
         XCTAssertTrue(next.waitForExistence(timeout: 8) && next.isEnabled); next.tap()

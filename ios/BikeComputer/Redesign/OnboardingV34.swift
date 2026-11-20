@@ -33,6 +33,8 @@ struct OnboardingV34View: View {
     @State private var holdProgress: CGFloat = 0
     @State private var holding = false
     @State private var welcomeLeaving = false
+    /// True once Build your week has been shown in this run of onboarding.
+    @State private var sawWeek = false
     /// About you: why a typed weight or height is not accepted (shown above Continue).
     @State private var aboutIssue: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -96,7 +98,7 @@ struct OnboardingV34View: View {
             .toolbar(.hidden, for: .navigationBar)
             .onAppear(perform: resume)
             .onChange(of: a) { _, _ in OnboardingFlow.commit(a, to: store) }
-            .onChange(of: page) { _, p in store.onboardingStage = p == 0 ? 0 : Self.stageBase + p }
+            .onChange(of: page) { _, p in store.onboardingStage = p == 0 ? 0 : Self.stageBase + p; if p >= 4 && p < Self.pages { sawWeek = true } }
             .sheet(isPresented: $library) { RosterLibrarySheet(sports: sportsBinding).cyThemeRoot() }
         }
         .accessibilityElement(children: .contain)
@@ -158,9 +160,9 @@ struct OnboardingV34View: View {
         case 1: return aboutIssue == nil && BodyMeasure.aboutYouComplete(name: a.name, dateOfBirth: a.dateOfBirth, weightKg: a.weightKg, heightCm: a.heightCm)
         // 21 Nov 2026: any roster continues to Goals; cycling and gym training are not a condition of having a roster
         case 2: return !roster.isEmpty
-        // A plan is only ever built from a goal the planner knows, for a roster it can plan. A roster Cyclift cannot plan
-        // stops here with its goals saved — no week, sessions or plan are invented for it.
-        case 3: return roster.mode != nil && !goalSelection.plannerGoals.isEmpty
+        // Every athlete continues with at least one goal (owner decision 21 Nov 2026). Whether a plan is built is decided
+        // by `planPossible`; without one the athlete goes straight to a profile-only Blueprint.
+        case 3: return !goalSelection.ids.isEmpty
         case 4: return !OnboardingWeek.feasibility(a.week ?? proposedWeek, mode: mode, ride: a.rideMinutes ?? OnboardingWeek.defaultRideMinutes,
                                                    lift: a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes, strengthLevel: a.strengthLevel).blocking
         default: return true
@@ -169,7 +171,13 @@ struct OnboardingV34View: View {
     private var proposedWeek: [DayKind] {
         OnboardingWeek.propose(mode: mode, cyclingLevel: a.cyclingLevel ?? .intermediate, strengthLevel: a.strengthLevel, priority: a.priority ?? .balanced)
     }
+    /// A training plan can be built: a planned activity in the roster and a goal its planner knows, chosen by the athlete.
+    private var planPossible: Bool { RosterGoals.canPlan(roster: sports, selection: goalSelection) }
+
     private func next() {
+        // Profile-only: nothing chosen can be planned today. Build your week, Connect and calibrate and Athlete
+        // Evolution all describe a plan, so they are passed over; the Blueprint says what is saved.
+        if page == 3, !planPossible { page = Self.pages; return }
         if page == 3 {
             // what is shown on screen is the answer (the level chips start on the stored level)
             if a.cyclingLevel == nil, mode.includesCycling { a.cyclingLevel = store.profile.level }
@@ -182,7 +190,11 @@ struct OnboardingV34View: View {
 
     private var rail: some View {
         HStack(spacing: 5) {
-            Button { if !fromBlueprint { page -= 1 } else if canContinue { backToBlueprint() } } label: {
+            Button {
+                if fromBlueprint { if canContinue { backToBlueprint() } }
+                else if page == Self.pages, !planPossible { page = 3 }       // the profile-only Blueprint was reached from Goals
+                else { page -= 1 }
+            } label: {
                 Image(systemName: "chevron.left").font(.body.weight(.semibold)).foregroundStyle(theme.textPrimary)
                     .frame(width: 36, height: CyHit.min).contentShape(Rectangle())
             }
@@ -197,7 +209,8 @@ struct OnboardingV34View: View {
     }
     /// One slot of the blueprint rail (sheet Y1): a number until its page is finished, then the mark the page left.
     private func railSlot(_ i: Int) -> some View {
-        let done = i < page, here = i == page
+        // pages 4–6 were never visited by an athlete without a plan: they are not offered as places to go back to
+        let done = i < page && (planPossible || i <= 3), here = i == page
         return Button { if done { fromBlueprint = false; page = i } } label: {
             railMark(i, done: done, here: here)
                 .frame(maxWidth: .infinity).frame(height: 26)
@@ -308,9 +321,7 @@ struct OnboardingV34View: View {
             // says truthfully what Cyclift plans and records for it today.
             guard !roster.isEmpty else { return CoachLine(mark: "", tint: theme.textSecondary, before: "Choose what you train. You can add as many activities as you like.") }
             let support = AthleticRoster.supportLine(sports) ?? ""
-            if roster.mode == nil {
-                return CoachLine(mark: "◆", tint: theme.accent, strong: AthleticRoster.identity(sports) + ". ", after: support + " To build a training plan today, add cycling or gym training.")
-            }
+            if roster.mode == nil { return CoachLine(mark: "◆", tint: theme.accent, strong: AthleticRoster.identity(sports) + ". ", after: support) }
             return CoachLine(mark: "◆", tint: theme.accent, strong: AthleticRoster.identityLine(sports, priority: a.priority) + ". ", after: support)
         case 3:
             guard let g = a.primaryGoal ?? a.goals?.first else { return CoachLine(mark: "", tint: theme.textSecondary, before: "Pick at least one goal. The main goal shapes the sessions the Coach proposes.") }
@@ -322,10 +333,17 @@ struct OnboardingV34View: View {
         case 5: return CoachLine(mark: "◆", tint: theme.accent, strong: "Increases to your plan are presented for your approval.",
                                  after: " Reductions that protect recovery can be applied for you if you allow it. You can review why your plan changed.")
         case 6: return CoachLine(mark: "▲", tint: theme.success, before: "Your stage is earned by ", strong: "recorded training only", after: ". Nothing you answered here can raise or lower it.")
-        default: return CoachLine(mark: "◆", tint: theme.accent, strong: "Nothing is scheduled until you approve.", after: " Tap any part of the blueprint to change it first.")
+        default:
+            if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "No training plan is created.", after: " Your profile, sports and goals are saved, and you can change them first.") }
+            return CoachLine(mark: "◆", tint: theme.accent, strong: "Nothing is scheduled until you approve.", after: " Tap any part of the blueprint to change it first.")
         }
     }
-    private func backToBlueprint() { fromBlueprint = false; page = Self.pages }
+    /// Back to the Blueprint after an edit. If the edit made a plan possible for an athlete who had none, the week has
+    /// never been shown to them: they go to Build your week first, so no proposed week is approved unseen.
+    private func backToBlueprint() {
+        fromBlueprint = false
+        page = (planPossible && !sawWeek) ? 4 : Self.pages
+    }
     /// A Blueprint group opens the page it came from; that page's button returns here.
     private func editFromBlueprint(_ p: Int) { fromBlueprint = true; page = p }
 
@@ -347,6 +365,10 @@ struct OnboardingV34View: View {
             if fromBlueprint, page < Self.pages {
                 CyPrimaryButton(title: "Back to blueprint", isEnabled: canContinue, action: backToBlueprint)
                     .accessibilityIdentifier("onbBackToBlueprint")
+            } else if page == Self.pages, !planPossible {
+                // profile-only: nothing is approved because no plan exists; the profile is saved and the app opens
+                CyPrimaryButton(title: "Create my profile") { OnboardingFlow.createProfileOnly(a, store: store) }
+                    .accessibilityIdentifier("onbCreateProfile")
             } else if page == Self.pages {
                 CyPrimaryButton(title: "Approve my blueprint") { OnboardingFlow.approve(a, store: store) }
                     .accessibilityIdentifier("onbCreatePlan")
@@ -680,7 +702,7 @@ struct OnboardingV34View: View {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(group.title.uppercased()) GOALS").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
                         if !group.planned {
-                            Text("· saved, not planned yet").font(CyFont.caption).foregroundStyle(theme.textSecondary)
+                            Text("· saved · plans coming soon").font(CyFont.caption).foregroundStyle(theme.textSecondary)
                                 .accessibilityIdentifier("goalGroupSavedOnly-\(group.family?.rawValue ?? "general")")
                         }
                     }
@@ -759,7 +781,7 @@ struct OnboardingV34View: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(g.title), \(g.line)\(planned ? "" : ", saved, not planned yet")\(main ? ", main goal" : "")")
+            .accessibilityLabel("\(g.title), \(g.line)\(planned ? "" : ", saved, plans coming soon")\(main ? ", main goal" : "")")
             .accessibilityAddTraits(on ? .isSelected : [])
             .accessibilityIdentifier("goal-\(g.id)")
             if on {
@@ -818,8 +840,77 @@ struct OnboardingV34View: View {
 
     // MARK: 7 — Athletic Blueprint
 
-    private var pageBlueprint: some View {
-        OnbBlueprintPage(m: blueprintModel, onEdit: editFromBlueprint)
+    @ViewBuilder private var pageBlueprint: some View {
+        if planPossible { OnbBlueprintPage(m: blueprintModel, onEdit: editFromBlueprint) }
+        else { profileBlueprint }
+    }
+    /// The Blueprint of an athlete without a training plan (owner decision 21 Nov 2026): who they are, every sport they
+    /// selected with what Cyclift does for it today, their goals, and a plain statement that no plan is created. No
+    /// week, no session and no figure appears, because none exists.
+    private var profileBlueprint: some View {
+        let v = roster, sel = goalSelection
+        let all = v.mains + v.also
+        return VStack(alignment: .leading, spacing: CySpace.l) {
+            VStack(alignment: .leading, spacing: 4) {
+                (Text("07").foregroundColor(theme.accent) + Text(" · ATHLETIC BLUEPRINT").foregroundColor(theme.textSecondary))
+                    .font(CyFont.overline).tracking(1.2).accessibilityLabel("Page 7, Athletic Blueprint")
+                Text((a.name ?? "").trimmingCharacters(in: .whitespaces)).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
+                    .lineLimit(2).minimumScaleFactor(0.7).accessibilityAddTraits(.isHeader).accessibilityIdentifier("onbTitle")
+                Text(AthleticRoster.identity(sports)).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textSecondary)
+                    .accessibilityIdentifier("blueprintIdentity")
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                blueprintGroupHeader("Your sports", edit: 2, id: "blueprintEditSports")
+                ForEach(all) { x in
+                    HStack(spacing: CySpace.m) {
+                        Image(systemName: Self.symbol(x)).foregroundStyle(theme.textSecondary).frame(width: 26).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(x.title + (x == v.main ? " · main" : "")).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                            Text(x.planning != nil ? "Planning and recording work today" : "Saved · plans coming soon")
+                                .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .frame(minHeight: 48)
+                    .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("blueprintSport-\(x.id)")
+                }
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                blueprintGroupHeader("Your goals", edit: 3, id: "blueprintEditGoals")
+                ForEach(sel.ids.compactMap { RosterGoals.goal($0) }) { g in
+                    HStack(spacing: CySpace.m) {
+                        Image(systemName: sel.main == g.id ? "star.fill" : "circle.fill").font(sel.main == g.id ? .footnote : .system(size: 6))
+                            .foregroundStyle(sel.main == g.id ? theme.accent : theme.textSecondary).frame(width: 26).accessibilityHidden(true)
+                        Text(g.title + (g.family.map { " · " + ($0 == .walking ? "Walking" : $0 == .recovery ? "Mobility & recovery" : $0.title) } ?? "") + (sel.main == g.id ? " · main goal" : ""))
+                            .font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(minHeight: 44)
+                    .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("blueprintGoal-\(g.id)")
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("NO TRAINING PLAN YET").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
+                Text(all.contains { $0.planning != nil }
+                     ? "Your profile, sports and goals are saved. No training plan is created, because you chose no goal for a sport Cyclift plans today. Personalised plans for your other sports are coming soon."
+                     : "Your profile, sports and goals are saved. No training plan is created: personalised plans for your sports are coming soon. Nothing is scheduled for you.")
+                    .font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("blueprintNoPlan")
+            }
+        }
+    }
+    private func blueprintGroupHeader(_ title: String, edit page: Int, id: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title.uppercased()).font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
+            Spacer(minLength: CySpace.s)
+            Button("Change") { editFromBlueprint(page) }
+                .font(CyFont.caption.weight(.semibold)).foregroundStyle(theme.accent).frame(minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
+                .accessibilityLabel("Change \(title.lowercased())").accessibilityIdentifier(id)
+        }
     }
     private var blueprintModel: OnbBlueprintModel {
         let kinds = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? proposedWeek
@@ -884,7 +975,7 @@ struct OnboardingV34View: View {
         out.append(.init(id: "planChanges", title: "Plan changes", value: store.settings.autoAdapt ? "Auto-apply reductions" : "Always ask me", page: 5))
         // selected activities Cyclift does not plan yet — part of the athlete's roster, not "interests" (20 Nov 2026)
         let unplanned = (v.mains + v.also).filter { !$0.capability.plannable }.map(\.title)
-        if !unplanned.isEmpty { out.append(.init(id: "interests", title: "In your roster · not planned yet", value: unplanned.joined(separator: " · "), page: 2)) }
+        if !unplanned.isEmpty { out.append(.init(id: "interests", title: "Saved · plans coming soon", value: unplanned.joined(separator: " · "), page: 2)) }
         return out
     }
     private var measuredLine: String {
