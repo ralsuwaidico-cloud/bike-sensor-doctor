@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 20 Nov 2026, 19:05 (Dubai) · Screens recorded: 2
+Last updated: 20 Nov 2026, 22:10 (Dubai) · Screens recorded: 2
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -13,7 +13,7 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 | # | ID | Screen | Approved design | Implemented in code | Compiled | Simulator-verified | Physically verified on iPhone |
 |---|---|---|---|---|---|---|---|
 | 1 | ONB-01 | Welcome | YES | YES | YES | YES — with limits | NO |
-| 2 | ONB-02 | About You | YES | YES | YES | FUNCTION: YES — with limits. VISUAL: NOT YET | NO |
+| 2 | ONB-02 | About You | YES | YES | YES | YES — visual and functional | NO |
 
 ---
 
@@ -92,9 +92,9 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 ## Screen 2 — About You (ONB-02)
 
 - **Navigation location:** Onboarding · page 1 of 7, directly after Welcome. The same measurements are editable later in Profile › Personal details.
-- **Approval date:** 20 Nov 2026, 17:09 (design); revised and approved 18:24 (all four fields mandatory, compact units selector, simplified page)
-- **Approval status:** APPROVED DESIGN AND REQUIREMENTS — IMPLEMENTATION VERIFICATION PENDING
-- **Original design reference and source:** Onboarding v3.3 design sheet Y1, page 1 (15 Nov 2026) — previously an unapproved direction; approved by the owner on 20 Nov 2026 as the layout for this screen, with the modifications listed below. No drawing of the modified screen exists; the sheet image is kept as the reference until an accurate implementation screenshot has been verified.
+- **Approval date:** 20 Nov 2026, 17:09 (design); revised 18:24; implementation approved exactly as shown 22:00 (02_about_you_revision.png, commit 9dd5a862)
+- **Approval status:** APPROVED AND LOCKED — visually approved and functionally verified on the iPhone 15 Pro simulator. No further visual changes without the owner's approval
+- **Original design reference and source:** Canonical design: the implementation screenshots the owner approved on 20 Nov 2026 at 22:00 (board 02_about_you_revision.png, iPhone 15 Pro simulator, Obsidian, commit 9dd5a862). Origin: onboarding v3.3 design sheet Y1, page 1 (15 Nov 2026), with the owner's modifications of 17:09 and 18:24.
 - **Implementation commit:** 891d80aa (18:24 revision) on top of 848f015f (height, date sheet, BMI rule); checked at 9dd5a862 (branch ios/lab). Not in any TestFlight build.
 
 ### Exact approved wording
@@ -135,31 +135,34 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 
 | Stage | State | Evidence |
 |---|---|---|
-| Approved design | YES | Owner, 20 Nov 2026 17:09; requirements revised and approved 18:24. |
+| Approved design | YES | Owner: design 17:09, requirements 18:24, implementation as shown 22:00 (20 Nov 2026). |
 | Implemented in code | YES | Commit 891d80aa. BMI is calculated but not displayed on any screen. |
 | Compiled | YES | Fast check 27 (run 44754061376) built the Lab app at commit 9dd5a862. |
-| Simulator-verified | FUNCTION: YES — with limits. VISUAL: NOT YET | iPhone 15 Pro simulator, Obsidian, fast check 27: Continue disabled on an empty page and with one, two or three of the four fields; the page names what is missing; an impossible height (17 cm) is named and blocks Continue; all four valid values enable it; no 'optional' label and no old paragraph; date typed as day/month/year with no wheel; 31 April, 29 February 1999 and a 2090 birthday each rejected with their reason, Cancel stores nothing, 29 February 2000 accepted and shown; the units menu offers Metric and Imperial and is under 200 pt wide; Imperial shows 154 lb and 5 ft 9 in, Metric shows the unchanged 70 and 175 again; Back and Continue keep the answers; all four present and the page complete after closing and reopening; the seven-page journey still reaches an approved plan. The owner has not yet given a visual verdict. |
+| Simulator-verified | YES — visual and functional | Owner approved the screenshots at 22:00. iPhone 15 Pro simulator, Obsidian, fast check 27 (run 44754061376): Continue disabled on an empty page and with one, two or three of the four fields; the page names what is missing; an impossible height (17 cm) is named and blocks Continue; all four valid values enable it; no 'optional' label and no old paragraph; date typed as day/month/year with no wheel; 31 April, 29 February 1999 and a 2090 birthday each rejected with their reason, Cancel stores nothing, 29 February 2000 accepted and shown; the units menu offers Metric and Imperial and is under 200 pt wide; Imperial shows 154 lb and 5 ft 9 in, Metric shows the unchanged 70 and 175 again; Back and Continue keep the answers; all four present and the page complete after closing and reopening; the seven-page journey still reaches an approved plan. Lab app only. |
 | Physically verified on iPhone | NO | Nothing on this screen has been checked on a real iPhone. |
 
-- **Visual verification:** PENDING. Screenshots of the revised implementation were sent to the owner on 20 Nov 2026 (fast check 27); no verdict yet.
-- **Functional verification:** Simulator: fast check 27, as listed. Logic tests (19): BMI arithmetic, no BMI without two valid measurements, the four-field rule and its wording, weight and height limits in both unit systems, leap years, future dates, older records without a height still readable and not rejected.
+- **Visual verification:** APPROVED by the owner on 20 Nov 2026, 22:00, exactly as shown in 02_about_you_revision.png (commit 9dd5a862). Obsidian, iPhone 15 Pro simulator only.
+- **Functional verification:** VERIFIED on the iPhone 15 Pro simulator (Lab app): fast check 27, as listed. Logic tests (19): BMI arithmetic, no BMI without two valid measurements, the four-field rule and its wording, weight and height limits in both unit systems, leap years, future dates, older records without a height still readable and not rejected.
 
 ### Remaining work or limitations
 
-- Owner's visual verdict on the revised implementation.
-- Three implementation choices awaiting the owner's ruling: the small descriptions under the rows were removed; the line above Continue now says what is missing or out of range; the date sheet still has an empty gap above the keypad and a second "Done" pill.
+- OUTSTANDING — redesigned main app: this screen has not been run there since the change (the main-app check was updated to enter the new required fields but not run).
+- OUTSTANDING — accessibility: largest text sizes, VoiceOver labels and order, High Contrast and the other four themes are unchecked for this screen.
+- OUTSTANDING — physical iPhone: nothing on this screen has been checked on a real device (keyboard, date sheet, units menu).
+- OUTSTANDING — regression: the full Lab run and two other updated checks have not been run since the change.
 - Where BMI should be shown — it is calculated but appears nowhere; owner decision needed.
-- Limits chosen by the implementation, to be confirmed by the owner: height 120–230 cm; age 13–100 (the earlier wheel's limit). Weight keeps its existing 30–200 kg rule.
+- Limits in the approved implementation, for the record: height 120–230 cm; age 13–100; weight 30–200 kg.
 - Profile › Personal details still uses the date wheel (left for the Profile review); its new Height row has not been seen on the simulator.
-- Redesigned main app, full Lab regression, other themes, largest text size, real iPhone: not checked for this change.
 - Open observation: a hold on Welcome begun the instant the app launched did not open this page (cause not proven; see Screen 1).
 
 ### Images
 
-- `assets/S02_about_you_reference_v33_Y1_page1.png` — APPROVED DESIGN REFERENCE — onboarding v3.3 sheet Y1, page 1 (actual sheet image). Approved WITH MODIFICATIONS not drawn on it: a Height row; "Units: Metric ▾" compact selector in place of the full-width control; no "optional" labels; no paragraph above Continue; date of birth entered in a compact day / month / year sheet.
-- `assets/S02_impl_about-empty_sim_9dd5a862.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED BY THE OWNER. Empty page, Continue disabled. iPhone 15 Pro simulator, Obsidian, commit 9dd5a862 (fast check 27).
-- `assets/S02_impl_about_sim_9dd5a862.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. All four fields complete, same run.
-- `assets/S02_impl_dob-sheet_sim_9dd5a862.png` — IMPLEMENTATION — NOT YET VISUALLY VERIFIED. The date-of-birth sheet, same run.
+- `assets/S02_approved_about_sim_9dd5a862.png` — APPROVED DESIGN — as implemented. All four fields complete, Metric. iPhone 15 Pro simulator, Obsidian, commit 9dd5a862 (fast check 27). The yellow badge and Theme / Scenario / Restore controls are Cyclift Lab controls, not part of the screen.
+- `assets/S02_approved_about-empty_sim_9dd5a862.png` — APPROVED DESIGN. Empty page: Continue disabled, the line names what is missing.
+- `assets/S02_approved_dob-sheet_sim_9dd5a862.png` — APPROVED DESIGN. Date of birth typed as day, month and year.
+- `assets/S02_approved_units-menu_sim_9dd5a862.png` — APPROVED DESIGN. The compact units menu open.
+- `assets/S02_approved_about-imperial_sim_9dd5a862.png` — APPROVED DESIGN. Imperial: the same measurements shown in pounds and feet / inches.
+- `assets/S02_about_you_reference_v33_Y1_page1.png` — ORIGIN ONLY — NOT THE CANONICAL DESIGN. Onboarding v3.3 sheet Y1, page 1, from which the approved screen was developed.
 
 ### Decision history
 
@@ -168,3 +171,4 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 | 20 Nov 2026, 17:09 | Approved: the v3.3 reference layout with height, the compact date-of-birth entry, unit handling and the BMI rule. First name mandatory; date of birth, weight and height optional initially. | SUPERSEDED IN PART (optional fields) |
 | 20 Nov 2026, 18:24 | Revised and approved: all four fields mandatory with Continue disabled until valid and a clear indication of what to correct; compact "Units: Metric ▾" selector; "optional" labels and the bottom paragraph removed; date sheet preserved; existing athletes not forced through a migration. | IN FORCE |
 | 20 Nov 2026, 19:05 | Record only (no new decision): the 18:24 revision was implemented and passed its simulator check; visual verdict pending. | NOTE |
+| 20 Nov 2026, 22:00 | Approved exactly as shown in 02_about_you_revision.png, commit 9dd5a862: visually approved and functionally verified on the iPhone 15 Pro simulator. All four fields stay mandatory; compact units selector, direct date entry, validation and persistence preserved. No further visual changes without the owner's approval. | IN FORCE |

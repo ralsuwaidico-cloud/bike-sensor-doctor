@@ -101,8 +101,8 @@ def image_row(images, width, max_h):
     caps = []
     for f, c in images:
         approved = c.startswith("APPROVED")
-        cut = c.find(" — ") if approved else c.find(". ")
-        head, rest = (c[:cut + (0 if approved else 1)], c[cut + (3 if approved else 2):]) if cut > 0 else (c, "")
+        cut = c.find(". ")                      # the label is the first sentence
+        head, rest = (c[:cut + 1], c[cut + 2:]) if cut > 0 else (c, "")
         caps.append([Paragraph(esc(head), ParagraphStyle("ch", parent=CAPB, textColor=GOOD if approved else WARN)), Paragraph(esc(rest), CAP)])
     t = Table([pics, caps], colWidths=[col + (gap if i < n - 1 else 0) for i in range(n)], hAlign="LEFT")
     t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("ALIGN", (0, 0), (-1, 0), "LEFT"),
@@ -148,11 +148,19 @@ def pdf():
               Paragraph(f"<b>Status:</b> {esc(s['status'])}", ParagraphStyle("stt", parent=BODY, textColor=GOOD if s['status'].startswith('APPROVED AND LOCKED') else WARN)),
               Paragraph(f"<b>Approved:</b> {esc(s['approved_on'])}", BODY), Spacer(1, 4 * mm),
               image_row(s["images"][:1], width, 190 * mm)]
-        if len(s["images"]) > 1:
-            S += [PageBreak(), Paragraph(f"Screen {s['number']} — {esc(s['name'])} · current implementation", H1),
-                  Paragraph("Shown for information. These screenshots are NOT the approved design and have not been visually verified by the owner.",
+        rest = s["images"][1:]
+        approved_more = [x for x in rest if x[1].startswith("APPROVED")]
+        other = [x for x in rest if not x[1].startswith("APPROVED")]
+        for k in range(0, len(approved_more), 4):
+            S += [PageBreak(), Paragraph(f"Screen {s['number']} — {esc(s['name'])} · approved states", H1), Spacer(1, 3 * mm),
+                  image_row(approved_more[k:k + 4], width, 150 * mm)]
+        if other:
+            impl = any(x[1].startswith("IMPLEMENTATION") for x in other)
+            S += [PageBreak(), Paragraph(f"Screen {s['number']} — {esc(s['name'])} · " + ("current implementation" if impl else "origin"), H1),
+                  Paragraph("Shown for information. These screenshots are NOT the approved design and have not been visually verified by the owner." if impl
+                            else "Shown for the record only. This is where the approved design came from; it is not the canonical design.",
                             ParagraphStyle("w", parent=BODY, textColor=WARN)), Spacer(1, 4 * mm),
-                  image_row(s["images"][1:], width, 150 * mm)]
+                  image_row(other, width, 150 * mm)]
         S += [PageBreak(), Paragraph(f"Screen {s['number']} — {esc(s['name'])} · record", H1),
               Paragraph(f"<b>Design reference:</b> {esc(s['reference'])}", BODY),
               Paragraph("Exact approved wording", H2)]
