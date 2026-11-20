@@ -48,7 +48,21 @@ final class LabFastOnboarding: XCTestCase {
     /// Welcome → page 1 with a name → page 2 with road cycling and gym training → page 3 with Endurance. Ends on page 3.
     private func reachGoals(_ app: XCUIApplication, name: String) {
         let start = app.buttons["onboardingContinue"].firstMatch
-        XCTAssertTrue(start.waitForExistence(timeout: 30), "required: a new athlete starts at Welcome"); start.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 30), "required: a new athlete starts at Welcome")
+        // Owner's Screen 1 decision, 20 Nov 2026: hero, headline, one line, and a control HELD for three seconds.
+        // The earlier check tapped "Get started"; a tap must now do nothing, and so must a hold released early.
+        XCTAssertTrue(app.staticTexts["onbWelcomeHeadline"].firstMatch.exists, "required: the welcome headline")
+        XCTAssertEqual(app.staticTexts["onbWelcomeHeadline"].firstMatch.label, "Start your journey to a better lifestyle")
+        XCTAssertTrue(app.staticTexts["onbWelcomeLine"].firstMatch.exists, "required: the supporting line")
+        XCTAssertFalse(app.staticTexts["Cyclift"].exists, "the app name is not on the welcome screen")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Seven short pages' OR label CONTAINS[c] 'declared by you'")).firstMatch.exists, "the old paragraph and legend are gone")
+        shot("onb-0-welcome")
+        start.tap()
+        XCTAssertFalse(app.textFields["onbName"].firstMatch.waitForExistence(timeout: 2), "required: a tap does not start onboarding")
+        start.press(forDuration: 1.2)
+        XCTAssertFalse(app.textFields["onbName"].firstMatch.waitForExistence(timeout: 2), "required: a hold released early does not start onboarding")
+        XCTAssertTrue(start.exists, "still on Welcome after the early release")
+        start.press(forDuration: 3.6)
         page(app, 1)
         let field = app.textFields["onbName"].firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 8), "required: the name field"); field.tap(); field.typeText(name)

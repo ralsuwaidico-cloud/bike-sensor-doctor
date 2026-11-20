@@ -31,7 +31,9 @@ final class RedesignMainTests: XCTestCase {
         must(start, "Welcome", timeout: 40)
         XCTAssertFalse(el(app, "labThemeName").exists, "the main app carries no Cyclift Lab strip")
         must(el(app, "onboardingV34"), "the seven-page onboarding (redesign is on)")
-        shot("0-welcome"); start.tap()
+        shot("0-welcome")
+        // Welcome is held for three seconds since the owner's Screen 1 decision of 20 Nov 2026; a tap no longer starts onboarding.
+        start.press(forDuration: 3.6)
         let next = app.buttons["onboardingNext"].firstMatch
         func page(_ n: Int) {
             let p = app.staticTexts["onboardingProgress"].firstMatch

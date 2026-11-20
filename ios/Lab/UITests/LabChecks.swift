@@ -850,7 +850,8 @@ final class LabChecks: XCTestCase {
         app.launch()
         let start = app.buttons["onboardingContinue"].firstMatch
         XCTAssertTrue(start.waitForExistence(timeout: 30), "starts at Welcome (after the deletion test)"); shot("journey-0-welcome")
-        start.tap()
+        // Welcome is held for three seconds since the owner's Screen 1 decision of 20 Nov 2026; a tap no longer starts onboarding.
+        start.press(forDuration: 3.6)
         let next = app.buttons["onboardingNext"].firstMatch
         func page(_ n: Int) { XCTAssertTrue(app.staticTexts["onboardingProgress"].firstMatch.waitForExistence(timeout: 8) && app.staticTexts["onboardingProgress"].firstMatch.label.hasPrefix("\(n) of 7"), "onboarding page \(n) (\(app.staticTexts["onboardingProgress"].firstMatch.label))") }
         // 1 About you

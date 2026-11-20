@@ -28,6 +28,12 @@ struct OnboardingV34View: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var health: HealthAccess
     @State private var page = 0                 // 0 = welcome, 1…7
+    /// Welcome only: how far the hold-to-start ring has filled (0…1), whether a finger is down, and whether the
+    /// screen is dissolving away after a completed hold.
+    @State private var holdProgress: CGFloat = 0
+    @State private var holding = false
+    @State private var welcomeLeaving = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var a = OnboardingAnswers()
     @State private var ftpKnown = false
     @State private var ftpText = ""
@@ -51,15 +57,16 @@ struct OnboardingV34View: View {
 
     var body: some View {
         NavigationStack {
+            Group {
+            if page == 0 { welcomeScreen } else {
             VStack(spacing: 0) {
-                if page > 0 { rail }
+                rail
                 // Simulator run 17: all pages share this one scroll view, which kept its position from page to page and
                 // after the keyboard, so a page could rest with its title under the rail. Every page now opens at its top.
                 ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: CySpace.l) {
                         switch page {
-                        case 0: welcome
                         case 1: pageAbout
                         case 2: pageRoster
                         case 3: pageGoals
@@ -77,7 +84,10 @@ struct OnboardingV34View: View {
                 .onChange(of: page) { _, _ in proxy.scrollTo(Self.topID, anchor: .top) }
                 .onChange(of: toTop) { _, _ in withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(Self.topID, anchor: .top) } }
                 }
-                if page > 0 { bottom }
+                bottom
+            }
+            .transition(.opacity)
+            }
             }
             .background(theme.background.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
@@ -310,22 +320,98 @@ struct OnboardingV34View: View {
     }
 
     // MARK: 0 — Welcome
+    //
+    // Owner's approved direction for this screen, 20 Nov 2026 ("Screen 1 final decision"): the singularity as the hero,
+    // one headline, one supporting line and a circular control that is HELD for three seconds; the screen then
+    // dissolves and About you appears. No logo, app name, legend or explanatory paragraph. Do not add to it.
+    // What "Get started" did is kept exactly: the athlete continues without an account and page 1 opens.
+    // The hero is the app's existing flat singularity (the same one Progress draws); it does not move.
 
-    private var welcome: some View {
-        VStack(alignment: .leading, spacing: CySpace.xl) {
-            Spacer(minLength: 40)
-            HStack(spacing: 12) { CycliftMark(size: 52); Text("Cyclift").font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary) }
-            Text("Seven short pages build your Athletic Blueprint: who you are, what you train, what you aim for and the week that fits your life.")
-                .font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-            VStack(alignment: .leading, spacing: 6) {
-                provenance("●", "Declared by you")
-                provenance("◆", "Coach's proposal (rules-based)")
-                provenance("▲", "Measured evidence")
+    static let holdSeconds: Double = 3
+
+    private var welcomeScreen: some View {
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 24)
+                    SingularityPlaceholder(diameter: min(200, geo.size.width * 0.5), detail: 1)
+                        .frame(height: min(200, geo.size.width * 0.5) * 1.25)
+                        .accessibilityHidden(true)
+                    Spacer(minLength: 28).frame(maxHeight: 44)
+                    VStack(spacing: 14) {
+                        Text("Start your journey to a better lifestyle")
+                            .font(.system(.title, design: .rounded).weight(.semibold)).foregroundStyle(theme.textPrimary)
+                            .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader).accessibilityIdentifier("onbWelcomeHeadline")
+                        Text("See where you fit in the athletic world, and build a routine around your life.")
+                            .font(CyFont.body).foregroundStyle(theme.textSecondary)
+                            .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("onbWelcomeLine")
+                    }
+                    .padding(.horizontal, CySpace.s)
+                    Spacer(minLength: 32)
+                    holdToStart
+                    Spacer(minLength: 16).frame(maxHeight: 28)
+                }
+                .padding(.horizontal, CySpace.xl)
+                .frame(maxWidth: CyTheme.maxContentWidth).frame(maxWidth: .infinity)
+                .frame(minHeight: geo.size.height)
             }
-            Text("About two minutes · connections optional · everything stays on this iPhone").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            CyPrimaryButton(title: "Get started", systemImage: "arrow.right") { store.guest = true; page = 1 }
-                .accessibilityIdentifier("onboardingContinue")
+        }
+        .opacity(welcomeLeaving ? 0 : 1)
+        .scaleEffect(welcomeLeaving && !reduceMotion ? 1.04 : 1)
+        .blur(radius: welcomeLeaving && !reduceMotion ? 8 : 0)
+        .allowsHitTesting(!welcomeLeaving)
+    }
+
+    private var holdToStart: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Circle().stroke(theme.textSecondary.opacity(0.28), lineWidth: 3)
+                Circle().trim(from: 0, to: holdProgress)
+                    .stroke(theme.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Circle().fill(theme.textPrimary.opacity(holding ? 0.20 : 0.10)).padding(9)
+                    .scaleEffect(holding ? 0.94 : 1)
+            }
+            .frame(width: 88, height: 88)
+            .contentShape(Circle())
+            .onLongPressGesture(minimumDuration: Self.holdSeconds, maximumDistance: 60, perform: startOnboarding) { down in
+                guard !welcomeLeaving else { return }
+                if down {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeOut(duration: 0.15)) { holding = true }
+                    withAnimation(.linear(duration: Self.holdSeconds)) { holdProgress = 1 }
+                } else {
+                    // released early: the ring empties and nothing has started
+                    withAnimation(.easeOut(duration: 0.25)) { holding = false; holdProgress = 0 }
+                }
+            }
+            VStack(spacing: 3) {
+                Text("Hold to start").font(CyFont.headline).foregroundStyle(theme.textPrimary)
+                Text("Hold for 3 seconds").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Hold to start")
+        .accessibilityHint("Press and hold for 3 seconds")
+        .accessibilityAddTraits(.isButton)
+        // VoiceOver and Switch Control cannot hold a control for three seconds; their activation starts onboarding.
+        .accessibilityAction { startOnboarding() }
+        .accessibilityIdentifier("onboardingContinue")
+    }
+
+    /// The hold completed. Same effect as the earlier "Get started": continue without an account, open page 1 —
+    /// after the welcome screen has dissolved.
+    private func startOnboarding() {
+        guard !welcomeLeaving else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        store.guest = true
+        holdProgress = 1
+        withAnimation(.easeOut(duration: 0.45)) { welcomeLeaving = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            withAnimation(.easeIn(duration: 0.35)) { page = 1 }
+            holding = false; holdProgress = 0; welcomeLeaving = false
         }
     }
 
