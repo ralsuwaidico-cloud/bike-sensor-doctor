@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 21 Nov 2026, 01:00 (Dubai) · Screens recorded: 3
+Last updated: 21 Nov 2026, 01:30 (Dubai) · Screens recorded: 4
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -15,6 +15,7 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 | 1 | ONB-01 | Welcome | YES | YES | YES | YES — with limits | NO |
 | 2 | ONB-02 | About You | YES | YES | YES | YES — visual and functional | NO |
 | 3 | ONB-03 | Athletic Roster | YES | YES — selection only | YES | FUNCTION: PARTLY. VISUAL: NOT YET | NO |
+| 4 | ONB-04 | Goals | DIRECTION ONLY | NOT YET | NOT YET | NOT YET | NO |
 
 ---
 
@@ -256,3 +257,73 @@ The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in 
 |---|---|---|
 | 15 Nov 2026 | Onboarding v3.4 Athletic Roster selected as the page 2 design baseline (sheets Z1–Z6). | IN FORCE (visual) |
 | 20 Nov 2026, 23:04 | Z2 / Z3 approved as the Screen 3 visual baseline. Product requirement changed: multi-sport, extensible athletic roster; identity from selected activities; selection, recording and planning kept as separate concepts; no fake support. | IN FORCE |
+
+---
+
+## Screen 4 — Goals (ONB-04)
+
+- **Navigation location:** Onboarding · page 3 of 7, after the Athletic Roster.
+- **Approval date:** 21 Nov 2026, 00:30 (design direction: Build 6 goal cards with mandatory adjustments)
+- **Approval status:** DESIGN DIRECTION APPROVED — implementation and visual verification pending
+- **Original design reference and source:** The Build 6 implementation of this page (TestFlight build 6, commit 9b9d3a68; simulator screenshot from Lab run 44), chosen by the owner over the v3.3 sheet Y3 and the Build 7 rebuild, WITH MANDATORY ADJUSTMENTS. The screenshot shows a visible defect of Build 6 (text overlapping the lower cards) that the adjustments remove; it is the reference for the card design, not for the layout.
+- **Implementation commit:** Not yet verified. Implementation in progress on branch ios/lab.
+
+### Exact approved wording
+
+- **Page title:** What are you aiming for? (as in Build 6)
+- **Main-goal explanation:** Heading in the form "MUSCLE · MAIN GOAL", then a compact explanation of the selected main goal, e.g. "Build muscle through progressive strength training, with an emphasis on appropriate working sets and recovery." (owner's example)
+- **Note:** Other strings were not approved one by one.
+
+### Approved layout, visual elements and interactions
+
+- Build 6 goal-card design: compact icon-based cards; two columns where appropriate; clear sport categories; distinct selected states; main-goal star indicator; existing Obsidian design language. Keep the visual character; reduce unnecessary height and spacing.
+- At the standard iPhone 15 Pro display size all essential content fits on one screen without vertical scrolling. Text is not reduced until hard to read; nothing overlaps, is clipped, or hides behind the footer; Continue stays visible at the bottom.
+- Larger accessibility text sizes scroll instead of clipping.
+- The balance question (Cycling / Balanced / Strength) is NOT asked again; Screen 3 collected it and the stored preference is used.
+- The page adapts to the athlete's roster: cycling goals for a cycling athlete, strength goals for a strength athlete, both for a cycling/strength athlete, running goals for a runner, swimming goals for a swimmer, the relevant goals for a multisport athlete. Cycling and strength goals are not shown to every athlete.
+- Goals the existing planner supports are distinguished from goals that can be saved but cannot yet generate a sport-specific plan.
+- Multiple goals are allowed; exactly one is the main goal, marked by the star. Changing the main goal is intuitive and deletes no other goal.
+- A compact explanation of the selected main goal sits at the bottom of the content, immediately above Continue, and changes with the main goal.
+
+### Mandatory functionality and dependencies
+
+- Preserved: goal selection; multiple goals; main-goal selection; relevant experience levels; existing goal storage; planner integration; accurate training explanations; Back and Continue behaviour. Selections persist after Back and after reopening the app.
+- Cycling and lifting experience is kept where the current planner needs it; athletes of other sports are not asked irrelevant cycling or strength experience. No experience field the planner needs is removed without saying how it will be collected.
+- No workout prescriptions are invented for unsupported sports; no unsupported training calculations; no promise of programme capabilities the app does not have.
+- No change to the production app; existing athlete records are not overwritten.
+
+### Explicitly rejected alternatives
+
+- The v3.3 sheet Y3 layout and the Build 7 rebuild of this page as the card design.
+- Asking the Cycling / Balanced / Strength preference again on this page.
+- Showing cycling and strength goals to every athlete regardless of roster.
+- Inventing prescriptions or plans for sports Cyclift does not support.
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY | Owner, 21 Nov 2026 00:30. The final screenshot is not approved until the owner reviews the updated implementation. |
+| Implemented in code | NOT YET | Being written. |
+| Compiled | NOT YET |  |
+| Simulator-verified | NOT YET | To verify on the iPhone 15 Pro simulator: fits without scrolling at standard size; no overlap or clipping; correct categories; explanation updates; goals and main-goal changes persist; unsupported goals trigger no fabricated plan; Back and Continue keep selections; larger text scrolls. |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** PENDING — owner to review screenshots of: a cycling/strength athlete, a runner-only athlete, and a different main goal selected.
+- **Functional verification:** PENDING.
+
+### Remaining work or limitations
+
+- Implement only these Screen 4 changes; provide the three screenshots and the functional results.
+- Goal lists for sports without a planner (running, swimming, walking, mobility and recovery, bodyweight) do not exist in any approved document; the implementation's lists are provisional and need the owner's review.
+- After the owner's visual approval: Screen 5 — Build Your Week, three-column review.
+
+### Images
+
+- `assets/S04_goals_build6_reference_9b9d3a68.png` — APPROVED CARD DESIGN REFERENCE. Build 6 (commit 9b9d3a68), simulator screenshot. Approved WITH MANDATORY ADJUSTMENTS not shown: compact height, everything on one screen, no overlap, roster-dependent categories, main-goal explanation above Continue.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 21 Nov 2026, 00:30 | Build 6 goal-card design chosen with mandatory adjustments: one screen without scrolling, no repeated balance question, goals follow the roster, planned and saved-only goals distinguished, multiple goals with exactly one main goal, main-goal explanation above Continue, experience only where the planner needs it. | IN FORCE |
