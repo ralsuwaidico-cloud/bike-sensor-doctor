@@ -1,6 +1,6 @@
-# Cyclift Lab — TestFlight upload. Owner approval of 19 Nov 2026, 17:07 (Dubai): Cyclift Lab 0.1.0 build 6 built
-# exclusively from commit 9b9d3a6878bcc44473178bca2df0ca0432384fdb, internal testers only, using the signed-app checks.
-# (Earlier: 59e2f033 as build 3, 16 Nov; 8ba4f4e1 as build 4, 18 Nov; b48f6c58 as build 5, 19 Nov 2026.) This workflow uploads NOTHING ELSE:
+# Cyclift Lab — TestFlight upload. Owner approval of 20 Nov 2026, 13:42 (Dubai): Cyclift Lab 0.1.0 build 7 built
+# exclusively from commit 19340b0921578410d5824ca19abc3d682e0f4bd5, internal testers only, using the signed-app checks.
+# (Earlier: 59e2f033 as build 3, 16 Nov; 8ba4f4e1 as build 4, 18 Nov; b48f6c58 as build 5, 9b9d3a68 as build 6, 19 Nov 2026.) This workflow uploads NOTHING ELSE:
 # the approved commit is fixed below, the run checks out exactly that commit before anything is built — so no newer
 # development commit can be in the app — and the upload is refused unless every check on the signed app passes. The
 # file that is checked is the file that is uploaded (same run, same .ipa). It never touches the production Cyclift
@@ -16,7 +16,7 @@ concurrency:
   group: lab-upload
   cancel-in-progress: false
 env:
-  APPROVED: 9b9d3a6878bcc44473178bca2df0ca0432384fdb
+  APPROVED: 19340b0921578410d5824ca19abc3d682e0f4bd5
 jobs:
   upload:
     runs-on: macos-26

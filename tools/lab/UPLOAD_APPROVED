@@ -1,2 +1,2 @@
-9b9d3a6878bcc44473178bca2df0ca0432384fdb
-Approved by the owner in writing, 19 Nov 2026 17:07 (Dubai): Cyclift Lab 0.1.0 build 6 from this exact commit only, internal testers only; nothing newer (P06, onboarding page 3) may be included. Gates on this commit: Lab run 44 (13 of 13, isolation ok), signed-build check run 5, iOS run 301 (journeys and redesigned main app).
+19340b0921578410d5824ca19abc3d682e0f4bd5
+Approved by the owner in writing, 20 Nov 2026 13:42 (Dubai): Cyclift Lab 0.1.0 build 7 from exactly this commit, internal TestFlight only; no additional code changes; no production merge or external release. Gates on this commit: Lab run 46 (13 of 13, isolation ok), signed-build check run 6, iOS run 305 (journeys and redesigned main app 7 of 7), fast checks 20 and 21 (39 focused journey checks).
