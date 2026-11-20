@@ -901,7 +901,8 @@ final class LabChecks: XCTestCase {
         // 7 Blueprint
         page(7)
         let identity = app.staticTexts["blueprintIdentity"].firstMatch
-        XCTAssertTrue(identity.waitForExistence(timeout: 8) && identity.label == "Road cycling + Gym training · balanced", "the Blueprint names the roster (\(identity.label))")
+        // Owner decision 20 Nov 2026 (23:04): the identity is derived from the selected sports — "Cycling/Strength hybrid" — where it used to list the two activity names.
+        XCTAssertTrue(identity.waitForExistence(timeout: 8) && identity.label == "Cycling/Strength hybrid · balanced", "the Blueprint names the roster (\(identity.label))")
         XCTAssertTrue(app.staticTexts["blueprintWeekTotals"].firstMatch.exists, "the proposed week's totals")
         shot("journey-7-blueprint")
         app.buttons["onbCreatePlan"].firstMatch.tap()

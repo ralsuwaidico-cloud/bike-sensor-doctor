@@ -422,7 +422,8 @@ final class LabFastOnboarding: XCTestCase {
         page(app, 7)
         XCTAssertEqual(app.staticTexts["onbTitle"].firstMatch.label, "Sam", "required: the blueprint is headed by the athlete's name")
         let identity = app.staticTexts["blueprintIdentity"].firstMatch
-        XCTAssertTrue(identity.exists && identity.label == "Road cycling + Gym training · balanced", "required: the roster line (\(identity.label))")
+        // Owner decision 20 Nov 2026 (23:04): the identity is derived from the selected sports — "Cycling/Strength hybrid" — where it used to list the two activity names.
+        XCTAssertTrue(identity.exists && identity.label == "Cycling/Strength hybrid · balanced", "required: the roster line (\(identity.label))")
         need(app, "blueprintSports", "the sport line-up")
         for id in ["blueprintSport-roadCycling", "blueprintSport-strength"] { XCTAssertTrue(need(app, id, "a main sport").label.contains("main"), "required: \(id) is a main sport") }
         XCTAssertTrue(need(app, "blueprintMainGoal", "the main goal").label.contains("Endurance"), "required: the main goal is named")

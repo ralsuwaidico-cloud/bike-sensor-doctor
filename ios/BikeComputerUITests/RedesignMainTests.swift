@@ -61,7 +61,8 @@ final class RedesignMainTests: XCTestCase {
         page(6); must(app.staticTexts["onbEvolutionStage"].firstMatch, "the no-stage statement"); next.tap()
         page(7)
         let identity = app.staticTexts["blueprintIdentity"].firstMatch
-        must(identity, "Blueprint identity"); XCTAssertEqual(identity.label, "Road cycling + Gym training · balanced")
+        // Owner decision 20 Nov 2026 (23:04): the identity is derived from the selected sports — "Cycling/Strength hybrid" — where it used to list the two activity names.
+        must(identity, "Blueprint identity"); XCTAssertEqual(identity.label, "Cycling/Strength hybrid · balanced")
         shot("7-blueprint")
         let approve = app.buttons["onbCreatePlan"].firstMatch; must(approve, "Approve my plan"); approve.tap()
 
