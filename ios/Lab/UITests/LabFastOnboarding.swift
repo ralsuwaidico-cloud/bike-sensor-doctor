@@ -596,6 +596,11 @@ final class LabFastOnboarding: XCTestCase {
 
         // a day changes only when confirmed
         tap(app, app.buttons["onbDay-0"].firstMatch, "open Monday")
+        if !el(app, "onbDayEditorDay").waitForExistence(timeout: 8) {
+            // what the editor does contain, so a missing day name can be explained and not guessed at
+            let inside = el(app, "onbDayEditor").descendants(matching: .any).allElementsBoundByIndex.prefix(30).map { "\($0.elementType.rawValue)|\($0.identifier)|\($0.label)" }
+            XCTFail("required: the day editor names the day. It contains: \(inside)")
+        }
         XCTAssertEqual(need(app, "onbDayEditorDay", "the day editor").label, "Monday")
         for a in ["roadCycling", "strength", "running"] { need(app, "onbAct-\(a)", "\(a) from the roster") }
         for a in ["swimming", "walking", "mobility"] { XCTAssertFalse(app.buttons["onbAct-\(a)"].firstMatch.exists, "required: \(a) is not in this roster and is not offered") }

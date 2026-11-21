@@ -529,13 +529,19 @@ struct OnbWeekPage: View {
         let changed = draft != saved
         // header: the day; whether what is shown is confirmed or not yet; and Rest, always in the same place
         HStack(spacing: 6) {
+            // each is its own accessibility element with its own identifier (check 38: the day name could not be
+            // found by its identifier once it shared the row with the tag; cause not established)
             Text(day).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).lineLimit(1)
-                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("onbDayEditorDay")
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(day).accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("onbDayEditorDay")
             Text(changed ? "Not confirmed yet" : "Confirmed")
                 .font(CyDyn.f(11, .semibold)).foregroundStyle(changed ? theme.warning : theme.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.8)
                 .padding(.horizontal, 7).padding(.vertical, 2)
                 .background(Capsule().fill((changed ? theme.warning : theme.textSecondary).opacity(0.14)))
-                .lineLimit(1).minimumScaleFactor(0.8)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(changed ? "Not confirmed yet" : "Confirmed")
                 .accessibilityIdentifier("onbDayEditorState")
             Spacer(minLength: 4)
             chip("Rest", spoken: "Rest", icon: "moon", on: draft.isEmpty, tint: nil, id: "onbDayRest") { draft = [] }
