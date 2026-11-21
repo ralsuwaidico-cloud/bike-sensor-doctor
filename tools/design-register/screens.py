@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "22 Nov 2026, 00:10 (Dubai)"
+UPDATED = "22 Nov 2026, 01:40 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -357,7 +357,7 @@ SCREENS = [
         number=5, id="ONB-05", name="Build Your Week",
         location="Onboarding · page 4 of 7, after Goals. Every athlete builds their week here, including athletes whose sports have no planner yet.",
         approved_on="21 Nov 2026, 21:18 (design direction with required changes)",
-        status="DESIGN DIRECTION APPROVED — implementation and final visual verification pending",
+        status="VISUAL REFINEMENT REQUESTED (22 Nov 2026, 01:03) — final approval pending",
         reference="The layout the owner chose from the Screen 5 comparison board (05_build_your_week.png): compact seven-day calendar, day editor, weekly totals, "
                   "equipment selector and Continue — WITH REQUIRED CHANGES. The owner's own screenshot was not received with the decision; the layout is taken "
                   "to be the current-implementation column of the board, whose elements match the decision's list. To be confirmed at visual review. Origin: "
@@ -375,7 +375,15 @@ SCREENS = [
                 "The calendar shows each day's selected activity and its duration.",
                 "Weekly summary: total duration, number of sessions, training days, rest days, sport breakdown where space permits; updated immediately on every edit.",
                 "Equipment selector retained, shown only when relevant to the selected activities (strength); never required of a runner-only or swimmer-only athlete."],
-        mandatory=["Continue stays disabled until at least one valid training day is configured.",
+        mandatory=["REFINEMENT 22 Nov 01:03 — calendar tiles show ONLY the weekday and the activity icon(s): no duration numbers; a rest day shows a moon and a small "
+                   "'Rest' label; two sessions show two small icons; the selected-day outline stays. Durations stay editable in the day editor, which shows activity "
+                   "names and minutes. The weekly total and the compact sessions / training days / rest days summary stay beneath the calendar. Equipment stays "
+                   "conditional on relevant activities. Rest is a consistent, easy-to-find action in the editor. Unconfirmed day edits are clearly told apart from "
+                   "the confirmed week, without a large explanatory card.",
+                   "STRICT HEIGHT (22 Nov 01:03) — on the iPhone 15 Pro at standard text size everything fits without scrolling INCLUDING the expanded editor with two "
+                   "sessions, the weekly summary, relevant equipment and Continue; not by hiding required functionality, overlapping controls or unreadable text; "
+                   "tighter spacing and compact controls instead. Equipment is never silently hidden. Larger accessibility sizes may scroll.",
+                   "Continue stays disabled until at least one valid training day is configured.",
                    "New-user rule only: an existing athlete's saved schedule is preserved when editing or resuming; choices are not reset on return.",
                    "An activity per training day; each session's duration set independently — a duration on one day never silently changes another day; up to two "
                    "sessions on one day; a session can be changed or removed; choices persist through Back, Continue and reopening.",
@@ -419,12 +427,11 @@ SCREENS = [
         visual_verification="PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.",
         functional_verification="Lab simulator: passed at 83ed8066 (see stages). Not verified: larger text on this commit, other themes, redesigned main app, full Lab regression, physical iPhone.",
         remaining=["Owner's visual verdict on the screenshots (sent 21 Nov).",
-                   "For the owner's ruling: the equipment choice steps aside while a day is being edited (it would otherwise sit under Continue with two sessions open); "
-                   "with three roster activities the Rest chip wraps to a second row.",
+                   "Refinement of 22 Nov 01:03 written (branch ios/lab); simulator check and the two screenshots pending.",
                    "Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).",
                    "After approval: Screen 6, three-column comparison."],
         images=[("S05_week_impl_sim_83ed8066.png",
-                 "IMPLEMENTATION — NOT APPROVED. iPhone 15 Pro simulator, Obsidian, commit 83ed8066 (check 37). Left to right: all seven days at Rest; a "
+                 "SUPERSEDED — NOT APPROVED (minutes on the tiles; equipment hidden during an edit — refinement requested 22 Nov 01:03). iPhone 15 Pro simulator, Obsidian, commit 83ed8066 (check 37). Left to right: all seven days at Rest; a "
                  "running-only week; a multisport week with different durations and two-session days; the day editor with two sessions open."),
                 ("S05_week_comparison_board_75335114.png",
                  "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left two: design sheet Y4 (drawings). Middle: Build 6 (commit 9b9d3a68). Right two: the implementation "
@@ -434,6 +441,10 @@ SCREENS = [
                   "at standard text size.", "IN FORCE"),
                  ("21 Nov 2026, 22:22", "Five decisions: no both-sports requirement; activity variant is the session type; any two activities a day including the same "
                   "sport, stored separately; starting durations 60 / 30 minutes accepted; existing icons reused. Integration rule: the calendar is declared "
-                  "preferences, not a Coach plan. Screen 5 stays design direction approved — final visual approval pending.", "IN FORCE")],
+                  "preferences, not a Coach plan. Screen 5 stays design direction approved — final visual approval pending.", "IN FORCE"),
+                 ("22 Nov 2026, 00:10", "Record only (no decision): implementation sent for review (check 37, commit 83ed8066) with minutes on the calendar tiles and "
+                  "the equipment choice stepping aside during an edit.", "NOTE"),
+                 ("22 Nov 2026, 01:03", "Not approved as sent. Refinement: icon-only calendar tiles; Rest easy to find in the editor; unconfirmed edits distinguished; "
+                  "strict one-screen fit including the expanded two-session editor with equipment visible. Screens 1–4 untouched; Screen 6 waits.", "IN FORCE")],
     ),
 ]
