@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 21 Nov 2026, 22:40 (Dubai) · Screens recorded: 5
+Last updated: 21 Nov 2026, 23:00 (Dubai) · Screens recorded: 5
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -37,6 +37,10 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | INT-01 | Home | 21 Nov 2026, 20:50 | Home's training categories and icons reflect the athlete's actual sports. A runner must not see Cycling as their main Endurance card. | NOT IMPLEMENTED — for the Home review |
 | INT-02 | Train | 21 Nov 2026, 20:50 | Train's primary shortcuts are sport-aware. Other activities stay accessible, without presenting cycling as every athlete's default. | NOT IMPLEMENTED — for the Training Hub review |
 | INT-03 | Plan | 21 Nov 2026, 20:50 | Plan's 'Add a goal' flow respects the athlete's roster, with truthful handling when personalized planning is not yet available. | NOT IMPLEMENTED — for the Plan review |
+| INT-05 | Blueprint | 21 Nov 2026, 22:22 | The Blueprint shows the athlete's selected week, including sessions that are not yet prescribed. | NOT IMPLEMENTED — for the Blueprint review |
+| INT-06 | Home and Plan | 21 Nov 2026, 22:22 | Home and Plan must not lose or misrepresent the athlete's selected week. | NOT IMPLEMENTED — for the Home and Plan reviews |
+| INT-07 | Goals | 21 Nov 2026, 22:22 | The Goals summary distinguishes a provisional planner mix from the athlete's confirmed schedule. | NOT IMPLEMENTED — needs the owner's authorization to touch approved Screen 4 |
+| INT-08 | Icons (all screens) | 21 Nov 2026, 22:22 | Distinctive mobility, yoga and recovery icons — a later visual refinement. Until then the existing sport icon system is reused. | LATER REFINEMENT |
 | INT-04 | Goals (all screens) | 21 Nov 2026, 20:50 | Existing working goal names and planner mappings are retained. Goals are not renamed solely for cosmetic reasons. | IN FORCE — current behaviour |
 
 ## Summary
@@ -416,6 +420,12 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 - New-user rule only: an existing athlete's saved schedule is preserved when editing or resuming; choices are not reset on return.
 - An activity per training day; each session's duration set independently — a duration on one day never silently changes another day; up to two sessions on one day; a session can be changed or removed; choices persist through Back, Continue and reopening.
 - Feasibility warnings stay accurate.
+- DECIDED 21 Nov 22:22 — Continue depends only on at least one valid configured training session. A cycling-and-strength athlete is NOT required to schedule both sports; a roster activity need not appear in every week. The older both-sports rule is not applied, with safe handling: the planner plans exactly the sessions given.
+- DECIDED 22:22 — the selected activity variant IS the session type on this screen; workout prescription stays the planner's responsibility.
+- DECIDED 22:22 — any combination of two selected activities on a day, two of the same sport included; both stored separately; adding a second never replaces the first. The planner's constraints are kept separately: it is given only sessions it can genuinely handle, and nothing is fabricated or silently discarded.
+- DECIDED 22:22 — editable starting durations: 60 minutes for cycling, 30 minutes for other activities. Starting values, not prescriptions.
+- DECIDED 22:22 — the existing sport icon system is reused for now.
+- INTEGRATION RULE (22:22) — the calendar is the athlete's DECLARED TRAINING PREFERENCES, not a generated Coach plan. Any roster activity on any day. The planner consumes only what it can handle and never changes or discards the declared schedule; a week that cannot be fully planned keeps the chosen schedule with a truthful profile-only or partially planned outcome.
 - The page is the athlete's chosen availability and preferred activities, kept distinct from a generated training programme, and passed to the planner as authoritative input.
 - No training prescription is fabricated for a sport without a planning engine, and cycling or strength is never substituted for it. Continue still works for valid days of such sports, using the profile-only outcome where necessary.
 - Scope: Screen 5 and the minimum shared-model changes for athlete-selected activities and per-day durations. Screens 1–4 unchanged.
@@ -456,3 +466,4 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | When | Decision | State |
 |---|---|---|
 | 21 Nov 2026, 21:18 | Layout chosen with required changes: seven rest days on first entry; roster-based day editor with confirmation; independent durations; up to two sessions a day; fuller weekly summary; equipment only when relevant; truthful handling of sports without a planner; one screen at standard text size. | IN FORCE |
+| 21 Nov 2026, 22:22 | Five decisions: no both-sports requirement; activity variant is the session type; any two activities a day including the same sport, stored separately; starting durations 60 / 30 minutes accepted; existing icons reused. Integration rule: the calendar is declared preferences, not a Coach plan. Screen 5 stays design direction approved — final visual approval pending. | IN FORCE |
