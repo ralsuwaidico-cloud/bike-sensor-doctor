@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "22 Nov 2026, 01:40 (Dubai)"
+UPDATED = "22 Nov 2026, 02:30 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -410,7 +410,7 @@ SCREENS = [
                   "One ride length and one strength length applied to the whole week.",
                   "Large explanatory panels and technical wording.",
                   "Requiring an equipment choice from athletes with no strength training."],
-        commits="Implemented and checked at commit 83ed8066 (branch ios/lab). Not in any TestFlight build.",
+        commits="Refinement implemented and checked at commit 8dbbd54a (branch ios/lab); earlier version 83ed8066. Not in any TestFlight build.",
         stages=[("Approved design", "DIRECTION ONLY", "Owner, 21 Nov 2026 21:18. Not final visual approval."),
                 ("Implemented in code", "YES", "Commit 83ed8066, including the decisions of 22:22. Additive stored field for the chosen week; older records unchanged."),
                 ("Compiled", "YES", "Lab app built in focused check 37 (run 44935585991). Main-app build not run on this commit."),
@@ -423,14 +423,26 @@ SCREENS = [
                  "ride chosen; the seven-page journey reaches an approved plan with sessions only on chosen days. Logic: 600 tests, 0 failures. Earlier: check 35 "
                  "(run 44930790358) FAILED on an empty total reading '0 h' and the equipment row under Continue with two sessions open — both corrected. Checks 35 "
                  "and 36 also failed once each at launch (Welcome hold did not open page 1; cause unproven; passed in 37)."),
+                ("Simulator-verified — refinement of 22 Nov", "FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING", "Focused check 39, run 44952043241, "
+                 "commit 8dbbd54a, Build your week check passed: no minutes on the calendar tiles; Rest in the editor header; 'Confirmed' / 'Not confirmed yet' tag; "
+                 "the calendar and summary show the confirmed week during an edit and an unconfirmed edit is not saved; with a two-session day OPEN the calendar, "
+                 "editor, Confirm, summary, warning note, all four equipment choices and Continue are on one screen with no overlap and the title visible; plus all "
+                 "scheduling and persistence checks of check 37. Check 38 (run 44949793574, f2591ad2): runner and seven-page journeys passed; this check FAILED — "
+                 "the day name could not be found by its identifier (cause not established; day name and tag made separate elements). Runner and seven-page "
+                 "journeys were not re-run on 8dbbd54a."),
                 ("Physically verified on iPhone", "NO", "")],
         visual_verification="PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.",
         functional_verification="Lab simulator: passed at 83ed8066 (see stages). Not verified: larger text on this commit, other themes, redesigned main app, full Lab regression, physical iPhone.",
         remaining=["Owner's visual verdict on the screenshots (sent 21 Nov).",
-                   "Refinement of 22 Nov 01:03 written (branch ios/lab); simulator check and the two screenshots pending.",
+                   "Owner's visual verdict on the refined screenshots (sent 22 Nov).",
+                   "The '2 sessions' count was removed from the editor header to make room for the tag and Rest. A roster with more activities than one chip row "
+                   "wraps and may then need scrolling (checked with three activities).",
                    "Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).",
                    "After approval: Screen 6, three-column comparison."],
-        images=[("S05_week_impl_sim_83ed8066.png",
+        images=[("S05_week_refined_sim_8dbbd54a.png",
+                 "REFINED IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, commit 8dbbd54a (check 39). Left: multisport week, editor closed. "
+                 "Right: a two-session day with the editor expanded, equipment visible."),
+                ("S05_week_impl_sim_83ed8066.png",
                  "SUPERSEDED — NOT APPROVED (minutes on the tiles; equipment hidden during an edit — refinement requested 22 Nov 01:03). iPhone 15 Pro simulator, Obsidian, commit 83ed8066 (check 37). Left to right: all seven days at Rest; a "
                  "running-only week; a multisport week with different durations and two-session days; the day editor with two sessions open."),
                 ("S05_week_comparison_board_75335114.png",
