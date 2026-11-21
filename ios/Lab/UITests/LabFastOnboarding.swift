@@ -607,9 +607,9 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(el(app, "onbDay-0").label.hasSuffix(", rest") && !next.isEnabled, "required: Monday stays rest until it is confirmed")
         // a session is removed on its own row, without touching the other
         tap(app, app.buttons["onbAct-strength"].firstMatch, "add gym to Monday")
-        XCTAssertEqual(el(app, "onbDayEditorCount").label, "2 sessions")
+        XCTAssertTrue(need(app, "onbSession-1", "the second session's own row").exists)
         tap(app, app.buttons["onbSessionRemove-1"].firstMatch, "remove the gym session")
-        XCTAssertEqual(el(app, "onbDayEditorCount").label, "1 session"); XCTAssertEqual(el(app, "onbSession-0").label, "Road cycling", "required: the ride is still there")
+        XCTAssertFalse(el(app, "onbSession-1").exists, "required: one session is left"); XCTAssertEqual(el(app, "onbSession-0").label, "Road cycling", "required: the ride is still there")
         XCTAssertTrue(confirm.isEnabled); confirm.tap()
         XCTAssertTrue(el(app, "onbDay-0").label.contains("Road cycling 60 minutes"), "required: Monday is now the chosen ride (\(el(app, "onbDay-0").label))")
         XCTAssertEqual(el(app, "onbWeekTotal").label, "1 h"); XCTAssertEqual(el(app, "onbWeekCounts").label, "1 session · 1 training day · 6 rest days")
@@ -621,19 +621,17 @@ final class LabFastOnboarding: XCTestCase {
         // two sessions on one day, each with its own length; the equipment question arrives with strength
         tap(app, app.buttons["onbDay-2"].firstMatch, "open Wednesday")
         tap(app, app.buttons["onbAct-strength"].firstMatch, "gym on Wednesday"); tap(app, app.buttons["onbAct-running"].firstMatch, "and a run")
-        XCTAssertEqual(el(app, "onbDayEditorCount").label, "2 sessions")
+        XCTAssertTrue(need(app, "onbSession-1", "the second session's own row").exists)
         for _ in 0..<3 { app.buttons["onbLen-0Plus"].firstMatch.tap() }
         XCTAssertEqual(el(app, "onbLen-0Minutes").label, "45 min"); XCTAssertEqual(el(app, "onbLen-1Minutes").label, "30 min", "required: one session's length does not change the other's")
         XCTAssertFalse(app.buttons["onbAct-roadCycling"].firstMatch.isEnabled, "required: a third session is not offered")
-        // Check 35 found the equipment row under the Continue area in this state. The page now gives the open editor
-        // the room: the equipment choice is shown when no day is being edited, and required again below once confirmed.
         let line = need(app, "onbCoachLine", "the line above Continue")
+        XCTAssertEqual(need(app, "onbDayEditorState", "confirmed or not").label, "Not confirmed yet", "required: an unconfirmed edit is marked as such")
+        XCTAssertTrue(el(app, "onbDay-2").label.hasSuffix(", rest"), "required: the calendar still shows the confirmed week while the day is edited")
         XCTAssertTrue(confirm.isHittable && confirm.frame.maxY <= line.frame.minY + 1, "required: Confirm is above the Continue area with two sessions open (confirm \(confirm.frame), line \(line.frame))")
         for id in ["onbDayEditor", "onbWeekTotal", "onbWeekCounts", "onbWeekBySport"] {
             XCTAssertLessThanOrEqual(need(app, id, id).frame.maxY, line.frame.minY + 1, "required: with two sessions open \(id) is not under the Continue area (\(el(app, id).frame), line \(line.frame))")
         }
-        XCTAssertFalse(el(app, "onbEquipment").exists, "required: nothing is drawn under the Continue area while a day is edited")
-        app.settleForScreenshot(1); shot("onb-4-week-editing-two-sessions")
         confirm.tap()
         need(app, "onbEquipment", "the equipment choice, once a strength session is in the week")
         XCTAssertTrue(el(app, "onbDay-2").label.contains("Gym training 45 minutes") && el(app, "onbDay-2").label.contains("Road running 30 minutes"), "required: Wednesday holds both sessions (\(el(app, "onbDay-2").label))")
@@ -642,7 +640,7 @@ final class LabFastOnboarding: XCTestCase {
         // two sessions of the SAME activity on one day, stored separately with their own lengths (22:22); Monday is not changed
         tap(app, app.buttons["onbDay-5"].firstMatch, "open Saturday")
         tap(app, app.buttons["onbAct-roadCycling"].firstMatch, "a Saturday ride"); tap(app, app.buttons["onbAct-roadCycling"].firstMatch, "and a second ride")
-        XCTAssertEqual(el(app, "onbDayEditorCount").label, "2 sessions", "required: the second ride is added, not swapped for the first")
+        XCTAssertTrue(el(app, "onbSession-0").exists && el(app, "onbSession-1").exists, "required: the second ride is added, not swapped for the first")
         for _ in 0..<3 { app.buttons["onbLen-0Plus"].firstMatch.tap() }
         for _ in 0..<2 { app.buttons["onbLen-1Minus"].firstMatch.tap() }
         XCTAssertEqual(el(app, "onbLen-0Minutes").label, "90 min"); XCTAssertEqual(el(app, "onbLen-1Minutes").label, "40 min")
@@ -675,6 +673,30 @@ final class LabFastOnboarding: XCTestCase {
         for t in ["Gym", "Home", "Bodyweight", "Not sure"] { XCTAssertTrue(el(app, "onbEquipment").buttons[t].firstMatch.isHittable, "required: the \(t) equipment choice is visible") }
         XCTAssertTrue(next.frame.maxY <= window.maxY && next.frame.minY >= line.frame.maxY - 1, "required: Continue is visible below the line")
         app.settleForScreenshot(1); shot("onb-4-week-multisport")
+
+        // Owner's refinement, 22 Nov 2026: the calendar tiles carry icons only (minutes stay in the editor and in the
+        // spoken label), and the EXPANDED editor with two sessions, the summary, the equipment choice and Continue are
+        // all on the one screen. The check written on 21 Nov accepted the equipment choice stepping aside during an
+        // edit; that is no longer accepted — it must be visible here.
+        XCTAssertFalse(el(app, "onbWeek").staticTexts.matching(NSPredicate(format: "label MATCHES %@", "^[0-9]+$")).firstMatch.exists, "required: no minutes on the calendar tiles")
+        tap(app, app.buttons["onbDay-2"].firstMatch, "open Wednesday again")
+        XCTAssertEqual(el(app, "onbDayEditorState").label, "Confirmed", "required: a confirmed day is marked as confirmed")
+        XCTAssertEqual(el(app, "onbSession-0").label, "Gym training"); XCTAssertEqual(el(app, "onbLen-0Minutes").label, "45 min"); XCTAssertEqual(el(app, "onbLen-1Minutes").label, "30 min")
+        need(app, "onbDayRest", "Rest, in the editor header")
+        for id in ["onbWeek", "onbDayEditor", "onbDayConfirm", "onbSessionRemove-1", "onbWeekTotal", "onbWeekCounts", "onbWeekBySport", "onbFeasibility", "onbEquipment"] {
+            let e = need(app, id, id)
+            XCTAssertLessThanOrEqual(e.frame.maxY, line.frame.minY + 1, "required: expanded editor — \(id) is not under the Continue area (bottom \(e.frame.maxY), line starts \(line.frame.minY))")
+            XCTAssertGreaterThanOrEqual(e.frame.minY, title.frame.maxY - 1, "required: expanded editor — \(id) is below the title")
+        }
+        XCTAssertTrue(title.isHittable, "required: the title is still visible — the page did not need to scroll")
+        for t in ["Gym", "Home", "Bodyweight", "Not sure"] { XCTAssertTrue(el(app, "onbEquipment").buttons[t].firstMatch.isHittable, "required: expanded editor — the \(t) equipment choice is visible") }
+        XCTAssertTrue(el(app, "onbEquipment").frame.minY >= el(app, "onbWeekCounts").frame.maxY - 1 && el(app, "onbWeekTotal").frame.minY >= el(app, "onbDayEditor").frame.maxY - 1, "required: nothing overlaps")
+        app.settleForScreenshot(1); shot("onb-4-week-editing-two-sessions")
+        // an unconfirmed change is marked, and leaving the day without confirming changes nothing
+        app.buttons["onbLen-1Plus"].firstMatch.tap()
+        XCTAssertEqual(el(app, "onbDayEditorState").label, "Not confirmed yet"); XCTAssertEqual(el(app, "onbWeekTotal").label, "4 h 25 min", "required: the summary is the confirmed week")
+        tap(app, app.buttons["onbDay-2"].firstMatch, "close Wednesday without confirming")
+        XCTAssertTrue(el(app, "onbDay-2").label.contains("Road running 30 minutes"), "required: an unconfirmed edit is not saved (\(el(app, "onbDay-2").label))")
 
         // Continue and Back keep it; so does closing and reopening
         next.tap(); page(app, 5)
