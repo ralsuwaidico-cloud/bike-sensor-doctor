@@ -154,6 +154,19 @@ final class RosterGoalsTests: XCTestCase {
         XCTAssertEqual(ProfileOnlyText.goalTitle(s.profile), "Pace + 1 more")
         XCTAssertEqual(ProfileOnlyText.saved(s.profile), "Your running goals are saved. Personalized running plans are coming soon.")
     }
+    /// The training-mix bar is counted from a planned week, never from a table: sessions by kind, then free days.
+    func testTrainingMixIsCountedFromThePlannedWeek() {
+        let cal = Calendar(identifier: .gregorian)
+        let mon = cal.date(from: DateComponents(year: 2026, month: 11, day: 23))!
+        func w(_ d: Int, _ k: WorkoutKind) -> Workout { Workout(date: cal.date(byAdding: .day, value: d, to: mon)!, kind: k, minutes: 60) }
+        let week = [w(0, .strength), w(1, .endurance), w(2, .rest), w(3, .strength), w(4, .tempo), w(5, .long), w(5, .strength), w(6, .recoveryDay)]
+        let s = TrainingMix.shares(of: week, calendar: cal)
+        XCTAssertEqual(s, [.init(part: .easyRiding, count: 2), .init(part: .hardRiding, count: 1), .init(part: .strength, count: 3), .init(part: .rest, count: 2)])
+        XCTAssertEqual(TrainingMix.summary(s), "Easy riding 2, Hard riding 1, Strength 3, Rest 2")
+        XCTAssertEqual(TrainingMix.shares(of: [w(0, .strength), w(2, .strength)], calendar: cal).map(\.part), [.strength, .rest], "a strength-only week shows no riding")
+        XCTAssertTrue(TrainingMix.shares(of: [], calendar: cal).isEmpty, "no plan, no bar")
+        XCTAssertTrue(TrainingMix.shares(of: [w(0, .rest), w(1, .recoveryDay)], calendar: cal).isEmpty, "rest alone is not a training mix")
+    }
     /// The marker of an athlete without a plan is additive, off by default, and survives saving.
     func testProfileOnlyMarker() throws {
         XCTAssertFalse(RiderProfile().isProfileOnly)

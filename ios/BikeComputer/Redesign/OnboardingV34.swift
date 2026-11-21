@@ -381,24 +381,78 @@ struct OnboardingV34View: View {
         .background(theme.background)
     }
 
-    /// Goals page: the selected main goal, named and explained, immediately above Continue (owner decision 21 Nov 2026).
-    /// A planned goal shows the planner's own rule; a goal Cyclift cannot plan says that nothing is prescribed for it.
+    /// Goals page: the main-goal summary card, immediately above Continue (owner decisions 21 Nov 2026, 00:30 and 13:38;
+    /// visual basis: the Build 6 card). Heading, the goal's effect on training, the training-mix bar and its legend.
+    /// The bar is counted from the week the real planner proposes for these answers (`TrainingMix`); an athlete with
+    /// no plan gets the truthful sentence and NO bar.
     private var goalExplanation: some View {
         let sel = goalSelection
         let e = RosterGoals.explanation(main: sel.main, roster: sports, selection: sel)
-        return VStack(alignment: .leading, spacing: 3) {
+        let fam = sel.main.flatMap { RosterGoals.goal($0) }?.family
+        let tint: Color = e == nil ? theme.textSecondary : fam == .strength ? theme.strength : fam == nil || fam == .recovery ? theme.recovery : theme.endurance
+        let mix = e == nil ? [] : proposedMix
+        return VStack(alignment: .leading, spacing: 5) {
             Text((e?.title ?? "Your main goal").uppercased()).font(CyFont.overline).tracking(0.8)
-                .foregroundStyle(e == nil ? theme.textSecondary : theme.accent)
+                .foregroundStyle(tint)
                 .lineLimit(1).minimumScaleFactor(0.8)
                 .accessibilityIdentifier("onbMainGoalTitle")
             Text(e?.text ?? "Choose one or more goals. The first is your main goal; tap a star to change it.")
-                .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary)
-                .lineLimit(dts.isAccessibilitySize ? 8 : 3, reservesSpace: !dts.isAccessibilitySize)
+                .font(CyDyn.f(13)).foregroundStyle(e == nil ? theme.textSecondary : theme.textPrimary)
+                .lineLimit(dts.isAccessibilitySize ? 8 : 3)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityIdentifier("onbCoachLine")
+            if !mix.isEmpty { mixBar(mix) }
         }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(e == nil ? theme.surface : tint.opacity(0.14)))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onbGoalExplanation")
+    }
+    /// The mix of the week the planner proposes for the answers so far (the week chosen on page 4 once there is one).
+    private var proposedMix: [TrainingMix.Share] {
+        guard planPossible else { return [] }
+        let kinds = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? proposedWeek
+        let plan = OnboardingFlow.dryRun(a, store: store, kinds: kinds, ride: a.rideMinutes ?? OnboardingWeek.defaultRideMinutes,
+                                         lift: a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes, weekOffset: 1)   // next week: a whole week, never a part-elapsed one
+        return TrainingMix.shares(of: plan)
+    }
+    private func mixColor(_ p: TrainingMix.Part) -> Color {
+        switch p {
+        case .easyRiding: return theme.endurance.opacity(0.6)
+        case .hardRiding: return theme.endurance
+        case .strength: return theme.strength
+        case .other: return theme.recovery
+        case .rest: return theme.textTertiary.opacity(0.45)
+        }
+    }
+    private func mixBar(_ mix: [TrainingMix.Share]) -> some View {
+        let total = max(1, mix.reduce(0) { $0 + $1.count })
+        return VStack(alignment: .leading, spacing: 5) {
+            GeometryReader { geo in
+                HStack(spacing: 2) {
+                    ForEach(mix, id: \.part) { m in
+                        RoundedRectangle(cornerRadius: 3).fill(mixColor(m.part))
+                            .frame(width: max(4, (geo.size.width - CGFloat(2 * (mix.count - 1))) * CGFloat(m.count) / CGFloat(total)))
+                    }
+                }
+            }
+            .frame(height: 7)
+            HStack(spacing: 10) {
+                ForEach(mix, id: \.part) { m in
+                    HStack(spacing: 4) {
+                        Circle().fill(mixColor(m.part)).frame(width: 7, height: 7)
+                        Text(m.part.title).font(CyDyn.f(11, .semibold)).foregroundStyle(theme.textSecondary).lineLimit(1)
+                    }
+                }
+            }
+            .minimumScaleFactor(0.8)
+        }
+        .padding(.top, 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Proposed week")
+        .accessibilityValue(TrainingMix.summary(mix))
+        .accessibilityIdentifier("onbGoalMix")
     }
 
     // MARK: 0 — Welcome

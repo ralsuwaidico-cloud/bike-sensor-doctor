@@ -722,3 +722,50 @@ enum OnboardingOutcome {
         store.onboarded = true
     }
 }
+
+// MARK: - The training mix of a proposed week (Goals page summary card)
+//
+// Owner decision, 21 Nov 2026 (13:38): the main-goal card shows a segmented training-mix bar and its legend, and the
+// bar "must reflect the athlete's selected sports and actual proposed training distribution" — nothing hardcoded,
+// nothing invented. So the shares are COUNTED from a week the real planner produced for this athlete's answers (the
+// same dry run the Blueprint shows); `GoalInfo.emphasis`, a fixed table per goal, is not used for it. No planned
+// session in the week = no shares = no bar.
+enum TrainingMix {
+    enum Part: String, CaseIterable {
+        case easyRiding, hardRiding, strength, other, rest
+        var title: String {
+            switch self {
+            case .easyRiding: return "Easy riding"
+            case .hardRiding: return "Hard riding"
+            case .strength: return "Strength"
+            case .other: return "Other"
+            case .rest: return "Rest"
+            }
+        }
+    }
+    struct Share: Equatable { let part: Part; let count: Int }
+
+    static func part(of k: WorkoutKind) -> Part? {
+        switch k {
+        case .rest, .recoveryDay: return nil
+        case .strength: return .strength
+        case .mobility, .other: return .other
+        default: return k.zone >= 3 ? .hardRiding : .easyRiding       // rides: zone 3 and above is hard (as Workout.isHard)
+        }
+    }
+    /// Sessions of each kind in one planned week, then the days of the seven with no session. Empty when nothing is planned.
+    static func shares(of week: [Workout], calendar cal: Calendar = .current) -> [Share] {
+        var n: [Part: Int] = [:]
+        var days = Set<Date>()
+        for w in week {
+            guard let p = part(of: w.kind) else { continue }
+            n[p, default: 0] += 1
+            days.insert(cal.startOfDay(for: w.date))
+        }
+        guard !days.isEmpty else { return [] }
+        n[.rest] = max(0, 7 - days.count)
+        return Part.allCases.compactMap { p in (n[p] ?? 0) > 0 ? Share(part: p, count: n[p] ?? 0) : nil }
+    }
+    /// "Easy riding 2, Hard riding 1, Strength 3, Rest 2" — what VoiceOver and the checks read.
+    static func summary(_ s: [Share]) -> String { s.map { "\($0.part.title) \($0.count)" }.joined(separator: ", ") }
+}

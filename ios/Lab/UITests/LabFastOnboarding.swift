@@ -387,6 +387,15 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(mainGoalTitle(app), "MUSCLE · MAIN GOAL", "required: the first goal chosen is the main goal")
         XCTAssertTrue(goalText(app).contains("8–12 reps"), "required: the explanation is the planner's own rule for Muscle (\(goalText(app)))")
         XCTAssertTrue(next.isEnabled, "required: Continue with a goal Cyclift can plan")
+        // the main-goal summary card (owner, 21 Nov 13:38): training-mix bar and legend, counted from the proposed week
+        let mix = need(app, "onbGoalMix", "the training-mix bar and legend in the main-goal card")
+        let muscleMix = mix.value as? String ?? ""
+        XCTAssertTrue(muscleMix.contains("Strength") && muscleMix.contains("riding"), "required: the mix of a cycling and strength athlete names riding and strength (\(muscleMix))")
+        XCTAssertFalse(muscleMix.contains("Run") || muscleMix.contains("Swim"), "required: no sport the athlete did not choose (\(muscleMix))")
+        let card = el(app, "onbGoalExplanation").frame
+        XCTAssertTrue(mix.frame.minY >= card.minY && mix.frame.maxY <= card.maxY + 1 && card.maxY <= next.frame.minY + 1, "required: the bar is inside the card and the card is above Continue (bar \(mix.frame), card \(card), Continue \(next.frame))")
+        for id in ["goal-fitness", "onbCyclingLevel", "onbStrengthLevel"] { XCTAssertLessThanOrEqual(el(app, id).frame.maxY, card.minY + 1, "required: \(id) is not under the summary card") }
+        print("MIX muscle: \(muscleMix)")
         el(app, "goal-endurance").tap(); el(app, "goal-fitness").tap()
         XCTAssertEqual(mainGoalTitle(app), "MUSCLE · MAIN GOAL", "required: adding goals does not move the main goal")
         for g in ["muscle", "endurance", "fitness"] { XCTAssertTrue(app.buttons["goalStar-\(g)"].firstMatch.exists, "required: \(g) is selected") }
@@ -397,6 +406,10 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(goalText(app).contains("Zone 2"), "required: the explanation follows the main goal (\(goalText(app)))")
         for g in ["muscle", "endurance", "fitness"] { XCTAssertTrue(app.buttons["goalStar-\(g)"].firstMatch.exists, "required: changing the main goal deletes no other goal (\(g))") }
         XCTAssertEqual(app.buttons["goalStar-muscle"].firstMatch.value as? String, ""); XCTAssertEqual(app.buttons["goalStar-endurance"].firstMatch.value as? String, "Main goal")
+        let enduranceMix = need(app, "onbGoalMix", "the training-mix bar with Endurance as the main goal").value as? String ?? ""
+        XCTAssertTrue(enduranceMix.contains("riding") && enduranceMix.contains("Strength"), "required: the mix is still this athlete's proposed week (\(enduranceMix))")
+        print("MIX endurance: \(enduranceMix)")
+        for id in ["goal-fitness", "onbCyclingLevel", "onbStrengthLevel"] { XCTAssertLessThanOrEqual(el(app, id).frame.maxY, el(app, "onbGoalExplanation").frame.minY + 1, "required: \(id) is not under the summary card (Endurance)") }
         app.settleForScreenshot(1); shot("onb-3-goals-main-changed")
 
         // a level the planner needs, as one compact menu
@@ -439,6 +452,7 @@ final class LabFastOnboarding: XCTestCase {
         app.buttons["goalStar-runPace"].firstMatch.tap()
         XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: the runner's main goal is named")
         let text = goalText(app)
+        XCTAssertFalse(el(app, "onbGoalMix").exists, "required: no training-mix bar for an athlete without a plan — nothing is proposed, so nothing is charted")
         XCTAssertTrue(text.contains("Your running goals are saved") && text.contains("coming soon"), "required: saved, plans coming soon (\(text))")
         for word in ["Zone", "reps", "interval", " km", "FTP", "nsupported", "not supported", "not implemented", "navailable"] {
             XCTAssertFalse(text.contains(word), "required: no prescription and no technical wording ('\(word)') in: \(text)")
