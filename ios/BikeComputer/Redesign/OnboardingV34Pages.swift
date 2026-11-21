@@ -458,7 +458,9 @@ struct OnbWeekPage: View {
             OnbWeekStrip(kinds: [], ride: 0, lift: 0, sessions: w, selected: selected) { i in open(i, w) }
             editor(w)
             summary(w)
-            if showsEquipment(w) { equipment }
+            // while a day is being edited the editor has the room (check 35: with two sessions open the equipment row
+            // went under the Continue area); the equipment choice returns the moment the day is confirmed or closed
+            if selected == nil, showsEquipment(w) { equipment }
         }
     }
 
@@ -498,10 +500,13 @@ struct OnbWeekPage: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onbDayEditor")
     }
-    /// "Road" for "Road cycling" when no other roster activity starts with the same word; otherwise the full name.
+    /// "Road" for "Road cycling" when no other roster activity starts with the same word.
     private func chipTitle(_ x: RosterActivity) -> String {
         let short = OnbWeekText.short(x.title)
-        return roster.filter { OnbWeekText.short($0.title) == short }.count > 1 ? x.title : short
+        guard roster.filter({ OnbWeekText.short($0.title) == short }).count > 1 else { return short }
+        // "Road cycling" beside "Road running": the sport's own name, when only one roster activity has it (check 35:
+        // full names pushed the chips onto two rows)
+        return roster.filter { $0.family == x.family }.count == 1 ? x.family.title : x.title
     }
     @ViewBuilder private func dayEditor(_ i: Int, saved: [ChosenSession]) -> some View {
         let day = WeeklyAvailability.longDayNames[i]
@@ -588,7 +593,7 @@ struct OnbWeekPage: View {
     private func summary(_ w: ChosenWeek.Week) -> some View {
         let t = ChosenWeek.totals(w)
         let f = ChosenWeek.feasibility(w, planMode: planMode, strengthLevel: a.strengthLevel)
-        let time = OnboardingWeek.durationText(t.minutes)
+        let time = t.minutes == 0 ? "0 min" : OnboardingWeek.durationText(t.minutes)      // check 35: an empty week read "0 h"
         let sports = ChosenWeek.bySport(w).map { "\($0.sport) \(OnboardingWeek.durationText($0.minutes))" }.joined(separator: " · ")
         let layout = dts.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
         return VStack(alignment: .leading, spacing: 1) {
@@ -619,7 +624,7 @@ struct OnbWeekPage: View {
     // --- equipment: only when a strength session the planner builds is in the week (or being added)
 
     private func showsEquipment(_ w: ChosenWeek.Week) -> Bool {
-        (w.joined() + draft).contains { ChosenWeek.engine($0.activity) == .strength }
+        w.joined().contains { ChosenWeek.engine($0.activity) == .strength }
     }
     /// Simulator run 17: at an accessibility text size four choices side by side broke "Bodyweight" in the middle of
     /// the word. From those sizes the same choice is drawn as rows of two (one a row at the three largest sizes), each

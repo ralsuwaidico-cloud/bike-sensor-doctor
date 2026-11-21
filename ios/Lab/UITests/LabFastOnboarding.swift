@@ -622,12 +622,17 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(el(app, "onbLen-strengthMinutes").label, "45 min"); XCTAssertEqual(el(app, "onbLen-runningMinutes").label, "30 min", "required: one session's length does not change the other's")
         XCTAssertFalse(app.buttons["onbAct-roadCycling"].firstMatch.isEnabled, "required: a third session is not offered")
         // the fullest state of the page: nothing is under the fixed Continue area
+        // Check 35 found the equipment row under the Continue area in this state. The page now gives the open editor
+        // the room: the equipment choice is shown when no day is being edited, and required again below once confirmed.
         let line = need(app, "onbCoachLine", "the line above Continue")
-        let kitOpen = need(app, "onbEquipment", "the equipment choice, shown with a strength session")
         XCTAssertTrue(confirm.isHittable && confirm.frame.maxY <= line.frame.minY + 1, "required: Confirm is above the Continue area with two sessions open (confirm \(confirm.frame), line \(line.frame))")
-        XCTAssertLessThanOrEqual(kitOpen.frame.maxY, line.frame.minY + 1, "required: with two sessions open the equipment row is not under the Continue area (equipment \(kitOpen.frame), line \(line.frame))")
+        for id in ["onbDayEditor", "onbWeekTotal", "onbWeekCounts", "onbWeekBySport", "onbFeasibility"] {
+            XCTAssertLessThanOrEqual(need(app, id, id).frame.maxY, line.frame.minY + 1, "required: with two sessions open \(id) is not under the Continue area (\(el(app, id).frame), line \(line.frame))")
+        }
+        XCTAssertFalse(el(app, "onbEquipment").exists, "required: nothing is drawn under the Continue area while a day is edited")
         app.settleForScreenshot(1); shot("onb-4-week-editing-two-sessions")
         confirm.tap()
+        need(app, "onbEquipment", "the equipment choice, once a strength session is in the week")
         XCTAssertTrue(el(app, "onbDay-2").label.contains("Gym training 45 minutes") && el(app, "onbDay-2").label.contains("Road running 30 minutes"), "required: Wednesday holds both sessions (\(el(app, "onbDay-2").label))")
         XCTAssertEqual(el(app, "onbWeekTotal").label, "2 h 15 min"); XCTAssertEqual(el(app, "onbWeekCounts").label, "3 sessions · 2 training days · 5 rest days")
         XCTAssertTrue(next.isEnabled, "required: Continue once the week is valid")
