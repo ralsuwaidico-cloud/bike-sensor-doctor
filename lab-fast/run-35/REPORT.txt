@@ -1,0 +1,34 @@
+FAST focused Lab check — selected: LabFastOnboarding/testBuildYourWeek LabFastOnboarding/testARunnerCompletesOnboardingWithoutAPlan LabFastOnboarding/testAMixedRosterPlansOnlyTheGoalsChosen LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from ac046799 · files changed since then: 12
+TIME setup: 14s
+  timing: SwiftCompile (13 tasks) | 680.984 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 186.707 seconds
+  timing: Ld (18 tasks) | 10.614 seconds
+  timing: SwiftEmitModule (2 tasks) | 8.541 seconds
+  timing: SwiftDriver (2 tasks) | 4.516 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.452 seconds
+  timing: ConstructStubExecutorLinkFileList (1 task) | 0.539 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.353 seconds
+  stages: packages at 129s · packages prepared at 288s · dependency graph at 288s · inputs at 288s · build description at 288s · first link at 300s · first Swift step at 300s · asset catalogue at 304s · finished at 794s
+  compiled in this run: 112 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 796s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 9s
+	 Executed 4 tests, with 4 failures (0 unexpected) in 826.555 (826.567) seconds
+	 Executed 4 tests, with 4 failures (0 unexpected) in 826.555 (826.572) seconds
+	 Executed 4 tests, with 4 failures (0 unexpected) in 826.555 (826.577) seconds
+Lab/UITests/LabFastOnboarding.swift:39: error: -[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen] : XCTAssertTrue failed - required: the page counter
+Lab/UITests/LabFastOnboarding.swift:42: error: -[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type StaticText` -> `Elements matching predicate '"onboardingProgress" IN identifiers'`, given input App element pid: 26973
+Lab/UITests/LabFastOnboarding.swift:590: error: -[CycliftLabUITests.LabFastOnboarding testBuildYourWeek] : XCTAssertEqual failed: ("0 h") is not equal to ("0 min")
+Lab/UITests/LabFastOnboarding.swift:628: error: -[CycliftLabUITests.LabFastOnboarding testBuildYourWeek] : XCTAssertLessThanOrEqual failed: ("742.1666666666666") is greater than ("702.6666666666666") - required: with two sessions open the equipment row is not under the Continue area (equipment (15.5, 697.1666666666666, 362.0, 45.0), line (33.666666666666664, 701.6666666666666, 310.0, 50.3333333333
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen]' failed (54.170 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testARunnerCompletesOnboardingWithoutAPlan]' passed (235.389 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testBuildYourWeek]' failed (221.791 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (315.205 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 973s
+TIME total on the Mac: 1800s
+commit f543459d6aeaf25092f0a0a6adb25cf6e05a0ace  branch ios/lab
