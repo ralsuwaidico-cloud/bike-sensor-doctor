@@ -1,0 +1,300 @@
+    t =    57.02s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    57.02s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =    58.06s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =    58.06s         Checking existence of `"onboardingProgress" StaticText`
+    t =    59.11s Checking `Expect predicate `label BEGINSWITH "3 of 7"` for object "onboardingProgress" StaticText`
+    t =    59.11s     Find the "onboardingProgress" StaticText
+    t =    59.28s Waiting 8.0s for "goalGroup-cycling" Any to exist
+    t =    60.33s     Checking `Expect predicate `existsNoRetry == 1` for object "goalGroup-cycling" Any`
+    t =    60.33s         Checking existence of `"goalGroup-cycling" Any`
+    t =    60.62s Waiting 8.0s for "goalGroup-strength" Any to exist
+    t =    61.66s     Checking `Expect predicate `existsNoRetry == 1` for object "goalGroup-strength" Any`
+    t =    61.66s         Checking existence of `"goalGroup-strength" Any`
+    t =    61.83s Waiting 8.0s for "goalGroup-general" Any to exist
+    t =    62.86s     Checking `Expect predicate `existsNoRetry == 1` for object "goalGroup-general" Any`
+    t =    62.86s         Checking existence of `"goalGroup-general" Any`
+    t =    63.12s Checking existence of `"goalGroup-running" Any`
+    t =    63.95s Checking existence of `"goalGroup-swimming" Any`
+    t =    64.41s Checking existence of `"goalGroup-walking" Any`
+    t =    65.00s Checking existence of `"goalGroup-recovery" Any`
+    t =    65.36s Checking existence of `"rosterLead" Any`
+    t =    65.76s Checking existence of `"Balanced" Button`
+    t =    65.84s Checking existence of `"Endurance-led" Button`
+    t =    65.94s Find the "onboardingNext" Button
+    t =    66.07s Waiting 8.0s for "onbGoalExplanation" Any to exist
+    t =    67.07s     Checking `Expect predicate `existsNoRetry == 1` for object "onbGoalExplanation" Any`
+    t =    67.07s         Checking existence of `"onbGoalExplanation" Any`
+    t =    67.19s Find the Window (First Match)
+    t =    67.22s Find the "onbTitle" StaticText
+    t =    67.43s Waiting 8.0s for "goal-endurance" Any to exist
+    t =    68.47s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-endurance" Any`
+    t =    68.47s         Checking existence of `"goal-endurance" Any`
+    t =    68.98s Find the "goal-endurance" Any
+    t =    69.39s Find the "goal-endurance" Button
+    t =    69.79s Find the "onbGoalExplanation" Any
+    t =    70.04s Find the "goal-endurance" Button
+    t =    70.39s Find the "onbTitle" StaticText
+    t =    70.56s Find the "goal-endurance" Button
+    t =    70.77s Find the "goal-endurance" Button
+    t =    70.95s Waiting 8.0s for "goal-power" Any to exist
+    t =    71.99s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-power" Any`
+    t =    71.99s         Checking existence of `"goal-power" Any`
+    t =    72.18s Find the "goal-power" Any
+    t =    72.38s Find the "goal-power" Button
+    t =    72.57s Find the "onbGoalExplanation" Other
+    t =    73.04s Find the "goal-power" Button
+    t =    73.56s Find the "onbTitle" StaticText
+    t =    73.66s Find the "goal-power" Button
+    t =    73.87s Find the "goal-power" Button
+    t =    74.07s Waiting 8.0s for "goal-climbing" Any to exist
+    t =    75.09s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-climbing" Any`
+    t =    75.10s         Checking existence of `"goal-climbing" Any`
+    t =    75.53s Find the "goal-climbing" Any
+    t =    75.81s Find the "goal-climbing" Button
+    t =    76.08s Find the "onbGoalExplanation" Other
+    t =    76.23s Find the "goal-climbing" Button
+    t =    76.46s Find the "onbTitle" StaticText
+    t =    76.57s Find the "goal-climbing" Button
+    t =    76.70s Find the "goal-climbing" Button
+    t =    76.84s Waiting 8.0s for "goal-sprint" Any to exist
+    t =    77.87s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-sprint" Any`
+    t =    77.88s         Checking existence of `"goal-sprint" Any`
+    t =    77.99s Find the "goal-sprint" Any
+    t =    78.14s Find the "goal-sprint" Button
+    t =    78.27s Find the "onbGoalExplanation" Other
+    t =    78.37s Find the "goal-sprint" Button
+    t =    78.56s Find the "onbTitle" StaticText
+    t =    78.63s Find the "goal-sprint" Button
+    t =    78.78s Find the "goal-sprint" Button
+    t =    78.91s Waiting 8.0s for "goal-event" Any to exist
+    t =    79.94s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-event" Any`
+    t =    79.94s         Checking existence of `"goal-event" Any`
+    t =    80.08s Find the "goal-event" Any
+    t =    80.32s Find the "goal-event" Button
+    t =    80.53s Find the "onbGoalExplanation" Other
+    t =    80.63s Find the "goal-event" Button
+    t =    80.76s Find the "onbTitle" StaticText
+    t =    80.84s Find the "goal-event" Button
+    t =    80.97s Find the "goal-event" Button
+    t =    81.12s Waiting 8.0s for "goal-strength" Any to exist
+    t =    82.14s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-strength" Any`
+    t =    82.14s         Checking existence of `"goal-strength" Any`
+    t =    82.38s Find the "goal-strength" Any
+    t =    82.53s Find the "goal-strength" Button
+    t =    82.69s Find the "onbGoalExplanation" Other
+    t =    82.78s Find the "goal-strength" Button
+    t =    82.93s Find the "onbTitle" StaticText
+    t =    83.04s Find the "goal-strength" Button
+    t =    83.20s Find the "goal-strength" Button
+    t =    83.49s Waiting 8.0s for "goal-muscle" Any to exist
+    t =    84.53s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-muscle" Any`
+    t =    84.54s         Checking existence of `"goal-muscle" Any`
+    t =    84.68s Find the "goal-muscle" Any
+    t =    84.83s Find the "goal-muscle" Button
+    t =    84.99s Find the "onbGoalExplanation" Other
+    t =    85.07s Find the "goal-muscle" Button
+    t =    85.24s Find the "onbTitle" StaticText
+    t =    85.29s Find the "goal-muscle" Button
+    t =    85.43s Find the "goal-muscle" Button
+    t =    85.57s Waiting 8.0s for "goal-stamina" Any to exist
+    t =    86.59s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-stamina" Any`
+    t =    86.60s         Checking existence of `"goal-stamina" Any`
+    t =    86.72s Find the "goal-stamina" Any
+    t =    86.85s Find the "goal-stamina" Button
+    t =    86.99s Find the "onbGoalExplanation" Other
+    t =    87.07s Find the "goal-stamina" Button
+    t =    87.21s Find the "onbTitle" StaticText
+    t =    87.29s Find the "goal-stamina" Button
+    t =    87.43s Find the "goal-stamina" Button
+    t =    87.57s Waiting 8.0s for "goal-maintain" Any to exist
+    t =    88.60s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-maintain" Any`
+    t =    88.60s         Checking existence of `"goal-maintain" Any`
+    t =    88.73s Find the "goal-maintain" Any
+    t =    88.88s Find the "goal-maintain" Button
+    t =    89.14s Find the "onbGoalExplanation" Other
+    t =    89.23s Find the "goal-maintain" Button
+    t =    89.49s Find the "onbTitle" StaticText
+    t =    89.59s Find the "goal-maintain" Button
+    t =    89.71s Find the "goal-maintain" Button
+    t =    89.84s Waiting 8.0s for "goal-fitness" Any to exist
+    t =    90.86s     Checking `Expect predicate `existsNoRetry == 1` for object "goal-fitness" Any`
+    t =    90.86s         Checking existence of `"goal-fitness" Any`
+    t =    90.97s Find the "goal-fitness" Any
+    t =    91.12s Find the "goal-fitness" Button
+    t =    91.24s Find the "onbGoalExplanation" Other
+    t =    91.32s Find the "goal-fitness" Button
+    t =    91.45s Find the "onbTitle" StaticText
+    t =    91.53s Find the "goal-fitness" Button
+    t =    91.80s Find the "goal-fitness" Button
+    t =    92.04s Waiting 8.0s for "onbCyclingLevel" Any to exist
+    t =    93.08s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCyclingLevel" Any`
+    t =    93.08s         Checking existence of `"onbCyclingLevel" Any`
+    t =    93.28s Find the "onbCyclingLevel" Any
+    t =    93.43s Find the "onbCyclingLevel" Button
+    t =    93.58s Find the "onbGoalExplanation" Other
+    t =    93.67s Find the "onbCyclingLevel" Button
+    t =    93.82s Find the "onbTitle" StaticText
+    t =    93.90s Find the "onbCyclingLevel" Button
+    t =    94.05s Find the "onbCyclingLevel" Button
+    t =    94.24s Waiting 8.0s for "onbStrengthLevel" Any to exist
+    t =    95.27s     Checking `Expect predicate `existsNoRetry == 1` for object "onbStrengthLevel" Any`
+    t =    95.27s         Checking existence of `"onbStrengthLevel" Any`
+    t =    95.38s Find the "onbStrengthLevel" Any
+    t =    95.52s Find the "onbStrengthLevel" Button
+    t =    95.64s Find the "onbGoalExplanation" Other
+    t =    95.72s Find the "onbStrengthLevel" Button
+    t =    95.89s Find the "onbTitle" StaticText
+    t =    95.96s Find the "onbStrengthLevel" Button
+    t =    96.14s Find the "onbStrengthLevel" Button
+    t =    96.31s Checking existence of `"onboardingNext" Button`
+    t =    96.37s Find the "onboardingNext" Button
+    t =    96.42s Find the "onboardingNext" Button
+    t =    96.50s Find the "onbGoalExplanation" Other
+    t =    97.77s Tap "goal-muscle" Any
+    t =    97.77s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    97.78s     Find the "goal-muscle" Any
+    t =    97.90s     Check for interrupting elements affecting "goal-muscle" Button
+    t =    97.99s     Synthesize event
+    t =    98.29s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    98.30s Waiting 5.0s for "onbMainGoalTitle" StaticText to exist
+    t =    99.34s     Checking `Expect predicate `existsNoRetry == 1` for object "onbMainGoalTitle" StaticText`
+    t =    99.34s         Checking existence of `"onbMainGoalTitle" StaticText`
+    t =    99.38s Find the "onbMainGoalTitle" StaticText
+    t =    99.43s Checking existence of `"onbCoachLine" StaticText`
+    t =    99.47s Find the "onbCoachLine" StaticText
+    t =    99.52s Find the "onboardingNext" Button
+    t =    99.58s Waiting 8.0s for "onbGoalMix" Any to exist
+    t =   100.59s     Checking `Expect predicate `existsNoRetry == 1` for object "onbGoalMix" Any`
+    t =   100.59s         Checking existence of `"onbGoalMix" Any`
+    t =   100.70s Find the "onbGoalMix" Any
+    t =   100.84s Find the "onbGoalExplanation" Any
+    t =   101.01s Find the "onbGoalMix" Other
+    t =   101.20s Find the "onbGoalMix" Other
+    t =   101.33s Find the "onboardingNext" Button
+    t =   101.42s Find the "goal-fitness" Any
+    t =   101.63s Find the "onbCyclingLevel" Any
+    t =   101.86s Find the "onbStrengthLevel" Any
+    t =   102.05s Tap "goal-endurance" Any
+    t =   102.05s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   102.05s     Find the "goal-endurance" Any
+    t =   102.19s     Check for interrupting elements affecting "goal-endurance" Button
+    t =   102.29s     Synthesize event
+    t =   102.62s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   102.62s Tap "goal-fitness" Any
+    t =   102.62s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   102.63s     Find the "goal-fitness" Any
+    t =   102.93s     Check for interrupting elements affecting "goal-fitness" Button
+    t =   103.03s     Synthesize event
+    t =   103.33s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   103.33s Waiting 5.0s for "onbMainGoalTitle" StaticText to exist
+    t =   104.35s     Checking `Expect predicate `existsNoRetry == 1` for object "onbMainGoalTitle" StaticText`
+    t =   104.35s         Checking existence of `"onbMainGoalTitle" StaticText`
+    t =   104.48s Find the "onbMainGoalTitle" StaticText
+    t =   104.56s Checking existence of `"goalStar-muscle" Button`
+    t =   104.71s Checking existence of `"goalStar-endurance" Button`
+    t =   104.82s Checking existence of `"goalStar-fitness" Button`
+    t =   105.03s Find the "goalStar-muscle" Button
+    t =   105.15s Find the "goalStar-endurance" Button
+    t =   106.41s Tap "goalStar-endurance" Button
+    t =   106.41s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   106.41s     Find the "goalStar-endurance" Button
+    t =   106.50s     Check for interrupting elements affecting "goalStar-endurance" Button
+    t =   106.57s     Synthesize event
+    t =   106.87s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   106.89s Waiting 5.0s for "onbMainGoalTitle" StaticText to exist
+    t =   107.92s     Checking `Expect predicate `existsNoRetry == 1` for object "onbMainGoalTitle" StaticText`
+    t =   107.92s         Checking existence of `"onbMainGoalTitle" StaticText`
+    t =   108.00s Find the "onbMainGoalTitle" StaticText
+    t =   108.05s Checking existence of `"onbCoachLine" StaticText`
+    t =   108.15s Find the "onbCoachLine" StaticText
+    t =   108.21s Checking existence of `"goalStar-muscle" Button`
+    t =   108.33s Checking existence of `"goalStar-endurance" Button`
+    t =   108.41s Checking existence of `"goalStar-fitness" Button`
+    t =   108.54s Find the "goalStar-muscle" Button
+    t =   108.65s Find the "goalStar-endurance" Button
+    t =   108.71s Waiting 8.0s for "onbGoalMix" Any to exist
+    t =   109.75s     Checking `Expect predicate `existsNoRetry == 1` for object "onbGoalMix" Any`
+    t =   109.76s         Checking existence of `"onbGoalMix" Any`
+    t =   109.92s Find the "onbGoalMix" Any
+    t =   110.08s Find the "goal-fitness" Any
+    t =   110.27s Find the "onbGoalExplanation" Any
+    t =   110.40s Find the "onbCyclingLevel" Any
+    t =   110.63s Find the "onbGoalExplanation" Any
+    t =   110.71s Find the "onbStrengthLevel" Any
+    t =   110.88s Find the "onbGoalExplanation" Any
+    t =   112.45s Tap "onbStrengthLevel" Any
+    t =   112.45s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   112.46s     Find the "onbStrengthLevel" Any
+    t =   112.67s     Check for interrupting elements affecting "onbStrengthLevel" Button
+    t =   112.77s     Synthesize event
+    t =   113.10s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   114.18s Waiting 5.0s for "Intermediate" Button to exist
+    t =   115.22s     Checking `Expect predicate `existsNoRetry == 1` for object "Intermediate" Button`
+    t =   115.22s         Checking existence of `"Intermediate" Button`
+    t =   115.80s Tap "Intermediate" Button
+    t =   115.80s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   115.82s     Find the "Intermediate" Button
+    t =   115.94s     Check for interrupting elements affecting "Intermediate" Button
+    t =   116.02s     Synthesize event
+    t =   116.37s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   118.84s Checking `Expect predicate `label CONTAINS "Intermediate"` for object "onbStrengthLevel" Button`
+    t =   118.84s     Find the "onbStrengthLevel" Button
+    t =   119.01s Tap "onboardingNext" Button
+    t =   119.01s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   119.01s     Find the "onboardingNext" Button
+    t =   119.08s     Check for interrupting elements affecting "onboardingNext" Button
+    t =   119.13s     Synthesize event
+    t =   119.44s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   119.77s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   120.79s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   120.79s         Checking existence of `"onboardingProgress" StaticText`
+    t =   121.86s Checking `Expect predicate `label BEGINSWITH "4 of 7"` for object "onboardingProgress" StaticText`
+    t =   121.86s     Find the "onboardingProgress" StaticText
+    t =   121.90s Tap "onboardingBack" Button
+    t =   121.90s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   121.90s     Find the "onboardingBack" Button
+    t =   121.93s     Check for interrupting elements affecting "onboardingBack" Button
+    t =   122.00s     Synthesize event
+    t =   122.30s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   122.30s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   123.33s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   123.33s         Checking existence of `"onboardingProgress" StaticText`
+    t =   124.41s Checking `Expect predicate `label BEGINSWITH "3 of 7"` for object "onboardingProgress" StaticText`
+    t =   124.41s     Find the "onboardingProgress" StaticText
+    t =   124.45s Waiting 5.0s for "onbMainGoalTitle" StaticText to exist
+    t =   125.51s     Checking `Expect predicate `existsNoRetry == 1` for object "onbMainGoalTitle" StaticText`
+    t =   125.51s         Checking existence of `"onbMainGoalTitle" StaticText`
+    t =   125.54s Find the "onbMainGoalTitle" StaticText
+    t =   125.57s Checking existence of `"goalStar-muscle" Button`
+    t =   125.65s Checking existence of `"goalStar-endurance" Button`
+    t =   125.69s Checking existence of `"goalStar-fitness" Button`
+    t =   125.77s Terminate com.ralsuwaidico.cycliftlab:22744
+    t =   126.77s Open com.ralsuwaidico.cycliftlab
+    t =   126.77s     Launch com.ralsuwaidico.cycliftlab
+    t =   129.95s         Setting up automation session
+    t =   133.57s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   136.76s Waiting 30.0s for "onboardingProgress" StaticText to exist
+    t =   137.79s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   137.79s         Checking existence of `"onboardingProgress" StaticText`
+    t =   137.91s Find the "onboardingProgress" StaticText
+    t =   138.05s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   139.06s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   139.06s         Checking existence of `"onboardingProgress" StaticText`
+    t =   140.14s Checking `Expect predicate `label BEGINSWITH "3 of 7"` for object "onboardingProgress" StaticText`
+    t =   140.14s     Find the "onboardingProgress" StaticText
+    t =   140.19s Waiting 5.0s for "onbMainGoalTitle" StaticText to exist
+    t =   141.24s     Checking `Expect predicate `existsNoRetry == 1` for object "onbMainGoalTitle" StaticText`
+    t =   141.24s         Checking existence of `"onbMainGoalTitle" StaticText`
+    t =   141.29s Find the "onbMainGoalTitle" StaticText
+    t =   141.32s Waiting 5.0s for "goalStar-muscle" Button to exist
+    t =   142.38s     Checking `Expect predicate `existsNoRetry == 1` for object "goalStar-muscle" Button`
+    t =   142.38s         Checking existence of `"goalStar-muscle" Button`
+    t =   142.45s Waiting 5.0s for "goalStar-endurance" Button to exist
+    t =   143.48s     Checking `Expect predicate `existsNoRetry == 1` for object "goalStar-endurance" Button`
+    t =   143.48s         Checking existence of `"goalStar-endurance" Button`
+    t =   143.54s Waiting 5.0s for "goalStar-fitness" Button to exist
+    t =   144.60s     Checking `Expect predicate `existsNoRetry == 1` for object "goalStar-fitness" Button`
+    t =   144.60s         Checking existence of `"goalStar-fitness" Button`
+    t =   144.90s Find the "onbStrengthLevel" Any
+    t =   145.16s Tear Down
+Test Case '-[CycliftLabUITests.LabFastOnboarding testGoalsForACyclingAndStrengthAthlete]' passed (145.527 seconds).
