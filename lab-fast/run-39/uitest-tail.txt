@@ -1,0 +1,300 @@
+    t =   267.23s Tap "onbDayRest" Button
+    t =   267.23s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   267.24s     Find the "onbDayRest" Button
+    t =   267.51s     Check for interrupting elements affecting "onbDayRest" Button
+    t =   267.60s     Synthesize event
+    t =   267.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   267.93s Find the "onbDayConfirm" Button
+    t =   268.25s Tap "onbDayConfirm" Button
+    t =   268.25s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   268.28s     Find the "onbDayConfirm" Button
+    t =   268.56s     Check for interrupting elements affecting "onbDayConfirm" Button
+    t =   268.64s     Synthesize event
+    t =   268.97s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   268.97s Find the "onbDay-0" Any
+    t =   269.33s Find the "onbWeekTotal" Any
+    t =   269.57s Find the "onbWeekCounts" Any
+    t =   270.15s Waiting 8.0s for "onbDay-0" Button to exist
+    t =   271.18s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDay-0" Button`
+    t =   271.19s         Checking existence of `"onbDay-0" Button`
+    t =   271.43s Tap "onbDay-0" Button
+    t =   271.43s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   271.44s     Find the "onbDay-0" Button
+    t =   271.66s     Check for interrupting elements affecting "onbDay-0" Button
+    t =   271.73s     Synthesize event
+    t =   272.06s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   272.06s Waiting 5.0s for "onbAct-roadCycling" Button to exist
+    t =   273.07s     Checking `Expect predicate `existsNoRetry == 1` for object "onbAct-roadCycling" Button`
+    t =   273.07s         Checking existence of `"onbAct-roadCycling" Button`
+    t =   273.28s Tap "onbAct-roadCycling" Button
+    t =   273.28s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   273.28s     Find the "onbAct-roadCycling" Button
+    t =   273.48s     Check for interrupting elements affecting "onbAct-roadCycling" Button
+    t =   273.58s     Synthesize event
+    t =   273.91s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   273.91s Waiting 5.0s for "onbDayConfirm" Button to exist
+    t =   274.94s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDayConfirm" Button`
+    t =   274.94s         Checking existence of `"onbDayConfirm" Button`
+    t =   275.19s Find the "onbDayConfirm" Button
+    t =   275.40s Tap "onbDayConfirm" Button
+    t =   275.40s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   275.41s     Find the "onbDayConfirm" Button
+    t =   275.58s     Check for interrupting elements affecting "onbDayConfirm" Button
+    t =   275.66s     Synthesize event
+    t =   275.98s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   275.98s Find the "onbWeekTotal" Any
+    t =   276.21s Find the "onbWeekCounts" Any
+    t =   276.46s Find the "onbCoachLine" Any
+    t =   276.61s Find the Window (First Match)
+    t =   276.62s Find the "onbTitle" StaticText
+    t =   276.80s Waiting 8.0s for "onbWeek" Any to exist
+    t =   277.82s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeek" Any`
+    t =   277.82s         Checking existence of `"onbWeek" Any`
+    t =   278.05s Find the "onbWeek" Any
+    t =   278.34s Find the "onbCoachLine" StaticText
+    t =   278.52s Find the "onbWeek" Other
+    t =   278.74s Find the "onbTitle" StaticText
+    t =   278.88s Waiting 8.0s for "onbDayEditor" Any to exist
+    t =   279.90s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDayEditor" Any`
+    t =   279.90s         Checking existence of `"onbDayEditor" Any`
+    t =   280.35s Find the "onbDayEditor" Any
+    t =   280.67s Find the "onbCoachLine" StaticText
+    t =   280.84s Find the "onbDayEditor" Other
+    t =   281.04s Find the "onbTitle" StaticText
+    t =   281.25s Waiting 8.0s for "onbWeekTotal" Any to exist
+    t =   282.27s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeekTotal" Any`
+    t =   282.27s         Checking existence of `"onbWeekTotal" Any`
+    t =   282.50s Find the "onbWeekTotal" Any
+    t =   282.85s Find the "onbCoachLine" StaticText
+    t =   283.08s Find the "onbWeekTotal" StaticText
+    t =   283.49s Find the "onbTitle" StaticText
+    t =   283.73s Waiting 8.0s for "onbWeekCounts" Any to exist
+    t =   284.76s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeekCounts" Any`
+    t =   284.76s         Checking existence of `"onbWeekCounts" Any`
+    t =   285.08s Find the "onbWeekCounts" Any
+    t =   285.43s Find the "onbCoachLine" StaticText
+    t =   285.71s Find the "onbWeekCounts" StaticText
+    t =   286.00s Find the "onbTitle" StaticText
+    t =   286.14s Waiting 8.0s for "onbWeekBySport" Any to exist
+    t =   287.15s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeekBySport" Any`
+    t =   287.15s         Checking existence of `"onbWeekBySport" Any`
+    t =   287.39s Find the "onbWeekBySport" Any
+    t =   287.62s Find the "onbCoachLine" StaticText
+    t =   287.78s Find the "onbWeekBySport" StaticText
+    t =   288.16s Find the "onbTitle" StaticText
+    t =   288.31s Waiting 8.0s for "onbFeasibility" Any to exist
+    t =   289.34s     Checking `Expect predicate `existsNoRetry == 1` for object "onbFeasibility" Any`
+    t =   289.34s         Checking existence of `"onbFeasibility" Any`
+    t =   289.72s Find the "onbFeasibility" Any
+    t =   290.10s Find the "onbCoachLine" StaticText
+    t =   290.39s Find the "onbFeasibility" StaticText
+    t =   290.95s Find the "onbTitle" StaticText
+    t =   291.15s Waiting 8.0s for "onbEquipment" Any to exist
+    t =   292.15s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEquipment" Any`
+    t =   292.16s         Checking existence of `"onbEquipment" Any`
+    t =   292.41s Find the "onbEquipment" Any
+    t =   292.64s Find the "onbCoachLine" StaticText
+    t =   292.78s Find the "onbEquipment" Other
+    t =   293.19s Find the "onbTitle" StaticText
+    t =   293.52s Find the "Gym" Button
+    t =   293.82s Find the "Home" Button
+    t =   294.16s Find the "Bodyweight" Button
+    t =   294.54s Find the "Not sure" Button
+    t =   294.82s Find the "onboardingNext" Button
+    t =   294.93s Find the "onboardingNext" Button
+    t =   295.05s Find the "onbCoachLine" StaticText
+    t =   296.45s Checking existence of `StaticText (First Match)`
+    t =   296.73s Waiting 8.0s for "onbDay-2" Button to exist
+    t =   297.75s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDay-2" Button`
+    t =   297.76s         Checking existence of `"onbDay-2" Button`
+    t =   297.99s Checking existence of `"onbDay-2" Button`
+    t =   298.13s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   298.17s Checking existence of `"onbDay-2" Button`
+    t =   298.39s Checking existence of `"onbDay-2" Button`
+    t =   298.59s Find the "onbDay-2" Button
+    t =   298.82s Find the "onbDay-2" Button
+    t =   298.97s Checking existence of `"onbDay-2" Button`
+    t =   299.13s Find the "onbDay-2" Button
+    t =   299.33s Checking existence of `"onbDay-2" Button`
+    t =   299.77s Find the "onbDay-2" Button
+    t =   299.97s Checking existence of `"onbDay-2" Button`
+    t =   300.44s Find the "onbDay-2" Button
+    t =   300.79s Checking existence of `"onbDay-2" Button`
+    t =   301.02s Checking existence of `"onbDay-2" Button`
+    t =   301.23s Find the "onbDay-2" Button
+    t =   301.49s Find the "onbDay-2" Button
+    t =   301.61s Tap "onbDay-2" Button
+    t =   301.61s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   301.61s     Find the "onbDay-2" Button
+    t =   301.76s     Check for interrupting elements affecting "onbDay-2" Button
+    t =   301.83s     Synthesize event
+    t =   302.16s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   302.16s Find the "onbDayEditorState" Any
+    t =   302.52s Find the "onbSession-0" Any
+    t =   302.82s Find the "onbLen-0Minutes" Any
+    t =   303.17s Find the "onbLen-1Minutes" Any
+    t =   303.63s Waiting 8.0s for "onbDayRest" Any to exist
+    t =   304.63s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDayRest" Any`
+    t =   304.63s         Checking existence of `"onbDayRest" Any`
+    t =   305.07s Waiting 8.0s for "onbWeek" Any to exist
+    t =   306.10s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeek" Any`
+    t =   306.10s         Checking existence of `"onbWeek" Any`
+    t =   306.46s Find the "onbWeek" Any
+    t =   306.67s Find the "onbCoachLine" StaticText
+    t =   306.87s Find the "onbWeek" Other
+    t =   307.30s Find the "onbTitle" StaticText
+    t =   307.45s Waiting 8.0s for "onbDayEditor" Any to exist
+    t =   308.49s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDayEditor" Any`
+    t =   308.49s         Checking existence of `"onbDayEditor" Any`
+    t =   308.77s Find the "onbDayEditor" Any
+    t =   309.09s Find the "onbCoachLine" StaticText
+    t =   309.34s Find the "onbDayEditor" Other
+    t =   309.68s Find the "onbTitle" StaticText
+    t =   309.85s Waiting 8.0s for "onbDayConfirm" Any to exist
+    t =   310.87s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDayConfirm" Any`
+    t =   310.87s         Checking existence of `"onbDayConfirm" Any`
+    t =   311.31s Find the "onbDayConfirm" Any
+    t =   312.03s Find the "onbCoachLine" StaticText
+    t =   312.24s Find the "onbDayConfirm" Button
+    t =   312.90s Find the "onbTitle" StaticText
+    t =   313.07s Waiting 8.0s for "onbSessionRemove-1" Any to exist
+    t =   314.09s     Checking `Expect predicate `existsNoRetry == 1` for object "onbSessionRemove-1" Any`
+    t =   314.09s         Checking existence of `"onbSessionRemove-1" Any`
+    t =   314.63s Find the "onbSessionRemove-1" Any
+    t =   315.19s Find the "onbCoachLine" StaticText
+    t =   315.32s Find the "onbSessionRemove-1" Button
+    t =   315.69s Find the "onbTitle" StaticText
+    t =   315.79s Waiting 8.0s for "onbWeekTotal" Any to exist
+    t =   316.84s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeekTotal" Any`
+    t =   316.85s         Checking existence of `"onbWeekTotal" Any`
+    t =   317.18s Find the "onbWeekTotal" Any
+    t =   317.45s Find the "onbCoachLine" StaticText
+    t =   317.65s Find the "onbWeekTotal" StaticText
+    t =   317.89s Find the "onbTitle" StaticText
+    t =   318.01s Waiting 8.0s for "onbWeekCounts" Any to exist
+    t =   319.04s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeekCounts" Any`
+    t =   319.04s         Checking existence of `"onbWeekCounts" Any`
+    t =   319.22s Find the "onbWeekCounts" Any
+    t =   319.45s Find the "onbCoachLine" StaticText
+    t =   319.54s Find the "onbWeekCounts" StaticText
+    t =   319.73s Find the "onbTitle" StaticText
+    t =   319.86s Waiting 8.0s for "onbWeekBySport" Any to exist
+    t =   320.89s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeekBySport" Any`
+    t =   320.90s         Checking existence of `"onbWeekBySport" Any`
+    t =   321.04s Find the "onbWeekBySport" Any
+    t =   321.21s Find the "onbCoachLine" StaticText
+    t =   321.42s Find the "onbWeekBySport" StaticText
+    t =   321.65s Find the "onbTitle" StaticText
+    t =   321.72s Waiting 8.0s for "onbFeasibility" Any to exist
+    t =   322.76s     Checking `Expect predicate `existsNoRetry == 1` for object "onbFeasibility" Any`
+    t =   322.77s         Checking existence of `"onbFeasibility" Any`
+    t =   323.79s Find the "onbFeasibility" Any
+    t =   324.17s Find the "onbCoachLine" StaticText
+    t =   324.33s Find the "onbFeasibility" StaticText
+    t =   324.92s Find the "onbTitle" StaticText
+    t =   325.29s Waiting 8.0s for "onbEquipment" Any to exist
+    t =   326.34s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEquipment" Any`
+    t =   326.34s         Checking existence of `"onbEquipment" Any`
+    t =   326.79s Find the "onbEquipment" Any
+    t =   327.63s Find the "onbCoachLine" StaticText
+    t =   328.04s Find the "onbEquipment" Other
+    t =   328.74s Find the "onbTitle" StaticText
+    t =   329.06s Find the "onbTitle" StaticText
+    t =   329.46s Find the "Gym" Button
+    t =   330.03s Find the "Home" Button
+    t =   330.64s Find the "Bodyweight" Button
+    t =   331.91s Find the "Not sure" Button
+    t =   333.61s Find the "onbEquipment" Any
+    t =   335.75s Find the "onbWeekCounts" Any
+    t =   336.82s Find the "onbWeekTotal" Any
+    t =   337.40s Find the "onbDayEditor" Any
+    t =   339.07s Tap "onbLen-1Plus" Button
+    t =   339.07s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   339.08s     Find the "onbLen-1Plus" Button
+    t =   339.81s     Check for interrupting elements affecting "onbLen-1Plus" Button
+    t =   339.98s     Synthesize event
+    t =   340.32s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   340.33s Find the "onbDayEditorState" Any
+    t =   341.24s Find the "onbWeekTotal" Any
+    t =   341.69s Waiting 8.0s for "onbDay-2" Button to exist
+    t =   342.74s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDay-2" Button`
+    t =   342.74s         Checking existence of `"onbDay-2" Button`
+    t =   343.43s Checking existence of `"onbDay-2" Button`
+    t =   344.10s Find the Target Application 'com.ralsuwaidico.cycliftlab'
+    t =   344.19s Checking existence of `"onbDay-2" Button`
+    t =   344.75s Checking existence of `"onbDay-2" Button`
+    t =   345.09s Find the "onbDay-2" Button
+    t =   345.60s Find the "onbDay-2" Button
+    t =   345.87s Checking existence of `"onbDay-2" Button`
+    t =   346.05s Find the "onbDay-2" Button
+    t =   346.26s Checking existence of `"onbDay-2" Button`
+    t =   346.71s Find the "onbDay-2" Button
+    t =   346.85s Checking existence of `"onbDay-2" Button`
+    t =   347.24s Find the "onbDay-2" Button
+    t =   347.42s Checking existence of `"onbDay-2" Button`
+    t =   347.64s Checking existence of `"onbDay-2" Button`
+    t =   347.79s Find the "onbDay-2" Button
+    t =   347.96s Find the "onbDay-2" Button
+    t =   348.13s Tap "onbDay-2" Button
+    t =   348.14s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   348.14s     Find the "onbDay-2" Button
+    t =   348.31s     Check for interrupting elements affecting "onbDay-2" Button
+    t =   348.42s     Synthesize event
+    t =   348.75s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   348.76s Find the "onbDay-2" Any
+    t =   349.15s Tap "onboardingNext" Button
+    t =   349.15s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   349.16s     Find the "onboardingNext" Button
+    t =   349.28s     Check for interrupting elements affecting "onboardingNext" Button
+    t =   349.38s     Synthesize event
+    t =   349.72s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   349.76s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   350.79s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   350.79s         Checking existence of `"onboardingProgress" StaticText`
+    t =   351.91s Checking `Expect predicate `label BEGINSWITH "5 of 7"` for object "onboardingProgress" StaticText`
+    t =   351.91s     Find the "onboardingProgress" StaticText
+    t =   352.05s Tap "onboardingBack" Button
+    t =   352.05s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   352.05s     Find the "onboardingBack" Button
+    t =   352.10s     Check for interrupting elements affecting "onboardingBack" Button
+    t =   352.18s     Synthesize event
+    t =   352.49s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   352.49s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   353.54s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   353.54s         Checking existence of `"onboardingProgress" StaticText`
+    t =   354.70s Checking `Expect predicate `label BEGINSWITH "4 of 7"` for object "onboardingProgress" StaticText`
+    t =   354.70s     Find the "onboardingProgress" StaticText
+    t =   354.79s Find the "onbDay-5" Any
+    t =   355.12s Find the "onbDay-0" Any
+    t =   355.43s Find the "onbDay-2" Any
+    t =   355.67s Terminate com.ralsuwaidico.cycliftlab:17001
+    t =   356.69s Open com.ralsuwaidico.cycliftlab
+    t =   356.69s     Launch com.ralsuwaidico.cycliftlab
+    t =   360.21s         Setting up automation session
+    t =   364.14s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   367.47s Waiting 30.0s for "onboardingProgress" StaticText to exist
+    t =   368.50s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   368.50s         Checking existence of `"onboardingProgress" StaticText`
+    t =   370.13s Find the "onboardingProgress" StaticText
+    t =   370.33s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   371.36s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   371.36s         Checking existence of `"onboardingProgress" StaticText`
+    t =   372.43s Checking `Expect predicate `label BEGINSWITH "4 of 7"` for object "onboardingProgress" StaticText`
+    t =   372.43s     Find the "onboardingProgress" StaticText
+    t =   372.47s Waiting 8.0s for "onbDay-5" Any to exist
+    t =   373.50s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDay-5" Any`
+    t =   373.50s         Checking existence of `"onbDay-5" Any`
+    t =   374.60s Find the "onbDay-5" Any
+    t =   374.79s Waiting 8.0s for "onbDay-0" Any to exist
+    t =   375.83s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDay-0" Any`
+    t =   375.83s         Checking existence of `"onbDay-0" Any`
+    t =   375.99s Find the "onbDay-0" Any
+    t =   376.13s Waiting 8.0s for "onbDay-2" Any to exist
+    t =   377.14s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDay-2" Any`
+    t =   377.15s         Checking existence of `"onbDay-2" Any`
+    t =   377.35s Find the "onbDay-2" Any
+    t =   377.53s Find the "onbDay-2" Any
+    t =   377.73s Find the "onbDay-1" Any
+    t =   377.91s Find the "onbWeekTotal" Any
+    t =   378.10s Tear Down
+Test Case '-[CycliftLabUITests.LabFastOnboarding testBuildYourWeek]' passed (378.672 seconds).
