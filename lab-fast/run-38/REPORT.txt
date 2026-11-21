@@ -1,0 +1,31 @@
+FAST focused Lab check — selected: LabFastOnboarding/testBuildYourWeek LabFastOnboarding/testARunnerCompletesOnboardingWithoutAPlan LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 83ed8066 · files changed since then: 2
+TIME setup: 10s
+  timing: CompileAssetCatalogVariant (1 task) | 61.992 seconds
+  timing: SwiftCompile (4 tasks) | 30.852 seconds
+  timing: Ld (18 tasks) | 9.437 seconds
+  timing: SwiftEmitModule (2 tasks) | 9.186 seconds
+  timing: SwiftDriver (2 tasks) | 6.880 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.789 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.318 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.712 seconds
+  stages: packages at 181s · packages prepared at 214s · dependency graph at 214s · inputs at 214s · build description at 215s · first link at 300s · first Swift step at 303s · asset catalogue at 309s · finished at 371s
+  compiled in this run: 10 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 372s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 11s
+	 Executed 3 tests, with 2 failures (0 unexpected) in 664.961 (664.968) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 664.961 (664.971) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 664.961 (664.976) seconds
+Lab/UITests/LabFastOnboarding.swift:27: error: -[CycliftLabUITests.LabFastOnboarding testBuildYourWeek] : XCTAssertTrue failed - required: the day editor (onbDayEditorDay)
+Lab/UITests/LabFastOnboarding.swift:599: error: -[CycliftLabUITests.LabFastOnboarding testBuildYourWeek] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"onbDayEditorDay" IN identifiers'`, given input App element pid: 22297
+Test Case '-[CycliftLabUITests.LabFastOnboarding testARunnerCompletesOnboardingWithoutAPlan]' passed (229.765 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testBuildYourWeek]' failed (120.064 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (315.133 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 817s
+TIME total on the Mac: 1217s
+commit f2591ad22cca71a2e693b219224a226ecf361a72  branch ios/lab
