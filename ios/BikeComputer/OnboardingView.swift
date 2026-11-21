@@ -295,6 +295,10 @@ struct OnboardingView: View {
 enum OnboardingFlow {
     /// What is already stored, as answers. `pastFirstStage`: the athlete has been past the first stage, so the stored
     /// training type and levels are what they chose.
+    /// The athlete's own schedule for Build your week (redesigned onboarding only), kept and never reset: what they
+    /// chose there, or — for an athlete who set a week before that page stored one — their saved availability with its
+    /// saved minutes. nil = a new athlete (seven rest days). The older onboarding and the Profile editors do not use it.
+    static func storedSchedule(_ store: Store) -> [[ChosenSession]]? { OnboardingOutcome.storedSchedule(store) }
     static func storedAnswers(_ store: Store, pastFirstStage: Bool) -> (answers: OnboardingAnswers, ftpKnown: Bool, ftpWatts: Int?) {
         let p = store.profile
         var x = OnboardingAnswers()
@@ -332,15 +336,7 @@ enum OnboardingFlow {
 
     /// The planner on the inputs Approve will save — nothing persisted.
     static func dryRun(_ a: OnboardingAnswers, store: Store, kinds: [DayKind], ride: Int, lift: Int, weekOffset: Int) -> [Workout] {
-        var x = store.planInputs
-        var draft = a; draft.week = kinds; draft.rideMinutes = ride; draft.liftMinutes = lift
-        draft.apply(to: &x)
-        guard let av = x.availability else { return [] }
-        let cal = Calendar.current
-        let d0 = cal.startOfDay(for: Date())
-        let wd = (cal.component(.weekday, from: d0) + 5) % 7
-        let monday = cal.date(byAdding: .day, value: -wd + 7 * weekOffset, to: d0) ?? d0
-        return PlanEngine.week(starting: monday, profile: x.profile, availability: av)
+        OnboardingOutcome.dryRun(a, store: store, kinds: kinds, ride: ride, lift: lift, weekOffset: weekOffset)
     }
 
     /// Plan version 1: the same inputs the preview used, generated for this week and next; Home and Plan read `plan`.

@@ -54,6 +54,9 @@ struct OnbWeekStrip: View {
     let kinds: [DayKind]
     let ride: Int
     let lift: Int
+    /// The athlete's chosen sessions, each with its own activity and minutes. When given, the tiles are drawn from
+    /// these (any sport); otherwise from `kinds` with the week-wide lengths.
+    var sessions: [[ChosenSession]]? = nil
     var selected: Int? = nil
     var changed: Set<Int> = []
     var idPrefix = "onbDay"
@@ -79,13 +82,30 @@ struct OnbWeekStrip: View {
         case .rest: return "rest"
         }
     }
+    static func spoken(_ day: [ChosenSession]) -> String {
+        day.isEmpty ? "rest" : day.map { "\(AthleticRoster.activity($0.activity)?.title ?? "session") \($0.minutes) minutes" }.joined(separator: " and ")
+    }
+    static func tint(_ f: RosterFamily?, _ theme: CxTheme) -> Color {
+        f == .strength ? theme.strength : f == .recovery ? theme.recovery : theme.endurance
+    }
     @ViewBuilder private func tile(_ i: Int) -> some View {
         let k = kind(i)
         let on = selected == i
+        let day: [ChosenSession]? = sessions.map { i < $0.count ? $0[i] : [] }
         let content = VStack(spacing: 4) {
             Text(WeeklyAvailability.dayNames[i]).font(.caption).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.7)
             VStack(spacing: 2) {
-                if k == .rest {
+                if let day {
+                    if day.isEmpty {
+                        Image(systemName: "moon").font(.footnote).foregroundStyle(theme.textSecondary)
+                        Text("rest").font(.caption2).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.7)
+                    } else {
+                        ForEach(day, id: \.activity) { s in
+                            let x = AthleticRoster.activity(s.activity)
+                            session(x?.symbol ?? "figure.mixed.cardio", s.minutes, Self.tint(x?.family, theme))
+                        }
+                    }
+                } else if k == .rest {
                     Image(systemName: "moon").font(.footnote).foregroundStyle(theme.textSecondary)
                     Text("rest").font(.caption2).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.7)
                 } else {
@@ -102,7 +122,8 @@ struct OnbWeekStrip: View {
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
             .strokeBorder(on ? theme.textPrimary : (theme.id == .highContrast ? theme.border : Color.clear), lineWidth: on ? 2 : 1))
         .contentShape(Rectangle())
-        let label = "\(WeeklyAvailability.longDayNames[i]), \(Self.spoken(k, ride: ride, lift: lift))\(changed.contains(i) ? ", changed by you" : "")"
+        let said = day.map { Self.spoken($0) } ?? Self.spoken(k, ride: ride, lift: lift)
+        let label = "\(WeeklyAvailability.longDayNames[i]), \(said)\(changed.contains(i) ? ", changed by you" : "")"
         if let tap = onTap {
             Button { tap(i) } label: { content }
                 .buttonStyle(.plain)
@@ -406,119 +427,119 @@ struct OnbBirthSheet: View {
     }
 }
 
-// MARK: - Page 4 · Build your week (sheet Y4)
+// MARK: - Page 4 · Build your week
+//
+// Owner's approved direction, 21 Nov 2026 (21:18): the compact seven-day calendar, a day editor, weekly totals, the
+// equipment selector and Continue, on one screen at the standard text size. A NEW athlete starts with seven rest days:
+// nothing is preselected and nothing is inserted for them. Tapping a day opens its editor; the athlete picks an
+// activity FROM THEIR OWN ROSTER (Screen 3 — never a fixed cycling/gym pair), sets that session's own length, may add
+// a second session, and CONFIRMS the day — only then does the tile change. Any day can go back to rest. A length set
+// on one day never changes another day. What is built here is the athlete's chosen schedule, not a generated
+// programme; sports without a planner are saved exactly as chosen and never replaced by cycling or strength.
+// A returning athlete's saved schedule is shown as they left it (see OnboardingFlow.storedSchedule).
 
 struct OnbWeekPage: View {
     @Binding var a: OnboardingAnswers
-    let mode: TrainingMode
-    /// The athlete's main sports, as named on page 2 ("Road cycling", "Gym training").
-    let enduranceTitle: String
-    let strengthTitle: String
+    /// The athlete's roster, in roster order.
+    let roster: [RosterActivity]
+    /// The training type a plan will be built for from this week; nil = no plan is built from it.
+    let planMode: TrainingMode?
     @State private var selected: Int? = nil
+    /// The open day as being edited. Written to the week only by Confirm.
+    @State private var draft: [ChosenSession] = []
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var dts
 
-    private var proposed: [DayKind] {
-        OnboardingWeek.propose(mode: mode, cyclingLevel: a.cyclingLevel ?? .intermediate, strengthLevel: a.strengthLevel, priority: a.priority ?? .balanced)
-    }
-    /// Always seven days.
-    private var kinds: [DayKind] {
-        if let w = a.week, w.count == 7 { return w }
-        return proposed
-    }
-    private var ride: Int { a.rideMinutes ?? OnboardingWeek.defaultRideMinutes }
-    private var lift: Int { a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes }
-    private var changed: Set<Int> {
-        let k = kinds, p = proposed
-        return Set((0..<7).filter { k[$0] != p[$0] })
-    }
+    private var week: ChosenWeek.Week { ChosenWeek.normalised(a.schedule) }
 
     var body: some View {
-        let k = kinds
-        VStack(alignment: .leading, spacing: CySpace.m) {
-            OnbWeekStrip(kinds: k, ride: ride, lift: lift, selected: selected, changed: changed) { i in selected = selected == i ? nil : i }
-            statusRow
-            editor(k)
-            totals(k)
-            if mode.includesLifting { equipment }
+        let w = week
+        VStack(alignment: .leading, spacing: 10) {
+            OnbWeekStrip(kinds: [], ride: 0, lift: 0, sessions: w, selected: selected) { i in open(i, w) }
+            editor(w)
+            summary(w)
+            if showsEquipment(w) { equipment }
         }
-        .onAppear { if a.week == nil || a.week?.count != 7 { a.week = proposed } }
     }
 
-    private var statusRow: some View {
-        let n = changed.count
-        return HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text("●").font(CyDyn.f(8)).foregroundStyle(theme.accent).accessibilityHidden(true)
-            Text(n == 0 ? "Coach's proposal · rules-based" : "\(n) day\(n == 1 ? "" : "s") changed by you")
-                .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("onbWeekStatus")
-            Spacer(minLength: CySpace.s)
-            if n > 0 {
-                Button("Restore proposal") { a.week = proposed }
-                    .font(CyDyn.f(13, .semibold)).foregroundStyle(theme.accent)
-                    .frame(minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
-                    .accessibilityIdentifier("onbRestoreProposal")
+    private func open(_ i: Int, _ w: ChosenWeek.Week) {
+        if selected == i { selected = nil; return }
+        selected = i
+        draft = w[i]
+    }
+    private func confirm(_ i: Int) {
+        var w = week
+        guard w.indices.contains(i) else { return }
+        w[i] = draft
+        w = ChosenWeek.normalised(w)
+        a.schedule = w
+        // the older week fields stay in step for the pages that still read them (plannable sessions only)
+        a.week = ChosenWeek.kinds(w)
+        if let t = ChosenWeek.typicalMinutes(w, engine: .cycling) { a.rideMinutes = t }
+        if let t = ChosenWeek.typicalMinutes(w, engine: .strength) { a.liftMinutes = t }
+        selected = nil
+    }
+
+    // --- the day editor
+
+    private func editor(_ w: ChosenWeek.Week) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let i = selected, w.indices.contains(i) { dayEditor(i, saved: w[i]) }
+            else {
+                Text("Tap a day to choose its training").font(CyDyn.f(14, .semibold)).foregroundStyle(theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("onbDayEditorHint")
             }
         }
-        .frame(minHeight: 24)
-    }
-
-    // --- the day editor: fixed minimum height so nothing below it moves when a day is opened
-
-    private func editor(_ k: [DayKind]) -> some View {
-        VStack(alignment: .leading, spacing: CySpace.s) {
-            if let i = selected { dayEditor(i, k[i]) } else { editorHint }
-        }
-        .padding(CySpace.m)
-        .frame(maxWidth: .infinity, minHeight: dts.isAccessibilitySize ? 0 : 158, alignment: .topLeading)
+        .padding(.horizontal, CySpace.m).padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.surface))
         .overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: theme.borderWidth))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onbDayEditor")
     }
-    @ViewBuilder private var editorHint: some View {
-        Text("Tap a day to change it").font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
-            .accessibilityIdentifier("onbDayEditorHint")
-        Text(mode == .hybrid
-             ? "Choose up to two sessions for a day from your planned sports, or make it a rest day. The ride and strength lengths apply to the whole week. The proposal stays until you change it."
-             : "Make a day a training day or a rest day. The session length applies to the whole week. The proposal stays until you change it.")
-            .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+    /// "Road" for "Road cycling" when no other roster activity starts with the same word; otherwise the full name.
+    private func chipTitle(_ x: RosterActivity) -> String {
+        let short = OnbWeekText.short(x.title)
+        return roster.filter { OnbWeekText.short($0.title) == short }.count > 1 ? x.title : short
     }
-    @ViewBuilder private func dayEditor(_ i: Int, _ kind: DayKind) -> some View {
+    @ViewBuilder private func dayEditor(_ i: Int, saved: [ChosenSession]) -> some View {
+        let day = WeeklyAvailability.longDayNames[i]
         HStack(alignment: .firstTextBaseline) {
-            Text(WeeklyAvailability.longDayNames[i]).font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary)
+            Text(day).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary)
                 .accessibilityAddTraits(.isHeader).accessibilityIdentifier("onbDayEditorDay")
             Spacer(minLength: CySpace.s)
-            Text(kind == .rest ? "rest day" : kind == .both ? "2 sessions · strength first" : "1 session")
+            Text(draft.isEmpty ? "rest day" : draft.count == 1 ? "1 session" : "2 sessions")
                 .font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
                 .accessibilityIdentifier("onbDayEditorCount")
         }
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 6) { chips(i, kind) }
-            VStack(alignment: .leading, spacing: 6) { chips(i, kind) }
-        }
-        if kind == .rest {
-            Text("No session. Rest days are part of the plan.").font(CyDyn.f(13)).foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        } else {
-            if kind.lifts {
-                lengthRow(strengthTitle, note: "every strength session", icon: "dumbbell", tint: theme.strength, value: lift, range: 15...120, step: 5, id: "onbLift") { a.liftMinutes = $0 }
+        FlowLayout(spacing: 6) {
+            ForEach(roster) { x in
+                let on = draft.contains { $0.activity == x.id }
+                // a third session is not offered; a second activity of the same planned sport replaces the first
+                let full = !on && draft.count >= ChosenWeek.maxPerDay && !(x.planning != nil && draft.contains { ChosenWeek.engine($0.activity) == x.planning })
+                chip(chipTitle(x), spoken: x.title, icon: x.symbol, on: on, tint: OnbWeekStrip.tint(x.family, theme), id: "onbAct-\(x.id)") {
+                    draft = ChosenWeek.toggling(x.id, in: draft)
+                }
+                .disabled(full).opacity(full ? 0.4 : 1)
             }
-            if kind.rides {
-                lengthRow(enduranceTitle, note: "every ride", icon: "bicycle", tint: theme.endurance, value: ride, range: 20...300, step: 10, id: "onbRide") { a.rideMinutes = $0 }
-            }
+            chip("Rest", spoken: "Rest", icon: "moon", on: draft.isEmpty, tint: nil, id: "onbDayRest") { draft = [] }
         }
+        ForEach(draft, id: \.activity) { s in
+            if let x = AthleticRoster.activity(s.activity) { lengthRow(x, s.minutes) }
+        }
+        let changed = draft != saved
+        Button { confirm(i) } label: {
+            Text(draft.isEmpty && !saved.isEmpty ? "Make \(day) a rest day" : "Confirm \(day)")
+                .font(CyDyn.f(14, .semibold)).foregroundStyle(changed ? theme.background : theme.disabledText)
+                .frame(maxWidth: .infinity, minHeight: 36)
+                .background(Capsule().fill(changed ? theme.textPrimary : theme.surface2))
+                .frame(minHeight: CyHit.min).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).disabled(!changed)
+        .accessibilityIdentifier("onbDayConfirm")
     }
-    @ViewBuilder private func chips(_ i: Int, _ kind: DayKind) -> some View {
-        if mode.includesCycling {
-            chip(OnbWeekText.short(enduranceTitle), icon: "bicycle", on: kind.rides, tint: theme.endurance, id: "onbDayRide") { toggle(ride: true, day: i) }
-        }
-        if mode.includesLifting {
-            chip(OnbWeekText.short(strengthTitle), icon: "dumbbell", on: kind.lifts, tint: theme.strength, id: "onbDayLift") { toggle(ride: false, day: i) }
-        }
-        chip("Rest", icon: "moon", on: kind == .rest, tint: nil, id: "onbDayRest") { set(.rest, day: i) }
-    }
-    private func chip(_ title: String, icon: String, on: Bool, tint: Color?, id: String, action: @escaping () -> Void) -> some View {
+    private func chip(_ title: String, spoken: String, icon: String, on: Bool, tint: Color?, id: String, action: @escaping () -> Void) -> some View {
         let fill: Color = on ? (tint.map { $0.opacity(0.18) } ?? theme.textPrimary) : theme.surface2
         let ink: Color = on ? (tint == nil ? theme.background : theme.textPrimary) : theme.textSecondary
         return Button(action: action) {
@@ -526,29 +547,29 @@ struct OnbWeekPage: View {
                 Image(systemName: icon).font(CyDyn.f(12, .semibold)).foregroundStyle(on ? (tint ?? theme.background) : theme.textSecondary)
                 Text(title).font(CyDyn.f(14, .semibold)).foregroundStyle(ink).lineLimit(1)
             }
-            .padding(.horizontal, 12).frame(minHeight: 36)
+            .padding(.horizontal, 11).frame(minHeight: 34)
             .background(Capsule().fill(fill))
             .overlay(Capsule().strokeBorder(on ? (tint ?? Color.clear) : Color.clear, lineWidth: 1.5))
             .frame(minHeight: CyHit.min).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title)
+        .accessibilityLabel(spoken)
         .accessibilityAddTraits(on ? .isSelected : [])
         .accessibilityIdentifier(id)
     }
-    private func lengthRow(_ title: String, note: String, icon: String, tint: Color, value: Int, range: ClosedRange<Int>, step: Int, id: String, apply: @escaping (Int) -> Void) -> some View {
-        HStack(spacing: CySpace.s) {
-            Image(systemName: icon).font(CyDyn.f(13, .semibold)).foregroundStyle(tint).frame(width: 22).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title).font(CyDyn.f(14, .semibold)).foregroundStyle(theme.textPrimary).lineLimit(2).minimumScaleFactor(0.8)
-                Text(note).font(CyDyn.f(11)).foregroundStyle(theme.textSecondary)
-            }
+    /// One session's own length. It belongs to this day only.
+    private func lengthRow(_ x: RosterActivity, _ value: Int) -> some View {
+        let range = ChosenWeek.range(x.id), step = ChosenWeek.step(x.id)
+        func set(_ m: Int) { if let at = draft.firstIndex(where: { $0.activity == x.id }) { draft[at].minutes = m } }
+        return HStack(spacing: CySpace.s) {
+            Image(systemName: x.symbol).font(CyDyn.f(13, .semibold)).foregroundStyle(OnbWeekStrip.tint(x.family, theme)).frame(width: 22).accessibilityHidden(true)
+            Text(x.title).font(CyDyn.f(14, .semibold)).foregroundStyle(theme.textPrimary).lineLimit(2).minimumScaleFactor(0.8)
             Spacer(minLength: 4)
-            stepButton("minus", "\(title) shorter", enabled: value - step >= range.lowerBound, id: "\(id)Minus") { apply(max(range.lowerBound, value - step)) }
+            stepButton("minus", "\(x.title) shorter", enabled: value - step >= range.lowerBound, id: "onbLen-\(x.id)Minus") { set(max(range.lowerBound, value - step)) }
             Text("\(value) min").font(CyDyn.f(15, .semibold)).monospacedDigit().foregroundStyle(theme.textPrimary)
                 .frame(minWidth: 62).lineLimit(1)
-                .accessibilityIdentifier("\(id)Minutes")
-            stepButton("plus", "\(title) longer", enabled: value + step <= range.upperBound, id: "\(id)Plus") { apply(min(range.upperBound, value + step)) }
+                .accessibilityIdentifier("onbLen-\(x.id)Minutes")
+            stepButton("plus", "\(x.title) longer", enabled: value + step <= range.upperBound, id: "onbLen-\(x.id)Plus") { set(min(range.upperBound, value + step)) }
         }
         .frame(minHeight: CyHit.min)
     }
@@ -561,46 +582,45 @@ struct OnbWeekPage: View {
         .buttonStyle(.plain).disabled(!enabled)
         .accessibilityLabel(label).accessibilityIdentifier(id)
     }
-    private func toggle(ride isRide: Bool, day i: Int) {
-        let cur = kinds[i]
-        var r = cur.rides, l = cur.lifts
-        if isRide { r.toggle() } else { l.toggle() }
-        set(r && l ? .both : r ? .ride : l ? .lift : .rest, day: i)
-    }
-    private func set(_ kind: DayKind, day i: Int) {
-        var k = kinds
-        guard k.indices.contains(i) else { return }
-        k[i] = kind
-        a.week = k
-    }
 
-    // --- totals and the planner's existing checks
+    // --- the weekly summary: confirmed days only, so it changes the moment a day is confirmed
 
-    private func totals(_ k: [DayKind]) -> some View {
-        let f = OnboardingWeek.feasibility(k, mode: mode, ride: ride, lift: lift, strengthLevel: a.strengthLevel)
-        let time = OnbWeekText.total(k, ride: ride, lift: lift)
-        let n = OnbWeekText.sessions(k)
+    private func summary(_ w: ChosenWeek.Week) -> some View {
+        let t = ChosenWeek.totals(w)
+        let f = ChosenWeek.feasibility(w, planMode: planMode, strengthLevel: a.strengthLevel)
+        let time = OnboardingWeek.durationText(t.minutes)
+        let sports = ChosenWeek.bySport(w).map { "\($0.sport) \(OnboardingWeek.durationText($0.minutes))" }.joined(separator: " · ")
         let layout = dts.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
-        return VStack(alignment: .leading, spacing: 2) {
+        return VStack(alignment: .leading, spacing: 1) {
             layout {
-                Text(time).font(CyDyn.f(28, .bold)).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.7)
+                Text(time).font(CyDyn.f(26, .bold)).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.7)
                     .accessibilityIdentifier("onbWeekTotal")
-                Text("a week · \(n) session\(n == 1 ? "" : "s")").font(CyDyn.f(14)).foregroundStyle(theme.textSecondary)
-                    .accessibilityIdentifier("onbWeekSessions")
+                Text("a week").font(CyDyn.f(14)).foregroundStyle(theme.textSecondary)
             }
-            Text(OnbWeekText.bySport(k, ride: ride, lift: lift, mode: mode, endurance: enduranceTitle, strength: strengthTitle))
+            Text("\(t.sessions) session\(t.sessions == 1 ? "" : "s") · \(t.trainingDays) training day\(t.trainingDays == 1 ? "" : "s") · \(t.restDays) rest day\(t.restDays == 1 ? "" : "s")")
                 .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("onbWeekBySport")
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Image(systemName: f.ok ? "checkmark" : "exclamationmark.triangle").font(CyDyn.f(11, .bold)).accessibilityHidden(true)
-                Text(OnbWeekText.flag(f, time: time)).font(CyDyn.f(13, .medium)).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("onbWeekCounts")
+            if !sports.isEmpty {
+                Text(sports).font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("onbWeekBySport")
             }
-            .foregroundStyle(f.ok ? theme.success : f.blocking ? theme.danger : theme.warning)
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("onbFeasibility")
+            if !f.ok, t.sessions > 0 {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle").font(CyDyn.f(11, .bold)).accessibilityHidden(true)
+                    Text(OnbWeekText.flag(f, time: time)).font(CyDyn.f(13, .medium)).fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(f.blocking ? theme.danger : theme.warning)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("onbFeasibility")
+            }
         }
     }
 
+    // --- equipment: only when a strength session the planner builds is in the week (or being added)
+
+    private func showsEquipment(_ w: ChosenWeek.Week) -> Bool {
+        (w.joined() + draft).contains { ChosenWeek.engine($0.activity) == .strength }
+    }
     /// Simulator run 17: at an accessibility text size four choices side by side broke "Bodyweight" in the middle of
     /// the word. From those sizes the same choice is drawn as rows of two (one a row at the three largest sizes), each
     /// row the app's own choice bar on the same answer. What is stored is unchanged.
@@ -617,15 +637,10 @@ struct OnbWeekPage: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onbEquipment")
     }
-
     private var equipment: some View {
-        VStack(alignment: .leading, spacing: CySpace.s) {
+        VStack(alignment: .leading, spacing: 6) {
             OnbGroupHeader(mark: .none, title: "Equipment", trailing: "sets which exercises are offered")
             equipmentChoice
-            if (a.equipment ?? .notSure) == .notSure {
-                Text("Not sure = bodyweight sessions until you confirm what you have.").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
         }
     }
 }
@@ -838,6 +853,8 @@ struct OnbBlueprintModel {
     var kinds: [DayKind]
     var ride: Int
     var lift: Int
+    /// The chosen plannable sessions with each day's own minutes (nil = the week-wide lengths above are drawn).
+    var sessions: [[ChosenSession]]? = nil
     /// "3 h 30 min · 5 sessions"
     var weekTotals: String
     var proposalLines: [String]
@@ -947,7 +964,7 @@ struct OnbBlueprintPage: View {
         tappable("blueprintProposal", page: 4, hint: "Change your week") {
             VStack(alignment: .leading, spacing: CySpace.s) {
                 OnbGroupHeader(mark: .proposal, title: "Coach's proposal · week 1", trailing: m.weekTotals, trailingId: "blueprintWeekTotals")
-                OnbWeekStrip(kinds: m.kinds, ride: m.ride, lift: m.lift, idPrefix: "blueprintDay", containerId: "blueprintWeek")
+                OnbWeekStrip(kinds: m.kinds, ride: m.ride, lift: m.lift, sessions: m.sessions, idPrefix: "blueprintDay", containerId: "blueprintWeek")
                 ForEach(Array(m.proposalLines.enumerated()), id: \.offset) { pair in bullet(pair.element, tint: theme.accent, glyph: "◆") }
             }
         }

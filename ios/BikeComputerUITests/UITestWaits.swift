@@ -120,6 +120,20 @@ extension XCUIApplication {
         return false
     }
 
+    /// Onboarding › Build your week. Since the owner's decision of 21 Nov 2026 (21:18) the week starts as seven rest
+    /// days and nothing is proposed, so a check that used to accept the proposed week now chooses its days: open the
+    /// day, choose the activities from the roster, confirm. Fails when a control is missing.
+    func chooseWeekDay(_ day: Int, _ activities: [String], file: StaticString = #filePath, line: UInt = #line) {
+        let tile = buttons["onbDay-\(day)"].firstMatch
+        XCTAssertTrue(tile.waitForExistence(timeout: 8), "required: the day tile \(day)", file: file, line: line); tile.tap()
+        for a in activities {
+            let chip = buttons["onbAct-\(a)"].firstMatch
+            XCTAssertTrue(chip.waitForExistence(timeout: 5), "required: \(a) is offered in the day editor", file: file, line: line); chip.tap()
+        }
+        let ok = buttons["onbDayConfirm"].firstMatch
+        XCTAssertTrue(ok.waitForExistence(timeout: 5) && ok.isEnabled, "required: the day can be confirmed", file: file, line: line); ok.tap()
+    }
+
     /// Onboarding › About you. Since the owner's decision of 20 Nov 2026 (18:24) a new athlete must give a date of birth,
     /// a weight and a height as well as a name before Continue is enabled; checks that only typed a name now also enter
     /// these. The date is typed into the day / month / year sheet (fields are empty when nothing is stored).

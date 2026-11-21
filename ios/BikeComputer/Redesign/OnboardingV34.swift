@@ -116,6 +116,8 @@ struct OnboardingV34View: View {
         var x = r.answers
         // the roster is the stored sports list once the athlete has been on Page 2; before that nothing is preselected
         if page >= 2 { x.activities = AthleticRoster.roster(of: store.profile) }
+        // Build your week: a saved schedule is shown as it was left; a new athlete has none and starts with seven rest days
+        x.schedule = OnboardingFlow.storedSchedule(store)
         a = x
         ftpKnown = r.ftpKnown
         if let w = r.ftpWatts { ftpText = String(w) }
@@ -131,7 +133,12 @@ struct OnboardingV34View: View {
         let m = AthleticRoster.view(new).mode
         x.mode = m
         x.priority = m == .hybrid ? (a.priority ?? .balanced) : nil
-        if x.mode != a.mode { x.week = nil }      // a different training type gets a fresh proposed week
+        if let s = x.schedule {
+            // the chosen week keeps every session whose activity is still in the roster; nothing is put in place of the others
+            let kept = ChosenWeek.normalised(s.map { $0.filter { (x.activities ?? []).contains($0.activity) } })
+            x.schedule = kept
+            x.week = ChosenWeek.kinds(kept)
+        } else if x.mode != a.mode { x.week = nil }
         a = x
         // goals of a sport that left the roster go with it; the others, and the main goal if it survives, stay
         if a.goalIDs != nil || a.goals != nil {
@@ -163,8 +170,8 @@ struct OnboardingV34View: View {
         // Every athlete continues with at least one goal (owner decision 21 Nov 2026). Whether a plan is built is decided
         // by `planPossible`; without one the athlete goes straight to a profile-only Blueprint.
         case 3: return !goalSelection.ids.isEmpty
-        case 4: return !OnboardingWeek.feasibility(a.week ?? proposedWeek, mode: mode, ride: a.rideMinutes ?? OnboardingWeek.defaultRideMinutes,
-                                                   lift: a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes, strengthLevel: a.strengthLevel).blocking
+        // 21 Nov 2026, 21:18: the week starts as seven rest days; Continue needs at least one valid training day
+        case 4: return !ChosenWeek.feasibility(a.schedule ?? ChosenWeek.empty, planMode: weekPlanMode, strengthLevel: a.strengthLevel).blocking
         default: return true
         }
     }
@@ -172,12 +179,19 @@ struct OnboardingV34View: View {
         OnboardingWeek.propose(mode: mode, cyclingLevel: a.cyclingLevel ?? .intermediate, strengthLevel: a.strengthLevel, priority: a.priority ?? .balanced)
     }
     /// A training plan can be built: a planned activity in the roster and a goal its planner knows, chosen by the athlete.
-    private var planPossible: Bool { RosterGoals.canPlan(roster: sports, selection: goalSelection) }
+    /// Once the athlete has chosen a week, it must also hold a session of a sport Cyclift plans — their schedule is the
+    /// planner's input, and cycling or strength is never substituted for the days they chose.
+    private var planPossible: Bool {
+        guard RosterGoals.canPlan(roster: sports, selection: goalSelection) else { return false }
+        return a.schedule.map { ChosenWeek.hasPlannable($0) } ?? true
+    }
+    /// The training type a plan will be built for from the chosen week; nil when no plan will be built from it.
+    private var weekPlanMode: TrainingMode? { planPossible ? roster.mode : nil }
 
     private func next() {
-        // Profile-only: nothing chosen can be planned today. Build your week, Connect and calibrate and Athlete
-        // Evolution all describe a plan, so they are passed over; the Blueprint says what is saved.
-        if page == 3, !planPossible { page = Self.pages; return }
+        // Every athlete builds their week (21 Nov 2026, 21:18). Profile-only: nothing chosen can be planned today, so
+        // Connect and calibrate and Athlete Evolution, which describe a plan, are passed over; the Blueprint says what is saved.
+        if page == 4, !planPossible { page = Self.pages; return }
         if page == 3 {
             // what is shown on screen is the answer (the level chips start on the stored level)
             if a.cyclingLevel == nil, mode.includesCycling { a.cyclingLevel = store.profile.level }
@@ -192,7 +206,7 @@ struct OnboardingV34View: View {
         HStack(spacing: 5) {
             Button {
                 if fromBlueprint { if canContinue { backToBlueprint() } }
-                else if page == Self.pages, !planPossible { page = 3 }       // the profile-only Blueprint was reached from Goals
+                else if page == Self.pages, !planPossible { page = 4 }       // the profile-only Blueprint was reached from Build your week
                 else { page -= 1 }
             } label: {
                 Image(systemName: "chevron.left").font(.body.weight(.semibold)).foregroundStyle(theme.textPrimary)
@@ -209,8 +223,8 @@ struct OnboardingV34View: View {
     }
     /// One slot of the blueprint rail (sheet Y1): a number until its page is finished, then the mark the page left.
     private func railSlot(_ i: Int) -> some View {
-        // pages 4–6 were never visited by an athlete without a plan: they are not offered as places to go back to
-        let done = i < page && (planPossible || i <= 3), here = i == page
+        // pages 5–6 were never visited by an athlete without a plan: they are not offered as places to go back to
+        let done = i < page && (planPossible || i <= 4), here = i == page
         return Button { if done { fromBlueprint = false; page = i } } label: {
             railMark(i, done: done, here: here)
                 .frame(maxWidth: .infinity).frame(height: 26)
@@ -248,12 +262,16 @@ struct OnboardingV34View: View {
     }
     /// The week as seven small bars: a ride, a strength day, both, or a short bar for rest.
     private var railWeekBars: some View {
-        let k = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? proposedWeek
+        let w = ChosenWeek.normalised(a.schedule)
+        func tint(_ d: [ChosenSession]) -> Color {
+            guard let f = d.first.flatMap({ AthleticRoster.activity($0.activity) })?.family else { return theme.textTertiary }
+            return f == .strength ? theme.strength : f == .recovery ? theme.recovery : theme.endurance
+        }
         return HStack(alignment: .bottom, spacing: 2) {
             ForEach(0..<7, id: \.self) { i in
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(k[i] == .rest ? theme.textTertiary : k[i] == .lift ? theme.strength : theme.endurance)
-                    .frame(width: 3, height: k[i] == .rest ? 4 : k[i] == .both ? 13 : 10)
+                    .fill(tint(w[i]))
+                    .frame(width: 3, height: w[i].isEmpty ? 4 : w[i].count > 1 ? 13 : 10)
             }
         }
     }
@@ -267,7 +285,7 @@ struct OnboardingV34View: View {
         case 1: return a.name ?? ""
         case 2: return AthleticRoster.identityLine(sports, priority: a.priority)
         case 3: return "main goal \(a.primaryGoal?.title ?? a.goals?.first?.title ?? "")"
-        case 4: let k = a.week ?? proposedWeek; return "\(k.filter { $0 != .rest }.count) training days"
+        case 4: return "\(ChosenWeek.totals(a.schedule ?? ChosenWeek.empty).trainingDays) training days"
         case 5: return ftpKnown ? "FTP entered" : "seen"
         default: return "seen"
         }
@@ -327,9 +345,13 @@ struct OnboardingV34View: View {
             guard let g = a.primaryGoal ?? a.goals?.first else { return CoachLine(mark: "", tint: theme.textSecondary, before: "Pick at least one goal. The main goal shapes the sessions the Coach proposes.") }
             return CoachLine(mark: "◆", tint: theme.accent, strong: "Main goal: \(g.title).", after: " \(GoalInfo.effect(g))")
         case 4:
-            let k = a.week ?? proposedWeek
-            if OnboardingWeek.rides(k) + OnboardingWeek.lifts(k) == 0 { return CoachLine(mark: "◆", tint: theme.warning, strong: "A plan needs at least one training day.") }
-            return CoachLine(mark: "◆", tint: theme.accent, before: "Each tile becomes one planned session of that sport and length. ", strong: "Nothing is scheduled until you approve.")
+            // the athlete's chosen schedule is told apart from a generated programme, and sports without a planner are named truthfully
+            let w = ChosenWeek.normalised(a.schedule)
+            if ChosenWeek.totals(w).sessions == 0 { return CoachLine(mark: "", tint: theme.textSecondary, before: "Every day starts as rest. Tap a day to choose your training.") }
+            let waiting = ChosenWeek.bySport(w.map { $0.filter { ChosenWeek.engine($0.activity) == nil } }).map { $0.sport.lowercased() }
+            if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "This is your schedule, saved as you set it.", after: " Personalized plans for your sports are coming soon.") }
+            if !waiting.isEmpty { return CoachLine(mark: "◆", tint: theme.accent, strong: "Your schedule. ", after: "Cyclift plans your cycling and strength days; your \(waiting.joined(separator: " and ")) days are saved. Nothing is scheduled until you approve.") }
+            return CoachLine(mark: "◆", tint: theme.accent, before: "This is your schedule; the Coach plans inside it. ", strong: "Nothing is scheduled until you approve.")
         case 5: return CoachLine(mark: "◆", tint: theme.accent, strong: "Increases to your plan are presented for your approval.",
                                  after: " Reductions that protect recovery can be applied for you if you allow it. You can review why your plan changed.")
         case 6: return CoachLine(mark: "▲", tint: theme.success, before: "Your stage is earned by ", strong: "recorded training only", after: ". Nothing you answered here can raise or lower it.")
@@ -712,21 +734,7 @@ struct OnboardingV34View: View {
         .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
     }
     /// A plain symbol per activity (sheet Z2 draws one beside every row). Decorative: the name is always written.
-    private static func symbol(_ x: RosterActivity) -> String {
-        switch x.id {
-        case "strength", "freeWeights": return "dumbbell"
-        case "indoorCycling": return "figure.indoor.cycle"
-        default: break
-        }
-        switch x.family {
-        case .cycling: return "bicycle"
-        case .strength: return "figure.strengthtraining.traditional"
-        case .running: return "figure.run"
-        case .swimming: return "figure.pool.swim"
-        case .walking: return x.id == "hiking" ? "figure.hiking" : "figure.walk"
-        case .recovery: return "figure.mind.and.body"
-        }
-    }
+    private static func symbol(_ x: RosterActivity) -> String { x.symbol }      // one mapping for every screen (AthleticRoster.swift)
     @ViewBuilder private func rowText(_ x: RosterActivity) -> some View {
         Text(x.title).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
         Text("\(x.capability.mark) \(x.capabilityWords)").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
@@ -860,9 +868,9 @@ struct OnboardingV34View: View {
     // MARK: 4 — Week
 
     private var pageWeek: some View {
-        VStack(alignment: .leading, spacing: CySpace.m) {
-            heading(4, "Week", "Build your week")
-            OnbWeekPage(a: $a, mode: mode, enduranceTitle: roster.mainEndurance?.title ?? "Cycling", strengthTitle: roster.mainStrength?.title ?? "Strength")
+        VStack(alignment: .leading, spacing: 10) {
+            heading(4, "Week", "Build your week", compact: true)
+            OnbWeekPage(a: $a, roster: sports.compactMap { AthleticRoster.activity($0) }, planMode: weekPlanMode)
         }
     }
 
@@ -980,7 +988,8 @@ struct OnboardingV34View: View {
         let v = roster
         let main = a.primaryGoal ?? a.goals?.first
         let others = (a.goals ?? []).filter { $0 != main }
-        let n = OnbWeekText.sessions(kinds)
+        let chosen = a.schedule.map { ChosenWeek.plannable($0) }       // what the plan covers, with each day's own minutes
+        let n = chosen.map { ChosenWeek.totals($0).sessions } ?? OnbWeekText.sessions(kinds)
         let single: String = (v.mainEndurance ?? v.mainStrength)?.title ?? ""
         let lead: String = v.mode == .hybrid ? leadWord : single
         var goalLine = ""
@@ -989,7 +998,8 @@ struct OnboardingV34View: View {
             if !others.isEmpty { goalLine += " · also " + others.map(\.title).joined(separator: ", ") }
         }
         let isStrengthGoal: Bool = main.map { $0.sport == .strength } ?? false
-        let totals: String = "\(OnbWeekText.total(kinds, ride: ride, lift: lift)) · \(n) session\(n == 1 ? "" : "s")"
+        let time: String = chosen.map { OnboardingWeek.durationText(ChosenWeek.totals($0).minutes) } ?? OnbWeekText.total(kinds, ride: ride, lift: lift)
+        let totals: String = "\(time) · \(n) session\(n == 1 ? "" : "s")"
         return OnbBlueprintModel(
             name: (a.name ?? "").trimmingCharacters(in: .whitespaces),
             levels: levelsLine,
@@ -999,7 +1009,7 @@ struct OnboardingV34View: View {
             goalTitle: main?.title,
             goalIsStrength: isStrengthGoal,
             goalLine: goalLine,
-            kinds: kinds, ride: ride, lift: lift,
+            kinds: kinds, ride: ride, lift: lift, sessions: chosen,
             weekTotals: totals,
             proposalLines: lines,
             cells: blueprintCells(v, main: main, others: others),

@@ -245,8 +245,172 @@ enum OnboardingWeek {
             x.profile.liftDaysPerWeek = 0; x.profile.liftingHoursPerWeek = 0
         }
     }
+    /// The same, from the athlete's chosen schedule: every plannable session keeps ITS OWN minutes (nothing is averaged
+    /// or copied between days). The single "typical" lengths the planner also reads are the most frequent chosen ones.
+    static func write(schedule w: ChosenWeek.Week, into x: inout PlanInputs) {
+        x.availability = ChosenWeek.availability(w)
+        let k = ChosenWeek.kinds(w)
+        let r = rides(k), l = lifts(k)
+        x.profile.weekIsExplicit = true
+        x.profile.preferredDays = k.indices.filter { k[$0] != .rest }
+        x.profile.trainingDaysPerWeek = x.profile.preferredDays.count
+        if x.profile.trainingMode.includesCycling, r > 0 {
+            x.profile.cyclingDaysPerWeek = r
+            if let t = ChosenWeek.typicalMinutes(w, engine: .cycling) { x.profile.cyclingSessionMinutes = t }
+            x.profile.hoursPerWeek = max(1, Int((Double(ChosenWeek.minutes(w, engine: .cycling)) / 60).rounded(.up)))
+        }
+        if x.profile.trainingMode.includesLifting {
+            x.profile.liftDaysPerWeek = l
+            if let t = ChosenWeek.typicalMinutes(w, engine: .strength) { x.profile.strengthSessionMinutes = t }
+            x.profile.liftingHoursPerWeek = l == 0 ? 0 : max(1, Int((Double(ChosenWeek.minutes(w, engine: .strength)) / 60).rounded(.up)))
+            x.profile.confirmSessionLength = nil
+        } else {
+            x.profile.liftDaysPerWeek = 0; x.profile.liftingHoursPerWeek = 0
+        }
+    }
     static let defaultRideMinutes = 60
     static let defaultLiftMinutes = 30
+}
+
+// MARK: - The athlete's chosen week (Build your week — owner decision 21 Nov 2026, 21:18)
+//
+// A new athlete starts with seven rest days and decides each training day: an activity from THEIR roster, its own
+// duration, up to two sessions a day. This is the athlete's chosen schedule — availability and preferred activities —
+// not a generated programme. Sessions of sports Cyclift plans today are passed to the planner with exactly these
+// minutes; sessions of other sports are saved and never turned into cycling or strength.
+
+/// One chosen session: a roster activity (catalogue identifier) and its length.
+struct ChosenSession: Codable, Equatable, Hashable {
+    var activity: String
+    var minutes: Int
+}
+
+enum ChosenWeek {
+    typealias Week = [[ChosenSession]]
+    static let maxPerDay = 2
+    static var empty: Week { Array(repeating: [], count: 7) }
+
+    static func engine(_ id: String) -> RosterEngine? { AthleticRoster.activity(id)?.planning }
+    /// The length a newly added session starts at — the app's existing ride and strength defaults; 30 minutes for a
+    /// sport without a planner. A starting point for the stepper, not a prescription.
+    static func defaultMinutes(_ id: String) -> Int {
+        engine(id) == .cycling ? OnboardingWeek.defaultRideMinutes : OnboardingWeek.defaultLiftMinutes
+    }
+    static func range(_ id: String) -> ClosedRange<Int> { engine(id) == .strength ? 15...120 : AthleticRoster.activity(id)?.family == .cycling ? 20...300 : 10...300 }
+    static func step(_ id: String) -> Int { engine(id) == .cycling ? 10 : 5 }
+
+    /// Seven days, known activities only, minutes inside the activity's range, at most two sessions a day and at most
+    /// one per planning engine (the planner schedules one ride and one strength session a day).
+    static func normalised(_ w: Week?) -> Week {
+        var out = empty
+        for (i, day) in (w ?? []).prefix(7).enumerated() {
+            var kept: [ChosenSession] = []
+            for s in day where AthleticRoster.activity(s.activity) != nil {
+                if kept.count == maxPerDay { break }
+                if kept.contains(where: { $0.activity == s.activity }) { continue }
+                if let e = engine(s.activity), kept.contains(where: { engine($0.activity) == e }) { continue }
+                let r = range(s.activity)
+                kept.append(ChosenSession(activity: s.activity, minutes: min(r.upperBound, max(r.lowerBound, s.minutes))))
+            }
+            out[i] = kept
+        }
+        return out
+    }
+    /// A tap on an activity in the day editor: removes it when present; otherwise adds it at its starting length. A
+    /// second activity of the same planning engine replaces the first; a third session is not added.
+    static func toggling(_ id: String, in day: [ChosenSession]) -> [ChosenSession] {
+        guard AthleticRoster.activity(id) != nil else { return day }
+        if day.contains(where: { $0.activity == id }) { return day.filter { $0.activity != id } }
+        var d = day
+        if let e = engine(id), let at = d.firstIndex(where: { engine($0.activity) == e }) {
+            d[at] = ChosenSession(activity: id, minutes: d[at].minutes)        // same engine: the variant changes, the chosen length stays
+            return d
+        }
+        guard d.count < maxPerDay else { return d }
+        d.append(ChosenSession(activity: id, minutes: defaultMinutes(id)))
+        return d
+    }
+
+    // --- what the planner is given: plannable sessions only
+
+    static func kinds(_ w: Week) -> [DayKind] {
+        normalised(w).map { day in
+            let r = day.contains { engine($0.activity) == .cycling }, l = day.contains { engine($0.activity) == .strength }
+            return r && l ? .both : r ? .ride : l ? .lift : .rest
+        }
+    }
+    static func hasPlannable(_ w: Week) -> Bool { w.contains { $0.contains { engine($0.activity) != nil } } }
+    /// The sessions of sports Cyclift plans today (what the Blueprint's plan covers).
+    static func plannable(_ w: Week) -> Week { normalised(w).map { $0.filter { engine($0.activity) != nil } } }
+    static func availability(_ w: Week) -> WeeklyAvailability {
+        WeeklyAvailability(days: normalised(w).map { day in
+            var a: [DayAssignment] = []
+            if let s = day.first(where: { engine($0.activity) == .cycling }) { a.append(DayAssignment(sport: .cycling, minutes: s.minutes)) }
+            if let s = day.first(where: { engine($0.activity) == .strength }) { a.append(DayAssignment(sport: .strength, minutes: s.minutes)) }
+            return a.isEmpty ? DayAvailability(activity: .rest, minutes: 0) : DayAvailability(assignments: a)
+        })
+    }
+    static func minutes(_ w: Week, engine e: RosterEngine) -> Int { w.joined().filter { engine($0.activity) == e }.reduce(0) { $0 + $1.minutes } }
+    /// The most frequent chosen length for an engine (the longer one on a tie); nil when none is chosen.
+    static func typicalMinutes(_ w: Week, engine e: RosterEngine) -> Int? {
+        var n: [Int: Int] = [:]
+        for s in w.joined() where engine(s.activity) == e { n[s.minutes, default: 0] += 1 }
+        return n.max { ($0.value, $0.key) < ($1.value, $1.key) }?.key
+    }
+    /// An existing athlete's saved availability as a schedule (their choices are kept, never reset): each saved ride
+    /// or strength session with its saved minutes, named by the roster's main activity for that engine.
+    static func from(_ a: WeeklyAvailability?, roster ids: [String]) -> Week? {
+        guard let a, a.days.count == 7 else { return nil }
+        let acts = ids.compactMap { AthleticRoster.activity($0) }
+        let ride = acts.first { $0.planning == .cycling }?.id ?? "roadCycling"
+        let lift = acts.first { $0.planning == .strength }?.id ?? "strength"
+        return normalised(a.days.map { d in
+            d.assignments.map { ChosenSession(activity: $0.sport == .cycling ? ride : lift, minutes: $0.minutes) }
+        })
+    }
+
+    // --- the weekly summary
+
+    struct Totals: Equatable { var minutes = 0, sessions = 0, trainingDays = 0, restDays = 7 }
+    static func totals(_ w: Week) -> Totals {
+        let n = normalised(w)
+        let days = n.filter { !$0.isEmpty }.count
+        return Totals(minutes: n.joined().reduce(0) { $0 + $1.minutes }, sessions: n.joined().count, trainingDays: days, restDays: 7 - days)
+    }
+    /// "Cycling 2 h · Strength 1 h 30 min · Running 45 min" — by sport, in the order first scheduled.
+    static func bySport(_ w: Week) -> [(sport: String, minutes: Int)] {
+        var order: [RosterFamily] = [], sum: [RosterFamily: Int] = [:]
+        for s in normalised(w).joined() {
+            guard let f = AthleticRoster.activity(s.activity)?.family else { continue }
+            if sum[f] == nil { order.append(f) }
+            sum[f, default: 0] += s.minutes
+        }
+        return order.map { ($0.title, sum[$0] ?? 0) }
+    }
+    /// The week's checks. Blocking: no training day; or — only when a plan will be built (`planMode`) — the planner's
+    /// existing hybrid rule. The other notes are the planner's existing ones, counted over every chosen session.
+    static func feasibility(_ w: Week, planMode: TrainingMode?, strengthLevel: StrengthPrefs.Experience?) -> OnboardingWeek.Feasibility {
+        let n = normalised(w), t = totals(n), k = kinds(n)
+        if t.sessions == 0 { return .init(ok: false, blocking: true, text: "Pick at least one training day.") }
+        if planMode == .hybrid, hasPlannable(n) {
+            if OnboardingWeek.rides(k) == 0 { return .init(ok: false, blocking: true, text: "Hybrid needs at least one ride day.") }
+            if OnboardingWeek.lifts(k) == 0 { return .init(ok: false, blocking: true, text: "Hybrid needs at least one strength day.") }
+        }
+        var notes: [String] = []
+        if t.restDays == 0 { notes.append("no rest day — recovery will suffer") }
+        var streak = 0, longest = 0
+        for d in n + n.prefix(2) { streak = d.isEmpty ? 0 : streak + 1; longest = max(longest, streak) }
+        if longest >= 4 { notes.append("\(min(longest, 7)) training days in a row") }
+        if n.filter({ $0.count > 1 }).count > 1 { notes.append("two double days — keep one easy") }
+        let l = OnboardingWeek.lifts(k)
+        if l >= 4, (strengthLevel ?? .beginner) == .beginner { notes.append("4 lifts is a lot for a first block") }
+        let spaced = (0..<7).allSatisfy { i in !k[i].lifts || !k[(i + 1) % 7].lifts }
+        let time = OnboardingWeek.durationText(t.minutes)
+        if notes.isEmpty {
+            return .init(ok: true, blocking: false, text: "\(time) a week · \(t.restDays) rest day\(t.restDays == 1 ? "" : "s")\(l > 1 && spaced ? " · lifts ≥ 48 h apart" : "")")
+        }
+        return .init(ok: false, blocking: false, text: "\(time) a week · " + notes.joined(separator: " · "))
+    }
 }
 
 // MARK: - Stage E: the approach and the first workout (from a dry-run plan)
@@ -312,6 +476,13 @@ struct OnboardingAnswers: Equatable {
     var mainGoalID: String? = nil
     // Stage C
     var week: [DayKind]? = nil
+    /// Build your week (owner decision 21 Nov 2026, 21:18): the athlete's own schedule — per day, up to two sessions,
+    /// each a roster activity with its own duration. When set it is the authoritative week: the planner's availability
+    /// is written from its plannable sessions with exactly these minutes, and every session (planned sport or not) is
+    /// stored on the profile. nil = not chosen here (the older `week` + week-wide minutes path is used, unchanged).
+    var schedule: [[ChosenSession]]? = nil
+    /// The profile-only outcome: the schedule is saved, nothing plan-shaped is written from it.
+    var scheduleOnly = false
     var rideMinutes: Int? = nil
     var liftMinutes: Int? = nil
     var equipment: EquipmentPreset? = nil
@@ -352,7 +523,11 @@ struct OnboardingAnswers: Equatable {
             x.profile.activityGoals = sel.savedOnly
             x.profile.mainGoalID = sel.main.flatMap { ids.contains($0) ? $0 : nil }
         }
-        if let w = week {
+        if let s = schedule {
+            let w = ChosenWeek.normalised(s)
+            x.profile.chosenWeek = w
+            if !scheduleOnly, ChosenWeek.hasPlannable(w) { OnboardingWeek.write(schedule: w, into: &x) }
+        } else if let w = week {
             OnboardingWeek.write(w, ride: rideMinutes ?? x.profile.cyclingSessionMinutes ?? OnboardingWeek.defaultRideMinutes,
                                  lift: liftMinutes ?? x.profile.strengthSessionMinutes ?? OnboardingWeek.defaultLiftMinutes, into: &x)
         } else {
@@ -708,13 +883,33 @@ enum OnboardingOutcome {
         if store.strengthPrefs != x.strengthPrefs { store.strengthPrefs = x.strengthPrefs }
     }
 
+    /// The planner on the inputs Approve will save — nothing persisted. (Moved here unchanged from OnboardingFlow so
+    /// the logic tests can run it.)
+    static func dryRun(_ a: OnboardingAnswers, store: Store, kinds: [DayKind], ride: Int, lift: Int, weekOffset: Int) -> [Workout] {
+        var x = store.planInputs
+        var draft = a; draft.week = kinds; draft.rideMinutes = ride; draft.liftMinutes = lift
+        draft.apply(to: &x)
+        guard let av = x.availability else { return [] }
+        let cal = Calendar.current
+        let d0 = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: d0) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd + 7 * weekOffset, to: d0) ?? d0
+        return PlanEngine.week(starting: monday, profile: x.profile, availability: av)
+    }
+    static func storedSchedule(_ store: Store) -> [[ChosenSession]]? {
+        let p = store.profile
+        if let w = p.chosenWeek { return ChosenWeek.normalised(w) }
+        guard p.weekIsExplicit == true else { return nil }
+        return ChosenWeek.from(store.availability, roster: AthleticRoster.roster(of: p))
+    }
+
     /// The profile-only outcome (owner decision 21 Nov 2026): the athlete's profile, sports, goals and preferences are
     /// saved and they enter Cyclift WITHOUT a training plan, because nothing they chose can be planned today. No
     /// session is generated, no plan version is recorded, and no cycling or strength goal or type is assigned: the
     /// stored goals are exactly the ones chosen, and the marker keeps the planner from ever filling the calendar.
     static func createProfileOnly(_ a: OnboardingAnswers, store: Store) {
         var x = a
-        x.week = nil; x.mode = nil; x.priority = nil            // nothing plan-shaped is written
+        x.week = nil; x.mode = nil; x.priority = nil; x.scheduleOnly = true      // nothing plan-shaped is written; the chosen schedule itself is saved
         commit(x, to: store)
         store.updateProfile { $0.profileOnly = true }
         store.onboardingStage = 0

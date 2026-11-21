@@ -439,3 +439,23 @@ enum ProfileOnlyText {
         return "Your \(sport) goals are saved. Personalized \(sport) plans are coming soon."
     }
 }
+
+// MARK: - One symbol per activity (SF Symbols names), used wherever an activity is drawn
+extension RosterActivity {
+    /// The same symbol on the Athletic Roster, Build your week and the Blueprint. Native symbols only, one style.
+    var symbol: String {
+        switch id {
+        case "strength", "freeWeights": return "dumbbell"
+        case "indoorCycling": return "figure.indoor.cycle"
+        default: break
+        }
+        switch family {
+        case .cycling: return "bicycle"
+        case .strength: return "figure.strengthtraining.traditional"
+        case .running: return "figure.run"
+        case .swimming: return "figure.pool.swim"
+        case .walking: return id == "hiking" ? "figure.hiking" : "figure.walk"
+        case .recovery: return "figure.mind.and.body"
+        }
+    }
+}

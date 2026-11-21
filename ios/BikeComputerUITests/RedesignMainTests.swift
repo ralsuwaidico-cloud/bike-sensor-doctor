@@ -56,7 +56,10 @@ final class RedesignMainTests: XCTestCase {
         page(3)
         let goal = el(app, "goal-endurance"); must(goal, "goal cards"); goal.tap()
         XCTAssertTrue(next.isEnabled); next.tap()
-        page(4); must(el(app, "onbWeek"), "the week builder"); XCTAssertTrue(next.isEnabled); next.tap()
+        // Owner decision 21 Nov 2026 (21:18): the week starts as seven rest days; the earlier check accepted a proposed week.
+        page(4); must(el(app, "onbWeek"), "the week builder"); XCTAssertFalse(next.isEnabled, "Continue needs a chosen training day")
+        app.chooseWeekDay(0, ["strength"]); app.chooseWeekDay(1, ["roadCycling"]); app.chooseWeekDay(3, ["roadCycling"])
+        XCTAssertTrue(next.isEnabled); next.tap()
         page(5); XCTAssertFalse(app.staticTexts["onbLabDevices"].firstMatch.exists, "the main app does not show the Lab devices note"); next.tap()
         page(6); must(app.staticTexts["onbEvolutionStage"].firstMatch, "the no-stage statement"); next.tap()
         page(7)

@@ -891,7 +891,11 @@ final class LabChecks: XCTestCase {
         shot("journey-3-goals"); XCTAssertTrue(next.isEnabled); next.tap()
         // 4 Week
         page(4); XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "onbWeek").firstMatch.waitForExistence(timeout: 8), "the week builder")
-        shot("journey-4-week"); XCTAssertTrue(next.isEnabled, "the proposed week can be accepted as it is"); next.tap()
+        // Owner decision 21 Nov 2026 (21:18): no week is proposed any more — the page starts as seven rest days and the
+        // athlete chooses. The earlier check accepted the proposed week as it was.
+        XCTAssertFalse(next.isEnabled, "page 4: Continue needs a chosen training day")
+        app.chooseWeekDay(0, ["strength"]); app.chooseWeekDay(1, ["roadCycling"]); app.chooseWeekDay(3, ["roadCycling"]); app.chooseWeekDay(4, ["strength"])
+        shot("journey-4-week"); XCTAssertTrue(next.isEnabled, "the chosen week can be continued"); next.tap()
         // 5 Connect
         page(5); XCTAssertTrue(app.staticTexts["onbLabDevices"].firstMatch.exists, "Lab says devices are switched off")
         shot("journey-5-connect"); next.tap()

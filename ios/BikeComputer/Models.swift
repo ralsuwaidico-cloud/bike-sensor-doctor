@@ -55,6 +55,10 @@ struct RiderProfile: Codable, Equatable {
     /// The athlete's one main goal across planned and saved-only goals (a `GoalID` raw value or a `RosterGoals`
     /// identifier). nil = follow `primaryGoal`. Both fields added 21 Nov 2026; additive, ignored by older builds.
     var mainGoalID: String? = nil
+    /// The athlete's chosen week from Build your week (21 Nov 2026): seven days, each up to two sessions of a roster
+    /// activity with its own minutes — every sport, planned or not. The planner never reads it (it reads
+    /// `availability`, written from the plannable sessions). nil = not chosen there. Additive; ignored by older builds.
+    var chosenWeek: [[ChosenSession]]? = nil
     /// True for an athlete who finished onboarding WITHOUT a training plan, because none of the goals they chose can be
     /// planned by an engine Cyclift has today (owner decision 21 Nov 2026: every athlete completes onboarding; nobody
     /// is silently given a cycling or strength programme). While it is true no session is ever generated — see
@@ -241,6 +245,7 @@ struct RiderProfile: Codable, Equatable {
         activities = try? c.decodeIfPresent([String].self, forKey: .activities)
         activityGoals = try? c.decodeIfPresent([String].self, forKey: .activityGoals)
         mainGoalID = try? c.decodeIfPresent(String.self, forKey: .mainGoalID)
+        chosenWeek = try? c.decodeIfPresent([[ChosenSession]].self, forKey: .chosenWeek)
         profileOnly = try? c.decodeIfPresent(Bool.self, forKey: .profileOnly)
         version = try c.decodeIfPresent(UInt32.self, forKey: .version) ?? 1
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()

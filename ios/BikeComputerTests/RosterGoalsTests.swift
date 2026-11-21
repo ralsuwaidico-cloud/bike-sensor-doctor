@@ -167,6 +167,86 @@ final class RosterGoalsTests: XCTestCase {
         XCTAssertTrue(TrainingMix.shares(of: [], calendar: cal).isEmpty, "no plan, no bar")
         XCTAssertTrue(TrainingMix.shares(of: [w(0, .rest), w(1, .recoveryDay)], calendar: cal).isEmpty, "rest alone is not a training mix")
     }
+    // MARK: Build your week — the athlete's chosen schedule (owner decision 21 Nov 2026, 21:18)
+
+    /// Seven rest days to start with; nothing is inserted; Continue has nothing to continue with.
+    func testANewWeekIsSevenRestDays() {
+        let w = ChosenWeek.normalised(nil)
+        XCTAssertEqual(w.count, 7); XCTAssertTrue(w.allSatisfy(\.isEmpty))
+        XCTAssertEqual(ChosenWeek.totals(w), .init(minutes: 0, sessions: 0, trainingDays: 0, restDays: 7))
+        XCTAssertTrue(ChosenWeek.feasibility(w, planMode: nil, strengthLevel: nil).blocking)
+        XCTAssertEqual(ChosenWeek.kinds(w), Array(repeating: .rest, count: 7))
+        XCTAssertFalse(ChosenWeek.hasPlannable(w))
+    }
+    /// Each session has its own length; totals and the by-sport breakdown are sums of what was chosen.
+    func testChosenWeekTotalsAndPerDayLengths() {
+        var w = ChosenWeek.empty
+        w[0] = [.init(activity: "roadCycling", minutes: 60)]
+        w[2] = [.init(activity: "strength", minutes: 45), .init(activity: "trailRunning", minutes: 30)]
+        w[5] = [.init(activity: "roadCycling", minutes: 120)]
+        XCTAssertEqual(ChosenWeek.totals(w), .init(minutes: 255, sessions: 4, trainingDays: 3, restDays: 4))
+        XCTAssertEqual(ChosenWeek.bySport(w).map { "\($0.sport) \($0.minutes)" }, ["Cycling 180", "Strength 45", "Running 30"])
+        XCTAssertEqual(ChosenWeek.kinds(w), [.ride, .rest, .lift, .rest, .rest, .ride, .rest], "running is never turned into a ride or a lift")
+        let av = ChosenWeek.availability(w)
+        XCTAssertEqual(av.days[0].assignments.map(\.minutes), [60]); XCTAssertEqual(av.days[5].assignments.map(\.minutes), [120], "one day's length does not change another's")
+        XCTAssertEqual(av.days[2].assignments.map(\.sport), [.strength]); XCTAssertEqual(av.days[2].assignments.map(\.minutes), [45])
+        XCTAssertFalse(ChosenWeek.feasibility(w, planMode: .hybrid, strengthLevel: .beginner).blocking)
+    }
+    /// The editor's rules: add, remove, at most two a day, one per planned sport, lengths kept inside the range.
+    func testDayEditingRules() {
+        var d = ChosenWeek.toggling("running", in: [])
+        XCTAssertEqual(d, [.init(activity: "running", minutes: 30)])
+        d = ChosenWeek.toggling("swimming", in: d); XCTAssertEqual(d.count, 2)
+        XCTAssertEqual(ChosenWeek.toggling("walking", in: d), d, "a third session is not added")
+        XCTAssertEqual(ChosenWeek.toggling("running", in: d).map(\.activity), ["swimming"], "a session can be removed")
+        XCTAssertEqual(ChosenWeek.toggling("running", in: [.init(activity: "running", minutes: 30)]), [], "back to rest")
+        let ride = [ChosenSession(activity: "roadCycling", minutes: 90)]
+        XCTAssertEqual(ChosenWeek.toggling("gravel", in: ride), [.init(activity: "gravel", minutes: 90)], "one ride a day: the variant changes, the length stays")
+        XCTAssertEqual(ChosenWeek.normalised([[.init(activity: "nope", minutes: 30), .init(activity: "strength", minutes: 500)]])[0], [.init(activity: "strength", minutes: 120)])
+    }
+    /// The planner is given the athlete's own days and minutes, and plans exactly those.
+    func testThePlannerPlansTheChosenDaysWithTheirOwnMinutes() {
+        let (s, _) = freshStore()
+        var a = OnboardingAnswers(); a.name = "Sam"; a.activities = ["roadCycling", "strength", "running"]; a.mode = .hybrid
+        a.goals = [.endurance]; a.primaryGoal = .endurance; a.goalIDs = ["endurance"]; a.mainGoalID = "endurance"
+        var w = ChosenWeek.empty
+        w[1] = [.init(activity: "roadCycling", minutes: 50)]; w[3] = [.init(activity: "strength", minutes: 40), .init(activity: "running", minutes: 25)]; w[5] = [.init(activity: "roadCycling", minutes: 110)]
+        a.schedule = w
+        let plan = OnboardingOutcome.dryRun(a, store: s, kinds: ChosenWeek.kinds(w), ride: 60, lift: 30, weekOffset: 1).filter { (w: Workout) in w.kind != .rest && w.kind != .recoveryDay }
+        let cal = Calendar.current
+        func day(_ x: Workout) -> Int { (cal.component(.weekday, from: x.date) + 5) % 7 }
+        XCTAssertEqual(Set(plan.map(day)), [1, 3, 5], "sessions only on the chosen days (\(plan.map { "\(day($0)) \($0.kind) \($0.minutes)" }))")
+        XCTAssertEqual(plan.filter { day($0) == 1 }.map(\.minutes), [50]); XCTAssertEqual(plan.filter { day($0) == 5 }.map(\.minutes), [110])
+        XCTAssertEqual(plan.filter { day($0) == 3 }.map(\.kind), [.strength], "the running session is not planned as anything")
+        XCTAssertEqual(plan.filter { day($0) == 3 }.map(\.minutes), [40])
+        OnboardingOutcome.commit(a, to: s)
+        XCTAssertEqual(s.profile.chosenWeek, w, "every chosen session is saved, planned sport or not")
+    }
+    /// A runner's week is saved as chosen; no availability, plan, type or goal is written from it.
+    func testARunnersWeekIsSavedAndNothingIsPlannedFromIt() {
+        let (s, _) = freshStore()
+        var sel = RosterGoals.Selection(); sel.toggle("runPace")
+        var a = OnboardingAnswers(); a.name = "Sam"; a.activities = ["running"]; a.goalIDs = sel.ids; a.mainGoalID = sel.main
+        var w = ChosenWeek.empty; w[0] = [.init(activity: "running", minutes: 40)]; w[4] = [.init(activity: "running", minutes: 70)]
+        a.schedule = w
+        let before = s.availability
+        OnboardingOutcome.commit(a, to: s)                 // as onboarding does on every change
+        XCTAssertEqual(s.availability, before, "a week with nothing Cyclift plans writes no planner availability")
+        OnboardingOutcome.createProfileOnly(a, store: s)
+        XCTAssertEqual(s.profile.chosenWeek, w)
+        XCTAssertEqual(s.availability, before); XCTAssertTrue(s.plan.isEmpty); XCTAssertTrue(s.profile.isProfileOnly)
+        XCTAssertEqual(OnboardingOutcome.storedSchedule(s), w, "shown again as it was left")
+        XCTAssertFalse(ChosenWeek.feasibility(w, planMode: nil, strengthLevel: nil).blocking, "a valid training day lets the runner continue")
+    }
+    /// An older record without the field still reads; an existing athlete's saved week is kept, not reset to rest.
+    func testAnExistingWeekIsKept() throws {
+        let old = try JSONDecoder().decode(RiderProfile.self, from: JSONEncoder().encode(RiderProfile()))
+        XCTAssertNil(old.chosenWeek)
+        let av = OnboardingWeek.availability([.lift, .ride, .rest, .both, .rest, .rest, .rest], ride: 75, lift: 35)
+        let w = ChosenWeek.from(av, roster: ["gravel", "strength"])
+        XCTAssertEqual(w?[0], [.init(activity: "strength", minutes: 35)]); XCTAssertEqual(w?[1], [.init(activity: "gravel", minutes: 75)])
+        XCTAssertEqual(Set(w?[3].map(\.activity) ?? []), ["gravel", "strength"])
+    }
     /// The marker of an athlete without a plan is additive, off by default, and survives saving.
     func testProfileOnlyMarker() throws {
         XCTAssertFalse(RiderProfile().isProfileOnly)
