@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "21 Nov 2026, 03:10 (Dubai)"
+UPDATED = "21 Nov 2026, 21:10 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -17,6 +17,15 @@ CAPABILITY = [
     ("Swimming (pool, open water)", "Yes", "Yes", "No", "No", "No"),
     ("Walking, hiking", "Yes", "Yes", "No", "No", "No"),
     ("Mobility, stretching, recovery", "Yes", "Yes", "No", "No", "No"),
+]
+
+# Cross-screen integration requirements decided by the owner. They are REQUIREMENTS, not implemented features, and are
+# taken up when their screen is reached in the sequential review — not before.
+INTEGRATION = [
+    ("INT-01", "Home", "21 Nov 2026, 20:50", "Home's training categories and icons reflect the athlete's actual sports. A runner must not see Cycling as their main Endurance card.", "NOT IMPLEMENTED — for the Home review"),
+    ("INT-02", "Train", "21 Nov 2026, 20:50", "Train's primary shortcuts are sport-aware. Other activities stay accessible, without presenting cycling as every athlete's default.", "NOT IMPLEMENTED — for the Training Hub review"),
+    ("INT-03", "Plan", "21 Nov 2026, 20:50", "Plan's 'Add a goal' flow respects the athlete's roster, with truthful handling when personalized planning is not yet available.", "NOT IMPLEMENTED — for the Plan review"),
+    ("INT-04", "Goals (all screens)", "21 Nov 2026, 20:50", "Existing working goal names and planner mappings are retained. Goals are not renamed solely for cosmetic reasons.", "IN FORCE — current behaviour"),
 ]
 
 SCREENS = [
@@ -243,14 +252,16 @@ SCREENS = [
     dict(
         number=4, id="ONB-04", name="Goals",
         location="Onboarding · page 3 of 7, after the Athletic Roster.",
-        approved_on="21 Nov 2026, 00:30 (design direction: Build 6 goal cards with mandatory adjustments)",
-        status="DESIGN DIRECTION APPROVED — implemented and simulator-checked; the owner's visual verification is PENDING. Screenshot NOT approved",
-        reference="The Build 6 implementation of this page (TestFlight build 6, commit 9b9d3a68; simulator screenshot from Lab run 44), chosen by the owner "
+        approved_on="21 Nov 2026, 00:30 (design direction); summary card with training mix required 13:38; approved exactly as shown 20:50 (run34_s4.png, commit ac046799)",
+        status="APPROVED AND LOCKED — visually approved and simulator-verified on the iPhone 15 Pro. Do not modify without the owner's authorization",
+        reference="Canonical design: the implementation screenshot the owner approved on 21 Nov 2026 at 20:50 (run34_s4.png, iPhone 15 Pro simulator, Obsidian, commit ac046799). Origin: the Build 6 implementation of this page (TestFlight build 6, commit 9b9d3a68; simulator screenshot from Lab run 44), chosen by the owner "
                   "over the v3.3 sheet Y3 and the Build 7 rebuild, WITH MANDATORY ADJUSTMENTS. The screenshot shows a visible defect of Build 6 "
                   "(text overlapping the lower cards) that the adjustments remove; it is the reference for the card design, not for the layout.",
         wording=[("Page title", "What are you aiming for? (as in Build 6)"),
                  ("Main-goal explanation", "Heading in the form \"MUSCLE · MAIN GOAL\", then a compact explanation of the selected main goal, e.g. \"Build muscle through progressive strength training, with an emphasis on appropriate working sets and recovery.\" (owner's example)"),
-                 ("Note", "Other strings were not approved one by one.")],
+                 ("As approved", "Heading \"MUSCLE · MAIN GOAL\" with the planner's own rule for the goal (e.g. \"8–12 reps, more working sets per muscle each week. Measured by weekly working sets and top sets.\"); legend: Easy riding · Hard riding · Strength · Rest; athlete without a plan: \"Your running goals are saved. Personalized running plans are coming soon. You can finish setting up without a training plan.\""),
+                 ("Goal names", "The existing working goal names and planner mappings are retained (owner, 21 Nov 20:50): cycling — Endurance, Power, Climbing, Sprint, Event; strength — Strength, Muscle, Stamina, Maintain; general — Fitness. Goals are not renamed for cosmetic reasons."),
+                 ("Note", "Other strings were not approved one by one; they are approved as shown in the screenshot.")],
         design=["Build 6 goal-card design: compact icon-based cards; two columns where appropriate; clear sport categories; distinct selected states; "
                 "main-goal star indicator; existing Obsidian design language. Keep the visual character; reduce unnecessary height and spacing.",
                 "At the standard iPhone 15 Pro display size all essential content fits on one screen without vertical scrolling. Text is not reduced "
@@ -262,55 +273,80 @@ SCREENS = [
                 "Cycling and strength goals are not shown to every athlete.",
                 "Goals the existing planner supports are distinguished from goals that can be saved but cannot yet generate a sport-specific plan.",
                 "Multiple goals are allowed; exactly one is the main goal, marked by the star. Changing the main goal is intuitive and deletes no other goal.",
-                "A compact explanation of the selected main goal sits at the bottom of the content, immediately above Continue, and changes with the main goal."],
+                "A compact explanation of the selected main goal sits at the bottom of the content, immediately above Continue, and changes with the main goal.",
+                "REVISION 21 Nov 13:38 — the bottom section is the main-goal SUMMARY CARD (visual basis: the Build 6 card): heading, concise explanation of the goal "
+                "and how it influences training, segmented training-mix bar, and the legend for each segment, in a tinted card directly above Continue.",
+                "The legend size is approved as shown and stays unchanged (owner, 20:50).",
+                "The mix may be identical for two main goals (e.g. Muscle and Endurance) when the authoritative planner proposes the same session distribution. "
+                "Values are never invented to create a visual difference.",
+                "The runner-only version — the same card with the truthful no-plan summary and no bar — is accepted."],
         mandatory=["Preserved: goal selection; multiple goals; main-goal selection; relevant experience levels; existing goal storage; planner integration; "
                    "accurate training explanations; Back and Continue behaviour. Selections persist after Back and after reopening the app.",
                    "Cycling and lifting experience is kept where the current planner needs it; athletes of other sports are not asked irrelevant "
                    "cycling or strength experience. No experience field the planner needs is removed without saying how it will be collected.",
                    "No workout prescriptions are invented for unsupported sports; no unsupported training calculations; no promise of programme "
                    "capabilities the app does not have.",
-                   "No change to the production app; existing athlete records are not overwritten."],
+                   "No change to the production app; existing athlete records are not overwritten.",
+                   "The training-mix bar reflects the athlete's selected sports and the ACTUAL proposed training distribution: it is counted from the week the real "
+                   "planner proposes for the athlete's answers (sessions by kind, then free days). No hardcoded cycling/strength segments, no invented values. "
+                   "Dependency: the planner dry run used by the Blueprint.",
+                   "An athlete with no supported training plan gets a truthful summary and NO mix chart."],
         rejected=["The v3.3 sheet Y3 layout and the Build 7 rebuild of this page as the card design.",
                   "Asking the Cycling / Balanced / Strength preference again on this page.",
                   "Showing cycling and strength goals to every athlete regardless of roster.",
-                  "Inventing prescriptions or plans for sports Cyclift does not support."],
-        commits="Implementation and checks at commit 9834cb7f (branch ios/lab). Not in any TestFlight build.",
-        stages=[("Approved design", "DIRECTION ONLY", "Owner, 21 Nov 2026 00:30. The final screenshot is not approved until the owner reviews the updated implementation."),
-                ("Implemented in code", "YES", "Commit 9834cb7f. Includes the profile-only outcome (owner decisions of 21 Nov 00:46 and 00:49): an athlete whose "
-                 "chosen goals cannot be planned today finishes onboarding with profile, sports and goals saved and NO training plan."),
-                ("Compiled", "YES", "Lab app built in focused check 33 (run 44826330301). Main-app build not run on this commit."),
-                ("Simulator-verified", "FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING", "Focused check 33, run 44826330301, commit 9834cb7f, 3 of 3 passed: "
-                 "one screen without scrolling; roster-dependent groups; explanation follows the main goal; several goals kept when the main goal changes; Back keeps "
-                 "selections; a runner completes onboarding without a plan and Home, Plan and Train show no cycling plan, goal or session; none is created at the "
-                 "next launch; a mixed roster is planned only from a goal the athlete chose. Larger text scrolling passed in check 31 (run 44813599677, older commit "
-                 "23ec4893) and was not re-run. Check 32 (run 44819311147) had FAILED: a cycling week generated before set-up stayed for the runner; corrected in "
-                 "606651c2. Originally to verify on the iPhone 15 Pro simulator: fits without scrolling at standard size; no overlap or clipping; correct "
-                 "categories; explanation updates; goals and main-goal changes persist; unsupported goals trigger no fabricated plan; Back and Continue keep "
-                 "selections; larger text scrolls."),
-                ("Physically verified on iPhone", "NO", "")],
-        visual_verification="PENDING — owner to review screenshots of: a cycling/strength athlete, a runner-only athlete, and a different main goal selected.",
-        functional_verification="Lab simulator: passed at 9834cb7f (see stages). Not verified: redesigned main app, other themes, VoiceOver, physical iPhone.",
-        remaining=["Owner's visual verdict on the three screenshots (sent 21 Nov).",
-                   "Open rulings: on Plan, 'Add a goal' still opens the cycling/strength goal sheet for an athlete without a plan (it creates no plan); "
-                   "Home still shows an 'Endurance' card with a bicycle and Train offers a Cycling recording shortcut to a runner; strength and cycling "
-                   "goals keep the planner's names (Muscle, Stamina, Maintain, Event) rather than the owner's example names.",
+                  "Inventing prescriptions or plans for sports Cyclift does not support.",
+                  "The two-line explanation without the card, bar and legend (rejected 21 Nov 13:38).",
+                  "Build 6's own bar values — a fixed table of shares per goal — as the source of the bar (conflicts with the no-invented-values rule).",
+                  "Renaming existing goals for cosmetic reasons."],
+        commits="Summary card and mix: ba77dcd9; checked and approved at ac046799 (branch ios/lab). Earlier Goals work: 23ec4893, 31ea6914, 606651c2. Not in any TestFlight build.",
+        stages=[("Approved design", "YES", "Owner, 21 Nov 2026 20:50: exactly as shown in run34_s4.png, commit ac046799. Direction 00:30; summary card required 13:38."),
+                ("Implemented in code", "YES", "Commit ba77dcd9 (card and planner-derived mix) on the earlier Goals implementation; includes the profile-only outcome "
+                 "(owner decisions of 21 Nov 00:46 and 00:49)."),
+                ("Compiled", "YES", "Lab app built in focused check 34 (run 44890889110) at commit ac046799. Main-app build not run on this commit."),
+                ("Simulator-verified", "YES — visual and functional", "Owner approved the screenshot at 20:50. iPhone 15 Pro simulator, Obsidian, Lab app. Focused check 34 "
+                 "(run 44890889110, commit ac046799), 2 of 2 passed: all goal cards, level menus, the summary card and Continue on one screen without scrolling, "
+                 "nothing under the card; roster-dependent groups; heading and explanation follow the main goal; the bar is inside the card, names riding and strength "
+                 "for the cycling/strength athlete and no sport not chosen; several goals kept when the main goal changes; Back and reopening keep selections and "
+                 "level; no bar for the runner; the runner completes onboarding without a plan and Home, Plan and Train show no cycling plan, goal or session, also "
+                 "after reopening. On earlier commits only: mixed roster planned only from a chosen goal (check 33, run 44826330301, 9834cb7f); larger-text scrolling "
+                 "(check 31, run 44813599677, 23ec4893 — before the card was added). Check 32 (run 44819311147) had FAILED on a leftover cycling week for the "
+                 "runner; corrected in 606651c2."),
+                ("Physically verified on iPhone", "NO", "Nothing on this screen has been checked on a real iPhone.")],
+        visual_verification="APPROVED by the owner on 21 Nov 2026, 20:50, exactly as shown in run34_s4.png (commit ac046799). Obsidian, iPhone 15 Pro simulator only.",
+        functional_verification="VERIFIED on the iPhone 15 Pro simulator (Lab app): focused check 34, as listed. Logic tests for goals, the profile-only outcome and the mix counting pass.",
+        remaining=["OUTSTANDING — larger text sizes: scrolling has not been checked since the summary card was added.",
+                   "OUTSTANDING — other five themes: no screenshot of this screen.",
+                   "OUTSTANDING — redesigned main app: this screen has not been run there.",
+                   "OUTSTANDING — physical iPhone: nothing checked on a real device; VoiceOver unchecked.",
+                   "OUTSTANDING — regression: the full Lab run and the full logic suite have not been run on ac046799.",
+                   "Goal lists for sports without a planner (running, swimming, walking, mobility and recovery, bodyweight) remain PROVISIONAL until the owner reviews them.",
                    "No route yet for an athlete without a plan to set one up later.",
-                   "Goal lists for sports without a planner (running, swimming, walking, mobility and recovery, bodyweight) do not exist in any approved "
-                   "document; the implementation's lists are provisional and need the owner's review.",
-                   "After the owner's visual approval: Screen 5 — Build Your Week, three-column review."],
-        images=[("S04_goals_impl_sim_9834cb7f.png",
-                 "IMPLEMENTATION — NOT APPROVED. Simulator, iPhone 15 Pro, Obsidian, commit 9834cb7f (check 33). Left: cycling/strength athlete. Middle: "
+                   "Cross-screen integration requirements decided with this approval are recorded in their own section of this register."],
+        images=[("S04_approved_goals_sim_ac046799.png",
+                 "APPROVED DESIGN — as implemented (run34_s4.png). iPhone 15 Pro simulator, Obsidian, commit ac046799 (check 34). Left: cycling and strength, Muscle as "
+                 "main goal. Middle: the same athlete, Endurance as main goal. Right: runner-only, Pace as main goal. The yellow badge and Theme / Scenario / Restore "
+                 "controls are Cyclift Lab controls, not part of the screen."),
+                ("S04_goals_impl_sim_9834cb7f.png",
+                 "SUPERSEDED — NOT APPROVED (two-line explanation without the summary card; rejected 13:38). Simulator, iPhone 15 Pro, Obsidian, commit 9834cb7f (check 33). Left: cycling/strength athlete. Middle: "
                  "runner-only athlete. Right: a different main goal selected."),
                 ("S04_no_plan_home_plan_train_sim_9834cb7f.png",
-                 "IMPLEMENTATION — NOT APPROVED. The runner after 'Create my profile': Home, Plan and Train without a training plan (commit 9834cb7f)."),
+                 "NOT PART OF THIS APPROVAL — record only. The runner after 'Create my profile': Home, Plan and Train without a training plan (commit 9834cb7f)."),
                 ("S04_goals_build6_reference_9b9d3a68.png",
-                 "APPROVED CARD DESIGN REFERENCE. Build 6 (commit 9b9d3a68), simulator screenshot. Approved WITH MANDATORY ADJUSTMENTS not shown: compact height, "
+                 "ORIGIN ONLY — NOT THE CANONICAL DESIGN. Build 6 (commit 9b9d3a68), simulator screenshot. Approved WITH MANDATORY ADJUSTMENTS not shown: compact height, "
                  "everything on one screen, no overlap, roster-dependent categories, main-goal explanation above Continue.")],
         history=[("21 Nov 2026, 00:30", "Build 6 goal-card design chosen with mandatory adjustments: one screen without scrolling, no repeated balance question, "
                   "goals follow the roster, planned and saved-only goals distinguished, multiple goals with exactly one main goal, main-goal explanation above "
                   "Continue, experience only where the planner needs it.", "IN FORCE"),
                  ("21 Nov 2026, 00:46 / 00:49", "Every athlete completes onboarding; athletes whose sports cannot be planned yet get a profile-only outcome with no "
                   "fabricated plan and no automatic cycling or strength goal. Goal categories for new sports remain provisional. Screen 4 stays visually unverified "
-                  "until the owner reviews the screenshots.", "IN FORCE")],
+                  "until the owner reviews the screenshots.", "IN FORCE"),
+                 ("21 Nov 2026, 03:10", "Record only (no decision): implementation with a two-line explanation above Continue sent for review (check 33, commit 9834cb7f).", "NOTE"),
+                 ("21 Nov 2026, 13:38", "Not approved as sent: the bottom section must be the main-goal summary card — heading, concise explanation, segmented "
+                  "training-mix bar and legend — with the mix reflecting the athlete's sports and the actual proposed distribution; truthful summary without a chart "
+                  "when there is no plan.", "IN FORCE"),
+                 ("21 Nov 2026, 20:50", "Approved exactly as shown in run34_s4.png, commit ac046799: Build 6-style goal cards, selected states, main-goal summary card, "
+                  "goal-specific explanation, planner-derived mix bar, legend and compact one-screen layout are the approved visual baseline. Legend size unchanged. The "
+                  "mix may be identical between goals when the planner proposes the same distribution. The runner-only no-plan version is accepted. Existing goal names "
+                  "and planner mappings are retained. Screens 1–4 are not to be modified without further authorization.", "IN FORCE")],
     ),
 ]

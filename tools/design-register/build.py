@@ -2,7 +2,7 @@
 """Writes docs/design/CYCLIFT_APPROVED_SCREENS.md and .pdf from screens.py. No CI, no simulator: existing assets only."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from screens import SCREENS, UPDATED, CAPABILITY
+from screens import SCREENS, UPDATED, CAPABILITY, INTEGRATION
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
@@ -37,7 +37,11 @@ def markdown():
          "| Sport / discipline | Selectable in the UI | Profile and goal storage | Workout planning | Recording | AI Coach |", "|---|---|---|---|---|---|"]
     L += ["| " + " | ".join(r) + " |" for r in CAPABILITY]
     L += ["", "The goal categories for sports without a planner are PROVISIONAL until the owner reviews them.", "",
-         "## Summary", "",
+         "## Cross-screen integration requirements", "",
+         "Decided by the owner; requirements, not implemented features. Each is taken up when its screen is reached in the sequential review.", "",
+         "| ID | Screen | Decided | Requirement | State |", "|---|---|---|---|---|"]
+    L += ["| " + " | ".join(r) + " |" for r in INTEGRATION]
+    L += ["", "## Summary", "",
          "| # | ID | Screen | " + " | ".join(STAGES) + " |", "|---|---|---|" + "---|" * len(STAGES)]
     for s in SCREENS:
         L.append(f"| {s['number']} | {s['id']} | {s['name']} | " + " | ".join(v for _, v, _ in s["stages"]) + " |")
@@ -163,7 +167,15 @@ def pdf():
                             ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
     S += [ct, Spacer(1, 3 * mm),
           Paragraph("\"Yes\" in the first two columns means implemented in code on the development branch; verification is recorded under Screens 3 and 4. "
-                    "Goal categories for sports without a planner are provisional until the owner reviews them. Nothing here is in a TestFlight build.", SMALL)]
+                    "Goal categories for sports without a planner are provisional until the owner reviews them. Nothing here is in a TestFlight build.", SMALL),
+          Spacer(1, 5 * mm), Paragraph("Cross-screen integration requirements", H2),
+          Paragraph("Decided by the owner; requirements, not implemented features. Each is taken up when its screen is reached in the sequential review.", SMALL), Spacer(1, 2 * mm)]
+    irow = [[Paragraph(x, CELLB) for x in ["ID", "Screen", "Decided", "Requirement", "State"]]]
+    for r in INTEGRATION: irow.append([Paragraph(esc(v), CELL) for v in r])
+    it = Table(irow, colWidths=[14 * mm, 24 * mm, 24 * mm, width - 102 * mm, 40 * mm], repeatRows=1)
+    it.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("BACKGROUND", (0, 0), (-1, 0), SOFT),
+                            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
+    S += [it]
     for s in SCREENS:
         S += [PageBreak(), Paragraph(f"Screen {s['number']} — {esc(s['name'])}", H1),
               Paragraph(f"{s['id']} · {esc(s['location'])}", SMALL), Spacer(1, 2 * mm),
