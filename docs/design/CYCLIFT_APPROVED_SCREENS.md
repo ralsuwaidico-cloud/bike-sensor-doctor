@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 21 Nov 2026, 21:10 (Dubai) · Screens recorded: 4
+Last updated: 21 Nov 2026, 22:40 (Dubai) · Screens recorded: 5
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -47,6 +47,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 2 | ONB-02 | About You | YES | YES | YES | YES — visual and functional | NO |
 | 3 | ONB-03 | Athletic Roster | YES | YES — selection only | YES | FUNCTION: PARTLY. VISUAL: NOT YET | NO |
 | 4 | ONB-04 | Goals | YES | YES | YES | YES — visual and functional | NO |
+| 5 | ONB-05 | Build Your Week | DIRECTION ONLY | NOT YET VERIFIED | NOT YET | NOT YET | NO |
 
 ---
 
@@ -381,3 +382,77 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 21 Nov 2026, 03:10 | Record only (no decision): implementation with a two-line explanation above Continue sent for review (check 33, commit 9834cb7f). | NOTE |
 | 21 Nov 2026, 13:38 | Not approved as sent: the bottom section must be the main-goal summary card — heading, concise explanation, segmented training-mix bar and legend — with the mix reflecting the athlete's sports and the actual proposed distribution; truthful summary without a chart when there is no plan. | IN FORCE |
 | 21 Nov 2026, 20:50 | Approved exactly as shown in run34_s4.png, commit ac046799: Build 6-style goal cards, selected states, main-goal summary card, goal-specific explanation, planner-derived mix bar, legend and compact one-screen layout are the approved visual baseline. Legend size unchanged. The mix may be identical between goals when the planner proposes the same distribution. The runner-only no-plan version is accepted. Existing goal names and planner mappings are retained. Screens 1–4 are not to be modified without further authorization. | IN FORCE |
+
+---
+
+## Screen 5 — Build Your Week (ONB-05)
+
+- **Navigation location:** Onboarding · page 4 of 7, after Goals. Every athlete builds their week here, including athletes whose sports have no planner yet.
+- **Approval date:** 21 Nov 2026, 21:18 (design direction with required changes)
+- **Approval status:** DESIGN DIRECTION APPROVED — implementation and final visual verification pending
+- **Original design reference and source:** The layout the owner chose from the Screen 5 comparison board (05_build_your_week.png): compact seven-day calendar, day editor, weekly totals, equipment selector and Continue — WITH REQUIRED CHANGES. The owner's own screenshot was not received with the decision; the layout is taken to be the current-implementation column of the board, whose elements match the decision's list. To be confirmed at visual review. Origin: onboarding v3.3 sheet Y4.
+- **Implementation commit:** Implementation in progress on branch ios/lab. Not in any TestFlight build.
+
+### Exact approved wording
+
+- **Page title:** Build your week
+- **Note:** No individual strings were approved. Unnecessary technical text and large explanatory areas are to be removed.
+
+### Approved layout, visual elements and interactions
+
+- Preserve the compact seven-day calendar, day editor, weekly totals, equipment selector and Continue button.
+- All essential content on one screen on the iPhone 15 Pro at standard text size, with readable typography; larger accessibility sizes scroll.
+- No large empty explanatory areas; no unnecessary technical text.
+- START WITH SEVEN REST DAYS: on first entry Monday to Sunday all show Rest; no session is preselected or inserted; the athlete decides.
+- Tapping a day opens its activity editor. The athlete selects a sport, session type and duration, then CONFIRMS the day; only then does the day change from Rest. Any day can return to Rest.
+- The day editor uses the roster saved on Screen 3 — never hardcoded Cycling and Gym. Appropriate, consistently styled native icons per sport (bicycle, dumbbell, runner, swimmer, walking figure, mountain/hiker, stretching and yoga figures); no random emoji.
+- The calendar shows each day's selected activity and its duration.
+- Weekly summary: total duration, number of sessions, training days, rest days, sport breakdown where space permits; updated immediately on every edit.
+- Equipment selector retained, shown only when relevant to the selected activities (strength); never required of a runner-only or swimmer-only athlete.
+
+### Mandatory functionality and dependencies
+
+- Continue stays disabled until at least one valid training day is configured.
+- New-user rule only: an existing athlete's saved schedule is preserved when editing or resuming; choices are not reset on return.
+- An activity per training day; each session's duration set independently — a duration on one day never silently changes another day; up to two sessions on one day; a session can be changed or removed; choices persist through Back, Continue and reopening.
+- Feasibility warnings stay accurate.
+- The page is the athlete's chosen availability and preferred activities, kept distinct from a generated training programme, and passed to the planner as authoritative input.
+- No training prescription is fabricated for a sport without a planning engine, and cycling or strength is never substituted for it. Continue still works for valid days of such sports, using the profile-only outcome where necessary.
+- Scope: Screen 5 and the minimum shared-model changes for athlete-selected activities and per-day durations. Screens 1–4 unchanged.
+
+### Explicitly rejected alternatives
+
+- A pre-filled Coach's proposed week on first entry.
+- Hardcoded Cycling and Gym as the only day choices.
+- One ride length and one strength length applied to the whole week.
+- Large explanatory panels and technical wording.
+- Requiring an equipment choice from athletes with no strength training.
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY | Owner, 21 Nov 2026 21:18. Not final visual approval. |
+| Implemented in code | NOT YET VERIFIED | Being written and checked. |
+| Compiled | NOT YET |  |
+| Simulator-verified | NOT YET | To verify on the iPhone 15 Pro simulator: seven rest days for a new athlete; Continue disabled until a valid day; an activity enables Continue; an appropriate icon per sport; different durations on different days; a day returns to Rest; two sessions on one day; totals update; Back, Continue and reopening keep choices; planned and not-yet-planned sports handled truthfully; nothing clipped or under Continue. |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.
+- **Functional verification:** PENDING.
+
+### Remaining work or limitations
+
+- Implement, verify on the simulator, and present the three screenshots with the functional results.
+- Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).
+- After approval: Screen 6, three-column comparison.
+
+### Images
+
+- `assets/S05_week_comparison_board_75335114.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left two: design sheet Y4 (drawings). Middle: Build 6 (commit 9b9d3a68). Right two: the implementation BEFORE the required changes (commit 75335114, check 32) — it still shows a pre-filled proposed week and week-wide lengths, both now rejected.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 21 Nov 2026, 21:18 | Layout chosen with required changes: seven rest days on first entry; roster-based day editor with confirmation; independent durations; up to two sessions a day; fuller weekly summary; equipment only when relevant; truthful handling of sports without a planner; one screen at standard text size. | IN FORCE |

@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "21 Nov 2026, 21:10 (Dubai)"
+UPDATED = "21 Nov 2026, 22:40 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -348,5 +348,62 @@ SCREENS = [
                   "goal-specific explanation, planner-derived mix bar, legend and compact one-screen layout are the approved visual baseline. Legend size unchanged. The "
                   "mix may be identical between goals when the planner proposes the same distribution. The runner-only no-plan version is accepted. Existing goal names "
                   "and planner mappings are retained. Screens 1–4 are not to be modified without further authorization.", "IN FORCE")],
+    ),
+    dict(
+        number=5, id="ONB-05", name="Build Your Week",
+        location="Onboarding · page 4 of 7, after Goals. Every athlete builds their week here, including athletes whose sports have no planner yet.",
+        approved_on="21 Nov 2026, 21:18 (design direction with required changes)",
+        status="DESIGN DIRECTION APPROVED — implementation and final visual verification pending",
+        reference="The layout the owner chose from the Screen 5 comparison board (05_build_your_week.png): compact seven-day calendar, day editor, weekly totals, "
+                  "equipment selector and Continue — WITH REQUIRED CHANGES. The owner's own screenshot was not received with the decision; the layout is taken "
+                  "to be the current-implementation column of the board, whose elements match the decision's list. To be confirmed at visual review. Origin: "
+                  "onboarding v3.3 sheet Y4.",
+        wording=[("Page title", "Build your week"),
+                 ("Note", "No individual strings were approved. Unnecessary technical text and large explanatory areas are to be removed.")],
+        design=["Preserve the compact seven-day calendar, day editor, weekly totals, equipment selector and Continue button.",
+                "All essential content on one screen on the iPhone 15 Pro at standard text size, with readable typography; larger accessibility sizes scroll.",
+                "No large empty explanatory areas; no unnecessary technical text.",
+                "START WITH SEVEN REST DAYS: on first entry Monday to Sunday all show Rest; no session is preselected or inserted; the athlete decides.",
+                "Tapping a day opens its activity editor. The athlete selects a sport, session type and duration, then CONFIRMS the day; only then does the day "
+                "change from Rest. Any day can return to Rest.",
+                "The day editor uses the roster saved on Screen 3 — never hardcoded Cycling and Gym. Appropriate, consistently styled native icons per sport "
+                "(bicycle, dumbbell, runner, swimmer, walking figure, mountain/hiker, stretching and yoga figures); no random emoji.",
+                "The calendar shows each day's selected activity and its duration.",
+                "Weekly summary: total duration, number of sessions, training days, rest days, sport breakdown where space permits; updated immediately on every edit.",
+                "Equipment selector retained, shown only when relevant to the selected activities (strength); never required of a runner-only or swimmer-only athlete."],
+        mandatory=["Continue stays disabled until at least one valid training day is configured.",
+                   "New-user rule only: an existing athlete's saved schedule is preserved when editing or resuming; choices are not reset on return.",
+                   "An activity per training day; each session's duration set independently — a duration on one day never silently changes another day; up to two "
+                   "sessions on one day; a session can be changed or removed; choices persist through Back, Continue and reopening.",
+                   "Feasibility warnings stay accurate.",
+                   "The page is the athlete's chosen availability and preferred activities, kept distinct from a generated training programme, and passed to the "
+                   "planner as authoritative input.",
+                   "No training prescription is fabricated for a sport without a planning engine, and cycling or strength is never substituted for it. Continue still "
+                   "works for valid days of such sports, using the profile-only outcome where necessary.",
+                   "Scope: Screen 5 and the minimum shared-model changes for athlete-selected activities and per-day durations. Screens 1–4 unchanged."],
+        rejected=["A pre-filled Coach's proposed week on first entry.",
+                  "Hardcoded Cycling and Gym as the only day choices.",
+                  "One ride length and one strength length applied to the whole week.",
+                  "Large explanatory panels and technical wording.",
+                  "Requiring an equipment choice from athletes with no strength training."],
+        commits="Implementation in progress on branch ios/lab. Not in any TestFlight build.",
+        stages=[("Approved design", "DIRECTION ONLY", "Owner, 21 Nov 2026 21:18. Not final visual approval."),
+                ("Implemented in code", "NOT YET VERIFIED", "Being written and checked."),
+                ("Compiled", "NOT YET", ""),
+                ("Simulator-verified", "NOT YET", "To verify on the iPhone 15 Pro simulator: seven rest days for a new athlete; Continue disabled until a valid day; an "
+                 "activity enables Continue; an appropriate icon per sport; different durations on different days; a day returns to Rest; two sessions on one day; "
+                 "totals update; Back, Continue and reopening keep choices; planned and not-yet-planned sports handled truthfully; nothing clipped or under Continue."),
+                ("Physically verified on iPhone", "NO", "")],
+        visual_verification="PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.",
+        functional_verification="PENDING.",
+        remaining=["Implement, verify on the simulator, and present the three screenshots with the functional results.",
+                   "Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).",
+                   "After approval: Screen 6, three-column comparison."],
+        images=[("S05_week_comparison_board_75335114.png",
+                 "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left two: design sheet Y4 (drawings). Middle: Build 6 (commit 9b9d3a68). Right two: the implementation "
+                 "BEFORE the required changes (commit 75335114, check 32) — it still shows a pre-filled proposed week and week-wide lengths, both now rejected.")],
+        history=[("21 Nov 2026, 21:18", "Layout chosen with required changes: seven rest days on first entry; roster-based day editor with confirmation; independent "
+                  "durations; up to two sessions a day; fuller weekly summary; equipment only when relevant; truthful handling of sports without a planner; one screen "
+                  "at standard text size.", "IN FORCE")],
     ),
 ]
