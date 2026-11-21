@@ -471,8 +471,8 @@ final class LabFastOnboarding: XCTestCase {
         tap(app, app.buttons["onbDayRest"].firstMatch, "close without choosing"); tap(app, app.buttons["onbDay-0"].firstMatch, "close Monday")
         app.chooseWeekDay(0, ["running"])
         tap(app, app.buttons["onbDay-3"].firstMatch, "open Thursday"); tap(app, app.buttons["onbAct-running"].firstMatch, "running on Thursday")
-        for _ in 0..<3 { app.buttons["onbLen-runningPlus"].firstMatch.tap() }
-        XCTAssertEqual(el(app, "onbLen-runningMinutes").label, "45 min", "required: Thursday's own length")
+        for _ in 0..<3 { app.buttons["onbLen-0Plus"].firstMatch.tap() }
+        XCTAssertEqual(el(app, "onbLen-0Minutes").label, "45 min", "required: Thursday's own length")
         tap(app, app.buttons["onbDayConfirm"].firstMatch, "confirm Thursday")
         app.chooseWeekDay(5, ["running"])
         XCTAssertTrue(el(app, "onbDay-0").label.contains("Road running 30 minutes") && el(app, "onbDay-3").label.contains("Road running 45 minutes"), "required: each day keeps its own length (\(el(app, "onbDay-0").label) / \(el(app, "onbDay-3").label))")
@@ -603,30 +603,33 @@ final class LabFastOnboarding: XCTestCase {
         let confirm = app.buttons["onbDayConfirm"].firstMatch
         XCTAssertFalse(confirm.isEnabled, "required: nothing to confirm yet")
         tap(app, app.buttons["onbAct-roadCycling"].firstMatch, "road cycling on Monday")
-        XCTAssertEqual(el(app, "onbLen-roadCyclingMinutes").label, "60 min")
+        XCTAssertEqual(el(app, "onbLen-0Minutes").label, "60 min", "required: a ride starts at 60 minutes")
         XCTAssertTrue(el(app, "onbDay-0").label.hasSuffix(", rest") && !next.isEnabled, "required: Monday stays rest until it is confirmed")
+        // a session is removed on its own row, without touching the other
+        tap(app, app.buttons["onbAct-strength"].firstMatch, "add gym to Monday")
+        XCTAssertEqual(el(app, "onbDayEditorCount").label, "2 sessions")
+        tap(app, app.buttons["onbSessionRemove-1"].firstMatch, "remove the gym session")
+        XCTAssertEqual(el(app, "onbDayEditorCount").label, "1 session"); XCTAssertEqual(el(app, "onbSession-0").label, "Road cycling", "required: the ride is still there")
         XCTAssertTrue(confirm.isEnabled); confirm.tap()
         XCTAssertTrue(el(app, "onbDay-0").label.contains("Road cycling 60 minutes"), "required: Monday is now the chosen ride (\(el(app, "onbDay-0").label))")
         XCTAssertEqual(el(app, "onbWeekTotal").label, "1 h"); XCTAssertEqual(el(app, "onbWeekCounts").label, "1 session · 1 training day · 6 rest days")
-        // The planner's existing rule for an athlete whose main sports are cycling AND strength is kept, not weakened: a
-        // plan for both needs a day of each, and the page says so. (A single-sport athlete continues with one day —
-        // see testARunnerCompletesOnboardingWithoutAPlan.)
-        XCTAssertTrue(need(app, "onbFeasibility", "the reason Continue is not yet available").label.contains("at least one strength day"), "required: the page says what is missing (\(el(app, "onbFeasibility").label))")
-        XCTAssertFalse(next.isEnabled, "required: the existing cycling-and-strength rule still holds")
+        // Owner decision 21 Nov 2026 (22:22): a cycling-and-strength athlete need not schedule both sports. The check
+        // written an hour earlier required Continue to stay disabled here under the older planner rule.
+        XCTAssertTrue(next.isEnabled, "required: one valid training session enables Continue, whatever else is in the roster")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Hybrid needs'")).firstMatch.exists, "required: the older both-sports rule is not shown")
 
         // two sessions on one day, each with its own length; the equipment question arrives with strength
         tap(app, app.buttons["onbDay-2"].firstMatch, "open Wednesday")
         tap(app, app.buttons["onbAct-strength"].firstMatch, "gym on Wednesday"); tap(app, app.buttons["onbAct-running"].firstMatch, "and a run")
         XCTAssertEqual(el(app, "onbDayEditorCount").label, "2 sessions")
-        for _ in 0..<3 { app.buttons["onbLen-strengthPlus"].firstMatch.tap() }
-        XCTAssertEqual(el(app, "onbLen-strengthMinutes").label, "45 min"); XCTAssertEqual(el(app, "onbLen-runningMinutes").label, "30 min", "required: one session's length does not change the other's")
+        for _ in 0..<3 { app.buttons["onbLen-0Plus"].firstMatch.tap() }
+        XCTAssertEqual(el(app, "onbLen-0Minutes").label, "45 min"); XCTAssertEqual(el(app, "onbLen-1Minutes").label, "30 min", "required: one session's length does not change the other's")
         XCTAssertFalse(app.buttons["onbAct-roadCycling"].firstMatch.isEnabled, "required: a third session is not offered")
-        // the fullest state of the page: nothing is under the fixed Continue area
         // Check 35 found the equipment row under the Continue area in this state. The page now gives the open editor
         // the room: the equipment choice is shown when no day is being edited, and required again below once confirmed.
         let line = need(app, "onbCoachLine", "the line above Continue")
         XCTAssertTrue(confirm.isHittable && confirm.frame.maxY <= line.frame.minY + 1, "required: Confirm is above the Continue area with two sessions open (confirm \(confirm.frame), line \(line.frame))")
-        for id in ["onbDayEditor", "onbWeekTotal", "onbWeekCounts", "onbWeekBySport", "onbFeasibility"] {
+        for id in ["onbDayEditor", "onbWeekTotal", "onbWeekCounts", "onbWeekBySport"] {
             XCTAssertLessThanOrEqual(need(app, id, id).frame.maxY, line.frame.minY + 1, "required: with two sessions open \(id) is not under the Continue area (\(el(app, id).frame), line \(line.frame))")
         }
         XCTAssertFalse(el(app, "onbEquipment").exists, "required: nothing is drawn under the Continue area while a day is edited")
@@ -635,30 +638,36 @@ final class LabFastOnboarding: XCTestCase {
         need(app, "onbEquipment", "the equipment choice, once a strength session is in the week")
         XCTAssertTrue(el(app, "onbDay-2").label.contains("Gym training 45 minutes") && el(app, "onbDay-2").label.contains("Road running 30 minutes"), "required: Wednesday holds both sessions (\(el(app, "onbDay-2").label))")
         XCTAssertEqual(el(app, "onbWeekTotal").label, "2 h 15 min"); XCTAssertEqual(el(app, "onbWeekCounts").label, "3 sessions · 2 training days · 5 rest days")
-        XCTAssertTrue(next.isEnabled, "required: Continue once the week is valid")
 
-        // a different length on another day; Monday is not changed by it
-        tap(app, app.buttons["onbDay-5"].firstMatch, "open Saturday"); tap(app, app.buttons["onbAct-roadCycling"].firstMatch, "a Saturday ride")
-        for _ in 0..<3 { app.buttons["onbLen-roadCyclingPlus"].firstMatch.tap() }
+        // two sessions of the SAME activity on one day, stored separately with their own lengths (22:22); Monday is not changed
+        tap(app, app.buttons["onbDay-5"].firstMatch, "open Saturday")
+        tap(app, app.buttons["onbAct-roadCycling"].firstMatch, "a Saturday ride"); tap(app, app.buttons["onbAct-roadCycling"].firstMatch, "and a second ride")
+        XCTAssertEqual(el(app, "onbDayEditorCount").label, "2 sessions", "required: the second ride is added, not swapped for the first")
+        for _ in 0..<3 { app.buttons["onbLen-0Plus"].firstMatch.tap() }
+        for _ in 0..<2 { app.buttons["onbLen-1Minus"].firstMatch.tap() }
+        XCTAssertEqual(el(app, "onbLen-0Minutes").label, "90 min"); XCTAssertEqual(el(app, "onbLen-1Minutes").label, "40 min")
         confirm.tap()
-        XCTAssertTrue(el(app, "onbDay-5").label.contains("Road cycling 90 minutes") && el(app, "onbDay-0").label.contains("Road cycling 60 minutes"), "required: Saturday 90, Monday still 60 (\(el(app, "onbDay-5").label) / \(el(app, "onbDay-0").label))")
-        XCTAssertEqual(el(app, "onbWeekTotal").label, "3 h 45 min")
-        XCTAssertEqual(el(app, "onbWeekBySport").label, "Cycling 2 h 30 min · Strength 45 min · Running 30 min")
+        XCTAssertTrue(el(app, "onbDay-5").label.contains("Road cycling 90 minutes and Road cycling 40 minutes"), "required: Saturday holds both rides (\(el(app, "onbDay-5").label))")
+        XCTAssertTrue(el(app, "onbDay-0").label.contains("Road cycling 60 minutes"), "required: Monday is still 60 (\(el(app, "onbDay-0").label))")
+        XCTAssertEqual(el(app, "onbWeekTotal").label, "4 h 25 min"); XCTAssertEqual(el(app, "onbWeekCounts").label, "5 sessions · 3 training days · 4 rest days")
+        XCTAssertEqual(el(app, "onbWeekBySport").label, "Cycling 3 h 10 min · Strength 45 min · Running 30 min")
+        XCTAssertTrue(need(app, "onbFeasibility", "the note about two double days").label.contains("double days"), "required: the existing note still appears, and does not block (\(el(app, "onbFeasibility").label))")
+        XCTAssertTrue(next.isEnabled, "required: a note is not a block")
 
         // back to rest, and chosen again
         tap(app, app.buttons["onbDay-0"].firstMatch, "open Monday"); tap(app, app.buttons["onbDayRest"].firstMatch, "Rest")
         XCTAssertEqual(confirm.label, "Make Monday a rest day"); confirm.tap()
         XCTAssertTrue(el(app, "onbDay-0").label.hasSuffix(", rest"), "required: Monday is rest again")
-        XCTAssertEqual(el(app, "onbWeekTotal").label, "2 h 45 min"); XCTAssertEqual(el(app, "onbWeekCounts").label, "3 sessions · 2 training days · 5 rest days")
+        XCTAssertEqual(el(app, "onbWeekTotal").label, "3 h 25 min"); XCTAssertEqual(el(app, "onbWeekCounts").label, "4 sessions · 2 training days · 5 rest days")
         app.chooseWeekDay(0, ["roadCycling"])
-        XCTAssertEqual(el(app, "onbWeekTotal").label, "3 h 45 min"); XCTAssertEqual(el(app, "onbWeekCounts").label, "4 sessions · 3 training days · 4 rest days")
+        XCTAssertEqual(el(app, "onbWeekTotal").label, "4 h 25 min"); XCTAssertEqual(el(app, "onbWeekCounts").label, "5 sessions · 3 training days · 4 rest days")
         let mixedLine = el(app, "onbCoachLine").label
         XCTAssertTrue(mixedLine.contains("running days are saved") && mixedLine.contains("Nothing is scheduled until you approve"), "required: planned and saved sports are told apart (\(mixedLine))")
 
         // one screen: calendar, summary, equipment and Continue, nothing clipped or under the Continue area
         let window = app.windows.firstMatch.frame, title = app.staticTexts["onbTitle"].firstMatch
         XCTAssertTrue(title.isHittable, "required: the page title is visible")
-        for id in ["onbWeek", "onbDayEditor", "onbWeekTotal", "onbWeekCounts", "onbWeekBySport", "onbEquipment"] {
+        for id in ["onbWeek", "onbDayEditor", "onbWeekTotal", "onbWeekCounts", "onbWeekBySport", "onbFeasibility", "onbEquipment"] {
             let e = need(app, id, id)
             XCTAssertLessThanOrEqual(e.frame.maxY, line.frame.minY + 1, "required: \(id) is not under the Continue area (bottom \(e.frame.maxY), line starts \(line.frame.minY))")
             XCTAssertGreaterThanOrEqual(e.frame.minY, title.frame.maxY - 1, "required: \(id) is below the title")
@@ -670,7 +679,7 @@ final class LabFastOnboarding: XCTestCase {
         // Continue and Back keep it; so does closing and reopening
         next.tap(); page(app, 5)
         app.buttons["onboardingBack"].firstMatch.tap(); page(app, 4)
-        let kept = ["onbDay-0": "Road cycling 60 minutes", "onbDay-2": "Gym training 45 minutes", "onbDay-5": "Road cycling 90 minutes"]
+        let kept = ["onbDay-0": "Road cycling 60 minutes", "onbDay-2": "Gym training 45 minutes", "onbDay-5": "Road cycling 90 minutes and Road cycling 40 minutes"]
         for (id, text) in kept { XCTAssertTrue(el(app, id).label.contains(text), "required: \(id) after Back (\(el(app, id).label))") }
         app.terminate()
         let again = XCUIApplication(); again.launchEnvironment["LAB_THEME"] = "obsidian"; again.launch()
@@ -681,7 +690,7 @@ final class LabFastOnboarding: XCTestCase {
         for (id, text) in kept { XCTAssertTrue(need(again, id, id).label.contains(text), "required: \(id) was saved (\(el(again, id).label))") }
         XCTAssertTrue(el(again, "onbDay-2").label.contains("Road running 30 minutes"), "required: the running session was saved too")
         XCTAssertTrue(el(again, "onbDay-1").label.hasSuffix(", rest"), "required: nothing was added while the app was closed")
-        XCTAssertEqual(el(again, "onbWeekTotal").label, "3 h 45 min")
+        XCTAssertEqual(el(again, "onbWeekTotal").label, "4 h 25 min")
     }
 
     /// All seven pages: each page's required elements, the units choice, a day edit on page 4, a Blueprint group opened
@@ -836,7 +845,7 @@ final class LabFastOnboarding: XCTestCase {
         tap(app, app.buttons["onbDay-1"].firstMatch, "open Tuesday")
         XCTAssertEqual(need(app, "onbDayEditorDay", "the day editor").label, "Tuesday", "required: the editor opens the tapped day")
         tap(app, app.buttons["onbAct-roadCycling"].firstMatch, "a Tuesday ride")
-        XCTAssertTrue(app.buttons["onbLen-roadCyclingPlus"].firstMatch.exists, "required: the ride length control")
+        XCTAssertTrue(app.buttons["onbLen-0Plus"].firstMatch.exists, "required: the ride length control")
         app.settleForScreenshot(1); shot("onb-large-4-week-day")
         tap(app, app.buttons["onbDayConfirm"].firstMatch, "confirm Tuesday")
         let kit = need(app, "onbEquipment", "the equipment choice")

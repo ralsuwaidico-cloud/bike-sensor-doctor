@@ -174,7 +174,7 @@ final class RosterGoalsTests: XCTestCase {
         let w = ChosenWeek.normalised(nil)
         XCTAssertEqual(w.count, 7); XCTAssertTrue(w.allSatisfy(\.isEmpty))
         XCTAssertEqual(ChosenWeek.totals(w), .init(minutes: 0, sessions: 0, trainingDays: 0, restDays: 7))
-        XCTAssertTrue(ChosenWeek.feasibility(w, planMode: nil, strengthLevel: nil).blocking)
+        XCTAssertTrue(ChosenWeek.feasibility(w, strengthLevel: nil).blocking)
         XCTAssertEqual(ChosenWeek.kinds(w), Array(repeating: .rest, count: 7))
         XCTAssertFalse(ChosenWeek.hasPlannable(w))
     }
@@ -190,19 +190,62 @@ final class RosterGoalsTests: XCTestCase {
         let av = ChosenWeek.availability(w)
         XCTAssertEqual(av.days[0].assignments.map(\.minutes), [60]); XCTAssertEqual(av.days[5].assignments.map(\.minutes), [120], "one day's length does not change another's")
         XCTAssertEqual(av.days[2].assignments.map(\.sport), [.strength]); XCTAssertEqual(av.days[2].assignments.map(\.minutes), [45])
-        XCTAssertFalse(ChosenWeek.feasibility(w, planMode: .hybrid, strengthLevel: .beginner).blocking)
+        XCTAssertFalse(ChosenWeek.feasibility(w, strengthLevel: .beginner).blocking)
     }
-    /// The editor's rules: add, remove, at most two a day, one per planned sport, lengths kept inside the range.
+    /// The editor's rules (owner decision 21 Nov 2026, 22:22): any two activities share a day — the same sport or the
+    /// same activity twice included — each stored separately; nothing is replaced; no third session; lengths in range.
     func testDayEditingRules() {
-        var d = ChosenWeek.toggling("running", in: [])
+        var d = ChosenWeek.adding("running", to: [])
         XCTAssertEqual(d, [.init(activity: "running", minutes: 30)])
-        d = ChosenWeek.toggling("swimming", in: d); XCTAssertEqual(d.count, 2)
-        XCTAssertEqual(ChosenWeek.toggling("walking", in: d), d, "a third session is not added")
-        XCTAssertEqual(ChosenWeek.toggling("running", in: d).map(\.activity), ["swimming"], "a session can be removed")
-        XCTAssertEqual(ChosenWeek.toggling("running", in: [.init(activity: "running", minutes: 30)]), [], "back to rest")
+        d = ChosenWeek.adding("running", to: d)
+        XCTAssertEqual(d.map(\.activity), ["running", "running"], "two sessions of the same activity are two sessions")
+        XCTAssertEqual(ChosenWeek.adding("walking", to: d), d, "a third session is not added")
         let ride = [ChosenSession(activity: "roadCycling", minutes: 90)]
-        XCTAssertEqual(ChosenWeek.toggling("gravel", in: ride), [.init(activity: "gravel", minutes: 90)], "one ride a day: the variant changes, the length stays")
-        XCTAssertEqual(ChosenWeek.normalised([[.init(activity: "nope", minutes: 30), .init(activity: "strength", minutes: 500)]])[0], [.init(activity: "strength", minutes: 120)])
+        XCTAssertEqual(ChosenWeek.adding("gravel", to: ride), [.init(activity: "roadCycling", minutes: 90), .init(activity: "gravel", minutes: 60)], "a second ride is added; the first is not replaced")
+        let n = ChosenWeek.normalised([[.init(activity: "nope", minutes: 30), .init(activity: "strength", minutes: 500), .init(activity: "strength", minutes: 20), .init(activity: "running", minutes: 30)]])[0]
+        XCTAssertEqual(n, [.init(activity: "strength", minutes: 120), .init(activity: "strength", minutes: 20)], "unknown activities are not stored; two a day; lengths inside the range")
+    }
+    /// A cycling-and-strength athlete may schedule one sport only: Continue is not blocked, and the planner plans
+    /// exactly the chosen sessions — no strength session is added to a rides-only week, and no ride to a strength-only one.
+    func testAHybridAthleteMayScheduleOneSportOnly() {
+        let cal = Calendar.current
+        func day(_ x: Workout) -> Int { (cal.component(.weekday, from: x.date) + 5) % 7 }
+        for (activity, wrong) in [("roadCycling", "strength"), ("strength", "ride")] {
+            let (s, _) = freshStore()
+            var a = OnboardingAnswers(); a.name = "Sam"; a.activities = ["roadCycling", "strength"]; a.mode = .hybrid
+            a.goals = [.endurance, .muscle]; a.primaryGoal = .endurance
+            var w = ChosenWeek.empty; w[0] = [.init(activity: activity, minutes: 50)]; w[3] = [.init(activity: activity, minutes: 80)]
+            a.schedule = w
+            XCTAssertFalse(ChosenWeek.feasibility(w, strengthLevel: .beginner).blocking, "\(activity) only: Continue is not blocked")
+            let plan = OnboardingOutcome.dryRun(a, store: s, kinds: ChosenWeek.kinds(w), ride: 60, lift: 30, weekOffset: 1).filter { (x: Workout) in x.kind != .rest && x.kind != .recoveryDay }
+            XCTAssertEqual(plan.map(day).sorted(), [0, 3], "\(activity) only: sessions on the chosen days only")
+            XCTAssertEqual(plan.sorted { day($0) < day($1) }.map(\.minutes), [50, 80], "with the chosen minutes")
+            XCTAssertTrue(plan.allSatisfy { ($0.kind == .strength) == (activity == "strength") }, "\(activity) only: no \(wrong) session is added (\(plan.map { $0.kind.rawValue }))")
+        }
+    }
+    /// Two rides, or two strength sessions, on one day: the planner is given both and schedules both, with their own
+    /// minutes. Nothing is dropped and nothing is invented; a sport without a planner on the same day is not planned.
+    func testThePlannerTakesEveryPlannableSessionOfTheChosenWeek() {
+        let (s, _) = freshStore()
+        var a = OnboardingAnswers(); a.name = "Sam"; a.activities = ["roadCycling", "gravel", "strength", "running"]; a.mode = .hybrid
+        a.goals = [.endurance]; a.primaryGoal = .endurance
+        var w = ChosenWeek.empty
+        w[0] = [.init(activity: "roadCycling", minutes: 50), .init(activity: "gravel", minutes: 30)]
+        w[3] = [.init(activity: "strength", minutes: 40), .init(activity: "strength", minutes: 25)]
+        w[5] = [.init(activity: "running", minutes: 35), .init(activity: "running", minutes: 20)]
+        a.schedule = w
+        let av = ChosenWeek.availability(w)
+        XCTAssertEqual(av.days[0].assignments.map(\.minutes), [50, 30]); XCTAssertEqual(av.days[3].assignments.map(\.minutes), [40, 25]); XCTAssertTrue(av.days[5].assignments.isEmpty)
+        let cal = Calendar.current
+        func day(_ x: Workout) -> Int { (cal.component(.weekday, from: x.date) + 5) % 7 }
+        let plan = OnboardingOutcome.dryRun(a, store: s, kinds: ChosenWeek.kinds(w), ride: 60, lift: 30, weekOffset: 1).filter { (x: Workout) in x.kind != .rest && x.kind != .recoveryDay }
+        XCTAssertEqual(plan.filter { day($0) == 0 }.map(\.minutes).sorted(), [30, 50], "both rides are planned (\(plan.map { "\(day($0)) \($0.kind.rawValue) \($0.minutes)" }))")
+        XCTAssertEqual(plan.filter { day($0) == 3 }.map(\.minutes).sorted(), [25, 40], "both strength sessions are planned")
+        XCTAssertTrue(plan.filter { day($0) == 3 }.allSatisfy { $0.kind == .strength })
+        XCTAssertTrue(plan.filter { day($0) == 5 }.isEmpty, "the two runs are saved, and planned as nothing")
+        XCTAssertEqual(plan.count, 4, "nothing is added")
+        OnboardingOutcome.commit(a, to: s)
+        XCTAssertEqual(s.profile.chosenWeek, w, "all six sessions are stored separately, as chosen")
     }
     /// The planner is given the athlete's own days and minutes, and plans exactly those.
     func testThePlannerPlansTheChosenDaysWithTheirOwnMinutes() {
@@ -236,7 +279,7 @@ final class RosterGoalsTests: XCTestCase {
         XCTAssertEqual(s.profile.chosenWeek, w)
         XCTAssertEqual(s.availability, before); XCTAssertTrue(s.plan.isEmpty); XCTAssertTrue(s.profile.isProfileOnly)
         XCTAssertEqual(OnboardingOutcome.storedSchedule(s), w, "shown again as it was left")
-        XCTAssertFalse(ChosenWeek.feasibility(w, planMode: nil, strengthLevel: nil).blocking, "a valid training day lets the runner continue")
+        XCTAssertFalse(ChosenWeek.feasibility(w, strengthLevel: nil).blocking, "a valid training day lets the runner continue")
     }
     /// An older record without the field still reads; an existing athlete's saved week is kept, not reset to rest.
     func testAnExistingWeekIsKept() throws {

@@ -100,9 +100,9 @@ struct OnbWeekStrip: View {
                         Image(systemName: "moon").font(.footnote).foregroundStyle(theme.textSecondary)
                         Text("rest").font(.caption2).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.7)
                     } else {
-                        ForEach(day, id: \.activity) { s in
-                            let x = AthleticRoster.activity(s.activity)
-                            session(x?.symbol ?? "figure.mixed.cardio", s.minutes, Self.tint(x?.family, theme))
+                        ForEach(Array(day.enumerated()), id: \.offset) { item in
+                            let x = AthleticRoster.activity(item.element.activity)
+                            session(x?.symbol ?? "figure.mixed.cardio", item.element.minutes, Self.tint(x?.family, theme))
                         }
                     }
                 } else if k == .rest {
@@ -433,7 +433,7 @@ struct OnbBirthSheet: View {
 // equipment selector and Continue, on one screen at the standard text size. A NEW athlete starts with seven rest days:
 // nothing is preselected and nothing is inserted for them. Tapping a day opens its editor; the athlete picks an
 // activity FROM THEIR OWN ROSTER (Screen 3 — never a fixed cycling/gym pair), sets that session's own length, may add
-// a second session, and CONFIRMS the day — only then does the tile change. Any day can go back to rest. A length set
+// a second session (any activity, the same one included), and CONFIRMS the day — only then does the tile change. Any day can go back to rest. A length set
 // on one day never changes another day. What is built here is the athlete's chosen schedule, not a generated
 // programme; sports without a planner are saved exactly as chosen and never replaced by cycling or strength.
 // A returning athlete's saved schedule is shown as they left it (see OnboardingFlow.storedSchedule).
@@ -442,8 +442,6 @@ struct OnbWeekPage: View {
     @Binding var a: OnboardingAnswers
     /// The athlete's roster, in roster order.
     let roster: [RosterActivity]
-    /// The training type a plan will be built for from this week; nil = no plan is built from it.
-    let planMode: TrainingMode?
     @State private var selected: Int? = nil
     /// The open day as being edited. Written to the week only by Confirm.
     @State private var draft: [ChosenSession] = []
@@ -520,18 +518,19 @@ struct OnbWeekPage: View {
         }
         FlowLayout(spacing: 6) {
             ForEach(roster) { x in
+                // a tap ADDS a session of that activity — any two may share a day, the same one twice included; nothing
+                // already chosen is replaced; a third session is not offered. Each session is removed on its own row.
                 let on = draft.contains { $0.activity == x.id }
-                // a third session is not offered; a second activity of the same planned sport replaces the first
-                let full = !on && draft.count >= ChosenWeek.maxPerDay && !(x.planning != nil && draft.contains { ChosenWeek.engine($0.activity) == x.planning })
-                chip(chipTitle(x), spoken: x.title, icon: x.symbol, on: on, tint: OnbWeekStrip.tint(x.family, theme), id: "onbAct-\(x.id)") {
-                    draft = ChosenWeek.toggling(x.id, in: draft)
+                let full = draft.count >= ChosenWeek.maxPerDay
+                chip(chipTitle(x), spoken: "Add \(x.title)", icon: x.symbol, on: on, tint: OnbWeekStrip.tint(x.family, theme), id: "onbAct-\(x.id)") {
+                    draft = ChosenWeek.adding(x.id, to: draft)
                 }
-                .disabled(full).opacity(full ? 0.4 : 1)
+                .disabled(full).opacity(full && !on ? 0.4 : 1)
             }
             chip("Rest", spoken: "Rest", icon: "moon", on: draft.isEmpty, tint: nil, id: "onbDayRest") { draft = [] }
         }
-        ForEach(draft, id: \.activity) { s in
-            if let x = AthleticRoster.activity(s.activity) { lengthRow(x, s.minutes) }
+        ForEach(Array(draft.enumerated()), id: \.offset) { item in
+            if let x = AthleticRoster.activity(item.element.activity) { lengthRow(item.offset, x, item.element.minutes) }
         }
         let changed = draft != saved
         Button { confirm(i) } label: {
@@ -562,19 +561,26 @@ struct OnbWeekPage: View {
         .accessibilityAddTraits(on ? .isSelected : [])
         .accessibilityIdentifier(id)
     }
-    /// One session's own length. It belongs to this day only.
-    private func lengthRow(_ x: RosterActivity, _ value: Int) -> some View {
+    /// One session: its own length, and its own remove button. It belongs to this day only.
+    private func lengthRow(_ at: Int, _ x: RosterActivity, _ value: Int) -> some View {
         let range = ChosenWeek.range(x.id), step = ChosenWeek.step(x.id)
-        func set(_ m: Int) { if let at = draft.firstIndex(where: { $0.activity == x.id }) { draft[at].minutes = m } }
-        return HStack(spacing: CySpace.s) {
+        func set(_ m: Int) { if draft.indices.contains(at) { draft[at].minutes = m } }
+        return HStack(spacing: 6) {
             Image(systemName: x.symbol).font(CyDyn.f(13, .semibold)).foregroundStyle(OnbWeekStrip.tint(x.family, theme)).frame(width: 22).accessibilityHidden(true)
             Text(x.title).font(CyDyn.f(14, .semibold)).foregroundStyle(theme.textPrimary).lineLimit(2).minimumScaleFactor(0.8)
-            Spacer(minLength: 4)
-            stepButton("minus", "\(x.title) shorter", enabled: value - step >= range.lowerBound, id: "onbLen-\(x.id)Minus") { set(max(range.lowerBound, value - step)) }
+                .accessibilityIdentifier("onbSession-\(at)")
+            Spacer(minLength: 2)
+            stepButton("minus", "\(x.title) shorter", enabled: value - step >= range.lowerBound, id: "onbLen-\(at)Minus") { set(max(range.lowerBound, value - step)) }
             Text("\(value) min").font(CyDyn.f(15, .semibold)).monospacedDigit().foregroundStyle(theme.textPrimary)
-                .frame(minWidth: 62).lineLimit(1)
-                .accessibilityIdentifier("onbLen-\(x.id)Minutes")
-            stepButton("plus", "\(x.title) longer", enabled: value + step <= range.upperBound, id: "onbLen-\(x.id)Plus") { set(min(range.upperBound, value + step)) }
+                .frame(minWidth: 58).lineLimit(1)
+                .accessibilityIdentifier("onbLen-\(at)Minutes")
+            stepButton("plus", "\(x.title) longer", enabled: value + step <= range.upperBound, id: "onbLen-\(at)Plus") { set(min(range.upperBound, value + step)) }
+            Button { if draft.indices.contains(at) { draft.remove(at: at) } } label: {
+                Image(systemName: "xmark").font(.caption.weight(.bold)).foregroundStyle(theme.textSecondary)
+                    .frame(width: 30, height: CyHit.min).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove \(x.title)").accessibilityIdentifier("onbSessionRemove-\(at)")
         }
         .frame(minHeight: CyHit.min)
     }
@@ -592,7 +598,7 @@ struct OnbWeekPage: View {
 
     private func summary(_ w: ChosenWeek.Week) -> some View {
         let t = ChosenWeek.totals(w)
-        let f = ChosenWeek.feasibility(w, planMode: planMode, strengthLevel: a.strengthLevel)
+        let f = ChosenWeek.feasibility(w, strengthLevel: a.strengthLevel)
         let time = t.minutes == 0 ? "0 min" : OnboardingWeek.durationText(t.minutes)      // check 35: an empty week read "0 h"
         let sports = ChosenWeek.bySport(w).map { "\($0.sport) \(OnboardingWeek.durationText($0.minutes))" }.joined(separator: " · ")
         let layout = dts.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))

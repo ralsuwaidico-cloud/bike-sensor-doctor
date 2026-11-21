@@ -299,36 +299,24 @@ enum ChosenWeek {
     static func range(_ id: String) -> ClosedRange<Int> { engine(id) == .strength ? 15...120 : AthleticRoster.activity(id)?.family == .cycling ? 20...300 : 10...300 }
     static func step(_ id: String) -> Int { engine(id) == .cycling ? 10 : 5 }
 
-    /// Seven days, known activities only, minutes inside the activity's range, at most two sessions a day and at most
-    /// one per planning engine (the planner schedules one ride and one strength session a day).
+    /// Seven days, known activities only, minutes inside the activity's range, at most two sessions a day. Any two
+    /// roster activities may share a day, the same sport or the same activity twice included (owner decision 21 Nov
+    /// 2026, 22:22); each is stored separately, in the order chosen.
     static func normalised(_ w: Week?) -> Week {
         var out = empty
         for (i, day) in (w ?? []).prefix(7).enumerated() {
-            var kept: [ChosenSession] = []
-            for s in day where AthleticRoster.activity(s.activity) != nil {
-                if kept.count == maxPerDay { break }
-                if kept.contains(where: { $0.activity == s.activity }) { continue }
-                if let e = engine(s.activity), kept.contains(where: { engine($0.activity) == e }) { continue }
+            out[i] = day.filter { AthleticRoster.activity($0.activity) != nil }.prefix(maxPerDay).map { s in
                 let r = range(s.activity)
-                kept.append(ChosenSession(activity: s.activity, minutes: min(r.upperBound, max(r.lowerBound, s.minutes))))
+                return ChosenSession(activity: s.activity, minutes: min(r.upperBound, max(r.lowerBound, s.minutes)))
             }
-            out[i] = kept
         }
         return out
     }
-    /// A tap on an activity in the day editor: removes it when present; otherwise adds it at its starting length. A
-    /// second activity of the same planning engine replaces the first; a third session is not added.
-    static func toggling(_ id: String, in day: [ChosenSession]) -> [ChosenSession] {
-        guard AthleticRoster.activity(id) != nil else { return day }
-        if day.contains(where: { $0.activity == id }) { return day.filter { $0.activity != id } }
-        var d = day
-        if let e = engine(id), let at = d.firstIndex(where: { engine($0.activity) == e }) {
-            d[at] = ChosenSession(activity: id, minutes: d[at].minutes)        // same engine: the variant changes, the chosen length stays
-            return d
-        }
-        guard d.count < maxPerDay else { return d }
-        d.append(ChosenSession(activity: id, minutes: defaultMinutes(id)))
-        return d
+    /// A tap on an activity in the day editor adds one session of it at its starting length. Nothing already chosen is
+    /// replaced; a third session is not added.
+    static func adding(_ id: String, to day: [ChosenSession]) -> [ChosenSession] {
+        guard AthleticRoster.activity(id) != nil, day.count < maxPerDay else { return day }
+        return day + [ChosenSession(activity: id, minutes: defaultMinutes(id))]
     }
 
     // --- what the planner is given: plannable sessions only
@@ -344,9 +332,11 @@ enum ChosenWeek {
     static func plannable(_ w: Week) -> Week { normalised(w).map { $0.filter { engine($0.activity) != nil } } }
     static func availability(_ w: Week) -> WeeklyAvailability {
         WeeklyAvailability(days: normalised(w).map { day in
-            var a: [DayAssignment] = []
-            if let s = day.first(where: { engine($0.activity) == .cycling }) { a.append(DayAssignment(sport: .cycling, minutes: s.minutes)) }
-            if let s = day.first(where: { engine($0.activity) == .strength }) { a.append(DayAssignment(sport: .strength, minutes: s.minutes)) }
+            // every session the planner can genuinely handle, each with its own minutes — rides first, as the planner's
+            // own week writes them. Two rides or two strength sessions on a day are both passed (the planner schedules
+            // both; verified by testThePlannerTakesEveryPlannableSessionOfTheChosenWeek). Other sports are not passed.
+            let a: [DayAssignment] = day.filter { engine($0.activity) == .cycling }.map { DayAssignment(sport: .cycling, minutes: $0.minutes) }
+                + day.filter { engine($0.activity) == .strength }.map { DayAssignment(sport: .strength, minutes: $0.minutes) }
             return a.isEmpty ? DayAvailability(activity: .rest, minutes: 0) : DayAvailability(assignments: a)
         })
     }
@@ -387,22 +377,22 @@ enum ChosenWeek {
         }
         return order.map { ($0.title, sum[$0] ?? 0) }
     }
-    /// The week's checks. Blocking: no training day; or — only when a plan will be built (`planMode`) — the planner's
-    /// existing hybrid rule. The other notes are the planner's existing ones, counted over every chosen session.
-    static func feasibility(_ w: Week, planMode: TrainingMode?, strengthLevel: StrengthPrefs.Experience?) -> OnboardingWeek.Feasibility {
+    /// The week's checks. Blocking ONLY when there is no training session at all. Owner decision 21 Nov 2026 (22:22): a
+    /// cycling-and-strength athlete is NOT required to schedule both sports — a roster activity does not have to appear
+    /// in every week — so the older "hybrid needs a ride day and a strength day" block is not applied to the chosen
+    /// week. That is safe: the planner plans exactly the sessions it is given, and a week with only rides or only
+    /// strength sessions yields only those (testAHybridAthleteMayScheduleOneSportOnly). The other notes are the
+    /// planner's existing ones, counted over every chosen session; none of them blocks.
+    static func feasibility(_ w: Week, strengthLevel: StrengthPrefs.Experience?) -> OnboardingWeek.Feasibility {
         let n = normalised(w), t = totals(n), k = kinds(n)
         if t.sessions == 0 { return .init(ok: false, blocking: true, text: "Pick at least one training day.") }
-        if planMode == .hybrid, hasPlannable(n) {
-            if OnboardingWeek.rides(k) == 0 { return .init(ok: false, blocking: true, text: "Hybrid needs at least one ride day.") }
-            if OnboardingWeek.lifts(k) == 0 { return .init(ok: false, blocking: true, text: "Hybrid needs at least one strength day.") }
-        }
         var notes: [String] = []
         if t.restDays == 0 { notes.append("no rest day — recovery will suffer") }
         var streak = 0, longest = 0
         for d in n + n.prefix(2) { streak = d.isEmpty ? 0 : streak + 1; longest = max(longest, streak) }
         if longest >= 4 { notes.append("\(min(longest, 7)) training days in a row") }
         if n.filter({ $0.count > 1 }).count > 1 { notes.append("two double days — keep one easy") }
-        let l = OnboardingWeek.lifts(k)
+        let l = n.joined().filter { engine($0.activity) == .strength }.count
         if l >= 4, (strengthLevel ?? .beginner) == .beginner { notes.append("4 lifts is a lot for a first block") }
         let spaced = (0..<7).allSatisfy { i in !k[i].lifts || !k[(i + 1) % 7].lifts }
         let time = OnboardingWeek.durationText(t.minutes)

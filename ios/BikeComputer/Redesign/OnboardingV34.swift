@@ -171,7 +171,8 @@ struct OnboardingV34View: View {
         // by `planPossible`; without one the athlete goes straight to a profile-only Blueprint.
         case 3: return !goalSelection.ids.isEmpty
         // 21 Nov 2026, 21:18: the week starts as seven rest days; Continue needs at least one valid training day
-        case 4: return !ChosenWeek.feasibility(a.schedule ?? ChosenWeek.empty, planMode: weekPlanMode, strengthLevel: a.strengthLevel).blocking
+        // (22:22: any one valid session is enough — a cycling-and-strength athlete need not schedule both)
+        case 4: return !ChosenWeek.feasibility(a.schedule ?? ChosenWeek.empty, strengthLevel: a.strengthLevel).blocking
         default: return true
         }
     }
@@ -185,8 +186,7 @@ struct OnboardingV34View: View {
         guard RosterGoals.canPlan(roster: sports, selection: goalSelection) else { return false }
         return a.schedule.map { ChosenWeek.hasPlannable($0) } ?? true
     }
-    /// The training type a plan will be built for from the chosen week; nil when no plan will be built from it.
-    private var weekPlanMode: TrainingMode? { planPossible ? roster.mode : nil }
+
 
     private func next() {
         // Every athlete builds their week (21 Nov 2026, 21:18). Profile-only: nothing chosen can be planned today, so
@@ -870,7 +870,7 @@ struct OnboardingV34View: View {
     private var pageWeek: some View {
         VStack(alignment: .leading, spacing: 10) {
             heading(4, "Week", "Build your week", compact: true)
-            OnbWeekPage(a: $a, roster: sports.compactMap { AthleticRoster.activity($0) }, planMode: weekPlanMode)
+            OnbWeekPage(a: $a, roster: sports.compactMap { AthleticRoster.activity($0) })
         }
     }
 
