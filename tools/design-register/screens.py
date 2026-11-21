@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "21 Nov 2026, 23:00 (Dubai)"
+UPDATED = "22 Nov 2026, 00:10 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -402,20 +402,31 @@ SCREENS = [
                   "One ride length and one strength length applied to the whole week.",
                   "Large explanatory panels and technical wording.",
                   "Requiring an equipment choice from athletes with no strength training."],
-        commits="Implementation in progress on branch ios/lab. Not in any TestFlight build.",
+        commits="Implemented and checked at commit 83ed8066 (branch ios/lab). Not in any TestFlight build.",
         stages=[("Approved design", "DIRECTION ONLY", "Owner, 21 Nov 2026 21:18. Not final visual approval."),
-                ("Implemented in code", "NOT YET VERIFIED", "Being written and checked."),
-                ("Compiled", "NOT YET", ""),
-                ("Simulator-verified", "NOT YET", "To verify on the iPhone 15 Pro simulator: seven rest days for a new athlete; Continue disabled until a valid day; an "
-                 "activity enables Continue; an appropriate icon per sport; different durations on different days; a day returns to Rest; two sessions on one day; "
-                 "totals update; Back, Continue and reopening keep choices; planned and not-yet-planned sports handled truthfully; nothing clipped or under Continue."),
+                ("Implemented in code", "YES", "Commit 83ed8066, including the decisions of 22:22. Additive stored field for the chosen week; older records unchanged."),
+                ("Compiled", "YES", "Lab app built in focused check 37 (run 44935585991). Main-app build not run on this commit."),
+                ("Simulator-verified", "FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING", "Focused check 37, run 44935585991, commit 83ed8066, 4 of 4 passed: seven "
+                 "rest days for a new athlete; Continue disabled until a confirmed session, enabled by one session for a cycling-and-strength athlete; only roster "
+                 "activities offered, each with its icon; a day changes only on Confirm; a session removed on its own row; two sessions on a day with independent "
+                 "lengths, the same activity twice included, no third; different lengths on different days; a day back to Rest; totals, counts and by-sport breakdown "
+                 "follow each change; equipment only with a strength session, not for a runner; everything above the Continue area with the editor closed and with two "
+                 "sessions open; Back, Continue and reopening keep the week; a runner continues to a profile-only Blueprint; a mixed roster is planned only for the "
+                 "ride chosen; the seven-page journey reaches an approved plan with sessions only on chosen days. Logic: 600 tests, 0 failures. Earlier: check 35 "
+                 "(run 44930790358) FAILED on an empty total reading '0 h' and the equipment row under Continue with two sessions open — both corrected. Checks 35 "
+                 "and 36 also failed once each at launch (Welcome hold did not open page 1; cause unproven; passed in 37)."),
                 ("Physically verified on iPhone", "NO", "")],
         visual_verification="PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.",
-        functional_verification="PENDING.",
-        remaining=["Implement, verify on the simulator, and present the three screenshots with the functional results.",
+        functional_verification="Lab simulator: passed at 83ed8066 (see stages). Not verified: larger text on this commit, other themes, redesigned main app, full Lab regression, physical iPhone.",
+        remaining=["Owner's visual verdict on the screenshots (sent 21 Nov).",
+                   "For the owner's ruling: the equipment choice steps aside while a day is being edited (it would otherwise sit under Continue with two sessions open); "
+                   "with three roster activities the Rest chip wraps to a second row.",
                    "Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).",
                    "After approval: Screen 6, three-column comparison."],
-        images=[("S05_week_comparison_board_75335114.png",
+        images=[("S05_week_impl_sim_83ed8066.png",
+                 "IMPLEMENTATION — NOT APPROVED. iPhone 15 Pro simulator, Obsidian, commit 83ed8066 (check 37). Left to right: all seven days at Rest; a "
+                 "running-only week; a multisport week with different durations and two-session days; the day editor with two sessions open."),
+                ("S05_week_comparison_board_75335114.png",
                  "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left two: design sheet Y4 (drawings). Middle: Build 6 (commit 9b9d3a68). Right two: the implementation "
                  "BEFORE the required changes (commit 75335114, check 32) — it still shows a pre-filled proposed week and week-wide lengths, both now rejected.")],
         history=[("21 Nov 2026, 21:18", "Layout chosen with required changes: seven rest days on first entry; roster-based day editor with confirmation; independent "
