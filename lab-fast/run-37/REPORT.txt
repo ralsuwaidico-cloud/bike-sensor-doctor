@@ -1,0 +1,30 @@
+FAST focused Lab check — selected: LabFastOnboarding/testBuildYourWeek LabFastOnboarding/testARunnerCompletesOnboardingWithoutAPlan LabFastOnboarding/testAMixedRosterPlansOnlyTheGoalsChosen LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from d667e1ed · files changed since then: 5
+TIME setup: 14s
+  timing: CompileAssetCatalogVariant (1 task) | 156.134 seconds
+  timing: SwiftCompile (5 tasks) | 30.772 seconds
+  timing: Ld (18 tasks) | 9.621 seconds
+  timing: SwiftEmitModule (2 tasks) | 9.616 seconds
+  timing: SwiftDriver (2 tasks) | 5.607 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.263 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.116 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.229 seconds
+  stages: packages at 195s · packages prepared at 255s · dependency graph at 255s · inputs at 256s · build description at 256s · first link at 278s · first Swift step at 279s · asset catalogue at 284s · finished at 445s
+  compiled in this run: 12 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 447s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 10s
+	 Executed 4 tests, with 0 failures (0 unexpected) in 886.494 (886.503) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 886.494 (886.505) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 886.494 (886.507) seconds
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen]' passed (155.186 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testARunnerCompletesOnboardingWithoutAPlan]' passed (219.605 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testBuildYourWeek]' passed (218.781 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (292.921 seconds).
+RESULT selected screen checks: ok
+TIME tests: 1024s
+TIME total on the Mac: 1499s
+commit 83ed806671b26807f87741687d84530fb6a2bff0  branch ios/lab
