@@ -1,0 +1,31 @@
+FAST focused Lab check — selected: LabFastOnboarding/testBuildYourWeek LabFastOnboarding/testAMixedRosterPlansOnlyTheGoalsChosen LabFastOnboarding/testARunnerCompletesOnboardingWithoutAPlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from f543459d · files changed since then: 2
+TIME setup: 11s
+  timing: CompileAssetCatalogVariant (1 task) | 127.325 seconds
+  timing: SwiftCompile (6 tasks) | 88.892 seconds
+  timing: SwiftDriver (2 tasks) | 15.938 seconds
+  timing: Ld (18 tasks) | 12.958 seconds
+  timing: SwiftEmitModule (2 tasks) | 11.819 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 7.507 seconds
+  timing: CopySwiftLibs (2 tasks) | 3.770 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 1.718 seconds
+  stages: packages at 109s · packages prepared at 220s · dependency graph at 221s · inputs at 221s · build description at 221s · first link at 237s · first Swift step at 239s · asset catalogue at 253s · finished at 377s
+  compiled in this run: 18 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 378s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 17s
+	 Executed 3 tests, with 2 failures (0 unexpected) in 477.902 (477.907) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 477.902 (477.908) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 477.902 (477.909) seconds
+Lab/UITests/LabFastOnboarding.swift:39: error: -[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen] : XCTAssertTrue failed - required: the page counter
+Lab/UITests/LabFastOnboarding.swift:42: error: -[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type StaticText` -> `Elements matching predicate '"onboardingProgress" IN identifiers'`, given input App element pid: 11093
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen]' failed (45.466 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testARunnerCompletesOnboardingWithoutAPlan]' passed (240.693 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testBuildYourWeek]' passed (191.743 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 604s
+TIME total on the Mac: 1012s
+commit d667e1ed7af942c6f18a72d7be275d60c116ee6e  branch ios/lab
