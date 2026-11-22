@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 23:40 (Dubai) · Screens recorded: 8
+Last updated: 23 Nov 2026, 00:30 (Dubai) · Screens recorded: 8
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -37,14 +37,14 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | INT-01 | Home | 21 Nov 2026, 20:50 | Home's training categories and icons reflect the athlete's actual sports. A runner must not see Cycling as their main Endurance card. | NOT IMPLEMENTED — for the Home review |
 | INT-02 | Train | 21 Nov 2026, 20:50 | Train's primary shortcuts are sport-aware. Other activities stay accessible, without presenting cycling as every athlete's default. | NOT IMPLEMENTED — for the Training Hub review |
 | INT-03 | Plan | 21 Nov 2026, 20:50 | Plan's 'Add a goal' flow respects the athlete's roster, with truthful handling when personalized planning is not yet available. | NOT IMPLEMENTED — for the Plan review |
-| INT-05 | Blueprint | 21 Nov 2026, 22:22 | The Blueprint shows the athlete's selected week, including sessions that are not yet prescribed. | IMPLEMENTED in commit 91574cf5 (Screen 8 decision of 22 Nov 22:51) — simulator verification pending |
+| INT-05 | Blueprint | 21 Nov 2026, 22:22 | The Blueprint shows the athlete's selected week, including sessions that are not yet prescribed. | IMPLEMENTED (91574cf5) and simulator-verified in Cyclift Lab (check 50, run 45062192865) — awaiting the Screen 8 visual approval |
 | INT-06 | Home and Plan | 21 Nov 2026, 22:22 | Home and Plan must not lose or misrepresent the athlete's selected week. | NOT IMPLEMENTED — for the Home and Plan reviews |
 | INT-07 | Goals | 21 Nov 2026, 22:22 | The Goals summary distinguishes a provisional planner mix from the athlete's confirmed schedule. | NOT IMPLEMENTED — needs the owner's authorization to touch approved Screen 4 |
 | INT-08 | Icons (all screens) | 21 Nov 2026, 22:22 | Distinctive mobility, yoga and recovery icons — a later visual refinement. Until then the existing sport icon system is reused. | LATER REFINEMENT |
 | EQ-01 | Equipment catalogue — strength | 22 Nov 2026, 14:36 | Barbell, dumbbells, kettlebell, bench, cable machine, weight machines (grouped), resistance bands, pull-up bar, trap bar: used by the existing strength planner to choose exercises. Squat rack, dip bars, gymnastic rings, weighted vest: stored only. | IMPLEMENTED — planner support only for the nine items it already knew |
 | EQ-02 | Equipment catalogue — cycling, running, swimming, mobility and recovery | 22 Nov 2026, 14:36 | Provisional, incomplete lists for recording what an athlete has. They change no generated training and are not exercise-planning support. | PROVISIONAL — STORAGE ONLY; lists to be reviewed |
 | EQ-03 | Equipment catalogue — individual machines | 22 Nov 2026, 14:36 | Individual machine types (leg press and others) to be representable later, alongside the grouped 'Weight machines' item, which is kept for compatibility. | NOT IMPLEMENTED — structure prepared, no individual types listed |
-| INT-09 | Blueprint | 22 Nov 2026, 17:19 | The Blueprint contains obsolete FTP and Plan changes links pointing back to Screen 6, which no longer holds either. To be corrected during the Blueprint review: FTP belongs in Performance Settings; Coach plan-change preferences belong in Profile › App Preferences › Coach. The Blueprint is not to be changed before that review. | IMPLEMENTED in commit 91574cf5: both cells removed from the Blueprint (Screen 8 decision of 22 Nov 22:51) — simulator verification pending |
+| INT-09 | Blueprint | 22 Nov 2026, 17:19 | The Blueprint contains obsolete FTP and Plan changes links pointing back to Screen 6, which no longer holds either. To be corrected during the Blueprint review: FTP belongs in Performance Settings; Coach plan-change preferences belong in Profile › App Preferences › Coach. The Blueprint is not to be changed before that review. | IMPLEMENTED (91574cf5): both cells removed; simulator-verified in Cyclift Lab (check 50, run 45062192865) — awaiting the Screen 8 visual approval |
 | INT-04 | Goals (all screens) | 21 Nov 2026, 20:50 | Existing working goal names and planner mappings are retained. Goals are not renamed solely for cosmetic reasons. | IN FORCE — current behaviour |
 
 ## Summary
@@ -58,7 +58,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 5 | ONB-05 | Build Your Week | YES | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING (later rounds: see the screen's status table) | NO |
 | 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only (later rounds: see the screen's status table) | NO |
 | 7 | ONB-07 | Athlete Evolution | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); final state: check 48 (later rounds: see the screen's status table) | NO |
-| 8 | ONB-08 | Athletic Blueprint | DIRECTION ONLY | YES — awaiting verification | PENDING | PENDING | NO |
+| 8 | ONB-08 | Athletic Blueprint | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | NO |
 
 ---
 
@@ -682,7 +682,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 - **Approval date:** 22 Nov 2026, 22:51 — COMBINED DESIGN DIRECTION. Not final visual approval.
 - **Approval status:** COMBINED DESIGN DIRECTION APPROVED — implementation and final visual verification PENDING. Not locked.
 - **Original design reference and source:** A combination chosen by the owner on 22 Nov 2026 at 22:51: design sheet v3.3 Y5, drawing B1 (the LEFT reference) as the visual foundation and drawing B3 for the confirmation state, with the useful functionality of the current implementation (editing, navigation, approval). The sheets are illustrative drawings; obsolete data and controls on them are not reproduced.
-- **Implementation commit:** Implementation of the direction: 91574cf5 (branch ios/lab). Not in any TestFlight build.
+- **Implementation commit:** Implementation of the direction: 91574cf5; three visual corrections d2ebe9f8 (branch ios/lab). Not in any TestFlight build.
 
 ### Exact approved wording
 
@@ -727,22 +727,25 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | Stage | State | Evidence |
 |---|---|---|
 | Approved design | DIRECTION ONLY | Owner, 22 Nov 2026 22:51. Final visual approval pending. |
-| Implemented in code | YES — awaiting verification | Commit 91574cf5: one layout for every athlete; 'Your training week' from the confirmed schedule (icon-only tiles, whole-week totals); 'Coach's training proposal' with the planner's guidance for what it plans and one truthful line for sessions it does not; FTP, Plan changes and the 'interest' wording removed; measured evidence only when something is recorded; approval as one durable write with a read-back check; confirmation state with Open Home; failed and unconfirmed saves shown as such. |
-| Compiled | PENDING | Focused check 49 (run 45058524408) requested. |
-| Simulator-verified | PENDING | Focused check 49. |
+| Implemented in code | YES | Commit 91574cf5, corrections d2ebe9f8: one layout for every athlete; 'Your training week' from the confirmed schedule (icon-only tiles, whole-week totals); 'Coach's training proposal' with the planner's guidance for what it plans and one truthful line for sessions it does not; FTP, Plan changes and the 'interest' wording removed; measured evidence only when something is recorded; approval as one durable write with a read-back check; confirmation state with Open Home; failed and unconfirmed saves shown as such. |
+| Compiled | YES | Lab app built in focused checks 49 and 50. Main-app build not run. |
+| Simulator-verified | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | Focused check 50, run 45062192865, code commit d2ebe9f8, 4 of 4 passed. CYCLING/STRENGTH: 'Your training week' shows the four chosen sessions and '3 h · 4 sessions'; the week is not labelled the Coach's proposal; guidance names the main goal and '2 lifts … 30 min each', then the first session; goals and equipment declared; no FTP, Plan changes, 'interest' wording or stage; everything on one screen; the week edited from the Blueprint (a Saturday ride added) and the Blueprint follows ('4 h · 5 sessions'); approval shows 'Approved and saved', 'Plan version 1 · approved' and Open Home, cannot be edited, and Open Home reaches Home and Plan with the chosen days. MULTISPORT (cycling, gym, running): all three sports in the line-up; Tuesday shows both its ride and its run; Thursday's run is kept, not Rest; '3 h 30 min · 5 sessions'; guidance only for the ride and the one lift; 'Running: kept in your week as you chose it…'; one screen; a save made to fail shows 'Not saved', no Open Home, and after reopening the athlete is still in onboarding with the whole week intact; a real approval then confirms, Home opens, the approval survives reopening, and Plan has no session on the running day and only the ride on Tuesday. RUNNER ONLY: sport, goals and the chosen week ('1 h 45 min · 3 sessions') shown; 'No training plan is created'; no guidance, no equipment; one screen; 'Create my profile' shows 'Saved. Your profile and training week are saved. No training plan was created.' with no approved mark; Home, Plan and Train show no plan. RUNNING + CYCLING: no plan without a cycling goal; with one, the running day stays as chosen, the main goal stays Pace with 'Coach plan follows Endurance', and no strength guidance appears. Check 49 (run 45058524408, 91574cf5): the first two PASSED; the runner and running + cycling checks FAILED on one assertion each that looked for the letters 'lift', which the Lab badge 'CYCLIFT LAB' contains — an error in the check, corrected to look for the strength-guidance wording. Logic: 616 tests, 0 failures at 91574cf5. |
 | Physically verified on iPhone | NO |  |
 
-- **Visual verification:** NOT YET PRESENTED.
-- **Functional verification:** Logic: 38 focused tests pass at 91574cf5 (whole-week totals; truthful status for unplanned sessions; guidance only for what is planned in the chosen week; outcome wording; the whole declared week is stored). Simulator: pending.
+- **Visual verification:** PRESENTED 23 Nov 2026 (run50_s8.png) — awaiting the owner's decision.
+- **Functional verification:** Logic: 38 focused tests pass at 91574cf5 (whole-week totals; truthful status for unplanned sessions; guidance only for what is planned in the chosen week; outcome wording; the whole declared week is stored). Simulator: check 50, as listed.
 
 ### Remaining work or limitations
 
-- PENDING — simulator verification and the four screenshots (cycling/strength before approval; multisport; runner-only; post-approval).
+- The 'Save not confirmed' state (Check again) has not been exercised on the simulator.
 - PENDING — owner's final visual approval.
-- Not verified: redesigned main app, larger text, other themes, VoiceOver, physical iPhone.
+- Not verified: redesigned main app (its check was updated for Open Home but not run; one line of the shared app shell changed), larger text, other themes, VoiceOver, physical iPhone, full Lab regression.
+- For the owner's view: the main goal shown is the athlete's own (a runner who also cycles keeps 'Pace', with 'Coach plan follows Endurance'); experience and training priority are in the header rather than in cells; a long sport line-up scrolls sideways; a repeated short sport name is replaced by the sport's name ('Running').
+- No route yet for an athlete without a plan to set one up later (recorded earlier).
 
 ### Images
 
+- `assets/S08_blueprint_impl_sim_d2ebe9f8.png` — IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit d2ebe9f8 (check 50). Left to right: cycling/strength before approval; multisport with all chosen activities; runner-only without a generated plan; after approval.
 - `assets/S08_blueprint_comparison_board_22756626.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y5, drawings B1 and B3 (the visual foundation). Middle: Build 6. Right: the implementation BEFORE the decision (commit 22756626; runner at 48466cec) — with the week labelled 'Coach's proposal', FTP and Plan changes, all now changed.
 
 ### Decision history
