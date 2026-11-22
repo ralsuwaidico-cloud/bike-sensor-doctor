@@ -108,6 +108,10 @@ struct OnboardingV34View: View {
     // MARK: state
 
     private func resume() {
+        // A new athlete starts with explicit approval before any plan change; applied once, and never to an athlete
+        // who already has a stored choice from finishing onboarding earlier. Changed later in Profile › Coach.
+        let start = OnbConnections.startingPlanChanges(asked: store.settings.planChangesAsked, onboarded: store.onboarded, current: store.settings.autoAdapt)
+        if start.asked != store.settings.planChangesAsked { store.settings.autoAdapt = start.autoAdapt; store.settings.planChangesAsked = start.asked }
         guard !resumed else { return }
         resumed = true
         let s = store.onboardingStage
@@ -365,8 +369,7 @@ struct OnboardingV34View: View {
             if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "This is your schedule, saved as you set it.", after: " Personalized plans for your sports are coming soon.") }
             if !waiting.isEmpty { return CoachLine(mark: "◆", tint: theme.accent, strong: "Your schedule. ", after: "Cyclift plans your cycling and strength days; your \(waiting.joined(separator: " and ")) days are saved. Nothing is scheduled until you approve.") }
             return CoachLine(mark: "◆", tint: theme.accent, before: "This is your schedule; the Coach plans inside it. ", strong: "Nothing is scheduled until you approve.")
-        case 5: return CoachLine(mark: "◆", tint: theme.accent, strong: "Increases always need your approval.",
-                                 after: " Reductions that protect recovery are applied for you only if you allow it.")
+        case 5: return CoachLine(mark: "", tint: theme.textSecondary, before: "Connect now or set up your devices later in Profile.")
         case 6: return CoachLine(mark: "▲", tint: theme.success, before: "Your stage is earned by ", strong: "recorded training only", after: ". Nothing you answered here can raise or lower it.")
         default:
             if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "No training plan is created.", after: " Your profile, sports and goals are saved, and you can change them first.") }

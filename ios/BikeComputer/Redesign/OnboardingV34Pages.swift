@@ -839,10 +839,9 @@ struct OnbEquipmentSheet: View {
 // MARK: - Page 5 · Connect your devices (sheet Y1, page 5 — owner's approved direction, 22 Nov 2026, 15:55)
 //
 // The compact connection rows of the sheet: five integrations in a fixed order with truthful statuses, an action only
-// where it does something real, then the Plan changes preference. No FTP. Lab consults no service and offers no action.
+// where it does something real. No FTP and no Plan changes choice. Lab consults no service and offers no action.
 
 struct OnbConnectPage: View {
-    @EnvironmentObject private var store: Store
     @Environment(\.cyTheme) private var theme
 
     var body: some View {
@@ -854,22 +853,7 @@ struct OnbConnectPage: View {
             }
             OnbGroupHeader(mark: .measured, title: "Connections", trailing: "all optional")
             if CycliftLab.isLab { OnbConnectionRows(rows: OnbConnections.rows(live: nil)) { _ in } } else { OnbLiveConnections() }
-            planChanges
-        }
-        .onAppear {
-            // "Always ask me" is where a new athlete starts; a stored choice is never overwritten
-            let s = OnbConnections.startingPlanChanges(asked: store.settings.planChangesAsked, onboarded: store.onboarded, current: store.settings.autoAdapt)
-            if s.asked != store.settings.planChangesAsked { store.settings.autoAdapt = s.autoAdapt; store.settings.planChangesAsked = s.asked }
-        }
-    }
-
-    /// The Coach preference the app already has (Profile › Coach, "Adjust future sessions automatically"). On = the
-    /// Coach's written rules may apply reductions; every increase still waits for approval either way.
-    private var planChanges: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            OnbGroupHeader(mark: .proposal, title: "Plan changes", trailing: "rules-based Coach")
-            CyChoiceBar(options: [(false, "Always ask me"), (true, "Auto-apply reductions")], selection: $store.settings.autoAdapt)
-                .accessibilityIdentifier("onbPlanChanges")
+            // No Plan changes choice here (owner, 22 Nov 2026, 16:34): it belongs to Profile › App preferences › Coach.
         }
     }
 }

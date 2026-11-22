@@ -792,23 +792,25 @@ enum OnbConnections {
         let lab = live == nil
         let l = live ?? Live()
         return [
-            OnbConnection(id: "health", name: "Apple Health", icon: "heart", detail: "Workouts, weight, resting heart rate, sleep",
+            OnbConnection(id: "health", name: "Apple Health", icon: "heart", detail: "Connect your health and activity data",
                           status: lab ? .notInLab : l.healthConnected ? .connected : .notConnected,
                           note: !lab && !l.healthAvailable ? "Not available on this device" : nil,
                           action: lab || !l.healthAvailable ? nil : l.healthConnected ? .manageHealth : .connectHealth),
-            OnbConnection(id: "watch", name: "Apple Watch", icon: "applewatch", detail: "Heart rate while you train",
+            OnbConnection(id: "watch", name: "Apple Watch", icon: "applewatch", detail: "Connect your Apple Watch",
                           status: lab ? .notInLab : l.watchConnected ? .connected : .notConnected, action: lab ? nil : .manageWatch),
             // no WHOOP or Garmin integration exists in the app: said so, with no button
-            OnbConnection(id: "whoop", name: "WHOOP", icon: "waveform.path.ecg", detail: "Recovery, strain and sleep", status: .comingSoon),
-            OnbConnection(id: "garmin", name: "Garmin", icon: "arrow.triangle.2.circlepath", detail: "Activities and daily health", status: .comingSoon),
-            OnbConnection(id: "bluetooth", name: "Bluetooth devices", icon: "dot.radiowaves.left.and.right", detail: "Supported heart-rate, power and cadence sensors",
+            OnbConnection(id: "whoop", name: "WHOOP", icon: "waveform.path.ecg", detail: "Connect your WHOOP", status: .comingSoon),
+            OnbConnection(id: "garmin", name: "Garmin", icon: "arrow.triangle.2.circlepath", detail: "Connect your Garmin", status: .comingSoon),
+            OnbConnection(id: "bluetooth", name: "Bluetooth devices", icon: "dot.radiowaves.left.and.right", detail: "Connect your sensors and devices",
                           status: lab ? .notInLab : l.bluetoothPaired > 0 ? .connected : .notConnected,
                           note: !lab && l.bluetoothPaired > 0 ? "\(l.bluetoothPaired) paired" : nil, action: lab ? nil : .pairBluetooth),
         ]
     }
-    /// The Plan changes starting point for a NEW athlete in the redesigned onboarding: "Always ask me" — applied once,
-    /// the first time the choice is shown to an athlete who has not finished onboarding. An athlete who was already
-    /// asked, or who finished onboarding under an earlier version, keeps the stored value untouched.
+    /// The Plan changes starting point for a NEW athlete in the redesigned onboarding: explicit approval before changes
+    /// ("Always ask me") — applied once, when the redesigned onboarding opens for an athlete who has not finished it.
+    /// The choice itself is NOT on any onboarding page (owner, 22 Nov 2026, 16:34): it lives in Profile › App
+    /// preferences › Coach. An athlete for whom it was already applied, or who finished onboarding under an earlier
+    /// version, keeps the stored value untouched.
     static func startingPlanChanges(asked: Bool?, onboarded: Bool, current: Bool) -> (autoAdapt: Bool, asked: Bool?) {
         guard asked != true, !onboarded else { return (current, asked) }
         return (false, true)

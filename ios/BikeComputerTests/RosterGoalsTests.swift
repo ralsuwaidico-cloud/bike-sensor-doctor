@@ -370,6 +370,7 @@ final class RosterGoalsTests: XCTestCase {
         let noHealth = OnbConnections.rows(live: .init(healthAvailable: false))[0]
         XCTAssertNil(noHealth.action, "no Connect button where Apple Health does not exist"); XCTAssertEqual(noHealth.note, "Not available on this device")
         XCTAssertFalse((lab + fresh + on).contains { $0.name.contains("BikeComputer") || $0.name.contains("sensors") })
+        XCTAssertEqual(lab.map(\.detail), ["Connect your health and activity data", "Connect your Apple Watch", "Connect your WHOOP", "Connect your Garmin", "Connect your sensors and devices"])
     }
     /// "Always ask me" is where a new athlete starts — once; a stored choice and an existing athlete's are never changed.
     func testPlanChangesStartingPoint() {

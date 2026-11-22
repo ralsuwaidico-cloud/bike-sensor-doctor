@@ -700,12 +700,16 @@ final class LabFastOnboarding: XCTestCase {
         let title = app.staticTexts["onbTitle"].firstMatch
         XCTAssertEqual(title.label, "Connect your devices", "required: the new title")
         XCTAssertTrue(app.staticTexts["onbLabDevices"].firstMatch.exists, "required: Lab says connections are switched off")
-        let wanted: [(id: String, name: String, status: String)] = [("health", "Apple Health", "Not available in Lab"), ("watch", "Apple Watch", "Not available in Lab"),
-                                                                     ("whoop", "WHOOP", "Coming soon"), ("garmin", "Garmin", "Coming soon"), ("bluetooth", "Bluetooth devices", "Not available in Lab")]
+        // subtitles as set by the owner on 22 Nov 2026 (16:34)
+        let wanted: [(id: String, name: String, status: String, sub: String)] = [
+            ("health", "Apple Health", "Not available in Lab", "Connect your health and activity data"), ("watch", "Apple Watch", "Not available in Lab", "Connect your Apple Watch"),
+            ("whoop", "WHOOP", "Coming soon", "Connect your WHOOP"), ("garmin", "Garmin", "Coming soon", "Connect your Garmin"),
+            ("bluetooth", "Bluetooth devices", "Not available in Lab", "Connect your sensors and devices")]
         var lastY: CGFloat = -1
         for w in wanted {
             let row = need(app, "onbConnection-\(w.id)", "the \(w.name) row")
             XCTAssertTrue(row.staticTexts[w.name].firstMatch.exists, "required: \(w.name) is named")
+            XCTAssertTrue(row.staticTexts[w.sub].firstMatch.exists, "required: the subtitle '\(w.sub)'")
             XCTAssertEqual(need(app, "onbConnectionStatus-\(w.id)", "the \(w.name) status").label, w.status, "required: a truthful status for \(w.name)")
             XCTAssertFalse(app.buttons["onbConnectionAction-\(w.id)"].firstMatch.exists, "required: no Connect, Manage or Pair button in Lab for \(w.name)")
             XCTAssertGreaterThan(row.frame.minY, lastY, "required: \(w.name) in the approved order"); lastY = row.frame.minY
@@ -715,38 +719,30 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertFalse(app.staticTexts.matching(gone).firstMatch.exists, "required: no BikeComputer row, no bike-sensors row, no FTP, no 'calibrate'")
         XCTAssertFalse(el(app, "onbFTP").exists || app.textFields["onbFTPWatts"].firstMatch.exists, "required: FTP is not asked in onboarding")
 
-        // the Coach preference: "Always ask me" to start with
-        let changes = need(app, "onbPlanChanges", "the plan-changes choice")
-        XCTAssertTrue(changes.buttons["Always ask me"].firstMatch.isSelected, "required: a new athlete starts on Always ask me")
-        XCTAssertFalse(changes.buttons["Auto-apply reductions"].firstMatch.isSelected)
+        // Owner decision 22 Nov 2026 (16:34): the Plan changes choice is not part of onboarding (it is in Profile ›
+        // Coach). The check written at 15:55 required it here, and its saving and restoring.
+        XCTAssertFalse(el(app, "onbPlanChanges").exists, "required: no Plan changes section in onboarding")
+        let notHere = NSPredicate(format: "label CONTAINS[c] 'Always ask me' OR label CONTAINS[c] 'Auto-apply' OR label CONTAINS[c] 'Plan changes' OR label CONTAINS[c] 'approval' OR label CONTAINS[c] 'Reductions'")
+        XCTAssertFalse(app.staticTexts.matching(notHere).firstMatch.exists || app.buttons.matching(notHere).firstMatch.exists, "required: no Coach setting and no paragraph about approval or reductions")
         let line = need(app, "onbCoachLine", "the line above Continue")
-        XCTAssertTrue(line.label.contains("Increases always need your approval"), "required: increases always need approval (\(line.label))")
+        XCTAssertEqual(line.label, "Connect now or set up your devices later in Profile.", "required: the one short line above Continue")
 
         // one screen, nothing clipped or under the Continue area
         let rail = app.buttons["onboardingBack"].firstMatch, window = app.windows.firstMatch.frame
         XCTAssertTrue(title.isHittable && title.frame.minY >= rail.frame.maxY - 1, "required: the title is wholly visible below the rail")
-        for id in wanted.map({ "onbConnection-\($0.id)" }) + ["onbPlanChanges"] {
+        for id in wanted.map({ "onbConnection-\($0.id)" }) {
             let e = el(app, id)
             XCTAssertTrue(e.frame.minY >= title.frame.maxY - 1 && e.frame.maxY <= line.frame.minY + 1, "required: \(id) is on screen between the title and the Continue area (\(e.frame), line \(line.frame))")
         }
-        for t in ["Always ask me", "Auto-apply reductions"] { XCTAssertTrue(changes.buttons[t].firstMatch.isHittable, "required: \(t) is visible") }
         XCTAssertTrue(next.isHittable && next.frame.maxY <= window.maxY && next.frame.minY >= line.frame.maxY - 1, "required: Continue is visible below the line")
         app.settleForScreenshot(1); shot("onb-5-connect-your-devices")
 
-        // the choice is saved: kept after Continue and Back, and after closing and reopening
-        changes.buttons["Auto-apply reductions"].firstMatch.tap()
-        XCTAssertTrue(next.isEnabled, "required: nothing needs connecting to continue")
+        // nothing needs connecting; no system permission prompt appeared; onboarding goes on
+        XCTAssertTrue(next.isEnabled, "required: Continue is enabled with no connection made")
+        XCTAssertFalse(XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch.exists, "required: no permission prompt on this page")
         next.tap(); page(app, 6)
         app.buttons["onboardingBack"].firstMatch.tap(); page(app, 5)
-        XCTAssertTrue(el(app, "onbPlanChanges").buttons["Auto-apply reductions"].firstMatch.isSelected, "required: the choice is kept after Continue and Back — and not reset to the starting point")
-        app.terminate()
-        let again = XCUIApplication(); again.launchEnvironment["LAB_THEME"] = "obsidian"; again.launch()
-        let counter = again.staticTexts["onboardingProgress"].firstMatch
-        XCTAssertTrue(counter.waitForExistence(timeout: 30), "required: onboarding resumes after reopening")
-        if counter.label.hasPrefix("6 of 7") { again.buttons["onboardingBack"].firstMatch.tap() }
-        page(again, 5)
-        XCTAssertTrue(need(again, "onbPlanChanges", "the plan-changes choice after reopening").buttons["Auto-apply reductions"].firstMatch.isSelected, "required: the choice was saved and restored")
-        XCTAssertTrue(again.buttons["onboardingNext"].firstMatch.isEnabled, "required: onboarding continues with no device connected")
+        need(app, "onbConnection-bluetooth", "the page again after Back")
     }
 
     /// Build your week (owner's approved direction, 21 Nov 2026, 21:18), for a cycling, gym and running athlete: seven
@@ -942,7 +938,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(app.staticTexts["onbLabDevices"].firstMatch.waitForExistence(timeout: 8), "required: Lab says connections are switched off")
         need(app, "onbConnection-health", "the connections list")
         XCTAssertFalse(el(app, "onbFTP").exists, "required: FTP is not asked in onboarding")
-        need(app, "onbPlanChanges", "the plan-changes choice")
+        XCTAssertFalse(el(app, "onbPlanChanges").exists, "required: no Plan changes section in onboarding (22 Nov 2026, 16:34)")
         XCTAssertEqual(app.staticTexts["onbTitle"].firstMatch.label, "Connect your devices", "required: page 5 title")
         app.settleForScreenshot(1); shot("onb-5-connect")
         next.tap()
@@ -975,7 +971,8 @@ final class LabFastOnboarding: XCTestCase {
         // FTP is no longer entered in onboarding (22 Nov 2026, 15:55), so a new athlete's is Unknown — never an invented number
         XCTAssertTrue(need(app, "blueprintCell-ftp", "the FTP line").label.contains("Unknown"), "required: an FTP that was never entered is shown as Unknown (\(el(app, "blueprintCell-ftp").label))")
         XCTAssertTrue(need(app, "blueprintCell-equipment", "the declared equipment").label.contains("Home"), "required: the chosen equipment")
-        need(app, "blueprintCell-planChanges", "the plan-changes answer")
+        // a new athlete keeps the safe default — explicit approval — though the choice is no longer asked in onboarding
+        XCTAssertTrue(need(app, "blueprintCell-planChanges", "the plan-changes line").label.contains("Always ask me"), "required: a new athlete starts with explicit approval (\(el(app, "blueprintCell-planChanges").label))")
         XCTAssertTrue(need(app, "blueprintMeasuredLine", "the measured line").label.hasPrefix("No recorded training yet"), "required: no evidence is claimed")
         let approve = app.buttons["onbCreatePlan"].firstMatch
         XCTAssertTrue(approve.exists && approve.label == "Approve my blueprint", "required: the approval button (\(approve.label))")
