@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "22 Nov 2026, 16:10 (Dubai)"
+UPDATED = "22 Nov 2026, 16:40 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -552,19 +552,28 @@ SCREENS = [
                   "The Cyclift BikeComputer row and the separate bike-sensors row on this page.",
                   "Asking for FTP in onboarding.",
                   "Buttons that look like actions but connect nothing; claiming WHOOP or Garmin connectivity."],
-        commits="Implementation written on branch ios/lab; simulator check pending. Not in any TestFlight build.",
+        commits="Implemented and checked in Lab at commit a02fc5e5 (branch ios/lab). Not in any TestFlight build.",
         stages=[("Approved design", "DIRECTION ONLY", "Owner, 22 Nov 2026 15:55. Not final visual approval."),
-                ("Implemented in code", "WRITTEN — NOT YET VERIFIED", ""),
-                ("Compiled", "NOT YET", ""),
-                ("Simulator-verified", "NOT YET", "To verify: five options in order; working integrations use real services in the redesigned main app; unavailable "
-                 "ones clearly labelled; skipping all works; FTP absent from onboarding but stored elsewhere; the Coach preference saved and restored; Lab isolation "
-                 "intact; one screen without clipping."),
+                ("Implemented in code", "YES", "Commit a02fc5e5. One additive stored marker for the Plan changes starting point; the app-wide default is unchanged."),
+                ("Compiled", "YES", "Lab app built in focused check 43 (run 45020206508)."),
+                ("Simulator-verified", "LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — VISUAL PENDING. MAIN APP: NOT YET", "Focused check 43, run 45020206508, commit a02fc5e5: "
+                 "the Connect your devices check PASSED — new title; the five integrations in order; Apple Health, Apple Watch and Bluetooth devices read 'Not "
+                 "available in Lab', WHOOP and Garmin 'Coming soon'; no Connect, Manage or Pair button in Lab; no BikeComputer row, bike-sensors row, FTP or "
+                 "'calibrate'; 'Always ask me' selected for a new athlete; all rows, the preference and Continue on one screen below the title; Continue works with "
+                 "nothing connected; the preference is kept after Continue and Back and after reopening, and is not reset. In the same run the seven-page journey "
+                 "FAILED on page 1 (the typed name 'Sam' arrived as 'Sa' — About You, before this screen); re-run requested. Logic: 607 tests, 0 failures, "
+                 "including a stored FTP left untouched and a new athlete's FTP staying Unknown. Main app (real services): run 45022440091 requested, not yet reported."),
                 ("Physically verified on iPhone", "NO", "")],
         visual_verification="PENDING — owner to review the simulator screenshot with connection statuses and the Coach preference.",
-        functional_verification="PENDING.",
-        remaining=["Verify on the simulator (Lab and redesigned main app) and present the screenshot.",
+        functional_verification="Lab simulator: passed at a02fc5e5 (see stages). Main app, larger text, other themes, VoiceOver and a physical iPhone: not verified.",
+        remaining=["Owner's visual verdict on the screenshot (sent 22 Nov).",
+                   "Main-app verification that the working integrations use the real services (run 45022440091).",
+                   "Whether pressing nothing on this page triggers any permission prompt in the main app is unproven until checked there and on a real iPhone.",
+                   "Blueprint still shows an FTP line whose tap leads to this page, which no longer has FTP — for the Blueprint review.",
                    "After visual approval: Screen 7, three-column comparison."],
-        images=[("S06_connect_comparison_board_0281b566.png",
+        images=[("S06_connect_impl_sim_a02fc5e5.png",
+                 "IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a02fc5e5 (check 43)."),
+                ("S06_connect_comparison_board_0281b566.png",
                  "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y1, page 5 (the chosen visual reference, before the modifications). Middle: Build 6 "
                  "(commit 9b9d3a68). Right: the implementation BEFORE the decision (commit 0281b566) — with the old title, BikeComputer and bike-sensor rows and FTP, "
                  "all now removed.")],

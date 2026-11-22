@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 16:10 (Dubai) · Screens recorded: 6
+Last updated: 22 Nov 2026, 16:40 (Dubai) · Screens recorded: 6
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -55,7 +55,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 3 | ONB-03 | Athletic Roster | YES | YES — selection only | YES | FUNCTION: PARTLY. VISUAL: NOT YET | NO |
 | 4 | ONB-04 | Goals | YES | YES | YES | YES — visual and functional | NO |
 | 5 | ONB-05 | Build Your Week | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | YES — functional (Lab, Obsidian, iPhone 15 Pro) | NO |
-| 6 | ONB-06 | Connect Your Devices | DIRECTION ONLY | WRITTEN — NOT YET VERIFIED | NOT YET | NOT YET | NO |
+| 6 | ONB-06 | Connect Your Devices | DIRECTION ONLY | YES | YES | LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — VISUAL PENDING. MAIN APP: NOT YET | NO |
 
 ---
 
@@ -502,7 +502,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 - **Approval date:** 22 Nov 2026, 15:55 (design direction with modifications)
 - **Approval status:** DESIGN DIRECTION APPROVED — implementation and final visual verification pending
 - **Original design reference and source:** Onboarding v3.3 design sheet Y1, page 5 (the LEFT column of the Screen 6 comparison board) — the compact connection-row design — WITH MODIFICATIONS. The sheet is an illustrative drawing; its title, its rows and its FTP block are changed by the decision.
-- **Implementation commit:** Implementation written on branch ios/lab; simulator check pending. Not in any TestFlight build.
+- **Implementation commit:** Implemented and checked in Lab at commit a02fc5e5 (branch ios/lab). Not in any TestFlight build.
 
 ### Exact approved wording
 
@@ -544,21 +544,25 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | Stage | State | Evidence |
 |---|---|---|
 | Approved design | DIRECTION ONLY | Owner, 22 Nov 2026 15:55. Not final visual approval. |
-| Implemented in code | WRITTEN — NOT YET VERIFIED |  |
-| Compiled | NOT YET |  |
-| Simulator-verified | NOT YET | To verify: five options in order; working integrations use real services in the redesigned main app; unavailable ones clearly labelled; skipping all works; FTP absent from onboarding but stored elsewhere; the Coach preference saved and restored; Lab isolation intact; one screen without clipping. |
+| Implemented in code | YES | Commit a02fc5e5. One additive stored marker for the Plan changes starting point; the app-wide default is unchanged. |
+| Compiled | YES | Lab app built in focused check 43 (run 45020206508). |
+| Simulator-verified | LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — VISUAL PENDING. MAIN APP: NOT YET | Focused check 43, run 45020206508, commit a02fc5e5: the Connect your devices check PASSED — new title; the five integrations in order; Apple Health, Apple Watch and Bluetooth devices read 'Not available in Lab', WHOOP and Garmin 'Coming soon'; no Connect, Manage or Pair button in Lab; no BikeComputer row, bike-sensors row, FTP or 'calibrate'; 'Always ask me' selected for a new athlete; all rows, the preference and Continue on one screen below the title; Continue works with nothing connected; the preference is kept after Continue and Back and after reopening, and is not reset. In the same run the seven-page journey FAILED on page 1 (the typed name 'Sam' arrived as 'Sa' — About You, before this screen); re-run requested. Logic: 607 tests, 0 failures, including a stored FTP left untouched and a new athlete's FTP staying Unknown. Main app (real services): run 45022440091 requested, not yet reported. |
 | Physically verified on iPhone | NO |  |
 
 - **Visual verification:** PENDING — owner to review the simulator screenshot with connection statuses and the Coach preference.
-- **Functional verification:** PENDING.
+- **Functional verification:** Lab simulator: passed at a02fc5e5 (see stages). Main app, larger text, other themes, VoiceOver and a physical iPhone: not verified.
 
 ### Remaining work or limitations
 
-- Verify on the simulator (Lab and redesigned main app) and present the screenshot.
+- Owner's visual verdict on the screenshot (sent 22 Nov).
+- Main-app verification that the working integrations use the real services (run 45022440091).
+- Whether pressing nothing on this page triggers any permission prompt in the main app is unproven until checked there and on a real iPhone.
+- Blueprint still shows an FTP line whose tap leads to this page, which no longer has FTP — for the Blueprint review.
 - After visual approval: Screen 7, three-column comparison.
 
 ### Images
 
+- `assets/S06_connect_impl_sim_a02fc5e5.png` — IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a02fc5e5 (check 43).
 - `assets/S06_connect_comparison_board_0281b566.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y1, page 5 (the chosen visual reference, before the modifications). Middle: Build 6 (commit 9b9d3a68). Right: the implementation BEFORE the decision (commit 0281b566) — with the old title, BikeComputer and bike-sensor rows and FTP, all now removed.
 
 ### Decision history
