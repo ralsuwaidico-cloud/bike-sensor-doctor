@@ -805,10 +805,11 @@ final class LabFastOnboarding: XCTestCase {
 
     /// Consecutive screenshots of a scrolling page from the top to the end: each step drags the page up by the same
     /// distance and holds before lifting, so the page does not coast and no content is skipped between two pictures.
-    private func captureFullPage(_ app: XCUIApplication, _ name: String, steps: Int = 12) {
+    private func captureFullPage(_ app: XCUIApplication, _ name: String, steps: Int = 14) {
         app.settleForScreenshot(1); shot("\(name)-00")
         for i in 1...steps {
-            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62))
+            // from the page's left gutter: a drag begun on the trends graph inspects the graph instead of scrolling the page
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.015, dy: 0.62))
             from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: -300)), withVelocity: .slow, thenHoldForDuration: 0.4)
             Thread.sleep(forTimeInterval: 0.6)
             shot(String(format: "%@-%02d", name, i))
@@ -816,8 +817,9 @@ final class LabFastOnboarding: XCTestCase {
     }
     /// Home of the Lab's demonstration athlete: a plan, ride history and a strength session today.
     func testCaptureHomeDemoAthlete() {
-        let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launch()
-        XCTAssertTrue(el(app, "homeGreeting").waitForExistence(timeout: 30) || app.buttons["Home"].firstMatch.waitForExistence(timeout: 10), "required: Home of the demonstration athlete")
+        // check 51 captured the previous test's athlete here: without LAB_FRESH_DEMO Lab keeps whatever records it last held
+        let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launchEnvironment["LAB_FRESH_DEMO"] = "1"; app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete")
         captureFullPage(app, "home-demo")
     }
     /// Home of a new cycling and strength athlete straight after approving a plan.
