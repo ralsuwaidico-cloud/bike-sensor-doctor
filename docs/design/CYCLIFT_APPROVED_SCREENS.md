@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 02:30 (Dubai) · Screens recorded: 5
+Last updated: 22 Nov 2026, 14:40 (Dubai) · Screens recorded: 5
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -393,7 +393,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 - **Navigation location:** Onboarding · page 4 of 7, after Goals. Every athlete builds their week here, including athletes whose sports have no planner yet.
 - **Approval date:** 21 Nov 2026, 21:18 (design direction with required changes)
-- **Approval status:** VISUAL REFINEMENT REQUESTED (22 Nov 2026, 01:03) — final approval pending
+- **Approval status:** CALENDAR AND SCHEDULING LAYOUT APPROVED (22 Nov 2026, 13:34; run39_s5.png, commit 8dbbd54a) — Equipment revision pending implementation and visual verification
 - **Original design reference and source:** The layout the owner chose from the Screen 5 comparison board (05_build_your_week.png): compact seven-day calendar, day editor, weekly totals, equipment selector and Continue — WITH REQUIRED CHANGES. The owner's own screenshot was not received with the decision; the layout is taken to be the current-implementation column of the board, whose elements match the decision's list. To be confirmed at visual review. Origin: onboarding v3.3 sheet Y4.
 - **Implementation commit:** Refinement implemented and checked at commit 8dbbd54a (branch ios/lab); earlier version 83ed8066. Not in any TestFlight build.
 
@@ -416,6 +416,11 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Mandatory functionality and dependencies
 
+- EQUIPMENT REVISION 22 Nov 13:34 — the Equipment control has four choices: Gym | Home | Bodyweight | Custom. 'Not sure' is not an equipment environment. These are training environments or presets, not limits on what an athlete can own.
+- EQUIPMENT REVISION — an Edit equipment action opens a compact bottom sheet with a checklist of individual tick boxes. Each environment has its own editable selection. Initial lists — Gym: barbell, dumbbells, bench, cable machine, squat rack, leg press, kettlebell, resistance bands. Home: dumbbells, resistance bands, kettlebell, bench, pull-up bar, exercise mat, barbell. Bodyweight: no equipment required by default; pull-up bar, dip bars, resistance bands, gymnastic rings, weighted vest, exercise mat, dumbbells. Custom: searchable full catalogue. The lists are examples, not mutually exclusive rules; equipment is never silently removed because it belongs to another category.
+- EQUIPMENT REVISION — selecting an environment loads its saved choices; switching never deletes other selections; every choice is editable; selections persist after Back, Continue and restart; a gym is not assumed to have every piece of equipment; the effect on eligible exercises is shown where the existing planner can calculate it accurately.
+- EQUIPMENT REVISION — an extensible canonical catalogue for all sports, sport-relevant equipment where helpful, no equipment selection required for activities that need none. Equipment is not represented as available unless the athlete selected it or an explicitly confirmed preset provides it. No breaking change to athlete records. Choices that cannot yet influence a planner are stored accurately without pretending they affect training.
+- EQUIPMENT REVISION — the approved Screen 5 layout and its no-scrolling behaviour are preserved; the checklist lives in a separate bottom sheet (which may scroll); the calendar, session editor and Continue are not shrunk.
 - REFINEMENT 22 Nov 01:03 — calendar tiles show ONLY the weekday and the activity icon(s): no duration numbers; a rest day shows a moon and a small 'Rest' label; two sessions show two small icons; the selected-day outline stays. Durations stay editable in the day editor, which shows activity names and minutes. The weekly total and the compact sessions / training days / rest days summary stay beneath the calendar. Equipment stays conditional on relevant activities. Rest is a consistent, easy-to-find action in the editor. Unconfirmed day edits are clearly told apart from the confirmed week, without a large explanatory card.
 - STRICT HEIGHT (22 Nov 01:03) — on the iPhone 15 Pro at standard text size everything fits without scrolling INCLUDING the expanded editor with two sessions, the weekly summary, relevant equipment and Continue; not by hiding required functionality, overlapping controls or unreadable text; tighter spacing and compact controls instead. Equipment is never silently hidden. Larger accessibility sizes may scroll.
 - Continue stays disabled until at least one valid training day is configured.
@@ -457,14 +462,14 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 ### Remaining work or limitations
 
 - Owner's visual verdict on the screenshots (sent 21 Nov).
-- Owner's visual verdict on the refined screenshots (sent 22 Nov).
+- Equipment revision of 22 Nov 13:34: written (branch ios/lab); simulator check and the two screenshots pending.
 - The '2 sessions' count was removed from the editor header to make room for the tag and Rest. A roster with more activities than one chip row wraps and may then need scrolling (checked with three activities).
 - Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).
 - After approval: Screen 6, three-column comparison.
 
 ### Images
 
-- `assets/S05_week_refined_sim_8dbbd54a.png` — REFINED IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, commit 8dbbd54a (check 39). Left: multisport week, editor closed. Right: a two-session day with the editor expanded, equipment visible.
+- `assets/S05_week_refined_sim_8dbbd54a.png` — APPROVED 22 Nov 2026 13:34 FOR THE CALENDAR, DAY EDITOR AND WEEKLY SUMMARY (the Equipment row shown, with 'Not sure', is NOT approved and is being revised). iPhone 15 Pro simulator, Obsidian, commit 8dbbd54a (check 39). Left: multisport week, editor closed. Right: a two-session day with the editor expanded, equipment visible.
 - `assets/S05_week_impl_sim_83ed8066.png` — SUPERSEDED — NOT APPROVED (minutes on the tiles; equipment hidden during an edit — refinement requested 22 Nov 01:03). iPhone 15 Pro simulator, Obsidian, commit 83ed8066 (check 37). Left to right: all seven days at Rest; a running-only week; a multisport week with different durations and two-session days; the day editor with two sessions open.
 - `assets/S05_week_comparison_board_75335114.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left two: design sheet Y4 (drawings). Middle: Build 6 (commit 9b9d3a68). Right two: the implementation BEFORE the required changes (commit 75335114, check 32) — it still shows a pre-filled proposed week and week-wide lengths, both now rejected.
 
@@ -476,3 +481,4 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 21 Nov 2026, 22:22 | Five decisions: no both-sports requirement; activity variant is the session type; any two activities a day including the same sport, stored separately; starting durations 60 / 30 minutes accepted; existing icons reused. Integration rule: the calendar is declared preferences, not a Coach plan. Screen 5 stays design direction approved — final visual approval pending. | IN FORCE |
 | 22 Nov 2026, 00:10 | Record only (no decision): implementation sent for review (check 37, commit 83ed8066) with minutes on the calendar tiles and the equipment choice stepping aside during an edit. | NOTE |
 | 22 Nov 2026, 01:03 | Not approved as sent. Refinement: icon-only calendar tiles; Rest easy to find in the editor; unconfirmed edits distinguished; strict one-screen fit including the expanded two-session editor with equipment visible. Screens 1–4 untouched; Screen 6 waits. | IN FORCE |
+| 22 Nov 2026, 13:34 | APPROVED: the calendar, day editor and weekly summary layout of run39_s5.png, commit 8dbbd54a. Equipment section to be revised before complete visual approval: Gym | Home | Bodyweight | Custom, per-environment editable checklists in a bottom sheet, extensible multisport catalogue, truthful planner integration. | IN FORCE |
