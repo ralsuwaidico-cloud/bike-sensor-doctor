@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 16:40 (Dubai) · Screens recorded: 6
+Last updated: 22 Nov 2026, 17:00 (Dubai) · Screens recorded: 6
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -500,7 +500,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 - **Navigation location:** Onboarding · page 5 of 7, after Build Your Week. Not shown to an athlete who finishes without a plan.
 - **Approval date:** 22 Nov 2026, 15:55 (design direction with modifications)
-- **Approval status:** DESIGN DIRECTION APPROVED — implementation and final visual verification pending
+- **Approval status:** VISUAL DIRECTION APPROVED (22 Nov 2026, 16:34; layout of fast-onb-5-connect-your-devices.png, commit a02fc5e5) — final wording and functional verification pending
 - **Original design reference and source:** Onboarding v3.3 design sheet Y1, page 5 (the LEFT column of the Screen 6 comparison board) — the compact connection-row design — WITH MODIFICATIONS. The sheet is an illustrative drawing; its title, its rows and its FTP block are changed by the decision.
 - **Implementation commit:** Implemented and checked in Lab at commit a02fc5e5 (branch ios/lab). Not in any TestFlight build.
 
@@ -509,7 +509,9 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 - **Page title:** Connect your devices ("and calibrate" removed — calibration is no longer part of this page)
 - **Integrations, in order:** Apple Health · Apple Watch · WHOOP · Garmin · Bluetooth devices
 - **Statuses:** Connected · Not connected · Coming soon (integration not available). Connect or Manage only where functional.
-- **Plan changes:** Always ask me · Auto-apply reductions
+- **Subtitles (22 Nov 16:34):** Apple Health — Connect your health and activity data · Apple Watch — Connect your Apple Watch · WHOOP — Connect your WHOOP · Garmin — Connect your Garmin · Bluetooth devices — Connect your sensors and devices
+- **Line above Continue (22 Nov 16:34):** Connect now or set up your devices later in Profile.
+- **Plan changes:** REMOVED from onboarding on 22 Nov 16:34 (was: Always ask me · Auto-apply reductions). The setting stays in Profile › App preferences › Coach.
 
 ### Approved layout, visual elements and interactions
 
@@ -522,6 +524,10 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Mandatory functionality and dependencies
 
+- REFINEMENT 22 Nov 16:34 — all five connections kept, in order, with the owner's subtitles; icons, compact rows, statuses and visual design kept; integrations are not removed for being under development.
+- REFINEMENT 22 Nov 16:34 — the entire Plan changes section is removed from onboarding (both options and the paragraph about approval and reductions). Stored preferences are not deleted and the Coach safety rules are not weakened. New athletes keep the safe default of explicit approval before changes. The preference stays accessible and editable in Profile.
+- REFINEMENT 22 Nov 16:34 — above Continue only: 'Connect now or set up your devices later in Profile.' The freed space is not filled. Continue stays enabled with no connection.
+- iPHONE-FIRST (22 Nov 16:34) — Cyclift works as a complete iPhone-first app while the Cyclift Watch and BikeComputer are in development. The architecture for Apple Health, Apple Watch, WHOOP, Garmin and Bluetooth sensors is preserved. No device or service is said to supply data its integration cannot retrieve. No fake connections; no simulated data outside the isolated Lab.
 - All connections optional; onboarding completes with no device connected.
 - Truthful statuses only. No decorative Connect button that cannot start a real connection.
 - Permissions are requested only when the athlete explicitly chooses to connect that service.
@@ -529,7 +535,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 - Cyclift Lab stays fully isolated from real HealthKit, Bluetooth and external accounts: the five rows in unavailable / demo states; no scanning, pairing, sign-in or permission prompt.
 - Redesigned main app: the actual existing connection services where implemented. WHOOP and Garmin are not claimed to work unless an integration is implemented and verified.
 - FTP is preserved in the authoritative athlete settings and the Performance Settings workflow; stored FTP is not deleted; the cycling planner can still use it; when FTP is unknown the planner invents no measured FTP.
-- Plan changes retained: 'Always ask me' is the default for NEW athletes, subject to the existing Coach policy. Increases always need explicit approval. Production Coach behaviour and stored preferences are not changed without a migration and verification plan.
+- (15:55, SUPERSEDED IN PART at 16:34) Plan changes was to be retained on this page; it is now removed from onboarding. Still in force: explicit approval is the default for NEW athletes; increases always need explicit approval; production Coach behaviour and stored preferences are not changed without a migration and verification plan.
 
 ### Explicitly rejected alternatives
 
@@ -554,7 +560,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Remaining work or limitations
 
-- Owner's visual verdict on the screenshot (sent 22 Nov).
+- Refinement of 22 Nov 16:34: written (branch ios/lab); focused simulator check and new screenshot pending.
 - Main-app verification that the working integrations use the real services (run 45022440091).
 - Whether pressing nothing on this page triggers any permission prompt in the main app is unproven until checked there and on a real iPhone.
 - Blueprint still shows an FTP line whose tap leads to this page, which no longer has FTP — for the Blueprint review.
@@ -562,11 +568,12 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Images
 
-- `assets/S06_connect_impl_sim_a02fc5e5.png` — IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a02fc5e5 (check 43).
+- `assets/S06_connect_impl_sim_a02fc5e5.png` — LAYOUT APPROVED 22 Nov 2026 16:34; its subtitles, Plan changes section and bottom paragraph are then changed. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a02fc5e5 (check 43).
 - `assets/S06_connect_comparison_board_0281b566.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y1, page 5 (the chosen visual reference, before the modifications). Middle: Build 6 (commit 9b9d3a68). Right: the implementation BEFORE the decision (commit 0281b566) — with the old title, BikeComputer and bike-sensor rows and FTP, all now removed.
 
 ### Decision history
 
 | When | Decision | State |
 |---|---|---|
-| 22 Nov 2026, 15:55 | Sheet Y1 page 5 chosen as the visual reference with modifications: title 'Connect your devices'; five integrations in a fixed order; BikeComputer and the bike-sensors row removed from this page; FTP removed from onboarding and preserved elsewhere; truthful statuses and functional actions only; Lab isolation; 'Always ask me' as a new athlete's default; one screen at standard text size. | IN FORCE |
+| 22 Nov 2026, 15:55 | Sheet Y1 page 5 chosen as the visual reference with modifications: title 'Connect your devices'; five integrations in a fixed order; BikeComputer and the bike-sensors row removed from this page; FTP removed from onboarding and preserved elsewhere; truthful statuses and functional actions only; Lab isolation; 'Always ask me' as a new athlete's default; one screen at standard text size. | IN FORCE — Plan changes on this page superseded 16:34 |
+| 22 Nov 2026, 16:34 | Overall layout of fast-onb-5-connect-your-devices.png (a02fc5e5) APPROVED, with changes: the owner's five subtitles; the Plan changes section removed from onboarding (it belongs to Profile › App preferences › Coach); only one short line above Continue; iPhone-first device strategy recorded. | IN FORCE |
