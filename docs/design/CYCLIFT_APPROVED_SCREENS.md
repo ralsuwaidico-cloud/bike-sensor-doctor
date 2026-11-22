@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 14:40 (Dubai) · Screens recorded: 5
+Last updated: 22 Nov 2026, 15:40 (Dubai) · Screens recorded: 5
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -51,7 +51,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 2 | ONB-02 | About You | YES | YES | YES | YES — visual and functional | NO |
 | 3 | ONB-03 | Athletic Roster | YES | YES — selection only | YES | FUNCTION: PARTLY. VISUAL: NOT YET | NO |
 | 4 | ONB-04 | Goals | YES | YES | YES | YES — visual and functional | NO |
-| 5 | ONB-05 | Build Your Week | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | NO |
+| 5 | ONB-05 | Build Your Week | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | NO |
 
 ---
 
@@ -393,9 +393,9 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 - **Navigation location:** Onboarding · page 4 of 7, after Goals. Every athlete builds their week here, including athletes whose sports have no planner yet.
 - **Approval date:** 21 Nov 2026, 21:18 (design direction with required changes)
-- **Approval status:** CALENDAR AND SCHEDULING LAYOUT APPROVED (22 Nov 2026, 13:34; run39_s5.png, commit 8dbbd54a) — Equipment revision pending implementation and visual verification
+- **Approval status:** CALENDAR AND SCHEDULING LAYOUT APPROVED (22 Nov 2026, 13:34; run39_s5.png, commit 8dbbd54a) — Equipment revision implemented and simulator-checked; its visual approval is PENDING
 - **Original design reference and source:** The layout the owner chose from the Screen 5 comparison board (05_build_your_week.png): compact seven-day calendar, day editor, weekly totals, equipment selector and Continue — WITH REQUIRED CHANGES. The owner's own screenshot was not received with the decision; the layout is taken to be the current-implementation column of the board, whose elements match the decision's list. To be confirmed at visual review. Origin: onboarding v3.3 sheet Y4.
-- **Implementation commit:** Refinement implemented and checked at commit 8dbbd54a (branch ios/lab); earlier version 83ed8066. Not in any TestFlight build.
+- **Implementation commit:** Calendar and scheduling: 8dbbd54a. Equipment revision: e5f4819a (branch ios/lab). Not in any TestFlight build.
 
 ### Exact approved wording
 
@@ -454,6 +454,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | Compiled | YES | Lab app built in focused check 37 (run 44935585991). Main-app build not run on this commit. |
 | Simulator-verified | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | Focused check 37, run 44935585991, commit 83ed8066, 4 of 4 passed: seven rest days for a new athlete; Continue disabled until a confirmed session, enabled by one session for a cycling-and-strength athlete; only roster activities offered, each with its icon; a day changes only on Confirm; a session removed on its own row; two sessions on a day with independent lengths, the same activity twice included, no third; different lengths on different days; a day back to Rest; totals, counts and by-sport breakdown follow each change; equipment only with a strength session, not for a runner; everything above the Continue area with the editor closed and with two sessions open; Back, Continue and reopening keep the week; a runner continues to a profile-only Blueprint; a mixed roster is planned only for the ride chosen; the seven-page journey reaches an approved plan with sessions only on chosen days. Logic: 600 tests, 0 failures. Earlier: check 35 (run 44930790358) FAILED on an empty total reading '0 h' and the equipment row under Continue with two sessions open — both corrected. Checks 35 and 36 also failed once each at launch (Welcome hold did not open page 1; cause unproven; passed in 37). |
 | Simulator-verified — refinement of 22 Nov | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | Focused check 39, run 44952043241, commit 8dbbd54a, Build your week check passed: no minutes on the calendar tiles; Rest in the editor header; 'Confirmed' / 'Not confirmed yet' tag; the calendar and summary show the confirmed week during an edit and an unconfirmed edit is not saved; with a two-session day OPEN the calendar, editor, Confirm, summary, warning note, all four equipment choices and Continue are on one screen with no overlap and the title visible; plus all scheduling and persistence checks of check 37. Check 38 (run 44949793574, f2591ad2): runner and seven-page journeys passed; this check FAILED — the day name could not be found by its identifier (cause not established; day name and tag made separate elements). Runner and seven-page journeys were not re-run on 8dbbd54a. |
+| Simulator-verified — Equipment revision | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | Focused check 41, run 45011571192, commit e5f4819a, equipment check passed: Gym | Home | Bodyweight | Custom shown, no 'Not sure'; compact Edit control; no equipment question before a strength session; Bodyweight opens its own list with nothing ticked; ticking and unticking work; dumbbells and resistance bands raise the count of exercises the planner can offer and a stored-only item does not; Gym shows its eight preset items ticked and does not include a trap bar; removing the barbell lowers the count; switching environments erases nothing; Custom searches the catalogue and holds a squat rack and a pull buoy together; all kept after Continue and Back and after closing and reopening. Check 40 (run 45008788939, 0281b566): Build your week (one-screen fit with the new row) and the seven-page journey PASSED; the equipment check FAILED — the sheet's own identifier hid its children's; corrected. Those two were not re-run on e5f4819a (one accessibility line changed). Logic: 603 tests, 0 failures. |
 | Physically verified on iPhone | NO |  |
 
 - **Visual verification:** PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.
@@ -462,13 +463,15 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 ### Remaining work or limitations
 
 - Owner's visual verdict on the screenshots (sent 21 Nov).
-- Equipment revision of 22 Nov 13:34: written (branch ios/lab); simulator check and the two screenshots pending.
+- Owner's visual verdict on the Equipment presentation (screenshots sent 22 Nov).
+- For the owner's confirmation: 'Leg press' is offered as 'Weight machines (leg press and others)' — the planner has one name for all machines; default ticks (Gym: its eight listed items; Home: the existing five-item home kit; Bodyweight and Custom: none); Gym no longer assumes a trap bar or pull-up bar; before an environment is chosen none is selected and Continue is not blocked; the cycling, running, swimming and mobility items are a provisional initial list; items the planner does not use are stored and labelled as not used to choose training yet.
 - The '2 sessions' count was removed from the editor header to make room for the tag and Rest. A roster with more activities than one chip row wraps and may then need scrolling (checked with three activities).
 - Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).
 - After approval: Screen 6, three-column comparison.
 
 ### Images
 
+- `assets/S05_equipment_sim_e5f4819a.png` — EQUIPMENT REVISION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, commit e5f4819a (check 41). Left: Screen 5 with Gym | Home | Bodyweight | Custom and the compact Edit control. Right: the Bodyweight checklist with dumbbells and resistance bands ticked.
 - `assets/S05_week_refined_sim_8dbbd54a.png` — APPROVED 22 Nov 2026 13:34 FOR THE CALENDAR, DAY EDITOR AND WEEKLY SUMMARY (the Equipment row shown, with 'Not sure', is NOT approved and is being revised). iPhone 15 Pro simulator, Obsidian, commit 8dbbd54a (check 39). Left: multisport week, editor closed. Right: a two-session day with the editor expanded, equipment visible.
 - `assets/S05_week_impl_sim_83ed8066.png` — SUPERSEDED — NOT APPROVED (minutes on the tiles; equipment hidden during an edit — refinement requested 22 Nov 01:03). iPhone 15 Pro simulator, Obsidian, commit 83ed8066 (check 37). Left to right: all seven days at Rest; a running-only week; a multisport week with different durations and two-session days; the day editor with two sessions open.
 - `assets/S05_week_comparison_board_75335114.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left two: design sheet Y4 (drawings). Middle: Build 6 (commit 9b9d3a68). Right two: the implementation BEFORE the required changes (commit 75335114, check 32) — it still shows a pre-filled proposed week and week-wide lengths, both now rejected.
