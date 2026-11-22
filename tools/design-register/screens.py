@@ -436,7 +436,7 @@ SCREENS = [
                   "Large explanatory panels and technical wording.",
                   "Requiring an equipment choice from athletes with no strength training."],
         commits="Calendar and scheduling: 8dbbd54a. Equipment presentation: e5f4819a. Final conditions: 48466cec (branch ios/lab). Not in any TestFlight build.",
-        stages=[("Approved design", "DIRECTION ONLY", "Owner, 21 Nov 2026 21:18. Not final visual approval."),
+        stages=[("Approved design", "YES", "Owner: direction 21 Nov 2026 21:18; calendar, day editor and summary approved 22 Nov 13:34 (run39_s5.png, 8dbbd54a); Equipment presentation approved 22 Nov 14:36 (run41_s5_equipment.png, e5f4819a) with final conditions."),
                 ("Implemented in code", "YES", "Commit 83ed8066, including the decisions of 22:22. Additive stored field for the chosen week; older records unchanged."),
                 ("Compiled", "YES", "Lab app built in focused check 37 (run 44935585991). Main-app build not run on this commit."),
                 ("Simulator-verified", "FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING", "Focused check 37, run 44935585991, commit 83ed8066, 4 of 4 passed: seven "
@@ -471,7 +471,7 @@ SCREENS = [
                  "presented as a suggested starting list; saved-only items are disclosed once; ticking dumbbells and bands raises the planner's own count and a "
                  "saved-only item does not. Logic: 604 tests, 0 failures, including that no barbell-only exercise is offered without a barbell."),
                 ("Physically verified on iPhone", "NO", "")],
-        visual_verification="PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.",
+        visual_verification="APPROVED by the owner: calendar, day editor and weekly summary on 22 Nov 2026 13:34 (commit 8dbbd54a); Equipment presentation on 22 Nov 14:36 (commit e5f4819a). The sheet wording refined afterwards (48466cec) has not itself been visually reviewed. Obsidian, iPhone 15 Pro simulator only.",
         functional_verification="Lab simulator: passed at 83ed8066 (see stages). Not verified: larger text on this commit, other themes, redesigned main app, full Lab regression, physical iPhone.",
         remaining=["Owner's visual verdict on the screenshots (sent 21 Nov).",
                    "OUTSTANDING — larger text sizes, the other five themes, VoiceOver, the redesigned main app, the full Lab regression and a physical iPhone. The "

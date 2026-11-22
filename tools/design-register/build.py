@@ -19,6 +19,20 @@ OUT = os.path.join(ROOT, "docs", "design"); ASSETS = os.path.join(OUT, "assets")
 STAGES = ["Approved design", "Implemented in code", "Compiled", "Simulator-verified", "Physically verified on iPhone"]
 
 # ---------------------------------------------------------------- Markdown
+FIVE = ["Approved design", "Implemented in code", "Compiled", "Simulator-verified", "Physically verified on iPhone"]
+def summary_states(s):
+    """One state per canonical stage for the summary table (a screen may list several simulator rounds in detail)."""
+    d = {}
+    for a, b, _ in s["stages"]:
+        d.setdefault(a, b)
+    out = []
+    for k in FIVE:
+        v = d.get(k, "—")
+        if k == "Simulator-verified" and len([a for a, _, _ in s["stages"] if a.startswith("Simulator-verified")]) > 1:
+            v += " (later rounds: see the screen's status table)"
+        out.append(v)
+    return out
+
 def markdown():
     L = ["# Cyclift — Approved Screens Register", "",
          f"Last updated: {UPDATED} · Screens recorded: {len(SCREENS)}", "",
@@ -44,7 +58,7 @@ def markdown():
     L += ["", "## Summary", "",
          "| # | ID | Screen | " + " | ".join(STAGES) + " |", "|---|---|---|" + "---|" * len(STAGES)]
     for s in SCREENS:
-        L.append(f"| {s['number']} | {s['id']} | {s['name']} | " + " | ".join(v for _, v, _ in s["stages"]) + " |")
+        L.append(f"| {s['number']} | {s['id']} | {s['name']} | " + " | ".join(summary_states(s)) + " |")
     for s in SCREENS:
         L += ["", "---", "", f"## Screen {s['number']} — {s['name']} ({s['id']})", "",
               f"- **Navigation location:** {s['location']}",
@@ -147,7 +161,7 @@ def pdf():
     rows = [head]
     for s in SCREENS:
         rows.append([Paragraph(str(s["number"]), CELL), Paragraph(f"<b>{esc(s['name'])}</b><br/>{s['id']}", CELL)] +
-                    [Paragraph(esc(v), ParagraphStyle("sv", parent=CELLB, textColor=state_color(v))) for _, v, _ in s["stages"]])
+                    [Paragraph(esc(v), ParagraphStyle("sv", parent=CELLB, textColor=state_color(v))) for v in summary_states(s)])
     cw = [8 * mm, 30 * mm] + [(width - 38 * mm) / 5] * 5
     t = Table(rows, colWidths=cw, repeatRows=1)
     t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("BACKGROUND", (0, 0), (-1, 0), SOFT),

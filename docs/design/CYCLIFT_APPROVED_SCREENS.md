@@ -55,8 +55,8 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 2 | ONB-02 | About You | YES | YES | YES | YES — visual and functional | NO |
 | 3 | ONB-03 | Athletic Roster | YES | YES — selection only | YES | FUNCTION: PARTLY. VISUAL: NOT YET | NO |
 | 4 | ONB-04 | Goals | YES | YES | YES | YES — visual and functional | NO |
-| 5 | ONB-05 | Build Your Week | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | YES — functional (Lab, Obsidian, iPhone 15 Pro) | NO |
-| 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | YES for the previous commit a02fc5e5 (same rows, earlier subtitles; Plan changes still on the page) | NO |
+| 5 | ONB-05 | Build Your Week | YES | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING (later rounds: see the screen's status table) | NO |
+| 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only (later rounds: see the screen's status table) | NO |
 | 7 | ONB-07 | Athlete Evolution | DIRECTION ONLY | YES — awaiting review | PENDING | PENDING | NO |
 
 ---
@@ -456,7 +456,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | Stage | State | Evidence |
 |---|---|---|
-| Approved design | DIRECTION ONLY | Owner, 21 Nov 2026 21:18. Not final visual approval. |
+| Approved design | YES | Owner: direction 21 Nov 2026 21:18; calendar, day editor and summary approved 22 Nov 13:34 (run39_s5.png, 8dbbd54a); Equipment presentation approved 22 Nov 14:36 (run41_s5_equipment.png, e5f4819a) with final conditions. |
 | Implemented in code | YES | Commit 83ed8066, including the decisions of 22:22. Additive stored field for the chosen week; older records unchanged. |
 | Compiled | YES | Lab app built in focused check 37 (run 44935585991). Main-app build not run on this commit. |
 | Simulator-verified | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | Focused check 37, run 44935585991, commit 83ed8066, 4 of 4 passed: seven rest days for a new athlete; Continue disabled until a confirmed session, enabled by one session for a cycling-and-strength athlete; only roster activities offered, each with its icon; a day changes only on Confirm; a session removed on its own row; two sessions on a day with independent lengths, the same activity twice included, no third; different lengths on different days; a day back to Rest; totals, counts and by-sport breakdown follow each change; equipment only with a strength session, not for a runner; everything above the Continue area with the editor closed and with two sessions open; Back, Continue and reopening keep the week; a runner continues to a profile-only Blueprint; a mixed roster is planned only for the ride chosen; the seven-page journey reaches an approved plan with sessions only on chosen days. Logic: 600 tests, 0 failures. Earlier: check 35 (run 44930790358) FAILED on an empty total reading '0 h' and the equipment row under Continue with two sessions open — both corrected. Checks 35 and 36 also failed once each at launch (Welcome hold did not open page 1; cause unproven; passed in 37). |
@@ -465,7 +465,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | Simulator-verified — final conditions of 22 Nov 14:36 | YES — functional (Lab, Obsidian, iPhone 15 Pro) | Focused check 42, run 45013559824, commit 48466cec, 3 of 3 passed: a strength athlete cannot continue without an equipment environment and the page says what is needed; Continue enables once one is chosen; a runner without strength sessions is never asked and continues; environment and all edited selections are kept after Continue, Back and reopening; the calendar, the expanded two-session editor, the summary, the Equipment row with its four choices and Continue are on one screen; the sheet leads with 'We'll choose exercises based on the equipment you have.' with the count as a secondary line; the Gym list is presented as a suggested starting list; saved-only items are disclosed once; ticking dumbbells and bands raises the planner's own count and a saved-only item does not. Logic: 604 tests, 0 failures, including that no barbell-only exercise is offered without a barbell. |
 | Physically verified on iPhone | NO |  |
 
-- **Visual verification:** PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.
+- **Visual verification:** APPROVED by the owner: calendar, day editor and weekly summary on 22 Nov 2026 13:34 (commit 8dbbd54a); Equipment presentation on 22 Nov 14:36 (commit e5f4819a). The sheet wording refined afterwards (48466cec) has not itself been visually reviewed. Obsidian, iPhone 15 Pro simulator only.
 - **Functional verification:** Lab simulator: passed at 83ed8066 (see stages). Not verified: larger text on this commit, other themes, redesigned main app, full Lab regression, physical iPhone.
 
 ### Remaining work or limitations
