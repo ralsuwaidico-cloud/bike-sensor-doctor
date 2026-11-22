@@ -570,7 +570,7 @@ SCREENS = [
         stages=[("Approved design", "YES", "Owner, 22 Nov 2026 17:19: approved and locked exactly as shown, commit a66577ee."),
                 ("Implemented in code", "YES", "Commit a02fc5e5. One additive stored marker for the Plan changes starting point; the app-wide default is unchanged."),
                 ("Compiled", "YES", "Lab app built in focused check 43 (run 45020206508)."),
-                ("Simulator-verified", "LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — VISUAL PENDING. MAIN APP: NOT YET", "Focused check 43, run 45020206508, commit a02fc5e5: "
+                ("Simulator-verified", "YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only", "First implementation — focused check 43, run 45020206508, commit a02fc5e5: "
                  "the Connect your devices check PASSED — new title; the five integrations in order; Apple Health, Apple Watch and Bluetooth devices read 'Not "
                  "available in Lab', WHOOP and Garmin 'Coming soon'; no Connect, Manage or Pair button in Lab; no BikeComputer row, bike-sensors row, FTP or "
                  "'calibrate'; 'Always ask me' selected for a new athlete; all rows, the preference and Continue on one screen below the title; Continue works with "
