@@ -1,0 +1,29 @@
+FAST focused Lab check — selected: LabFastOnboarding/testEquipmentEnvironments LabFastOnboarding/testBuildYourWeek LabFastOnboarding/testARunnerCompletesOnboardingWithoutAPlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from e5f4819a · files changed since then: 7
+TIME setup: 39s
+  timing: SwiftCompile (5 tasks) | 83.516 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 80.809 seconds
+  timing: SwiftEmitModule (2 tasks) | 24.925 seconds
+  timing: Ld (18 tasks) | 13.981 seconds
+  timing: SwiftDriver (2 tasks) | 7.516 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.406 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.333 seconds
+  timing: ConstructStubExecutorLinkFileList (1 task) | 0.271 seconds
+  stages: packages at 262s · packages prepared at 348s · dependency graph at 348s · inputs at 349s · build description at 349s · first link at 373s · first Swift step at 375s · asset catalogue at 380s · finished at 468s
+  compiled in this run: 12 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 470s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 15s
+	 Executed 3 tests, with 0 failures (0 unexpected) in 807.531 (807.539) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 807.531 (807.541) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 807.531 (807.542) seconds
+Test Case '-[CycliftLabUITests.LabFastOnboarding testARunnerCompletesOnboardingWithoutAPlan]' passed (274.004 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testBuildYourWeek]' passed (305.881 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testEquipmentEnvironments]' passed (227.646 seconds).
+RESULT selected screen checks: ok
+TIME tests: 932s
+TIME total on the Mac: 1459s
+commit 48466cec919f60a2ce09cfc1eb334c9072a78ca9  branch ios/lab
