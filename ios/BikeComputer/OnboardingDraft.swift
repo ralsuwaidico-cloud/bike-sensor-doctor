@@ -817,6 +817,95 @@ enum OnbConnections {
     }
 }
 
+// MARK: - Onboarding › Athlete Evolution (owner's approved direction, 22 Nov 2026, 17:33)
+//
+// Six stages, G0–G5, that the athlete can EXPLORE on the page: tapping one shows its orbital form, its name and a short
+// description. Exploring is presentation only — it is never stored and never becomes the athlete's stage.
+//
+// Three statuses are kept apart and must never be confused:
+//   · Exploring — the stage being looked at on the rail.
+//   · Estimated — from onboarding answers, labelled "Estimated · based on your answers".
+//   · Verified  — from approved performance criteria and actual recorded evidence.
+// No assessment method is approved yet, so the athlete's actual standing is always `.notAssessed` ("Starting stage not
+// yet assessed"). `estimated` and `verified` exist so the design can show them once a policy is approved; nothing in
+// the app produces them today. The names and descriptions are PROVISIONAL working labels, not assessment criteria.
+
+struct EvolutionStageInfo: Equatable, Identifiable {
+    let index: Int
+    let name: String
+    let summary: String
+    var id: Int { index }
+    var code: String { "G\(index)" }
+}
+
+enum EvolutionStages {
+    static let all: [EvolutionStageInfo] = [
+        .init(index: 0, name: "Origin", summary: "Where every athlete begins: first sessions and a new routine."),
+        .init(index: 1, name: "Foundation", summary: "Regular training and sound basics taking hold."),
+        .init(index: 2, name: "Development", summary: "Consistent weeks and steady, visible progress."),
+        .init(index: 3, name: "Performance", summary: "Structured training that shows in results."),
+        .init(index: 4, name: "Refinement", summary: "Well-balanced training, tuned in its details."),
+        .init(index: 5, name: "Mastery", summary: "Excellence sustained across seasons."),
+    ]
+    static func stage(_ i: Int) -> EvolutionStageInfo? { all.indices.contains(i) ? all[i] : nil }
+}
+
+enum EvolutionStanding: Equatable {
+    case notAssessed
+    case estimated(Int)
+    case verified(Int)
+    var title: String {
+        switch self {
+        case .notAssessed: return "Starting stage not yet assessed"
+        case .estimated(let i): return EvolutionStages.stage(i).map { "\($0.code) · \($0.name)" } ?? "Starting stage not yet assessed"
+        case .verified(let i): return EvolutionStages.stage(i).map { "\($0.code) · \($0.name)" } ?? "Starting stage not yet assessed"
+        }
+    }
+    /// The label that tells an estimate from a verified stage. nil when there is no stage to label.
+    var basis: String? {
+        switch self {
+        case .notAssessed: return nil
+        case .estimated: return "Estimated · based on your answers"
+        case .verified: return "Verified · from your recorded training"
+        }
+    }
+    /// The stage the athlete actually holds, if any — never the one being explored.
+    var stage: Int? { switch self { case .notAssessed: return nil; case .estimated(let i), .verified(let i): return i } }
+}
+
+enum EvolutionPage {
+    /// The athlete's actual standing. No assessment policy is approved, so it is not assessed — whatever was answered,
+    /// recorded or tapped. (When a policy is approved, this is the one place it is applied.)
+    static func standing() -> EvolutionStanding { .notAssessed }
+
+    /// What the athlete declared, sport by sport, from THEIR roster: "Cycling · Intermediate", "Strength · Beginner",
+    /// and — for a sport whose experience onboarding does not ask yet — "Running · experience not asked yet". Nothing
+    /// is assumed for a sport.
+    static func declared(roster ids: [String], cyclingLevel: String?, strengthLevel: String?) -> [String] {
+        var seen: [RosterFamily] = [], out: [String] = []
+        for a in ids.compactMap({ AthleticRoster.activity($0) }) where !seen.contains(a.family) {
+            seen.append(a.family)
+            let level: String? = a.family == .cycling ? cyclingLevel : a.family == .strength ? strengthLevel : nil
+            out.append("\(a.family.title) · \(level ?? "experience not asked yet")")
+        }
+        return out
+    }
+    /// The evidence line: what is actually recorded, and — truthfully — which of the athlete's sports cannot be
+    /// recorded yet. Nothing is invented for a sport without a recorder.
+    static func evidence(roster ids: [String], rides: Int, lifts: Int) -> (title: String, note: String) {
+        let acts = ids.compactMap { AthleticRoster.activity($0) }
+        var parts: [String] = []
+        if rides > 0 { parts.append("\(rides) ride\(rides == 1 ? "" : "s")") }
+        if lifts > 0 { parts.append("\(lifts) strength session\(lifts == 1 ? "" : "s")") }
+        let title = parts.isEmpty ? "Nothing recorded yet" : parts.joined(separator: " · ")
+        var waiting: [String] = []
+        for a in acts where a.recording == nil && !waiting.contains(a.family.title) { waiting.append(a.family.title) }
+        let canRecord = acts.isEmpty || acts.contains { $0.recording != nil }
+        if !canRecord { return (title, "Recording for your sports is coming soon.") }
+        return (title, waiting.isEmpty ? "Your recorded sessions will count." : "Recorded sessions will count. \(waiting.joined(separator: ", ")): recording coming soon.")
+    }
+}
+
 // MARK: - Profile › Devices & Connections (sheet P06): one row per device family, state in a word and a shape
 
 /// The six connection states of sheet P06. Told apart by word and symbol, never by colour.

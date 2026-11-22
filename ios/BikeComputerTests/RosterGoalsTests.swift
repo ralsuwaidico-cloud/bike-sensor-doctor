@@ -429,4 +429,40 @@ final class RosterGoalsTests: XCTestCase {
         let read = try JSONDecoder().decode(RiderProfile.self, from: JSONSerialization.data(withJSONObject: json))
         XCTAssertNil(read.activityGoals); XCTAssertNil(read.mainGoalID); XCTAssertEqual(read.goals, [.endurance, .strength]); XCTAssertEqual(read.primaryGoal, .strength)
     }
+
+    // MARK: Athlete Evolution (owner's direction, 22 Nov 2026, 17:33)
+
+    /// No assessment policy is approved: the athlete's standing is "not yet assessed", with no estimate or verified label.
+    func testEvolutionStandingIsNotAssessed() {
+        let s = EvolutionPage.standing()
+        XCTAssertEqual(s, .notAssessed); XCTAssertNil(s.stage); XCTAssertNil(s.basis)
+        XCTAssertEqual(s.title, "Starting stage not yet assessed")
+        // the two other statuses are worded apart, for when a policy exists
+        XCTAssertEqual(EvolutionStanding.estimated(2).basis, "Estimated · based on your answers")
+        XCTAssertNotEqual(EvolutionStanding.estimated(2).basis, EvolutionStanding.verified(2).basis)
+        XCTAssertEqual(EvolutionStanding.estimated(2).title, "G2 · Development")
+    }
+    func testEvolutionStagesAreSixWithTheWorkingNames() {
+        XCTAssertEqual(EvolutionStages.all.map { $0.code }, ["G0", "G1", "G2", "G3", "G4", "G5"])
+        XCTAssertEqual(EvolutionStages.all.map { $0.name }, ["Origin", "Foundation", "Development", "Performance", "Refinement", "Mastery"])
+        XCTAssertEqual(Set(EvolutionStages.all.map { $0.summary }).count, 6)
+        XCTAssertNil(EvolutionStages.stage(6)); XCTAssertNil(EvolutionStages.stage(-1))
+    }
+    /// What was declared follows the roster, sport by sport; a sport whose experience is not asked says so.
+    func testEvolutionDeclaredFollowsTheRoster() {
+        XCTAssertEqual(EvolutionPage.declared(roster: ["roadCycling", "strength", "running"], cyclingLevel: "Intermediate", strengthLevel: "Beginner"),
+                       ["Cycling · Intermediate", "Strength · Beginner", "Running · experience not asked yet"])
+        XCTAssertEqual(EvolutionPage.declared(roster: ["running", "swimming"], cyclingLevel: "Intermediate", strengthLevel: "Beginner"),
+                       ["Running · experience not asked yet", "Swimming · experience not asked yet"], "no cycling or strength line for an athlete who chose neither")
+        XCTAssertEqual(EvolutionPage.declared(roster: [], cyclingLevel: nil, strengthLevel: nil), [])
+    }
+    /// Evidence is what is recorded and nothing else; sports without a recorder are named as not recorded yet.
+    func testEvolutionEvidenceInventsNothing() {
+        let none = EvolutionPage.evidence(roster: ["roadCycling", "strength", "running"], rides: 0, lifts: 0)
+        XCTAssertEqual(none.title, "Nothing recorded yet"); XCTAssertTrue(none.note.contains("Running: recording coming soon"))
+        XCTAssertEqual(EvolutionPage.evidence(roster: ["roadCycling", "strength"], rides: 1, lifts: 2).title, "1 ride · 2 strength sessions")
+        XCTAssertEqual(EvolutionPage.evidence(roster: ["roadCycling", "strength"], rides: 1, lifts: 2).note, "Your recorded sessions will count.")
+        let runner = EvolutionPage.evidence(roster: ["running"], rides: 0, lifts: 0)
+        XCTAssertEqual(runner.title, "Nothing recorded yet"); XCTAssertEqual(runner.note, "Recording for your sports is coming soon.")
+    }
 }

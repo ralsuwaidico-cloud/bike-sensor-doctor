@@ -903,7 +903,7 @@ final class LabChecks: XCTestCase {
         page(5); XCTAssertTrue(app.staticTexts["onbLabDevices"].firstMatch.exists, "Lab says devices are switched off")
         shot("journey-5-connect"); next.tap()
         // 6 Evolution
-        page(6); XCTAssertTrue(app.staticTexts["onbEvolutionStage"].firstMatch.waitForExistence(timeout: 8) && app.staticTexts["onbEvolutionStage"].firstMatch.label.hasPrefix("No stage yet"), "no stage is claimed")
+        page(6); XCTAssertTrue(app.staticTexts["onbEvolutionStage"].firstMatch.waitForExistence(timeout: 8) && app.staticTexts["onbEvolutionStage"].firstMatch.label == "Starting stage not yet assessed", "no stage is claimed (wording changed by the owner on 22 Nov 2026, 17:33)")
         shot("journey-6-evolution"); next.tap()
         // 7 Blueprint
         page(7)

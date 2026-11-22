@@ -370,7 +370,7 @@ struct OnboardingV34View: View {
             if !waiting.isEmpty { return CoachLine(mark: "◆", tint: theme.accent, strong: "Your schedule. ", after: "Cyclift plans your cycling and strength days; your \(waiting.joined(separator: " and ")) days are saved. Nothing is scheduled until you approve.") }
             return CoachLine(mark: "◆", tint: theme.accent, before: "This is your schedule; the Coach plans inside it. ", strong: "Nothing is scheduled until you approve.")
         case 5: return CoachLine(mark: "", tint: theme.textSecondary, before: "Connect now or set up your devices later in Profile.")
-        case 6: return CoachLine(mark: "▲", tint: theme.success, before: "Your stage is earned by ", strong: "recorded training only", after: ". Nothing you answered here can raise or lower it.")
+        case 6: return CoachLine(mark: "▲", tint: theme.success, before: "Your stage comes from ", strong: "your training", after: ", not from what you tap here.")
         default:
             if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "No training plan is created.", after: " Your profile, sports and goals are saved, and you can change them first.") }
             return CoachLine(mark: "◆", tint: theme.accent, strong: "Nothing is scheduled until you approve.", after: " Tap any part of the blueprint to change it first.")
@@ -903,8 +903,12 @@ struct OnboardingV34View: View {
 
     private var pageEvolution: some View {
         VStack(alignment: .leading, spacing: CySpace.m) {
-            heading(6, "Evolution", "Athlete Evolution")
-            OnbEvolutionPage(declared: levelsLine, rides: store.rides.count, lifts: store.strength.count)
+            heading(6, "Evolution", "Athlete Evolution", compact: true)
+            OnbEvolutionPage(declared: EvolutionPage.declared(roster: sports,
+                                                              cyclingLevel: mode.includesCycling ? ProfileText.level(a.cyclingLevel ?? store.profile.level) : nil,
+                                                              strengthLevel: mode.includesLifting ? (a.strengthLevel ?? store.strengthPrefs.experience).map { ProfileText.strengthLevel($0) } : nil),
+                             evidence: EvolutionPage.evidence(roster: sports, rides: store.rides.count, lifts: store.strength.count),
+                             standing: EvolutionPage.standing())
         }
     }
     /// "Intermediate rider · beginner lifter" — what the athlete declared on page 3.

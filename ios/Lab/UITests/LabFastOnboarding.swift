@@ -745,6 +745,101 @@ final class LabFastOnboarding: XCTestCase {
         need(app, "onbConnection-bluetooth", "the page again after Back")
     }
 
+    /// Athlete Evolution (owner's approved direction, 22 Nov 2026, 17:33), for a cycling, gym and running athlete: the
+    /// page fits one screen; the athlete's own status is "Starting stage not yet assessed"; each of G0–G5 can be
+    /// tapped and shows its own name and description and is highlighted; a stage being explored is labelled as such
+    /// and never becomes the athlete's stage — not on the page, not after Back, Continue or reopening the app.
+    func testAthleteEvolution() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["roadCycling", "strength", "running"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        el(app, "goal-endurance").tap()
+        next.tap(); page(app, 4)
+        app.chooseWeekDay(0, ["strength"]); app.chooseWeekDay(1, ["roadCycling"])
+        need(app, "onbEquipment", "the equipment choice").buttons["Home"].firstMatch.tap()
+        next.tap(); page(app, 5)
+        next.tap(); page(app, 6)
+
+        let title = app.staticTexts["onbTitle"].firstMatch
+        XCTAssertEqual(title.label, "Athlete Evolution", "required: the title")
+        let status = "Starting stage not yet assessed"
+        let names = ["Origin", "Foundation", "Development", "Performance", "Refinement", "Mastery"]
+        func selected() -> [Int] { (0...5).filter { app.buttons["onbStage-\($0)"].firstMatch.isSelected } }
+        func fits(_ what: String) {
+            let rail = app.buttons["onboardingBack"].firstMatch, line = need(app, "onbCoachLine", "the line above the button"), window = app.windows.firstMatch.frame
+            XCTAssertTrue(title.isHittable && title.frame.minY >= rail.frame.maxY - 1, "required (\(what)): the title is wholly visible")
+            for id in ["onbEvolutionState", "onbEvolutionSummary", "onbStage-0", "onbStage-5", "onbEvolutionDeclared", "onbEvolutionMeasured", "onbEvolutionStage"] {
+                let e = need(app, id, id)
+                XCTAssertTrue(e.frame.minY >= title.frame.maxY - 1 && e.frame.maxY <= line.frame.minY + 1, "required (\(what)): \(id) is on screen between the title and the button area (\(e.frame), line \(line.frame))")
+            }
+            XCTAssertTrue(next.isHittable && next.frame.maxY <= window.maxY && next.frame.minY >= line.frame.maxY - 1, "required (\(what)): the button is visible below the line")
+        }
+
+        // default: nothing explored, nothing claimed, the athlete's own sports
+        XCTAssertEqual(need(app, "onbEvolutionState", "the headline").label, "Establishing your baseline", "required: the default headline")
+        XCTAssertEqual(need(app, "onbEvolutionStage", "the athlete's own status").label, status, "required: the athlete's status before any assessment")
+        XCTAssertFalse(el(app, "onbEvolutionBasis").exists, "required: no 'Estimated' or 'Verified' label while nothing is assessed")
+        XCTAssertFalse(el(app, "onbEvolutionExploring").exists, "required: nothing is being explored at first")
+        XCTAssertEqual(selected(), [], "required: no stage highlighted at first")
+        XCTAssertTrue(need(app, "onbEvolutionYou", "the YOU marker").label.contains(status), "required: YOU carries the athlete's own status")
+        let declared = need(app, "onbEvolutionDeclared", "what was declared").label
+        for line in ["Cycling · Intermediate", "Strength · Beginner", "Running · experience not asked yet"] { XCTAssertTrue(declared.contains(line), "required: '\(line)' from the athlete's roster (\(declared))") }
+        let measured = need(app, "onbEvolutionMeasured", "the evidence").label
+        XCTAssertTrue(measured.hasPrefix("Nothing recorded yet") && measured.contains("Running: recording coming soon"), "required: no evidence is claimed, and running is said not to be recorded yet (\(measured))")
+        XCTAssertEqual(next.label, "See my blueprint", "required: the button")
+        fits("default"); app.settleForScreenshot(1); shot("onb-6-evolution-default")
+
+        // every stage can be explored: its own name and description, highlighted, labelled as exploring — status unchanged
+        var seen: [String] = []
+        for g in 0...5 {
+            app.buttons["onbStage-\(g)"].firstMatch.tap()
+            let want = "G\(g) · \(names[g])"
+            let head = need(app, "onbEvolutionState", "the headline")
+            XCTAssertTrue(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", want), object: head)], timeout: 4) == .completed, "required: tapping G\(g) shows '\(want)' (shown: \(head.label))")
+            let about = need(app, "onbEvolutionSummary", "the stage description").label
+            XCTAssertFalse(about.isEmpty || seen.contains(about), "required: G\(g) has its own description (\(about))"); seen.append(about)
+            XCTAssertEqual(selected(), [g], "required: only G\(g) is highlighted")
+            XCTAssertEqual(need(app, "onbEvolutionExploring", "the exploring label").label, "Exploring · not your stage", "required: exploring is said in words")
+            XCTAssertEqual(el(app, "onbEvolutionStage").label, status, "required: exploring G\(g) does not change the athlete's status")
+            XCTAssertFalse(el(app, "onbEvolutionBasis").exists, "required: exploring G\(g) is not shown as estimated or verified")
+            fits("G\(g)")
+            if [0, 3, 5].contains(g) { app.settleForScreenshot(1); shot("onb-6-evolution-g\(g)") }
+        }
+        // tapping the highlighted stage again returns to the default
+        app.buttons["onbStage-5"].firstMatch.tap()
+        XCTAssertEqual(selected(), [], "required: tapping the highlighted stage clears it")
+        XCTAssertEqual(el(app, "onbEvolutionState").label, "Establishing your baseline", "required: the default headline returns")
+
+        // G5 explored, then Back and forward: not kept
+        app.buttons["onbStage-5"].firstMatch.tap(); XCTAssertEqual(selected(), [5])
+        app.buttons["onboardingBack"].firstMatch.tap(); page(app, 5)
+        next.tap(); page(app, 6)
+        XCTAssertEqual(selected(), [], "required: an explored stage is not kept after Back")
+        XCTAssertEqual(need(app, "onbEvolutionStage", "the status after Back").label, status, "required: the status after Back")
+
+        // G5 explored, then on to the Blueprint: no stage is claimed there
+        app.buttons["onbStage-5"].firstMatch.tap(); XCTAssertEqual(selected(), [5])
+        next.tap(); page(app, 7)
+        let claimed = NSPredicate(format: "label CONTAINS 'Mastery' OR label CONTAINS 'G5'")
+        XCTAssertFalse(app.staticTexts.matching(claimed).firstMatch.exists || app.buttons.matching(claimed).firstMatch.exists, "required: the Blueprint does not show the explored stage")
+        app.settleForScreenshot(1); shot("onb-7-blueprint-after-exploring-g5")
+
+        // closed and opened again: still not assessed, nothing highlighted
+        app.terminate()
+        let again = XCUIApplication(); again.launchEnvironment["LAB_THEME"] = "obsidian"; again.launch()
+        let counter = again.staticTexts["onboardingProgress"].firstMatch
+        XCTAssertTrue(counter.waitForExistence(timeout: 30), "required: onboarding resumes after reopening")
+        for _ in 0..<7 {
+            guard let n = Int(counter.label.prefix(1)), n != 6 else { break }
+            (n < 6 ? again.buttons["onboardingNext"] : again.buttons["onboardingBack"]).firstMatch.tap()
+            _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "NOT (label BEGINSWITH %@)", "\(n) of 7"), object: counter)], timeout: 5)
+        }
+        page(again, 6)
+        XCTAssertEqual(need(again, "onbEvolutionStage", "the status after reopening").label, status, "required: no stage was saved by exploring")
+        XCTAssertEqual((0...5).filter { again.buttons["onbStage-\($0)"].firstMatch.isSelected }, [], "required: nothing highlighted after reopening")
+        XCTAssertEqual(need(again, "onbEvolutionState", "the headline after reopening").label, "Establishing your baseline", "required: the default after reopening")
+    }
+
     /// Build your week (owner's approved direction, 21 Nov 2026, 21:18), for a cycling, gym and running athlete: seven
     /// rest days to start with; Continue needs a confirmed training day; the editor offers the athlete's own sports;
     /// a day changes only when confirmed; each session has its own length; two sessions on one day, not three; a day
@@ -943,13 +1038,16 @@ final class LabFastOnboarding: XCTestCase {
         app.settleForScreenshot(1); shot("onb-5-connect")
         next.tap()
 
-        // 6 · Athlete Evolution: baseline state only, no stage
+        // 6 · Athlete Evolution. Owner's direction of 22 Nov 2026 (17:33) replaced this page's wording: the status is
+        // now "Starting stage not yet assessed" (was "No stage yet …"), what was declared is listed sport by sport
+        // (was "Intermediate rider · beginner lifter"), and the rail is six buttons rather than one labelled picture.
         page(app, 6)
         XCTAssertEqual(need(app, "onbEvolutionState", "the baseline headline").label, "Establishing your baseline", "required: the new-athlete state")
-        XCTAssertTrue(need(app, "onbEvolutionTrack", "the empty stage track").label.contains("No stage yet"), "required: the track claims no stage")
-        XCTAssertEqual(need(app, "onbEvolutionDeclared", "the declared line").label, "Intermediate rider · beginner lifter", "required: what was declared")
-        XCTAssertEqual(need(app, "onbEvolutionMeasured", "the measured line").label, "Nothing recorded yet", "required: no evidence is claimed")
-        XCTAssertTrue(need(app, "onbEvolutionStage", "the stage line").label.hasPrefix("No stage yet"), "required: no stage is claimed")
+        for g in 0...5 { XCTAssertFalse(need(app, "onbStage-\(g)", "stage G\(g) on the rail").isSelected, "required: no stage is selected or claimed") }
+        let declared6 = need(app, "onbEvolutionDeclared", "the declared lines").label
+        XCTAssertTrue(declared6.contains("Cycling · Intermediate") && declared6.contains("Strength · Beginner"), "required: what was declared, sport by sport (\(declared6))")
+        XCTAssertTrue(need(app, "onbEvolutionMeasured", "the measured line").label.hasPrefix("Nothing recorded yet"), "required: no evidence is claimed")
+        XCTAssertEqual(need(app, "onbEvolutionStage", "the stage line").label, "Starting stage not yet assessed", "required: no stage is claimed")
         XCTAssertEqual(next.label, "See my blueprint", "required: the button names the next page")
         app.settleForScreenshot(1); shot("onb-6-evolution")
         next.tap()

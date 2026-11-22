@@ -951,88 +951,151 @@ struct OnbLiveConnections: View {
     }
 }
 
-// MARK: - Page 6 · Athlete Evolution (sheet Y5, E1 — the new-athlete state only)
+// MARK: - Page 6 · Athlete Evolution (sheet Y5, E1 — owner's approved direction, 22 Nov 2026, 17:33)
+//
+// The sheet's layout: orbital hero, title, the six-stage rail, what was declared, the measured evidence, the athlete's
+// stage, "See my blueprint". The rail is interactive: tapping G0–G5 shows that stage's orbital form, its provisional
+// name and a short description, and highlights it. That is EXPLORING — a local, unsaved state of this view. The
+// athlete's own standing is drawn separately and is "Starting stage not yet assessed" until an assessment policy is
+// approved; tapping G5 never makes anyone G5.
 
 struct OnbEvolutionPage: View {
-    /// "Intermediate rider · beginner lifter"
-    let declared: String
-    let rides: Int
-    let lifts: Int
+    /// One line per sport from the athlete's roster: "Cycling · Intermediate".
+    let declared: [String]
+    let evidence: (title: String, note: String)
+    let standing: EvolutionStanding
+    /// The stage being looked at. Never stored, never read by anything else; gone when the page is left.
+    @State private var exploring: Int? = nil
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var dts
 
     var body: some View {
-        VStack(alignment: .leading, spacing: CySpace.m) {
-            VStack(spacing: 6) {
-                SingularityPlaceholder(diameter: 64, detail: 1).frame(height: 76).accessibilityHidden(true)
-                Text("Establishing your baseline").font(CyDyn.f(22, .bold)).foregroundStyle(theme.textPrimary)
+        let shown = exploring.flatMap { EvolutionStages.stage($0) }
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(spacing: 4) {
+                hero(shown?.index ?? standing.stage ?? 0)
+                Text(shown.map { "\($0.code) · \($0.name)" } ?? "Establishing your baseline")
+                    .font(CyDyn.f(21, .bold)).foregroundStyle(theme.textPrimary)
                     .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("onbEvolutionState")
-                Text("Stages come from recorded training only. Cyclift does not evaluate stages in this version.")
-                    .font(CyDyn.f(14)).foregroundStyle(theme.textSecondary).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                Text(shown?.summary ?? "Tap a stage to see what it looks like. Yours comes from your training.")
+                    .font(CyDyn.f(13.5)).foregroundStyle(theme.textSecondary).multilineTextAlignment(.center)
+                    .lineLimit(dts.isAccessibilitySize ? nil : 2, reservesSpace: !dts.isAccessibilitySize)
+                    .accessibilityIdentifier("onbEvolutionSummary")
+                // exploring is said in words, so a stage being looked at is never read as the athlete's own
+                Text(shown == nil ? " " : "Exploring · not your stage")
+                    .font(CyDyn.f(11, .semibold)).foregroundStyle(theme.accent)
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(Capsule().fill(theme.accent.opacity(shown == nil ? 0 : 0.14)))
+                    .accessibilityHidden(shown == nil)
+                    .accessibilityIdentifier("onbEvolutionExploring")
             }
             .frame(maxWidth: .infinity)
-            track
-            group(.declared, "Declared by you", declared, "Sets your first plan. Never your stage.", id: "onbEvolutionDeclared")
-            group(.measured, "Measured evidence", measuredTitle, measuredNote, id: "onbEvolutionMeasured")
+            rail
+            group(.declared, "Declared by you", id: "onbEvolutionDeclared") {
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(Array(declared.prefix(3).enumerated()), id: \.offset) { line in
+                        Text(line.element).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if declared.count > 3 { Text("+ \(declared.count - 3) more").font(CyDyn.f(13)).foregroundStyle(theme.textSecondary) }
+                    if declared.isEmpty { Text("Nothing declared yet").font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary) }
+                }
+            }
+            group(.measured, "Measured evidence", id: "onbEvolutionMeasured") {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(evidence.title).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                    Text(evidence.note).font(CyDyn.f(12.5)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
             stageGroup
         }
     }
-    private var measuredTitle: String {
-        rides + lifts == 0 ? "Nothing recorded yet" : "\(rides) ride\(rides == 1 ? "" : "s") · \(lifts) strength session\(lifts == 1 ? "" : "s")"
-    }
-    private var measuredNote: String { rides + lifts == 0 ? "Recorded rides and strength sessions will count." : "Recorded in Cyclift." }
 
-    /// The empty track: where the athlete is (no stage) and six unfilled places. Nothing is filled, named or positioned
-    /// by a calculation; the stage names of the sheet are not shown because they are not approved.
-    private var track: some View {
+    /// The stage's orbital form: one drawing family, more developed stage by stage (rendered from the same routine as
+    /// the approved Welcome artwork). Falls back to the flat placeholder if an image is missing.
+    @ViewBuilder private func hero(_ stage: Int) -> some View {
+        let name = "EvolutionStage-\(stage)-\(theme.id.rawValue)"
+        Group {
+            if UIImage(named: name) != nil { Image(name).resizable().scaledToFit() }
+            else { SingularityPlaceholder(diameter: 64, detail: 1) }
+        }
+        .frame(height: 96)
+        .accessibilityHidden(true)
+        .id(name)
+        .transition(.opacity)
+    }
+
+    /// YOU (where the athlete stands — nowhere on the rail until assessed), then six stages, each a button.
+    private var rail: some View {
         HStack(alignment: .top, spacing: 0) {
-            VStack(spacing: 6) {
-                RoundedRectangle(cornerRadius: 3, style: .continuous).fill(theme.textPrimary).frame(width: 14, height: 14)
+            VStack(spacing: 4) {
+                RoundedRectangle(cornerRadius: 3, style: .continuous).fill(theme.textPrimary).frame(width: 14, height: 14).frame(height: 22)
                 Text("YOU").font(.caption2.weight(.bold)).foregroundStyle(theme.textPrimary)
             }
             .frame(width: 34)
-            ForEach(0..<6, id: \.self) { i in
-                VStack(spacing: 6) {
-                    ZStack {
-                        Rectangle().fill(theme.border).frame(height: 1)
-                        Circle().fill(theme.background).frame(width: 12, height: 12)
-                        Circle().strokeBorder(theme.textSecondary, lineWidth: 1.5).frame(width: 11, height: 11)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("You: \(standing.title)")
+            .accessibilityIdentifier("onbEvolutionYou")
+            ForEach(EvolutionStages.all) { s in
+                let on = exploring == s.index, mine = standing.stage == s.index
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { exploring = on ? nil : s.index }
+                } label: {
+                    VStack(spacing: 4) {
+                        ZStack {
+                            Rectangle().fill(theme.border).frame(height: 1)
+                            Circle().fill(theme.background).frame(width: on ? 20 : 12, height: on ? 20 : 12)
+                            if on {
+                                Circle().fill(theme.accent).frame(width: 12, height: 12)
+                                Circle().strokeBorder(theme.accent, lineWidth: 1.5).frame(width: 20, height: 20)
+                            } else if mine {
+                                Circle().fill(theme.textPrimary).frame(width: 11, height: 11)
+                            } else {
+                                Circle().strokeBorder(theme.textSecondary, lineWidth: 1.5).frame(width: 11, height: 11)
+                            }
+                        }
+                        .frame(height: 22)
+                        Text(s.code).font(.caption2.weight(on ? .bold : .semibold)).foregroundStyle(on ? theme.textPrimary : theme.textSecondary)
                     }
-                    .frame(height: 14)
-                    Text("G\(i)").font(.caption2.weight(.semibold)).foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: CyHit.min).contentShape(Rectangle())
                 }
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(s.code), \(s.name)")
+                .accessibilityValue(on ? "exploring" : mine ? "your stage" : "")
+                .accessibilityHint("Shows this stage. It does not change yours.")
+                .accessibilityAddTraits(on ? .isSelected : [])
+                .accessibilityIdentifier("onbStage-\(s.index)")
             }
         }
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
-        .padding(.bottom, CySpace.xs)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Evolution track. Establishing your baseline. No stage yet.")
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onbEvolutionTrack")
     }
 
-    private func group(_ mark: OnbGroupHeader.Mark, _ title: String, _ value: String, _ note: String, id: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Rectangle().fill(theme.separator).frame(height: 1).padding(.bottom, CySpace.s).accessibilityHidden(true)
+    private func group<Content: View>(_ mark: OnbGroupHeader.Mark, _ title: String, id: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Rectangle().fill(theme.separator).frame(height: 1).padding(.bottom, 5).accessibilityHidden(true)
             OnbGroupHeader(mark: mark, title: title)
-            Text(value).font(CyDyn.f(17, .semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+            content()
+                .accessibilityElement(children: .combine)
                 .accessibilityIdentifier(id)
-            Text(note).font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
         }
     }
+    /// The athlete's OWN standing — never the stage being explored.
     private var stageGroup: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Rectangle().fill(theme.separator).frame(height: 1).padding(.bottom, CySpace.s).accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 2) {
+            Rectangle().fill(theme.separator).frame(height: 1).padding(.bottom, 5).accessibilityHidden(true)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Image(systemName: "square").font(CyDyn.f(10, .bold)).foregroundStyle(theme.textSecondary).accessibilityHidden(true)
                 Text("YOUR STAGE").font(CyDyn.f(11.5, .semibold)).tracking(1.1).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
+                if let b = standing.basis {
+                    Text(b).font(CyDyn.f(11, .semibold)).foregroundStyle(theme.textSecondary).accessibilityIdentifier("onbEvolutionBasis")
+                }
             }
-            Text("None yet").font(CyDyn.f(17, .semibold)).foregroundStyle(theme.textPrimary)
-                .accessibilityLabel("No stage yet. Cyclift does not evaluate stages in this version, and what you declare never sets one.")
+            Text(standing.title).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("onbEvolutionStage")
-            Text("Cyclift does not evaluate stages in this version, and what you declare never sets one. The rules are not final.")
-                .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+            Text("Looking at a stage above does not change yours.")
+                .font(CyDyn.f(12.5)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 }
