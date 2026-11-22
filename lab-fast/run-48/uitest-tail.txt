@@ -1,0 +1,300 @@
+    t =   295.44s Find the "onbCoachLine" StaticText
+    t =   295.61s Find the "onboardingNext" Button
+    t =   295.75s Find the "onboardingNext" Button
+    t =   295.86s Find the "onboardingNext" Button
+    t =   295.98s Find the "onbCoachLine" StaticText
+    t =   297.36s Tap "onbStage-4" Button
+    t =   297.37s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   297.37s     Find the "onbStage-4" Button
+    t =   297.51s     Check for interrupting elements affecting "onbStage-4" Button
+    t =   297.59s     Synthesize event
+    t =   297.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   297.94s Waiting 8.0s for "onbEvolutionState" Any to exist
+    t =   298.98s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionState" Any`
+    t =   298.99s         Checking existence of `"onbEvolutionState" Any`
+    t =   300.27s Checking `Expect predicate `label == "G4 · Refinement"` for object "onbEvolutionState" Any`
+    t =   300.27s     Find the "onbEvolutionState" Any
+    t =   300.52s Waiting 8.0s for "onbEvolutionSummary" Any to exist
+    t =   301.54s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionSummary" Any`
+    t =   301.54s         Checking existence of `"onbEvolutionSummary" Any`
+    t =   301.79s Find the "onbEvolutionSummary" Any
+    t =   302.04s Find the "onbStage-0" Button
+    t =   302.19s Find the "onbStage-1" Button
+    t =   302.34s Find the "onbStage-2" Button
+    t =   302.48s Find the "onbStage-3" Button
+    t =   302.66s Find the "onbStage-4" Button
+    t =   302.79s Find the "onbStage-5" Button
+    t =   302.89s Waiting 8.0s for "onbEvolutionExploring" Any to exist
+    t =   303.94s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionExploring" Any`
+    t =   303.94s         Checking existence of `"onbEvolutionExploring" Any`
+    t =   304.13s Find the "onbEvolutionExploring" Any
+    t =   304.30s Find the "onbEvolutionStage" Any
+    t =   304.45s Checking existence of `"onbEvolutionBasis" Any`
+    t =   304.69s Waiting 8.0s for "onbCoachLine" Any to exist
+    t =   305.71s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCoachLine" Any`
+    t =   305.72s         Checking existence of `"onbCoachLine" Any`
+    t =   305.83s Find the Window (First Match)
+    t =   305.86s Find the "onbTitle" StaticText
+    t =   305.99s Find the "onbTitle" StaticText
+    t =   306.14s Find the "onboardingBack" Button
+    t =   306.23s Waiting 8.0s for "onbEvolutionState" Any to exist
+    t =   307.27s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionState" Any`
+    t =   307.27s         Checking existence of `"onbEvolutionState" Any`
+    t =   307.38s Find the "onbEvolutionState" Any
+    t =   307.51s Find the "onbTitle" StaticText
+    t =   307.60s Find the "onbEvolutionState" StaticText
+    t =   307.79s Find the "onbCoachLine" Any
+    t =   307.89s Waiting 8.0s for "onbEvolutionSummary" Any to exist
+    t =   308.96s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionSummary" Any`
+    t =   308.96s         Checking existence of `"onbEvolutionSummary" Any`
+    t =   309.21s Find the "onbEvolutionSummary" Any
+    t =   309.44s Find the "onbTitle" StaticText
+    t =   309.51s Find the "onbEvolutionSummary" StaticText
+    t =   309.70s Find the "onbCoachLine" StaticText
+    t =   309.81s Waiting 8.0s for "onbStage-0" Any to exist
+    t =   310.87s     Checking `Expect predicate `existsNoRetry == 1` for object "onbStage-0" Any`
+    t =   310.88s         Checking existence of `"onbStage-0" Any`
+    t =   311.13s Find the "onbStage-0" Any
+    t =   311.40s Find the "onbTitle" StaticText
+    t =   311.49s Find the "onbStage-0" Button
+    t =   311.65s Find the "onbCoachLine" StaticText
+    t =   311.75s Waiting 8.0s for "onbStage-5" Any to exist
+    t =   312.76s     Checking `Expect predicate `existsNoRetry == 1` for object "onbStage-5" Any`
+    t =   312.76s         Checking existence of `"onbStage-5" Any`
+    t =   312.93s Find the "onbStage-5" Any
+    t =   313.11s Find the "onbTitle" StaticText
+    t =   313.20s Find the "onbStage-5" Button
+    t =   313.39s Find the "onbCoachLine" StaticText
+    t =   313.47s Waiting 8.0s for "onbEvolutionDeclared" Any to exist
+    t =   314.49s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionDeclared" Any`
+    t =   314.50s         Checking existence of `"onbEvolutionDeclared" Any`
+    t =   314.66s Find the "onbEvolutionDeclared" Any
+    t =   314.88s Find the "onbTitle" StaticText
+    t =   314.96s Find the "onbEvolutionDeclared" StaticText
+    t =   315.21s Find the "onbCoachLine" StaticText
+    t =   315.30s Waiting 8.0s for "onbEvolutionMeasured" Any to exist
+    t =   316.34s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionMeasured" Any`
+    t =   316.35s         Checking existence of `"onbEvolutionMeasured" Any`
+    t =   316.58s Find the "onbEvolutionMeasured" Any
+    t =   316.81s Find the "onbTitle" StaticText
+    t =   316.92s Find the "onbEvolutionMeasured" StaticText
+    t =   317.23s Find the "onbCoachLine" StaticText
+    t =   317.41s Waiting 8.0s for "onbEvolutionStage" Any to exist
+    t =   318.43s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionStage" Any`
+    t =   318.43s         Checking existence of `"onbEvolutionStage" Any`
+    t =   318.61s Find the "onbEvolutionStage" Any
+    t =   318.82s Find the "onbTitle" StaticText
+    t =   318.90s Find the "onbEvolutionStage" StaticText
+    t =   319.07s Find the "onbCoachLine" StaticText
+    t =   319.19s Find the "onboardingNext" Button
+    t =   319.26s Find the "onboardingNext" Button
+    t =   319.32s Find the "onboardingNext" Button
+    t =   319.39s Find the "onbCoachLine" StaticText
+    t =   319.48s Tap "onbStage-5" Button
+    t =   319.48s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   319.48s     Find the "onbStage-5" Button
+    t =   319.58s     Check for interrupting elements affecting "onbStage-5" Button
+    t =   319.63s     Synthesize event
+    t =   320.00s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   320.00s Waiting 8.0s for "onbEvolutionState" Any to exist
+    t =   321.02s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionState" Any`
+    t =   321.03s         Checking existence of `"onbEvolutionState" Any`
+    t =   322.34s Checking `Expect predicate `label == "G5 · Mastery"` for object "onbEvolutionState" Any`
+    t =   322.34s     Find the "onbEvolutionState" Any
+    t =   322.53s Waiting 8.0s for "onbEvolutionSummary" Any to exist
+    t =   323.56s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionSummary" Any`
+    t =   323.56s         Checking existence of `"onbEvolutionSummary" Any`
+    t =   323.67s Find the "onbEvolutionSummary" Any
+    t =   323.80s Find the "onbStage-0" Button
+    t =   323.87s Find the "onbStage-1" Button
+    t =   324.01s Find the "onbStage-2" Button
+    t =   324.14s Find the "onbStage-3" Button
+    t =   324.21s Find the "onbStage-4" Button
+    t =   324.30s Find the "onbStage-5" Button
+    t =   324.38s Waiting 8.0s for "onbEvolutionExploring" Any to exist
+    t =   325.41s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionExploring" Any`
+    t =   325.41s         Checking existence of `"onbEvolutionExploring" Any`
+    t =   325.59s Find the "onbEvolutionExploring" Any
+    t =   325.85s Find the "onbEvolutionStage" Any
+    t =   325.98s Checking existence of `"onbEvolutionBasis" Any`
+    t =   326.23s Waiting 8.0s for "onbCoachLine" Any to exist
+    t =   327.27s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCoachLine" Any`
+    t =   327.28s         Checking existence of `"onbCoachLine" Any`
+    t =   327.35s Find the Window (First Match)
+    t =   327.38s Find the "onbTitle" StaticText
+    t =   327.47s Find the "onbTitle" StaticText
+    t =   327.52s Find the "onboardingBack" Button
+    t =   327.56s Waiting 8.0s for "onbEvolutionState" Any to exist
+    t =   328.62s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionState" Any`
+    t =   328.63s         Checking existence of `"onbEvolutionState" Any`
+    t =   328.78s Find the "onbEvolutionState" Any
+    t =   328.91s Find the "onbTitle" StaticText
+    t =   328.99s Find the "onbEvolutionState" StaticText
+    t =   329.14s Find the "onbCoachLine" Any
+    t =   329.24s Waiting 8.0s for "onbEvolutionSummary" Any to exist
+    t =   330.27s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionSummary" Any`
+    t =   330.27s         Checking existence of `"onbEvolutionSummary" Any`
+    t =   330.39s Find the "onbEvolutionSummary" Any
+    t =   330.51s Find the "onbTitle" StaticText
+    t =   330.57s Find the "onbEvolutionSummary" StaticText
+    t =   330.70s Find the "onbCoachLine" StaticText
+    t =   330.85s Waiting 8.0s for "onbStage-0" Any to exist
+    t =   331.88s     Checking `Expect predicate `existsNoRetry == 1` for object "onbStage-0" Any`
+    t =   331.88s         Checking existence of `"onbStage-0" Any`
+    t =   332.04s Find the "onbStage-0" Any
+    t =   332.24s Find the "onbTitle" StaticText
+    t =   332.34s Find the "onbStage-0" Button
+    t =   332.53s Find the "onbCoachLine" StaticText
+    t =   332.64s Waiting 8.0s for "onbStage-5" Any to exist
+    t =   333.65s     Checking `Expect predicate `existsNoRetry == 1` for object "onbStage-5" Any`
+    t =   333.65s         Checking existence of `"onbStage-5" Any`
+    t =   333.88s Find the "onbStage-5" Any
+    t =   334.16s Find the "onbTitle" StaticText
+    t =   334.27s Find the "onbStage-5" Button
+    t =   334.48s Find the "onbCoachLine" StaticText
+    t =   334.60s Waiting 8.0s for "onbEvolutionDeclared" Any to exist
+    t =   335.61s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionDeclared" Any`
+    t =   335.61s         Checking existence of `"onbEvolutionDeclared" Any`
+    t =   335.79s Find the "onbEvolutionDeclared" Any
+    t =   335.99s Find the "onbTitle" StaticText
+    t =   336.11s Find the "onbEvolutionDeclared" StaticText
+    t =   336.31s Find the "onbCoachLine" StaticText
+    t =   336.44s Waiting 8.0s for "onbEvolutionMeasured" Any to exist
+    t =   337.48s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionMeasured" Any`
+    t =   337.48s         Checking existence of `"onbEvolutionMeasured" Any`
+    t =   337.67s Find the "onbEvolutionMeasured" Any
+    t =   337.87s Find the "onbTitle" StaticText
+    t =   337.99s Find the "onbEvolutionMeasured" StaticText
+    t =   338.23s Find the "onbCoachLine" StaticText
+    t =   338.37s Waiting 8.0s for "onbEvolutionStage" Any to exist
+    t =   339.41s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionStage" Any`
+    t =   339.41s         Checking existence of `"onbEvolutionStage" Any`
+    t =   339.69s Find the "onbEvolutionStage" Any
+    t =   339.94s Find the "onbTitle" StaticText
+    t =   340.15s Find the "onbEvolutionStage" StaticText
+    t =   340.44s Find the "onbCoachLine" StaticText
+    t =   340.62s Find the "onboardingNext" Button
+    t =   340.72s Find the "onboardingNext" Button
+    t =   340.82s Find the "onboardingNext" Button
+    t =   340.92s Find the "onbCoachLine" StaticText
+    t =   342.30s Tap "onbStage-5" Button
+    t =   342.30s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   342.31s     Find the "onbStage-5" Button
+    t =   342.45s     Check for interrupting elements affecting "onbStage-5" Button
+    t =   342.53s     Synthesize event
+    t =   342.86s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   342.87s Find the "onbStage-0" Button
+    t =   342.99s Find the "onbStage-1" Button
+    t =   343.15s Find the "onbStage-2" Button
+    t =   343.25s Find the "onbStage-3" Button
+    t =   343.34s Find the "onbStage-4" Button
+    t =   343.46s Find the "onbStage-5" Button
+    t =   343.60s Find the "onbEvolutionState" Any
+    t =   343.72s Tap "onbStage-5" Button
+    t =   343.72s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   343.72s     Find the "onbStage-5" Button
+    t =   343.82s     Check for interrupting elements affecting "onbStage-5" Button
+    t =   343.86s     Synthesize event
+    t =   344.16s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   344.17s Find the "onbStage-0" Button
+    t =   344.24s Find the "onbStage-1" Button
+    t =   344.32s Find the "onbStage-2" Button
+    t =   344.40s Find the "onbStage-3" Button
+    t =   344.49s Find the "onbStage-4" Button
+    t =   344.57s Find the "onbStage-5" Button
+    t =   344.66s Tap "onboardingBack" Button
+    t =   344.66s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   344.66s     Find the "onboardingBack" Button
+    t =   344.70s     Check for interrupting elements affecting "onboardingBack" Button
+    t =   344.75s     Synthesize event
+    t =   345.06s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   345.06s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   346.07s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   346.07s         Checking existence of `"onboardingProgress" StaticText`
+    t =   347.16s Checking `Expect predicate `label BEGINSWITH "5 of 7"` for object "onboardingProgress" StaticText`
+    t =   347.17s     Find the "onboardingProgress" StaticText
+    t =   347.28s Tap "onboardingNext" Button
+    t =   347.28s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   347.28s     Find the "onboardingNext" Button
+    t =   347.34s     Check for interrupting elements affecting "onboardingNext" Button
+    t =   347.43s     Synthesize event
+    t =   347.78s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   347.78s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   348.83s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   348.83s         Checking existence of `"onboardingProgress" StaticText`
+    t =   350.01s Checking `Expect predicate `label BEGINSWITH "6 of 7"` for object "onboardingProgress" StaticText`
+    t =   350.01s     Find the "onboardingProgress" StaticText
+    t =   350.10s Find the "onbStage-0" Button
+    t =   350.23s Find the "onbStage-1" Button
+    t =   350.45s Find the "onbStage-2" Button
+    t =   350.57s Find the "onbStage-3" Button
+    t =   350.85s Find the "onbStage-4" Button
+    t =   350.97s Find the "onbStage-5" Button
+    t =   351.09s Waiting 8.0s for "onbEvolutionStage" Any to exist
+    t =   352.14s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionStage" Any`
+    t =   352.14s         Checking existence of `"onbEvolutionStage" Any`
+    t =   352.29s Find the "onbEvolutionStage" Any
+    t =   352.42s Tap "onbStage-5" Button
+    t =   352.42s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   352.43s     Find the "onbStage-5" Button
+    t =   352.54s     Check for interrupting elements affecting "onbStage-5" Button
+    t =   352.60s     Synthesize event
+    t =   352.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   352.93s Find the "onbStage-0" Button
+    t =   353.05s Find the "onbStage-1" Button
+    t =   353.17s Find the "onbStage-2" Button
+    t =   353.27s Find the "onbStage-3" Button
+    t =   353.35s Find the "onbStage-4" Button
+    t =   353.48s Find the "onbStage-5" Button
+    t =   353.60s Tap "onboardingNext" Button
+    t =   353.60s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   353.60s     Find the "onboardingNext" Button
+    t =   353.69s     Check for interrupting elements affecting "onboardingNext" Button
+    t =   353.73s     Synthesize event
+    t =   354.03s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   355.74s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   356.77s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   356.78s         Checking existence of `"onboardingProgress" StaticText`
+    t =   357.87s Checking `Expect predicate `label BEGINSWITH "7 of 7"` for object "onboardingProgress" StaticText`
+    t =   357.88s     Find the "onboardingProgress" StaticText
+    t =   357.97s Checking existence of `StaticText (First Match)`
+    t =   358.27s Checking existence of `Button (First Match)`
+    t =   359.69s Terminate com.ralsuwaidico.cycliftlab:15912
+    t =   360.70s Open com.ralsuwaidico.cycliftlab
+    t =   360.71s     Launch com.ralsuwaidico.cycliftlab
+    t =   365.97s         Setting up automation session
+    t =   373.12s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   378.63s Waiting 30.0s for "onboardingProgress" StaticText to exist
+    t =   379.69s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   379.69s         Checking existence of `"onboardingProgress" StaticText`
+    t =   379.84s Find the "onboardingProgress" StaticText
+    t =   379.92s Tap "onboardingBack" Button
+    t =   379.93s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   379.93s     Find the "onboardingBack" Button
+    t =   379.96s     Check for interrupting elements affecting "onboardingBack" Button
+    t =   380.03s     Synthesize event
+    t =   380.34s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   381.86s Checking `Expect predicate `NOT label BEGINSWITH "7 of 7"` for object "onboardingProgress" StaticText`
+    t =   381.88s     Find the "onboardingProgress" StaticText
+    t =   382.48s Find the "onboardingProgress" StaticText
+    t =   382.54s Waiting 8.0s for "onboardingProgress" StaticText to exist
+    t =   383.59s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingProgress" StaticText`
+    t =   383.59s         Checking existence of `"onboardingProgress" StaticText`
+    t =   384.71s Checking `Expect predicate `label BEGINSWITH "6 of 7"` for object "onboardingProgress" StaticText`
+    t =   384.72s     Find the "onboardingProgress" StaticText
+    t =   384.75s Waiting 8.0s for "onbEvolutionStage" Any to exist
+    t =   385.81s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionStage" Any`
+    t =   385.81s         Checking existence of `"onbEvolutionStage" Any`
+    t =   386.12s Find the "onbEvolutionStage" Any
+    t =   386.30s Find the "onbStage-0" Button
+    t =   386.46s Find the "onbStage-1" Button
+    t =   386.61s Find the "onbStage-2" Button
+    t =   386.74s Find the "onbStage-3" Button
+    t =   386.86s Find the "onbStage-4" Button
+    t =   387.01s Find the "onbStage-5" Button
+    t =   387.12s Waiting 8.0s for "onbEvolutionState" Any to exist
+    t =   388.16s     Checking `Expect predicate `existsNoRetry == 1` for object "onbEvolutionState" Any`
+    t =   388.17s         Checking existence of `"onbEvolutionState" Any`
+    t =   388.34s Find the "onbEvolutionState" Any
+    t =   388.54s Tear Down
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAthleteEvolution]' passed (389.023 seconds).
