@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "22 Nov 2026, 16:20 (Dubai)"
+UPDATED = "22 Nov 2026, 16:10 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -515,5 +515,61 @@ SCREENS = [
                  ("22 Nov 2026, 14:36", "APPROVED: the Equipment presentation of run41_s5_equipment.png, commit e5f4819a — four environments, compact row and Edit "
                   "action, separate checklist sheet, individual items, independent selections per environment, effect on eligible exercises where the planner "
                   "supports it, no checklist permanently expanded on the page. With six final conditions (see Mandatory functionality).", "IN FORCE")],
+    ),
+    dict(
+        number=6, id="ONB-06", name="Connect Your Devices",
+        location="Onboarding · page 5 of 7, after Build Your Week. Not shown to an athlete who finishes without a plan.",
+        approved_on="22 Nov 2026, 15:55 (design direction with modifications)",
+        status="DESIGN DIRECTION APPROVED — implementation and final visual verification pending",
+        reference="Onboarding v3.3 design sheet Y1, page 5 (the LEFT column of the Screen 6 comparison board) — the compact connection-row design — WITH MODIFICATIONS. "
+                  "The sheet is an illustrative drawing; its title, its rows and its FTP block are changed by the decision.",
+        wording=[("Page title", "Connect your devices (\"and calibrate\" removed — calibration is no longer part of this page)"),
+                 ("Integrations, in order", "Apple Health · Apple Watch · WHOOP · Garmin · Bluetooth devices"),
+                 ("Statuses", "Connected · Not connected · Coming soon (integration not available). Connect or Manage only where functional."),
+                 ("Plan changes", "Always ask me · Auto-apply reductions")],
+        design=["Compact connection rows as on the reference: clear names and icons, status labels, Connect or Manage where functional, minimal row separators, "
+                "fixed Continue, Obsidian design language.",
+                "The whole page visible on the iPhone 15 Pro at standard text size without scrolling: all five rows, the Plan changes preference and Continue. "
+                "Compact spacing, not unreadably small text. Larger accessibility sizes may scroll.",
+                "No large device cards (Build 6).",
+                "Cyclift BikeComputer removed from THIS page only; its functionality and settings are preserved elsewhere.",
+                "No separate cycling-sensors row: supported cycling and heart-rate sensors belong under Bluetooth devices.",
+                "FTP selector and wattage entry removed from onboarding."],
+        mandatory=["All connections optional; onboarding completes with no device connected.",
+                   "Truthful statuses only. No decorative Connect button that cannot start a real connection.",
+                   "Permissions are requested only when the athlete explicitly chooses to connect that service.",
+                   "Bluetooth: access to device pairing where supported, without suggesting every Bluetooth device is compatible.",
+                   "Cyclift Lab stays fully isolated from real HealthKit, Bluetooth and external accounts: the five rows in unavailable / demo states; no scanning, "
+                   "pairing, sign-in or permission prompt.",
+                   "Redesigned main app: the actual existing connection services where implemented. WHOOP and Garmin are not claimed to work unless an integration "
+                   "is implemented and verified.",
+                   "FTP is preserved in the authoritative athlete settings and the Performance Settings workflow; stored FTP is not deleted; the cycling planner can "
+                   "still use it; when FTP is unknown the planner invents no measured FTP.",
+                   "Plan changes retained: 'Always ask me' is the default for NEW athletes, subject to the existing Coach policy. Increases always need explicit "
+                   "approval. Production Coach behaviour and stored preferences are not changed without a migration and verification plan."],
+        rejected=["Build 6's large device cards.",
+                  "The title 'Connect and calibrate'.",
+                  "The Cyclift BikeComputer row and the separate bike-sensors row on this page.",
+                  "Asking for FTP in onboarding.",
+                  "Buttons that look like actions but connect nothing; claiming WHOOP or Garmin connectivity."],
+        commits="Implementation written on branch ios/lab; simulator check pending. Not in any TestFlight build.",
+        stages=[("Approved design", "DIRECTION ONLY", "Owner, 22 Nov 2026 15:55. Not final visual approval."),
+                ("Implemented in code", "WRITTEN — NOT YET VERIFIED", ""),
+                ("Compiled", "NOT YET", ""),
+                ("Simulator-verified", "NOT YET", "To verify: five options in order; working integrations use real services in the redesigned main app; unavailable "
+                 "ones clearly labelled; skipping all works; FTP absent from onboarding but stored elsewhere; the Coach preference saved and restored; Lab isolation "
+                 "intact; one screen without clipping."),
+                ("Physically verified on iPhone", "NO", "")],
+        visual_verification="PENDING — owner to review the simulator screenshot with connection statuses and the Coach preference.",
+        functional_verification="PENDING.",
+        remaining=["Verify on the simulator (Lab and redesigned main app) and present the screenshot.",
+                   "After visual approval: Screen 7, three-column comparison."],
+        images=[("S06_connect_comparison_board_0281b566.png",
+                 "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y1, page 5 (the chosen visual reference, before the modifications). Middle: Build 6 "
+                 "(commit 9b9d3a68). Right: the implementation BEFORE the decision (commit 0281b566) — with the old title, BikeComputer and bike-sensor rows and FTP, "
+                 "all now removed.")],
+        history=[("22 Nov 2026, 15:55", "Sheet Y1 page 5 chosen as the visual reference with modifications: title 'Connect your devices'; five integrations in a fixed "
+                  "order; BikeComputer and the bike-sensors row removed from this page; FTP removed from onboarding and preserved elsewhere; truthful statuses and "
+                  "functional actions only; Lab isolation; 'Always ask me' as a new athlete's default; one screen at standard text size.", "IN FORCE")],
     ),
 ]

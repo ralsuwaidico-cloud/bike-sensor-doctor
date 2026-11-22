@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 16:20 (Dubai) · Screens recorded: 5
+Last updated: 22 Nov 2026, 16:10 (Dubai) · Screens recorded: 6
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -55,6 +55,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 3 | ONB-03 | Athletic Roster | YES | YES — selection only | YES | FUNCTION: PARTLY. VISUAL: NOT YET | NO |
 | 4 | ONB-04 | Goals | YES | YES | YES | YES — visual and functional | NO |
 | 5 | ONB-05 | Build Your Week | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | YES — functional (Lab, Obsidian, iPhone 15 Pro) | NO |
+| 6 | ONB-06 | Connect Your Devices | DIRECTION ONLY | WRITTEN — NOT YET VERIFIED | NOT YET | NOT YET | NO |
 
 ---
 
@@ -492,3 +493,76 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 22 Nov 2026, 01:03 | Not approved as sent. Refinement: icon-only calendar tiles; Rest easy to find in the editor; unconfirmed edits distinguished; strict one-screen fit including the expanded two-session editor with equipment visible. Screens 1–4 untouched; Screen 6 waits. | IN FORCE |
 | 22 Nov 2026, 13:34 | APPROVED: the calendar, day editor and weekly summary layout of run39_s5.png, commit 8dbbd54a. Equipment section to be revised before complete visual approval: Gym | Home | Bodyweight | Custom, per-environment editable checklists in a bottom sheet, extensible multisport catalogue, truthful planner integration. | IN FORCE |
 | 22 Nov 2026, 14:36 | APPROVED: the Equipment presentation of run41_s5_equipment.png, commit e5f4819a — four environments, compact row and Edit action, separate checklist sheet, individual items, independent selections per environment, effect on eligible exercises where the planner supports it, no checklist permanently expanded on the page. With six final conditions (see Mandatory functionality). | IN FORCE |
+
+---
+
+## Screen 6 — Connect Your Devices (ONB-06)
+
+- **Navigation location:** Onboarding · page 5 of 7, after Build Your Week. Not shown to an athlete who finishes without a plan.
+- **Approval date:** 22 Nov 2026, 15:55 (design direction with modifications)
+- **Approval status:** DESIGN DIRECTION APPROVED — implementation and final visual verification pending
+- **Original design reference and source:** Onboarding v3.3 design sheet Y1, page 5 (the LEFT column of the Screen 6 comparison board) — the compact connection-row design — WITH MODIFICATIONS. The sheet is an illustrative drawing; its title, its rows and its FTP block are changed by the decision.
+- **Implementation commit:** Implementation written on branch ios/lab; simulator check pending. Not in any TestFlight build.
+
+### Exact approved wording
+
+- **Page title:** Connect your devices ("and calibrate" removed — calibration is no longer part of this page)
+- **Integrations, in order:** Apple Health · Apple Watch · WHOOP · Garmin · Bluetooth devices
+- **Statuses:** Connected · Not connected · Coming soon (integration not available). Connect or Manage only where functional.
+- **Plan changes:** Always ask me · Auto-apply reductions
+
+### Approved layout, visual elements and interactions
+
+- Compact connection rows as on the reference: clear names and icons, status labels, Connect or Manage where functional, minimal row separators, fixed Continue, Obsidian design language.
+- The whole page visible on the iPhone 15 Pro at standard text size without scrolling: all five rows, the Plan changes preference and Continue. Compact spacing, not unreadably small text. Larger accessibility sizes may scroll.
+- No large device cards (Build 6).
+- Cyclift BikeComputer removed from THIS page only; its functionality and settings are preserved elsewhere.
+- No separate cycling-sensors row: supported cycling and heart-rate sensors belong under Bluetooth devices.
+- FTP selector and wattage entry removed from onboarding.
+
+### Mandatory functionality and dependencies
+
+- All connections optional; onboarding completes with no device connected.
+- Truthful statuses only. No decorative Connect button that cannot start a real connection.
+- Permissions are requested only when the athlete explicitly chooses to connect that service.
+- Bluetooth: access to device pairing where supported, without suggesting every Bluetooth device is compatible.
+- Cyclift Lab stays fully isolated from real HealthKit, Bluetooth and external accounts: the five rows in unavailable / demo states; no scanning, pairing, sign-in or permission prompt.
+- Redesigned main app: the actual existing connection services where implemented. WHOOP and Garmin are not claimed to work unless an integration is implemented and verified.
+- FTP is preserved in the authoritative athlete settings and the Performance Settings workflow; stored FTP is not deleted; the cycling planner can still use it; when FTP is unknown the planner invents no measured FTP.
+- Plan changes retained: 'Always ask me' is the default for NEW athletes, subject to the existing Coach policy. Increases always need explicit approval. Production Coach behaviour and stored preferences are not changed without a migration and verification plan.
+
+### Explicitly rejected alternatives
+
+- Build 6's large device cards.
+- The title 'Connect and calibrate'.
+- The Cyclift BikeComputer row and the separate bike-sensors row on this page.
+- Asking for FTP in onboarding.
+- Buttons that look like actions but connect nothing; claiming WHOOP or Garmin connectivity.
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY | Owner, 22 Nov 2026 15:55. Not final visual approval. |
+| Implemented in code | WRITTEN — NOT YET VERIFIED |  |
+| Compiled | NOT YET |  |
+| Simulator-verified | NOT YET | To verify: five options in order; working integrations use real services in the redesigned main app; unavailable ones clearly labelled; skipping all works; FTP absent from onboarding but stored elsewhere; the Coach preference saved and restored; Lab isolation intact; one screen without clipping. |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** PENDING — owner to review the simulator screenshot with connection statuses and the Coach preference.
+- **Functional verification:** PENDING.
+
+### Remaining work or limitations
+
+- Verify on the simulator (Lab and redesigned main app) and present the screenshot.
+- After visual approval: Screen 7, three-column comparison.
+
+### Images
+
+- `assets/S06_connect_comparison_board_0281b566.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y1, page 5 (the chosen visual reference, before the modifications). Middle: Build 6 (commit 9b9d3a68). Right: the implementation BEFORE the decision (commit 0281b566) — with the old title, BikeComputer and bike-sensor rows and FTP, all now removed.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 22 Nov 2026, 15:55 | Sheet Y1 page 5 chosen as the visual reference with modifications: title 'Connect your devices'; five integrations in a fixed order; BikeComputer and the bike-sensors row removed from this page; FTP removed from onboarding and preserved elsewhere; truthful statuses and functional actions only; Lab isolation; 'Always ask me' as a new athlete's default; one screen at standard text size. | IN FORCE |
