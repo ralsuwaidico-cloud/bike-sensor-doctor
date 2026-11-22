@@ -1244,8 +1244,7 @@ struct OnbBlueprintPage: View {
     private var week: some View {
         tappable("blueprintYourWeek", page: 4, hint: "Change your week") {
             VStack(alignment: .leading, spacing: 6) {
-                OnbGroupHeader(mark: .declared, title: m.saved == nil ? BlueprintPreview.weekTitle : BlueprintPreview.weekTitle + " · saved",
-                               trailing: m.weekTotals, trailingId: "blueprintWeekTotals")
+                OnbGroupHeader(mark: .declared, title: BlueprintPreview.weekTitle, trailing: m.weekTotals, trailingId: "blueprintWeekTotals")
                 OnbWeekStrip(kinds: [], ride: 0, lift: 0, sessions: m.week, iconsOnly: true, idPrefix: "blueprintDay", containerId: "blueprintWeek")
             }
         }
@@ -1254,12 +1253,11 @@ struct OnbBlueprintPage: View {
     /// What the planner will do inside that week — or, truthfully, that it makes no plan.
     private var coach: some View {
         VStack(alignment: .leading, spacing: 5) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                OnbGroupHeader(mark: .proposal, title: BlueprintPreview.coachTitle)
-                if m.saved == .planSaved {
-                    Text("PLAN VERSION 1 · APPROVED").font(CyDyn.f(10.5, .bold)).tracking(0.6).foregroundStyle(theme.success)
-                        .lineLimit(1).minimumScaleFactor(0.7).accessibilityIdentifier("blueprintApprovedTag")
-                }
+            OnbGroupHeader(mark: .proposal, title: BlueprintPreview.coachTitle)
+            if m.saved == .planSaved {
+                // sheet B3's mark, on its own line so the section title is never squeezed
+                Text("PLAN VERSION 1 · APPROVED").font(CyDyn.f(11, .bold)).tracking(0.8).foregroundStyle(theme.success)
+                    .lineLimit(1).minimumScaleFactor(0.7).accessibilityIdentifier("blueprintApprovedTag")
             }
             if let none = m.noPlan {
                 bullet(none, tint: theme.textSecondary, glyph: "◆").accessibilityIdentifier("blueprintNoPlan")

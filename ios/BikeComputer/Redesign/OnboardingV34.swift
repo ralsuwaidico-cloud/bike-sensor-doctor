@@ -1056,7 +1056,14 @@ struct OnboardingV34View: View {
         func mark(_ x: RosterActivity, main: Bool) -> OnbBlueprintModel.SportMark {
             OnbBlueprintModel.SportMark(id: x.id, short: OnbWeekText.short(x.title), icon: Self.symbol(x), role: main ? "main" : "", strength: x.domain == .strength, main: main)
         }
-        return v.mains.map { mark($0, main: true) } + v.also.map { mark($0, main: false) }
+        var marks = v.mains.map { mark($0, main: true) } + v.also.map { mark($0, main: false) }
+        // "Road cycling" and "Road running" would both read "Road": a repeated short name gives way to the sport's own name
+        let acts = v.mains + v.also
+        for i in marks.indices where marks.filter({ $0.short == marks[i].short }).count > 1 && i > 0 {
+            let x = acts[i]
+            marks[i] = OnbBlueprintModel.SportMark(id: x.id, short: x.family.title, icon: marks[i].icon, role: marks[i].role, strength: marks[i].strength, main: marks[i].main)
+        }
+        return marks
     }
     /// What the athlete declared, each with the page that changes it. FTP and Plan changes are not here (owner,
     /// 22 Nov 2026): FTP lives in Performance Settings, Coach approval preferences in Profile › App preferences › Coach.

@@ -521,7 +521,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(need(app, "blueprintNoPlan", "the no-plan statement").label.contains("No training plan is created"), "required: the Blueprint says no plan is created (\(el(app, "blueprintNoPlan").label))")
         XCTAssertFalse(el(app, "blueprintCoachLine-0").exists, "required: no Coach guidance without a plan")
         XCTAssertFalse(el(app, "blueprintCell-equipment").exists, "required: no equipment line for a runner")
-        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'First session' OR label CONTAINS[c] 'rides ·' OR label CONTAINS[c] 'Zone' OR label CONTAINS[c] 'lift'")).firstMatch.exists, "required: no planned session and no cycling or strength guidance on this Blueprint")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'First session' OR label CONTAINS[c] 'rides ·' OR label CONTAINS[c] 'Zone' OR label CONTAINS[c] 'full body' OR label CONTAINS[c] ' lifts'")).firstMatch.exists, "required: no planned session and no cycling or strength guidance on this Blueprint")   // check 49: the first version looked for 'lift', which the Lab badge "CYCLIFT LAB" contains
         blueprintFits(app, "runner", last: ["blueprintDeclared"])
         // 21 Nov 2026 (21:18): page 4 is now visited by every athlete; pages 5 and 6 still describe a plan
         for i in 5...6 { XCTAssertFalse(app.buttons["railSlot-\(i)"].firstMatch.isEnabled, "required: page \(i) is not offered to an athlete without a plan") }
@@ -621,7 +621,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(status.hasPrefix("Running: kept in your week as you chose it") && status.contains("coming soon"), "required: a truthful status for running (\(status))")
         let guidance = need(app, "blueprintCoachLine-0", "the Coach's guidance").label
         XCTAssertTrue(guidance.contains("Endurance") || guidance.contains("ride"), "required: guidance for the ride the Coach plans (\(guidance))")
-        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'lift'")).firstMatch.exists, "required: no strength guidance for an athlete without strength")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'full body' OR label CONTAINS[c] ' lifts' OR label CONTAINS[c] ' lift '")).firstMatch.exists, "required: no strength guidance for an athlete without strength")   // check 49: the first version looked for 'lift', which the Lab badge "CYCLIFT LAB" contains
         XCTAssertTrue(need(app, "blueprintMainGoal", "the main goal").label.contains("Pace"), "required: the athlete's own main goal stays Pace")
         XCTAssertTrue(need(app, "blueprintGoalLine", "what the plan follows").label.contains("Coach plan follows Endurance"), "required: the goal the plan follows is said")
         blueprintFits(app, "running + cycling", last: ["blueprintDeclared"])
