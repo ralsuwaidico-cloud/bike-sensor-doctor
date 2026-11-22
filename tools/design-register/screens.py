@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "22 Nov 2026, 18:25 (Dubai)"
+UPDATED = "22 Nov 2026, 19:10 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -619,15 +619,15 @@ SCREENS = [
     dict(
         number=7, id="ONB-07", name="Athlete Evolution",
         location="Onboarding · page 6 of 7, after Connect Your Devices. Not shown to an athlete who finishes without a plan.",
-        approved_on="22 Nov 2026, 17:33 — DESIGN DIRECTION ONLY. Not final approval; not approval of stage-assessment criteria.",
-        status="DESIGN DIRECTION APPROVED — interactive stage visuals and assessment policy PENDING APPROVAL. Not locked.",
+        approved_on="22 Nov 2026, 17:33 (design direction); 18:47 (layout and interaction approved, with a final visual refinement). Not approval of stage-assessment activation.",
+        status="LAYOUT AND INTERACTION APPROVED (22 Nov 2026, 18:47) — final visual refinement and assessment-policy activation PENDING. Not locked.",
         reference="Design sheet v3.3 Y5, the LEFT design (page 6, Athlete Evolution), chosen by the owner on 22 Nov 2026 at 17:33 with substantial interactive "
                   "improvements described in his written direction. The sheet is an illustrative drawing.",
         wording=[("Page title", "Athlete Evolution"),
                  ("Stage names — PROVISIONAL working labels", "G0 Origin · G1 Foundation · G2 Development · G3 Performance · G4 Refinement · G5 Mastery"),
                  ("Athlete's status until an assessment method is approved", "Starting stage not yet assessed"),
                  ("Label for an estimated stage (not in use yet)", "Estimated · based on your answers"),
-                 ("Label for an explored stage (PROPOSED wording)", "Exploring · not your stage"),
+                 ("Label for a previewed stage (owner, 22 Nov 18:47)", "Previewing G3 (the stage's code). Replaces the proposed 'Exploring · not your stage'."),
                  ("Button", "See my blueprint"),
                  ("Stage descriptions", "PROPOSED one-line descriptions, written for review; not approved and not assessment criteria.")],
         design=["Preserve the LEFT layout: black-hole / orbital hero · title · six-stage rail G0–G5 · Declared experience · Measured evidence · the athlete's stage "
@@ -638,7 +638,13 @@ SCREENS = [
                 "Each stage has a visually distinct orbital appearance, more developed and refined through the progression; one coherent design family.",
                 "Three statuses that must never be confused: Estimated (from answers), Verified (approved criteria and recorded evidence), Exploring (being viewed).",
                 "Multisport: the athlete's actual sports and experience from the Athletic Roster; not hardcoded to cycling and strength."],
-        mandatory=["Stage selection never modifies the athlete's actual status. A user tapping G5 must not become G5. Exploration is presentation-only.",
+        mandatory=["REFINEMENT 22 Nov 18:47 — the six orbital designs are kept as the visual direction; the hero is moderately enlarged and the difference between "
+                   "consecutive stages made easier to recognize; the default unassessed state has a neutral orbital appearance distinct from G0; a previewed "
+                   "stage carries a concise label such as 'Previewing G3'; the complete iPhone 15 Pro screen still fits without scrolling at standard text size.",
+                   "ASSESSMENT (22 Nov 18:47) — the owner's eleven decisions form the PROPOSED policy specification "
+                   "(product/evolution/STARTING_STAGE_POLICY_SPECIFICATION.md). Automatic stage calculation is NOT enabled. No scientifically validated thresholds "
+                   "are to be invented. The stage-assessment discussion is not reopened in the screen review.",
+                   "Stage selection never modifies the athlete's actual status. A user tapping G5 must not become G5. Exploration is presentation-only.",
                    "Until the assessment method is approved, the athlete's actual status is 'Starting stage not yet assessed', with all six stages explorable.",
                    "Do not invent the G0–G5 assessment thresholds. A transparent, sport-aware classification method, with explicit assumptions and examples, is "
                    "submitted separately for approval before any automatic stage assignment is enabled.",
@@ -653,7 +659,7 @@ SCREENS = [
                   "Assigning a stage from a tap, or from a declared level alone.",
                   "A page hardcoded to cycling and strength; six unrelated stage illustrations."],
         commits="Implementation of the direction: c9e194c9, build fix 22756626 (branch ios/lab). Not in any TestFlight build.",
-        stages=[("Approved design", "DIRECTION ONLY", "Owner, 22 Nov 2026 17:33. Final appearance and rules to be decided after the visual concepts and assessment method are presented."),
+        stages=[("Approved design", "LAYOUT AND INTERACTION: YES. FINAL VISUAL: PENDING", "Owner, 22 Nov 2026 18:47: the LEFT Y5 layout and the interactive G0–G5 progression approved; visual refinement requested. Direction 17:33."),
                 ("Implemented in code", "YES — awaiting review", "Commit c9e194c9: explorable rail (a view state that is not stored), provisional names and proposed "
                  "descriptions, a proposed set of stage images (six stages × six themes, drawn by the same routine as the approved Welcome artwork), roster-based "
                  "declared and evidence lines, status 'Starting stage not yet assessed'. No assessment is calculated."),
@@ -672,7 +678,8 @@ SCREENS = [
         functional_verification="Logic: 33 focused tests pass at c9e194c9 (status is not assessed; six stages with the working names; declared and evidence lines follow the roster). Simulator: check 47, as listed.",
         remaining=["PENDING APPROVAL — the six stage visuals (proposed set).",
                    "PENDING APPROVAL — the stage descriptions and the 'Exploring · not your stage' wording.",
-                   "PENDING APPROVAL — the starting-stage assessment method: product/evolution/STARTING_STAGE_ASSESSMENT_PROPOSAL.md. Nothing in it is enabled.",
+                   "PENDING — assessment-policy activation: product/evolution/STARTING_STAGE_POLICY_SPECIFICATION.md (owner's decisions, plus proposed missing "
+                   "questions, operational definitions and worked examples awaiting approval). Verification thresholds and any lowering policy are separately gated.",
                    "Experience is asked only for cycling and strength today; other sports read 'experience not asked yet'. Asking it would change an approved screen.",
                    "Not verified: redesigned main app, larger text, other themes, VoiceOver, physical iPhone.",
                    "For the owner's view: the default state shows the same image as G0; the hero is drawn at a modest size to keep everything on one screen."],
@@ -685,7 +692,10 @@ SCREENS = [
                 ("S07_evolution_comparison_board_a66577ee.png",
                  "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y5 (the chosen direction). Middle: Build 6. Right: the implementation BEFORE the "
                  "decision (commit a66577ee).")],
-        history=[("22 Nov 2026, 17:33", "LEFT v3.3 Y5 design chosen as the direction, with selectable stages G0–G5, distinct stage visuals in one family, three "
+        history=[("22 Nov 2026, 18:47", "Layout and interactive G0–G5 progression APPROVED. Refinement: larger hero, clearer differences between consecutive stages, a "
+                  "neutral unassessed form distinct from G0, the label 'Previewing G3', one screen preserved. Eleven assessment decisions given as the proposed "
+                  "policy specification; calculation stays off. After the updated visual is approved, the review proceeds to the next onboarding screen.", "IN FORCE"),
+                 ("22 Nov 2026, 17:33", "LEFT v3.3 Y5 design chosen as the direction, with selectable stages G0–G5, distinct stage visuals in one family, three "
                   "separate statuses (estimated, verified, exploring), multisport declared experience, 'Starting stage not yet assessed' until a method is approved, "
                   "and a separately submitted assessment proposal. Not final approval.", "IN FORCE — direction only")],
     ),
