@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 17:40 (Dubai) · Screens recorded: 6
+Last updated: 22 Nov 2026, 18:10 (Dubai) · Screens recorded: 7
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -57,6 +57,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 4 | ONB-04 | Goals | YES | YES | YES | YES — visual and functional | NO |
 | 5 | ONB-05 | Build Your Week | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | YES — functional (Lab, Obsidian, iPhone 15 Pro) | NO |
 | 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | YES for the previous commit a02fc5e5 (same rows, earlier subtitles; Plan changes still on the page) | NO |
+| 7 | ONB-07 | Athlete Evolution | DIRECTION ONLY | YES — awaiting review | PENDING | PENDING | NO |
 
 ---
 
@@ -583,3 +584,81 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 22 Nov 2026, 15:55 | Sheet Y1 page 5 chosen as the visual reference with modifications: title 'Connect your devices'; five integrations in a fixed order; BikeComputer and the bike-sensors row removed from this page; FTP removed from onboarding and preserved elsewhere; truthful statuses and functional actions only; Lab isolation; 'Always ask me' as a new athlete's default; one screen at standard text size. | IN FORCE — Plan changes on this page superseded 16:34 |
 | 22 Nov 2026, 16:34 | Overall layout of fast-onb-5-connect-your-devices.png (a02fc5e5) APPROVED, with changes: the owner's five subtitles; the Plan changes section removed from onboarding (it belongs to Profile › App preferences › Coach); only one short line above Continue; iPhone-first device strategy recorded. | IN FORCE |
 | 22 Nov 2026, 17:19 | Approved and locked exactly as shown in fast-onb-5-connect-your-devices.png, commit a66577ee. Main-app verification on the latest commit, real-device permissions, accessibility and other themes recorded as pending. | IN FORCE |
+
+---
+
+## Screen 7 — Athlete Evolution (ONB-07)
+
+- **Navigation location:** Onboarding · page 6 of 7, after Connect Your Devices. Not shown to an athlete who finishes without a plan.
+- **Approval date:** 22 Nov 2026, 17:33 — DESIGN DIRECTION ONLY. Not final approval; not approval of stage-assessment criteria.
+- **Approval status:** DESIGN DIRECTION APPROVED — interactive stage visuals and assessment policy PENDING APPROVAL. Not locked.
+- **Original design reference and source:** Design sheet v3.3 Y5, the LEFT design (page 6, Athlete Evolution), chosen by the owner on 22 Nov 2026 at 17:33 with substantial interactive improvements described in his written direction. The sheet is an illustrative drawing.
+- **Implementation commit:** Implementation of the direction: c9e194c9 (branch ios/lab). Not in any TestFlight build.
+
+### Exact approved wording
+
+- **Page title:** Athlete Evolution
+- **Stage names — PROVISIONAL working labels:** G0 Origin · G1 Foundation · G2 Development · G3 Performance · G4 Refinement · G5 Mastery
+- **Athlete's status until an assessment method is approved:** Starting stage not yet assessed
+- **Label for an estimated stage (not in use yet):** Estimated · based on your answers
+- **Label for an explored stage (PROPOSED wording):** Exploring · not your stage
+- **Button:** See my blueprint
+- **Stage descriptions:** PROPOSED one-line descriptions, written for review; not approved and not assessment criteria.
+
+### Approved layout, visual elements and interactions
+
+- Preserve the LEFT layout: black-hole / orbital hero · title · six-stage rail G0–G5 · Declared experience · Measured evidence · the athlete's stage summary · 'See my blueprint'.
+- The complete screen fits the iPhone 15 Pro without scrolling at standard text size.
+- G0–G5 are individually selectable. Tapping a stage changes the black-hole visual to that stage's design, shows its name and a short description, and highlights it on the rail.
+- Each stage has a visually distinct orbital appearance, more developed and refined through the progression; one coherent design family.
+- Three statuses that must never be confused: Estimated (from answers), Verified (approved criteria and recorded evidence), Exploring (being viewed).
+- Multisport: the athlete's actual sports and experience from the Athletic Roster; not hardcoded to cycling and strength.
+
+### Mandatory functionality and dependencies
+
+- Stage selection never modifies the athlete's actual status. A user tapping G5 must not become G5. Exploration is presentation-only.
+- Until the assessment method is approved, the athlete's actual status is 'Starting stage not yet assessed', with all six stages explorable.
+- Do not invent the G0–G5 assessment thresholds. A transparent, sport-aware classification method, with explicit assumptions and examples, is submitted separately for approval before any automatic stage assignment is enabled.
+- G3 must not be assigned solely because an athlete chooses Intermediate.
+- No invented measurements for sports without recording integrations.
+- Reuse existing approved black-hole artwork and stage assets; where distinct stage assets do not exist, a PROPOSED visual set is created for approval and is not described as already approved.
+- Production stage logic, training prescriptions and athlete records are not changed. Existing onboarding answers, recorded evidence and current stage data are preserved.
+- Screens 1–6 are not changed.
+
+### Explicitly rejected alternatives
+
+- Simply showing G0 or 'None' rather than (eventually) an estimated starting stage.
+- Assigning a stage from a tap, or from a declared level alone.
+- A page hardcoded to cycling and strength; six unrelated stage illustrations.
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY | Owner, 22 Nov 2026 17:33. Final appearance and rules to be decided after the visual concepts and assessment method are presented. |
+| Implemented in code | YES — awaiting review | Commit c9e194c9: explorable rail (a view state that is not stored), provisional names and proposed descriptions, a proposed set of stage images (six stages × six themes, drawn by the same routine as the approved Welcome artwork), roster-based declared and evidence lines, status 'Starting stage not yet assessed'. No assessment is calculated. |
+| Compiled | PENDING | Focused check 46 (run 45028993447) requested. |
+| Simulator-verified | PENDING | Focused check 46. |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** NOT YET PRESENTED. The stage visual set and descriptions are proposals awaiting the owner's decision.
+- **Functional verification:** Logic: 33 focused tests pass at c9e194c9 (status is not assessed; six stages with the working names; declared and evidence lines follow the roster). Simulator: pending.
+
+### Remaining work or limitations
+
+- PENDING APPROVAL — the six stage visuals (proposed set).
+- PENDING APPROVAL — the stage descriptions and the 'Exploring · not your stage' wording.
+- PENDING APPROVAL — the starting-stage assessment method: product/evolution/STARTING_STAGE_ASSESSMENT_PROPOSAL.md. Nothing in it is enabled.
+- Experience is asked only for cycling and strength today; other sports read 'experience not asked yet'. Asking it would change an approved screen.
+- Not verified: redesigned main app, larger text, other themes, VoiceOver, physical iPhone.
+
+### Images
+
+- `assets/S07_stage_visual_set_proposed_obsidian.png` — PROPOSED STAGE VISUAL SET — NOT APPROVED. G0 to G5, Obsidian, drawn by the routine of the approved black-hole artwork with more rings, streaks and reach at each stage.
+- `assets/S07_evolution_comparison_board_a66577ee.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y5 (the chosen direction). Middle: Build 6. Right: the implementation BEFORE the decision (commit a66577ee).
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 22 Nov 2026, 17:33 | LEFT v3.3 Y5 design chosen as the direction, with selectable stages G0–G5, distinct stage visuals in one family, three separate statuses (estimated, verified, exploring), multisport declared experience, 'Starting stage not yet assessed' until a method is approved, and a separately submitted assessment proposal. Not final approval. | IN FORCE — direction only |
