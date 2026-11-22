@@ -118,6 +118,14 @@ struct OnboardingV34View: View {
         if page >= 2 { x.activities = AthleticRoster.roster(of: store.profile) }
         // Build your week: a saved schedule is shown as it was left; a new athlete has none and starts with seven rest days
         x.schedule = OnboardingFlow.storedSchedule(store)
+        // the training environment and every environment's own equipment selection, as saved
+        x.equipmentSets = store.profile.equipmentSets
+        x.environment = store.profile.equipmentEnvironment.flatMap(EquipmentEnvironment.init(rawValue:)) ?? EquipmentEnvironment.of(store.equipment)
+        if let env = x.environment, x.equipmentSets?[env.rawValue] == nil, store.equipment.isSet {
+            // an athlete whose equipment was set before environments existed keeps exactly what they had
+            var sets = x.equipmentSets ?? [:]; sets[env.rawValue] = store.equipment.owned.map(EquipmentProfile.normalised).sorted(); x.equipmentSets = sets
+        }
+        x.equipment = nil
         a = x
         ftpKnown = r.ftpKnown
         if let w = r.ftpWatts { ftpText = String(w) }
@@ -1032,7 +1040,7 @@ struct OnboardingV34View: View {
         var out: [OnbBlueprintModel.Cell] = []
         if let g = main { out.append(.init(id: "goals", title: "Goals", value: ([g.title + " ★"] + others.map(\.title)).joined(separator: " · "), page: 3)) }
         if v.mode == .hybrid { out.append(.init(id: "lead", title: "When time is short", value: leadWord, page: 2)) }
-        if mode.includesLifting { out.append(.init(id: "equipment", title: "Equipment", value: (a.equipment ?? .notSure).title, page: 4)) }
+        if mode.includesLifting { out.append(.init(id: "equipment", title: "Equipment", value: a.environment.map { e in let n = e.selection(in: a.equipmentSets).count; return "\(e.title) · \(n == 0 ? "no equipment" : n == 1 ? "1 item" : "\(n) items")" } ?? "Not chosen", page: 4)) }
         if mode.includesCycling {
             let p = store.profile
             let value = p.ftpKnown ? "\(p.ftpValue.map { "\($0) W" } ?? "Entered") · \(p.ftpSource == .tested ? "tested" : "not tested")" : "Unknown"

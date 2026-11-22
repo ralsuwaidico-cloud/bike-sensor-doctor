@@ -59,6 +59,11 @@ struct RiderProfile: Codable, Equatable {
     /// activity with its own minutes — every sport, planned or not. The planner never reads it (it reads
     /// `availability`, written from the plannable sessions). nil = not chosen there. Additive; ignored by older builds.
     var chosenWeek: [[ChosenSession]]? = nil
+    /// Equipment environments (22 Nov 2026): the chosen one ("gym", "home", "bodyweight", "custom") and each
+    /// environment's own saved equipment selection. The planner reads neither — it reads `Store.equipment`, written
+    /// from the chosen environment's selection. Additive; ignored by older builds.
+    var equipmentEnvironment: String? = nil
+    var equipmentSets: [String: [String]]? = nil
     /// True for an athlete who finished onboarding WITHOUT a training plan, because none of the goals they chose can be
     /// planned by an engine Cyclift has today (owner decision 21 Nov 2026: every athlete completes onboarding; nobody
     /// is silently given a cycling or strength programme). While it is true no session is ever generated — see
@@ -246,6 +251,8 @@ struct RiderProfile: Codable, Equatable {
         activityGoals = try? c.decodeIfPresent([String].self, forKey: .activityGoals)
         mainGoalID = try? c.decodeIfPresent(String.self, forKey: .mainGoalID)
         chosenWeek = try? c.decodeIfPresent([[ChosenSession]].self, forKey: .chosenWeek)
+        equipmentEnvironment = try? c.decodeIfPresent(String.self, forKey: .equipmentEnvironment)
+        equipmentSets = try? c.decodeIfPresent([String: [String]].self, forKey: .equipmentSets)
         profileOnly = try? c.decodeIfPresent(Bool.self, forKey: .profileOnly)
         version = try c.decodeIfPresent(UInt32.self, forKey: .version) ?? 1
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()

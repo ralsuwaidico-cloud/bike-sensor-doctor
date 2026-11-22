@@ -290,6 +290,54 @@ final class RosterGoalsTests: XCTestCase {
         XCTAssertEqual(w?[0], [.init(activity: "strength", minutes: 35)]); XCTAssertEqual(w?[1], [.init(activity: "gravel", minutes: 75)])
         XCTAssertEqual(Set(w?[3].map(\.activity) ?? []), ["gravel", "strength"])
     }
+    // MARK: Equipment environments (owner decision 22 Nov 2026, 13:34)
+
+    /// Four environments, no "Not sure"; each opens with its own preset, and nothing more than that preset.
+    func testEquipmentEnvironmentsAndTheirPresets() {
+        XCTAssertEqual(EquipmentEnvironment.allCases.map(\.title), ["Gym", "Home", "Bodyweight", "Custom"])
+        XCTAssertEqual(EquipmentEnvironment.bodyweight.selection(in: nil), [], "bodyweight needs no equipment by default")
+        XCTAssertEqual(EquipmentEnvironment.custom.selection(in: nil), [])
+        XCTAssertEqual(Set(EquipmentEnvironment.home.selection(in: nil)), EquipmentPreset.homeKit, "home starts from the app's existing home kit")
+        XCTAssertFalse(EquipmentEnvironment.gym.selection(in: nil).contains("trap bar"), "a gym is not assumed to have every piece of equipment")
+        for e in EquipmentEnvironment.allCases { XCTAssertTrue(e.checklist.allSatisfy { EquipmentCatalogue.item($0) != nil }, "\(e.title): every listed item is in the catalogue") }
+        XCTAssertTrue(EquipmentEnvironment.bodyweight.checklist.contains("dumbbell") && EquipmentEnvironment.bodyweight.checklist.contains("band"))
+        XCTAssertEqual(Set(EquipmentCatalogue.items.map(\.id)).count, EquipmentCatalogue.items.count, "identifiers are unique")
+        XCTAssertTrue(EquipmentCatalogue.items.filter(\.planner).allSatisfy { ExerciseCatalogue.equipmentOptions.contains($0.id) }, "an item marked as used by the planner is one the planner knows")
+        XCTAssertEqual(Set(EquipmentCatalogue.items.map(\.group)), Set(EquipmentGroup.allCases), "the catalogue covers every sport group")
+    }
+    /// Each environment keeps its own selection; choosing another never deletes it; exactly the ticked items are stored.
+    func testEachEnvironmentKeepsItsOwnSelection() {
+        let (s, _) = freshStore()
+        s.equipment.excluded = ["barbell-back-squat"]
+        var a = OnboardingAnswers(); a.name = "Sam"
+        a.environment = .bodyweight; a.equipmentSets = ["bodyweight": ["dumbbell", "band"], "gym": ["barbell", "bench"], "custom": ["squat rack", "pull buoy"]]
+        OnboardingOutcome.commit(a, to: s)
+        XCTAssertEqual(s.equipment.owned, ["dumbbell", "band"]); XCTAssertEqual(s.equipment.confirmed, true)
+        XCTAssertEqual(s.equipment.excluded, ["barbell-back-squat"], "the athlete's exercise exclusions are kept")
+        a.environment = .gym; OnboardingOutcome.commit(a, to: s)
+        XCTAssertEqual(s.equipment.owned, ["barbell", "bench"], "the gym's own selection, not the bodyweight one")
+        XCTAssertEqual(s.profile.equipmentSets?["bodyweight"], ["dumbbell", "band"], "switching did not delete the bodyweight selection")
+        a.environment = .custom; OnboardingOutcome.commit(a, to: s)
+        XCTAssertEqual(s.equipment.owned, ["squat rack", "pull buoy"], "custom holds equipment across categories")
+        XCTAssertEqual(s.profile.equipmentEnvironment, "custom")
+        let old = try? JSONDecoder().decode(RiderProfile.self, from: JSONEncoder().encode(RiderProfile()))
+        XCTAssertNil(old?.equipmentEnvironment); XCTAssertNil(old?.equipmentSets)
+    }
+    /// The existing strength planner respects what is ticked: a bodyweight athlete with dumbbells and bands can be
+    /// offered dumbbell and band exercises and no barbell ones; items the planner does not use change nothing.
+    func testThePlannerRespectsTickedEquipment() {
+        let all = ExerciseCatalogue.builtIn
+        XCTAssertFalse(all.isEmpty, "the exercise catalogue is loaded")
+        func can(_ ids: [String]) -> Set<String> { let e = EquipmentProfile(owned: Set(ids), confirmed: true); return Set(all.filter { e.hasEquipment(for: $0) }.map(\.id)) }
+        let none = can([]), kit = can(["dumbbell", "band"])
+        XCTAssertTrue(kit.isSuperset(of: none) && kit.count > none.count, "dumbbells and bands add exercises (\(none.count) → \(kit.count))")
+        let added = all.filter { kit.contains($0.id) && !none.contains($0.id) }
+        XCTAssertTrue(added.allSatisfy { !Set($0.equipment).isDisjoint(with: ["dumbbell", "band"]) }, "every added exercise uses a dumbbell or a band")
+        XCTAssertFalse(all.contains { kit.contains($0.id) && $0.equipment == ["barbell"] }, "no barbell-only exercise without a barbell")
+        XCTAssertEqual(can(["dumbbell", "band", "squat rack", "weighted vest", "pull buoy"]), kit, "stored-only items do not change what is offered")
+        XCTAssertEqual(EquipmentCatalogue.eligibleExercises(["dumbbell", "band"]).can, kit.count); XCTAssertEqual(EquipmentCatalogue.eligibleExercises([]).of, all.count)
+        XCTAssertGreaterThan(can(EquipmentEnvironment.gym.preset).count, kit.count)
+    }
     /// The marker of an athlete without a plan is additive, off by default, and survives saving.
     func testProfileOnlyMarker() throws {
         XCTAssertFalse(RiderProfile().isProfileOnly)

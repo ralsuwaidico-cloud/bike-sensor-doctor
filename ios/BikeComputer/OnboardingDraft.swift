@@ -47,6 +47,118 @@ enum EquipmentPreset: String, CaseIterable, Hashable, Codable {
     }
 }
 
+// MARK: - Equipment environments and the equipment catalogue (Build your week — owner decision 22 Nov 2026, 13:34)
+//
+// Gym | Home | Bodyweight | Custom are training ENVIRONMENTS — presets, not limits on what an athlete can own. Each
+// has its own editable checklist; switching environments never deletes another one's selections. Nothing is shown or
+// stored as available unless the athlete ticked it or the preset they chose provides it, and the preset's ticks are
+// visible and editable. "Not sure" is not an environment (the older `EquipmentPreset` above still serves the older
+// onboarding and the Profile editors, unchanged).
+//
+// The catalogue is one extensible list for every sport. An item whose `planner` name is set is one the existing
+// strength planner understands (its own vocabulary, `ExerciseCatalogue.equipmentOptions`); ticking it changes which
+// exercises can be offered. Every other item is stored exactly as chosen and changes NO generated training — and is
+// labelled so.
+
+enum EquipmentGroup: String, CaseIterable {
+    case strength, cycling, running, swimming, mobility
+    var title: String {
+        switch self {
+        case .strength: return "Strength"
+        case .cycling: return "Cycling"
+        case .running: return "Running"
+        case .swimming: return "Swimming"
+        case .mobility: return "Mobility and recovery"
+        }
+    }
+}
+
+struct EquipmentItem: Identifiable, Equatable {
+    /// Canonical identifier — what is stored. For an item the strength planner understands it IS the planner's name.
+    let id: String
+    let title: String
+    let group: EquipmentGroup
+    /// true = the strength planner uses it to choose exercises today.
+    let planner: Bool
+}
+
+enum EquipmentCatalogue {
+    static let items: [EquipmentItem] = [
+        .init(id: "barbell", title: "Barbell", group: .strength, planner: true),
+        .init(id: "dumbbell", title: "Dumbbells", group: .strength, planner: true),
+        .init(id: "kettlebell", title: "Kettlebell", group: .strength, planner: true),
+        .init(id: "bench", title: "Bench", group: .strength, planner: true),
+        .init(id: "cable", title: "Cable machine", group: .strength, planner: true),
+        .init(id: "machine", title: "Weight machines (leg press and others)", group: .strength, planner: true),
+        .init(id: "band", title: "Resistance bands", group: .strength, planner: true),
+        .init(id: "pull-up bar", title: "Pull-up bar", group: .strength, planner: true),
+        .init(id: "trap bar", title: "Trap bar", group: .strength, planner: true),
+        .init(id: "squat rack", title: "Squat rack", group: .strength, planner: false),
+        .init(id: "dip bars", title: "Dip bars", group: .strength, planner: false),
+        .init(id: "gymnastic rings", title: "Gymnastic rings", group: .strength, planner: false),
+        .init(id: "weighted vest", title: "Weighted vest", group: .strength, planner: false),
+        .init(id: "exercise mat", title: "Exercise mat", group: .mobility, planner: false),
+        .init(id: "foam roller", title: "Foam roller", group: .mobility, planner: false),
+        .init(id: "yoga blocks", title: "Yoga blocks", group: .mobility, planner: false),
+        .init(id: "indoor trainer", title: "Indoor trainer", group: .cycling, planner: false),
+        .init(id: "power meter", title: "Power meter", group: .cycling, planner: false),
+        .init(id: "heart-rate strap", title: "Heart-rate strap", group: .cycling, planner: false),
+        .init(id: "treadmill", title: "Treadmill", group: .running, planner: false),
+        .init(id: "running watch", title: "Running watch", group: .running, planner: false),
+        .init(id: "pool access", title: "Pool access", group: .swimming, planner: false),
+        .init(id: "pull buoy", title: "Pull buoy", group: .swimming, planner: false),
+        .init(id: "kickboard", title: "Kickboard", group: .swimming, planner: false),
+        .init(id: "swim fins", title: "Swim fins", group: .swimming, planner: false),
+    ]
+    static func item(_ id: String) -> EquipmentItem? { items.first { $0.id == id } }
+    /// Catalogue order, known items only, no duplicates.
+    static func ordered(_ ids: [String]) -> [String] { items.map(\.id).filter(Set(ids).contains) }
+    static func search(_ q: String) -> [EquipmentItem] {
+        let t = q.trimmingCharacters(in: .whitespaces).lowercased()
+        return t.isEmpty ? items : items.filter { $0.title.lowercased().contains(t) || $0.group.title.lowercased().contains(t) }
+    }
+    /// How many of the app's strength exercises the EXISTING planner could offer with this equipment — its own rule
+    /// (`EquipmentProfile.hasEquipment`), nothing estimated. Items the planner does not understand change nothing.
+    static func eligibleExercises(_ ids: [String]) -> (can: Int, of: Int) {
+        let e = EquipmentProfile(owned: Set(ids), confirmed: true)
+        let all = ExerciseCatalogue.builtIn
+        return (all.filter { e.hasEquipment(for: $0) }.count, all.count)
+    }
+}
+
+enum EquipmentEnvironment: String, CaseIterable, Hashable, Codable {
+    case gym, home, bodyweight, custom
+    var title: String {
+        switch self { case .gym: return "Gym"; case .home: return "Home"; case .bodyweight: return "Bodyweight"; case .custom: return "Custom" }
+    }
+    /// The checklist this environment opens with (the owner's lists of 22 Nov 2026; "Leg press" is offered as "Weight
+    /// machines", the planner's one name for leg press and the other machines). Custom lists the whole catalogue.
+    var checklist: [String] {
+        switch self {
+        case .gym: return ["barbell", "dumbbell", "bench", "cable", "squat rack", "machine", "kettlebell", "band"]
+        case .home: return ["dumbbell", "band", "kettlebell", "bench", "pull-up bar", "exercise mat", "barbell"]
+        case .bodyweight: return ["pull-up bar", "dip bars", "band", "gymnastic rings", "weighted vest", "exercise mat", "dumbbell"]
+        case .custom: return EquipmentCatalogue.items.map(\.id)
+        }
+    }
+    /// What the preset provides before the athlete edits it — shown ticked, and editable. Gym: its checklist (not every
+    /// piece of equipment that exists). Home: the app's existing home kit. Bodyweight and Custom: nothing.
+    var preset: [String] {
+        switch self {
+        case .gym: return checklist
+        case .home: return EquipmentCatalogue.ordered(Array(EquipmentPreset.homeKit))
+        case .bodyweight, .custom: return []
+        }
+    }
+    /// The athlete's saved selection for this environment, or the preset when they have never edited it.
+    func selection(in sets: [String: [String]]?) -> [String] { sets?[rawValue].map(EquipmentCatalogue.ordered) ?? preset }
+    /// An existing athlete's stored equipment, read as an environment (nothing is changed by reading it).
+    static func of(_ e: EquipmentProfile) -> EquipmentEnvironment? {
+        guard e.isSet else { return nil }
+        switch EquipmentPreset.of(e) { case .gym: return .gym; case .home: return .home; case .bodyweight: return .bodyweight; case .notSure: return nil }
+    }
+}
+
 // MARK: - Goals: one-line effect and the emphasis behind Stage B
 
 enum GoalInfo {
@@ -476,6 +588,10 @@ struct OnboardingAnswers: Equatable {
     var rideMinutes: Int? = nil
     var liftMinutes: Int? = nil
     var equipment: EquipmentPreset? = nil
+    /// Build your week (22 Nov 2026): the chosen training environment and each environment's own equipment selection
+    /// (identifiers of `EquipmentCatalogue`). nil = not chosen there; the older `equipment` preset path is then used.
+    var environment: EquipmentEnvironment? = nil
+    var equipmentSets: [String: [String]]? = nil
     var supersets: Bool? = nil
     // Stage D
     var ftpWatts: Int? = nil
@@ -524,7 +640,12 @@ struct OnboardingAnswers: Equatable {
             if let r = rideMinutes { x.profile.cyclingSessionMinutes = r }
             if let l = liftMinutes { x.profile.strengthSessionMinutes = l; x.profile.confirmSessionLength = nil }
         }
-        if let e = equipment { x.equipment = e.apply(to: x.equipment) }
+        if let env = environment {
+            // exactly what is ticked for the chosen environment — never more; the athlete's exercise exclusions are kept
+            x.equipment = EquipmentProfile(owned: Set(env.selection(in: equipmentSets)), excluded: x.equipment.excluded, confirmed: true)
+            x.profile.equipmentEnvironment = env.rawValue
+        } else if let e = equipment { x.equipment = e.apply(to: x.equipment) }
+        if let s = equipmentSets { x.profile.equipmentSets = s }      // every environment's selection, kept when another is chosen
         if let s = supersets { x.strengthPrefs.prefersSupersets = s }
         if let src = ftpSource {
             if src == .unknown { x.profile.setFTP(nil, source: .unknown) }

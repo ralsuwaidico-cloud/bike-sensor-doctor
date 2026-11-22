@@ -463,6 +463,7 @@ struct OnbWeekPage: View {
     @State private var selected: Int? = nil
     /// The open day as being edited. Written to the week only by Confirm.
     @State private var draft: [ChosenSession] = []
+    @State private var editingEquipment = false
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var dts
 
@@ -660,14 +661,14 @@ struct OnbWeekPage: View {
     private func showsEquipment(_ w: ChosenWeek.Week) -> Bool {
         w.joined().contains { ChosenWeek.engine($0.activity) == .strength }
     }
+    /// Gym | Home | Bodyweight | Custom (owner decision 22 Nov 2026, 13:34): training environments, not "Not sure".
     /// Simulator run 17: at an accessibility text size four choices side by side broke "Bodyweight" in the middle of
-    /// the word. From those sizes the same choice is drawn as rows of two (one a row at the three largest sizes), each
-    /// row the app's own choice bar on the same answer. What is stored is unchanged.
+    /// the word. From those sizes the same choice is drawn as rows of two (one a row at the three largest sizes).
     private var equipmentChoice: some View {
-        let all = EquipmentPreset.allCases.map { ($0, $0.title) }
-        let selection = Binding<EquipmentPreset>(get: { a.equipment ?? .notSure }, set: { a.equipment = $0 })
+        let all: [(EquipmentEnvironment?, String)] = EquipmentEnvironment.allCases.map { (Optional($0), $0.title) }
+        let selection = Binding<EquipmentEnvironment?>(get: { a.environment }, set: { a.environment = $0 })
         let perRow = !dts.isAccessibilitySize ? all.count : (dts >= .accessibility3 ? 1 : 2)
-        let rows: [[(EquipmentPreset, String)]] = stride(from: 0, to: all.count, by: perRow).map { i in Array(all[i..<min(i + perRow, all.count)]) }
+        let rows: [[(EquipmentEnvironment?, String)]] = stride(from: 0, to: all.count, by: perRow).map { i in Array(all[i..<min(i + perRow, all.count)]) }
         return VStack(spacing: 6) {
             ForEach(Array(rows.enumerated()), id: \.offset) { row in
                 CyChoiceBar(options: row.element, selection: selection)
@@ -676,11 +677,140 @@ struct OnbWeekPage: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onbEquipment")
     }
+    /// "3 items · Edit" — the compact way into the chosen environment's checklist (a bottom sheet; the page stays as it is).
+    private var equipmentEdit: some View {
+        let n = a.environment.map { $0.selection(in: a.equipmentSets).count }
+        let words = n.map { $0 == 0 ? "No equipment" : $0 == 1 ? "1 item" : "\($0) items" } ?? "Choose where you train"
+        return Button { editingEquipment = true } label: {
+            HStack(spacing: 4) {
+                Text(n == nil ? words : "\(words) · Edit").font(CyDyn.f(12, .semibold)).foregroundStyle(n == nil ? theme.textSecondary : theme.accent).lineLimit(1)
+                if n != nil { Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold)).foregroundStyle(theme.accent).accessibilityHidden(true) }
+            }
+            .frame(minHeight: 22).contentShape(Rectangle().inset(by: -10))
+        }
+        .buttonStyle(.plain).disabled(a.environment == nil)
+        .accessibilityLabel(n == nil ? words : "\(words). Edit equipment")
+        .accessibilityIdentifier("onbEquipmentEdit")
+    }
     private var equipment: some View {
         VStack(alignment: .leading, spacing: 3) {
-            OnbGroupHeader(mark: .none, title: "Equipment", trailing: "sets which exercises are offered")
+            HStack(alignment: .firstTextBaseline) {
+                Text("EQUIPMENT").font(CyDyn.f(11.5, .semibold)).tracking(1.1).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
+                Spacer(minLength: CySpace.s)
+                equipmentEdit
+            }
             equipmentChoice
         }
+        .sheet(isPresented: $editingEquipment) {
+            if let env = a.environment {
+                OnbEquipmentSheet(environment: env, ticked: Binding(
+                    get: { env.selection(in: a.equipmentSets) },
+                    set: { new in var sets = a.equipmentSets ?? [:]; sets[env.rawValue] = EquipmentCatalogue.ordered(new); a.equipmentSets = sets }))
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+}
+
+// MARK: - Equipment checklist (bottom sheet)
+//
+// One environment's own checklist: its usual items first, each a tick box; "All equipment" opens the whole catalogue
+// with search (Custom starts there). Ticks are kept per environment. The line under the title is the existing strength
+// planner's own count of exercises it can offer with what is ticked — nothing estimated; items the planner does not
+// use yet say so, so storing them never looks like it changes training.
+
+struct OnbEquipmentSheet: View {
+    let environment: EquipmentEnvironment
+    @Binding var ticked: [String]
+    @State private var showAll = false
+    @State private var query = ""
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.cyTheme) private var theme
+
+    private var whole: Bool { environment == .custom || showAll }
+    private var shown: [EquipmentItem] {
+        if whole { return EquipmentCatalogue.search(query) }
+        // the environment's usual items, then anything else the athlete has ticked for it (never dropped from view)
+        let usual = environment.checklist
+        let extra = ticked.filter { !usual.contains($0) }
+        return (usual + extra).compactMap { EquipmentCatalogue.item($0) }
+    }
+    private func toggle(_ id: String) {
+        ticked = ticked.contains(id) ? ticked.filter { $0 != id } : ticked + [id]
+    }
+
+    var body: some View {
+        let count = EquipmentCatalogue.eligibleExercises(ticked)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(environment.title) equipment").font(CyDyn.f(18, .bold)).foregroundStyle(theme.textPrimary)
+                    .accessibilityAddTraits(.isHeader).accessibilityIdentifier("equipTitle")
+                Spacer()
+                Button("Done") { dismiss() }
+                    .font(CyDyn.f(16, .semibold)).foregroundStyle(theme.accent).frame(minWidth: CyHit.min, minHeight: CyHit.min)
+                    .accessibilityIdentifier("equipDone")
+            }
+            Text("\(count.can) of \(count.of) strength exercises can be offered with this")
+                .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("equipEffect")
+            if environment == .bodyweight {
+                Text("No equipment is needed. Tick anything you also have.")
+                    .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("equipNoneNeeded")
+            }
+            if whole {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass").font(.footnote).foregroundStyle(theme.textSecondary).accessibilityHidden(true)
+                    TextField("Search equipment", text: $query)
+                        .font(CyDyn.f(15)).foregroundStyle(theme.textPrimary)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .accessibilityIdentifier("equipSearch")
+                }
+                .padding(.horizontal, 10).frame(minHeight: 38)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(theme.surface2))
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(shown) { item in row(item) }
+                    if shown.isEmpty {
+                        Text("Nothing in the catalogue matches.").font(CyDyn.f(14)).foregroundStyle(theme.textSecondary).padding(.vertical, 12)
+                    }
+                    if environment != .custom {
+                        Button { showAll.toggle(); query = "" } label: {
+                            Text(showAll ? "Show the \(environment.title) list" : "All equipment").font(CyDyn.f(14, .semibold)).foregroundStyle(theme.accent)
+                                .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain).accessibilityIdentifier("equipShowAll")
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, CySpace.l).padding(.top, CySpace.l)
+        .background(theme.background.ignoresSafeArea())
+        .accessibilityIdentifier("equipSheet")
+    }
+    private func row(_ item: EquipmentItem) -> some View {
+        let on = ticked.contains(item.id)
+        return Button { toggle(item.id) } label: {
+            HStack(spacing: 10) {
+                Image(systemName: on ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 20, weight: .medium)).foregroundStyle(on ? theme.accent : theme.textSecondary).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(item.title).font(CyDyn.f(15, .medium)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                    Text(item.planner ? (whole ? item.group.title : "used to choose your exercises") : "\(whole ? item.group.title + " · " : "")saved · not used to choose training yet")
+                        .font(CyDyn.f(11.5)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(item.title)
+        .accessibilityValue(on ? "ticked" : "not ticked")
+        .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
+        .accessibilityIdentifier("equip-\(item.id)")
     }
 }
 

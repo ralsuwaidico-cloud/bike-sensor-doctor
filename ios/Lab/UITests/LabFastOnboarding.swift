@@ -573,6 +573,108 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(need(app, "blueprintDay-0", "Monday on the Blueprint").label.hasSuffix(", rest"), "required: the running day is not planned as cycling or strength (\(el(app, "blueprintDay-0").label))")
     }
 
+    /// Equipment on Build your week (owner decision 22 Nov 2026, 13:34): Gym | Home | Bodyweight | Custom — no "Not
+    /// sure"; a compact Edit control opens the chosen environment's own checklist in a bottom sheet; ticking and
+    /// unticking work; Bodyweight can include dumbbells and bands; Custom holds equipment across categories; switching
+    /// environments erases nothing; everything is kept after reopening; the page itself does not change size.
+    func testEquipmentEnvironments() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["roadCycling", "strength"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        el(app, "goal-endurance").tap()
+        next.tap(); page(app, 4)
+        XCTAssertFalse(el(app, "onbEquipment").exists, "required: no equipment question before a strength session is chosen")
+        app.chooseWeekDay(0, ["strength"])
+        let kit = need(app, "onbEquipment", "the equipment choice")
+        for t in ["Gym", "Home", "Bodyweight", "Custom"] { XCTAssertTrue(kit.buttons[t].firstMatch.isHittable, "required: the \(t) environment") }
+        XCTAssertFalse(kit.buttons["Not sure"].firstMatch.exists, "required: 'Not sure' is not an environment")
+        let edit = need(app, "onbEquipmentEdit", "the compact Edit equipment control")
+        XCTAssertFalse(edit.isEnabled, "required: nothing to edit before an environment is chosen")
+        let line = need(app, "onbCoachLine", "the line above Continue")
+
+        func ticked(_ id: String) -> Bool { (need(app, "equip-\(id)", "the \(id) tick box").value as? String) == "ticked" }
+        func tick(_ id: String) { let r = need(app, "equip-\(id)", "the \(id) tick box"); if !r.isHittable { app.swipeUp() }; r.tap() }
+        func offered() -> Int { Int(need(app, "equipEffect", "the effect on eligible exercises").label.split(separator: " ").first ?? "") ?? -1 }
+        func openSheet(_ title: String) {
+            tap(app, edit, "Edit equipment")
+            XCTAssertEqual(need(app, "equipTitle", "the equipment sheet").label, "\(title) equipment")
+        }
+        func done() { tap(app, app.buttons["equipDone"].firstMatch, "Done"); XCTAssertTrue(edit.waitForExistence(timeout: 5)) }
+
+        // Bodyweight: nothing needed by default; dumbbells and bands can be added
+        kit.buttons["Bodyweight"].firstMatch.tap()
+        XCTAssertEqual(edit.label, "No equipment. Edit equipment", "required: bodyweight starts with no equipment")
+        XCTAssertLessThanOrEqual(kit.frame.maxY, line.frame.minY + 1, "required: the page is still one screen")
+        app.settleForScreenshot(1); shot("onb-4-equipment-main")
+        openSheet("Bodyweight")
+        need(app, "equipNoneNeeded", "the 'no equipment is needed' line")
+        for id in ["pull-up bar", "dip bars", "band", "gymnastic rings", "weighted vest", "exercise mat", "dumbbell"] { XCTAssertFalse(ticked(id), "required: \(id) is offered and not ticked by default") }
+        XCTAssertFalse(app.buttons["equip-barbell"].firstMatch.exists, "required: the Bodyweight list is its own list")
+        let bare = offered()
+        tick("dumbbell"); tick("band")
+        XCTAssertTrue(ticked("dumbbell") && ticked("band"), "required: ticking works")
+        let withKit = offered()
+        XCTAssertGreaterThan(withKit, bare, "required: more exercises can be offered with dumbbells and bands (\(bare) → \(withKit))")
+        tick("weighted vest")
+        XCTAssertEqual(offered(), withKit, "required: an item the planner does not use changes no exercise count")
+        tick("weighted vest"); XCTAssertFalse(ticked("weighted vest"), "required: unticking works")
+        app.settleForScreenshot(1); shot("onb-4-equipment-bodyweight-sheet")
+        done()
+        XCTAssertEqual(edit.label, "2 items. Edit equipment")
+        app.settleForScreenshot(1); shot("onb-4-equipment-main-2-items")
+
+        // Gym: its own list and preset; an edit there does not touch Bodyweight
+        kit.buttons["Gym"].firstMatch.tap()
+        XCTAssertEqual(edit.label, "8 items. Edit equipment")
+        openSheet("Gym")
+        for id in ["barbell", "dumbbell", "bench", "cable", "squat rack", "machine", "kettlebell", "band"] { XCTAssertTrue(ticked(id), "required: the Gym preset provides \(id), visibly") }
+        XCTAssertFalse(app.buttons["equip-trap bar"].firstMatch.exists, "required: a gym is not assumed to have everything")
+        let gymAll = offered(); tick("barbell")
+        XCTAssertLessThan(offered(), gymAll, "required: without a barbell fewer exercises can be offered")
+        done()
+        XCTAssertEqual(edit.label, "7 items. Edit equipment")
+        kit.buttons["Bodyweight"].firstMatch.tap()
+        XCTAssertEqual(edit.label, "2 items. Edit equipment", "required: switching environments erased nothing")
+
+        // Custom: the whole catalogue with search, across categories
+        kit.buttons["Custom"].firstMatch.tap()
+        XCTAssertEqual(edit.label, "No equipment. Edit equipment")
+        openSheet("Custom")
+        let search = need(app, "equipSearch", "the catalogue search")
+        search.tap(); search.typeText("rack")
+        XCTAssertTrue(need(app, "equip-squat rack", "squat rack found by search").exists)
+        XCTAssertFalse(app.buttons["equip-dumbbell"].firstMatch.exists, "required: the search narrows the list")
+        tick("squat rack")
+        // a second search in a freshly opened sheet (retyping into a filled field has garbled text in these checks before)
+        done(); XCTAssertEqual(edit.label, "1 item. Edit equipment")
+        openSheet("Custom")
+        let search2 = need(app, "equipSearch", "the catalogue search"); search2.tap(); search2.typeText("buoy")
+        tick("pull buoy")
+        XCTAssertTrue(ticked("pull buoy"), "required: swimming equipment can be ticked beside strength equipment")
+        done()
+        XCTAssertEqual(edit.label, "2 items. Edit equipment")
+        kit.buttons["Gym"].firstMatch.tap(); XCTAssertEqual(edit.label, "7 items. Edit equipment", "required: the Gym edit is still there")
+        kit.buttons["Bodyweight"].firstMatch.tap()
+
+        // Back and Continue keep it; so does closing and reopening
+        next.tap(); page(app, 5)
+        app.buttons["onboardingBack"].firstMatch.tap(); page(app, 4)
+        XCTAssertTrue(kit.buttons["Bodyweight"].firstMatch.isSelected); XCTAssertEqual(edit.label, "2 items. Edit equipment", "required: kept after Continue and Back")
+        app.terminate()
+        let again = XCUIApplication(); again.launchEnvironment["LAB_THEME"] = "obsidian"; again.launch()
+        let counter = again.staticTexts["onboardingProgress"].firstMatch
+        XCTAssertTrue(counter.waitForExistence(timeout: 30), "required: onboarding resumes after reopening")
+        if counter.label.hasPrefix("5 of 7") { again.buttons["onboardingBack"].firstMatch.tap() }
+        page(again, 4)
+        let kit2 = need(again, "onbEquipment", "the equipment choice after reopening"), edit2 = need(again, "onbEquipmentEdit", "Edit after reopening")
+        XCTAssertTrue(kit2.buttons["Bodyweight"].firstMatch.isSelected, "required: the environment was saved")
+        XCTAssertEqual(edit2.label, "2 items. Edit equipment", "required: the Bodyweight selection was saved")
+        kit2.buttons["Custom"].firstMatch.tap(); XCTAssertEqual(edit2.label, "2 items. Edit equipment", "required: the Custom selection was saved")
+        kit2.buttons["Gym"].firstMatch.tap(); XCTAssertEqual(edit2.label, "7 items. Edit equipment", "required: the Gym selection was saved")
+        tap(again, edit2, "Edit equipment after reopening")
+        XCTAssertEqual((need(again, "equip-barbell", "barbell after reopening").value as? String), "not ticked", "required: the unticked barbell stayed unticked")
+    }
+
     /// Build your week (owner's approved direction, 21 Nov 2026, 21:18), for a cycling, gym and running athlete: seven
     /// rest days to start with; Continue needs a confirmed training day; the editor offers the athlete's own sports;
     /// a day changes only when confirmed; each session has its own length; two sessions on one day, not three; a day
@@ -675,7 +777,7 @@ final class LabFastOnboarding: XCTestCase {
             XCTAssertLessThanOrEqual(e.frame.maxY, line.frame.minY + 1, "required: \(id) is not under the Continue area (bottom \(e.frame.maxY), line starts \(line.frame.minY))")
             XCTAssertGreaterThanOrEqual(e.frame.minY, title.frame.maxY - 1, "required: \(id) is below the title")
         }
-        for t in ["Gym", "Home", "Bodyweight", "Not sure"] { XCTAssertTrue(el(app, "onbEquipment").buttons[t].firstMatch.isHittable, "required: the \(t) equipment choice is visible") }
+        for t in ["Gym", "Home", "Bodyweight", "Custom"] { XCTAssertTrue(el(app, "onbEquipment").buttons[t].firstMatch.isHittable, "required: the \(t) equipment choice is visible") }
         XCTAssertTrue(next.frame.maxY <= window.maxY && next.frame.minY >= line.frame.maxY - 1, "required: Continue is visible below the line")
         app.settleForScreenshot(1); shot("onb-4-week-multisport")
 
@@ -694,7 +796,7 @@ final class LabFastOnboarding: XCTestCase {
             XCTAssertGreaterThanOrEqual(e.frame.minY, title.frame.maxY - 1, "required: expanded editor — \(id) is below the title")
         }
         XCTAssertTrue(title.isHittable, "required: the title is still visible — the page did not need to scroll")
-        for t in ["Gym", "Home", "Bodyweight", "Not sure"] { XCTAssertTrue(el(app, "onbEquipment").buttons[t].firstMatch.isHittable, "required: expanded editor — the \(t) equipment choice is visible") }
+        for t in ["Gym", "Home", "Bodyweight", "Custom"] { XCTAssertTrue(el(app, "onbEquipment").buttons[t].firstMatch.isHittable, "required: expanded editor — the \(t) equipment choice is visible") }
         XCTAssertTrue(el(app, "onbEquipment").frame.minY >= el(app, "onbWeekCounts").frame.maxY - 1 && el(app, "onbWeekTotal").frame.minY >= el(app, "onbDayEditor").frame.maxY - 1, "required: nothing overlaps")
         app.settleForScreenshot(1); shot("onb-4-week-editing-two-sessions")
         // an unconfirmed change is marked, and leaving the day without confirming changes nothing
@@ -877,7 +979,7 @@ final class LabFastOnboarding: XCTestCase {
         tap(app, app.buttons["onbDayConfirm"].firstMatch, "confirm Tuesday")
         let kit = need(app, "onbEquipment", "the equipment choice")
         // Added after simulator run 17 ("Bodyweight" was broken mid-word): all four choices are still offered at large text.
-        for t in ["Gym", "Home", "Bodyweight", "Not sure"] { XCTAssertTrue(kit.buttons[t].firstMatch.exists, "required: the \(t) equipment choice at large text") }
+        for t in ["Gym", "Home", "Bodyweight", "Custom"] { XCTAssertTrue(kit.buttons[t].firstMatch.exists, "required: the \(t) equipment choice at large text") }
         _ = app.reveal(el(app, "onbEquipment"), top: 110, bottomMargin: 300)
         app.settleForScreenshot(1); shot("onb-large-4-week-equipment")
         next.tap(); page(app, 5)
