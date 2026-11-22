@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 19:55 (Dubai) · Screens recorded: 7
+Last updated: 22 Nov 2026, 23:40 (Dubai) · Screens recorded: 8
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -37,14 +37,14 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | INT-01 | Home | 21 Nov 2026, 20:50 | Home's training categories and icons reflect the athlete's actual sports. A runner must not see Cycling as their main Endurance card. | NOT IMPLEMENTED — for the Home review |
 | INT-02 | Train | 21 Nov 2026, 20:50 | Train's primary shortcuts are sport-aware. Other activities stay accessible, without presenting cycling as every athlete's default. | NOT IMPLEMENTED — for the Training Hub review |
 | INT-03 | Plan | 21 Nov 2026, 20:50 | Plan's 'Add a goal' flow respects the athlete's roster, with truthful handling when personalized planning is not yet available. | NOT IMPLEMENTED — for the Plan review |
-| INT-05 | Blueprint | 21 Nov 2026, 22:22 | The Blueprint shows the athlete's selected week, including sessions that are not yet prescribed. | NOT IMPLEMENTED — for the Blueprint review |
+| INT-05 | Blueprint | 21 Nov 2026, 22:22 | The Blueprint shows the athlete's selected week, including sessions that are not yet prescribed. | IMPLEMENTED in commit 91574cf5 (Screen 8 decision of 22 Nov 22:51) — simulator verification pending |
 | INT-06 | Home and Plan | 21 Nov 2026, 22:22 | Home and Plan must not lose or misrepresent the athlete's selected week. | NOT IMPLEMENTED — for the Home and Plan reviews |
 | INT-07 | Goals | 21 Nov 2026, 22:22 | The Goals summary distinguishes a provisional planner mix from the athlete's confirmed schedule. | NOT IMPLEMENTED — needs the owner's authorization to touch approved Screen 4 |
 | INT-08 | Icons (all screens) | 21 Nov 2026, 22:22 | Distinctive mobility, yoga and recovery icons — a later visual refinement. Until then the existing sport icon system is reused. | LATER REFINEMENT |
 | EQ-01 | Equipment catalogue — strength | 22 Nov 2026, 14:36 | Barbell, dumbbells, kettlebell, bench, cable machine, weight machines (grouped), resistance bands, pull-up bar, trap bar: used by the existing strength planner to choose exercises. Squat rack, dip bars, gymnastic rings, weighted vest: stored only. | IMPLEMENTED — planner support only for the nine items it already knew |
 | EQ-02 | Equipment catalogue — cycling, running, swimming, mobility and recovery | 22 Nov 2026, 14:36 | Provisional, incomplete lists for recording what an athlete has. They change no generated training and are not exercise-planning support. | PROVISIONAL — STORAGE ONLY; lists to be reviewed |
 | EQ-03 | Equipment catalogue — individual machines | 22 Nov 2026, 14:36 | Individual machine types (leg press and others) to be representable later, alongside the grouped 'Weight machines' item, which is kept for compatibility. | NOT IMPLEMENTED — structure prepared, no individual types listed |
-| INT-09 | Blueprint | 22 Nov 2026, 17:19 | The Blueprint contains obsolete FTP and Plan changes links pointing back to Screen 6, which no longer holds either. To be corrected during the Blueprint review: FTP belongs in Performance Settings; Coach plan-change preferences belong in Profile › App Preferences › Coach. The Blueprint is not to be changed before that review. | OPEN — for the Blueprint review |
+| INT-09 | Blueprint | 22 Nov 2026, 17:19 | The Blueprint contains obsolete FTP and Plan changes links pointing back to Screen 6, which no longer holds either. To be corrected during the Blueprint review: FTP belongs in Performance Settings; Coach plan-change preferences belong in Profile › App Preferences › Coach. The Blueprint is not to be changed before that review. | IMPLEMENTED in commit 91574cf5: both cells removed from the Blueprint (Screen 8 decision of 22 Nov 22:51) — simulator verification pending |
 | INT-04 | Goals (all screens) | 21 Nov 2026, 20:50 | Existing working goal names and planner mappings are retained. Goals are not renamed solely for cosmetic reasons. | IN FORCE — current behaviour |
 
 ## Summary
@@ -58,6 +58,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 5 | ONB-05 | Build Your Week | YES | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING (later rounds: see the screen's status table) | NO |
 | 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only (later rounds: see the screen's status table) | NO |
 | 7 | ONB-07 | Athlete Evolution | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); final state: check 48 (later rounds: see the screen's status table) | NO |
+| 8 | ONB-08 | Athletic Blueprint | DIRECTION ONLY | YES — awaiting verification | PENDING | PENDING | NO |
 
 ---
 
@@ -672,3 +673,80 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 22 Nov 2026, 19:47 | Approved and locked exactly as shown in run48_s7.png, commit 2402aefa. Assessment policy remains separate and inactive. Main-app, accessibility, other-theme and physical-device verification recorded as pending. | IN FORCE |
 | 22 Nov 2026, 18:47 | Layout and interactive G0–G5 progression APPROVED. Refinement: larger hero, clearer differences between consecutive stages, a neutral unassessed form distinct from G0, the label 'Previewing G3', one screen preserved. Eleven assessment decisions given as the proposed policy specification; calculation stays off. After the updated visual is approved, the review proceeds to the next onboarding screen. | IN FORCE |
 | 22 Nov 2026, 17:33 | LEFT v3.3 Y5 design chosen as the direction, with selectable stages G0–G5, distinct stage visuals in one family, three separate statuses (estimated, verified, exploring), multisport declared experience, 'Starting stage not yet assessed' until a method is approved, and a separately submitted assessment proposal. Not final approval. | IN FORCE — direction only |
+
+---
+
+## Screen 8 — Athletic Blueprint (ONB-08)
+
+- **Navigation location:** Onboarding · page 7 of 7, the last page: reached from Athlete Evolution, or directly from Build Your Week by an athlete who finishes without a plan.
+- **Approval date:** 22 Nov 2026, 22:51 — COMBINED DESIGN DIRECTION. Not final visual approval.
+- **Approval status:** COMBINED DESIGN DIRECTION APPROVED — implementation and final visual verification PENDING. Not locked.
+- **Original design reference and source:** A combination chosen by the owner on 22 Nov 2026 at 22:51: design sheet v3.3 Y5, drawing B1 (the LEFT reference) as the visual foundation and drawing B3 for the confirmation state, with the useful functionality of the current implementation (editing, navigation, approval). The sheets are illustrative drawings; obsolete data and controls on them are not reproduced.
+- **Implementation commit:** Implementation of the direction: 91574cf5 (branch ios/lab). Not in any TestFlight build.
+
+### Exact approved wording
+
+- **Section A:** YOUR TRAINING WEEK — the athlete's chosen schedule. Never labelled 'Coach's proposal'.
+- **Section B:** COACH'S TRAINING PROPOSAL — the existing planner's actual guidance, below the schedule.
+- **Button — generated plan:** Approve my blueprint
+- **Button — no plan available:** Create my profile
+- **Button — after saving:** Open Home
+- **Other strings:** Not approved one by one; to be judged on the implementation screenshots.
+
+### Approved layout, visual elements and interactions
+
+- KEY CORRECTION — the weekly schedule is chosen by the athlete; the Coach's proposal is the training guidance applied within that schedule.
+- Visual foundation Y5 / B1: compact, premium one-screen composition; name and identity at the top; sport icons with primary and additional activities; main goal clearly identified; seven-day weekly strip; concise training explanation; the athlete's declared details; final approval button.
+- YOUR TRAINING WEEK: the exact schedule confirmed on Screen 5 — all selected activities including running, swimming and other sports; activity icons and Rest days; two icons when a day has two sessions; no minutes inside the weekday tiles; weekly training time and session count shown separately; tapping the section opens Screen 5.
+- COACH'S TRAINING PROPOSAL: the planner's actual recommendations where available — emphasis, session types, intensity or recovery guidance, what is adjusted for goal and experience. For activities without planning support, the chosen schedule is preserved with a concise, truthful status, not replaced by Rest.
+- Declared details, concise: selected sports; main and additional goals; sport-specific experience where known; equipment environment and items where relevant; training priority where applicable; measured evidence only if genuinely available.
+- The complete Blueprint fits the iPhone 15 Pro at standard text size without scrolling; larger accessibility sizes may scroll. A multisport athlete with many activities gets a concise summary with a clear way to inspect everything.
+- Post-approval: the Y5 / B3 direction — clearly confirms the blueprint was approved and saved, offers Open Home.
+
+### Mandatory functionality and dependencies
+
+- No hardcoded cycling or strength explanations for every athlete. No claim of sport-specific workouts the current planning engine cannot produce.
+- The Coach's proposal never silently overrides the athlete's chosen days, activities or durations.
+- FTP and Plan changes cells are removed from this screen (FTP: Performance Settings; Coach approval preferences: Profile › App preferences › Coach). No link opens the wrong page.
+- No Evolution stage is assigned: the assessment policy is not activated.
+- Before approval: nothing is committed as a generated plan; the athlete can return to any earlier screen; the preview reflects the latest confirmed answers; the chosen schedule survives returning to earlier pages.
+- On approval: the athlete profile and declared training week are saved; only the plan the existing planner can safely generate is applied; activities without planning support are preserved as selected training preferences; nothing is fabricated and no sport is substituted.
+- An athlete with no generated plan uses the existing profile-only completion path with truthful wording.
+- Success is shown only after storage confirms the result — never when saving failed or is uncertain. For profile-only completion the confirmation says the profile and schedule were saved without claiming a training plan.
+- Existing editing, navigation and approval functionality is preserved. Screens 1–7 are not altered. Home and other app screens wait for this screen's visual approval.
+
+### Explicitly rejected alternatives
+
+- Labelling the athlete's selected week 'Coach's proposal'.
+- FTP and Plan changes on this screen; links that open the wrong page.
+- Replacing days of sports without planning support with Rest.
+- Reproducing obsolete data or controls because they appear on the reference sheet.
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY | Owner, 22 Nov 2026 22:51. Final visual approval pending. |
+| Implemented in code | YES — awaiting verification | Commit 91574cf5: one layout for every athlete; 'Your training week' from the confirmed schedule (icon-only tiles, whole-week totals); 'Coach's training proposal' with the planner's guidance for what it plans and one truthful line for sessions it does not; FTP, Plan changes and the 'interest' wording removed; measured evidence only when something is recorded; approval as one durable write with a read-back check; confirmation state with Open Home; failed and unconfirmed saves shown as such. |
+| Compiled | PENDING | Focused check 49 (run 45058524408) requested. |
+| Simulator-verified | PENDING | Focused check 49. |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** NOT YET PRESENTED.
+- **Functional verification:** Logic: 38 focused tests pass at 91574cf5 (whole-week totals; truthful status for unplanned sessions; guidance only for what is planned in the chosen week; outcome wording; the whole declared week is stored). Simulator: pending.
+
+### Remaining work or limitations
+
+- PENDING — simulator verification and the four screenshots (cycling/strength before approval; multisport; runner-only; post-approval).
+- PENDING — owner's final visual approval.
+- Not verified: redesigned main app, larger text, other themes, VoiceOver, physical iPhone.
+
+### Images
+
+- `assets/S08_blueprint_comparison_board_22756626.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y5, drawings B1 and B3 (the visual foundation). Middle: Build 6. Right: the implementation BEFORE the decision (commit 22756626; runner at 48466cec) — with the week labelled 'Coach's proposal', FTP and Plan changes, all now changed.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 22 Nov 2026, 22:51 | Combined design decision: Y5 / B1 as the visual foundation with the current implementation's working functionality; the athlete's week ('Your training week') separated from the 'Coach's training proposal'; FTP and Plan changes removed; one screen; Y5 / B3 confirmation only after a confirmed save; profile-only path kept with truthful wording. | IN FORCE — direction only |
