@@ -1,0 +1,32 @@
+FAST focused Lab check — selected: LabFastOnboarding/testAthleticBlueprintMultisport LabFastOnboarding/testARunnerCompletesOnboardingWithoutAPlan LabFastOnboarding/testAMixedRosterPlansOnlyTheGoalsChosen LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 2af0cff9 · files changed since then: 11
+TIME setup: 35s
+  timing: SwiftCompile (15 tasks) | 655.774 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 137.576 seconds
+  timing: SwiftDriver (2 tasks) | 9.724 seconds
+  timing: SwiftEmitModule (2 tasks) | 8.483 seconds
+  timing: Ld (18 tasks) | 6.879 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.098 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.317 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.235 seconds
+  stages: packages at 303s · packages prepared at 355s · dependency graph at 355s · inputs at 356s · build description at 356s · first link at 370s · first Swift step at 371s · asset catalogue at 376s · finished at 822s
+  compiled in this run: 118 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 823s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 12s
+	 Executed 4 tests, with 2 failures (0 unexpected) in 978.196 (978.209) seconds
+	 Executed 4 tests, with 2 failures (0 unexpected) in 978.196 (978.212) seconds
+	 Executed 4 tests, with 2 failures (0 unexpected) in 978.196 (978.216) seconds
+Lab/UITests/LabFastOnboarding.swift:524: error: -[CycliftLabUITests.LabFastOnboarding testARunnerCompletesOnboardingWithoutAPlan] : XCTAssertFalse failed - required: no planned session and no cycling or strength guidance on this Blueprint
+Lab/UITests/LabFastOnboarding.swift:624: error: -[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen] : XCTAssertFalse failed - required: no strength guidance for an athlete without strength
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen]' failed (175.116 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testARunnerCompletesOnboardingWithoutAPlan]' failed (282.495 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAthleticBlueprintMultisport]' passed (232.923 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (287.663 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 1121s
+TIME total on the Mac: 1996s
+commit de3a3d92fa0d5da51602500129d3f1e56118efd5  branch ios/lab
