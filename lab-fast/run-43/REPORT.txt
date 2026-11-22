@@ -1,0 +1,29 @@
+FAST focused Lab check — selected: LabFastOnboarding/testConnectYourDevices LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 48466cec · files changed since then: 7
+TIME setup: 13s
+  timing: SwiftCompile (9 tasks) | 610.792 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 169.396 seconds
+  timing: SwiftEmitModule (2 tasks) | 18.580 seconds
+  timing: SwiftDriver (2 tasks) | 13.752 seconds
+  timing: Ld (18 tasks) | 8.228 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.013 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.324 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.260 seconds
+  stages: packages at 199s · packages prepared at 292s · dependency graph at 292s · inputs at 293s · build description at 293s · first link at 317s · first Swift step at 318s · asset catalogue at 326s · finished at 693s
+  compiled in this run: 103 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 695s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 14s
+	 Executed 2 tests, with 1 failure (0 unexpected) in 448.174 (448.179) seconds
+	 Executed 2 tests, with 1 failure (0 unexpected) in 448.174 (448.180) seconds
+	 Executed 2 tests, with 1 failure (0 unexpected) in 448.174 (448.181) seconds
+Lab/UITests/LabFastOnboarding.swift:74: error: -[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan] : XCTAssertEqual failed: ("Optional("Sa")") is not equal to ("Optional("Sam")") - required: the field holds what was typed
+Test Case '-[CycliftLabUITests.LabFastOnboarding testConnectYourDevices]' passed (155.639 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' failed (292.535 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 571s
+TIME total on the Mac: 1297s
+commit a02fc5e5022ccfedaedc9369daa1ec21febba0c4  branch ios/lab
