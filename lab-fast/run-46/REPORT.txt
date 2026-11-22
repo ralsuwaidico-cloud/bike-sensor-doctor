@@ -1,0 +1,10 @@
+FAST focused Lab check — selected: LabFastOnboarding/testAthleteEvolution LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from a66577ee · files changed since then: 78
+TIME setup: 13s
+  note: the build on the kept files failed — building again from nothing
+  stages: packages at 124s · packages prepared at 220s · dependency graph at 220s · inputs at 221s · build description at 221s · first link at 228s · first Swift step at 228s · asset catalogue at 231s · finished at 237s
+  compiled in this run: 506 Swift compile step(s)
+RESULT build: FAILED · 423s
+BikeComputer/Redesign/OnboardingV34Pages.swift:983:58: error: 'nil' cannot be used in context expecting type 'Int'
+commit e8c14cd4a6d28ab83b616980d9021a2e181bc2d7  branch ios/lab
