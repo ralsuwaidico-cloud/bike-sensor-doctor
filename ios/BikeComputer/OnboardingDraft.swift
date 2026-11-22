@@ -738,6 +738,83 @@ enum DeviceCards {
     }
 }
 
+// MARK: - Onboarding › Connect your devices (owner's approved direction, 22 Nov 2026, 15:55)
+//
+// Five integrations, always in this order: Apple Health, Apple Watch, WHOOP, Garmin, Bluetooth devices. Every one is
+// optional. A row says only what is true: Connected, Not connected, Coming soon (no integration exists), or — in
+// Cyclift Lab, which connects to nothing — Not available in Lab. An action is offered only where pressing it starts a
+// real connection or opens a real settings screen; there are no decorative buttons. The Cyclift BikeComputer and the
+// separate bike-sensors row are not on this page (the BikeComputer keeps its own settings elsewhere; supported cycling
+// and heart-rate sensors are paired under Bluetooth devices). FTP is not asked here (it stays in Performance settings).
+
+struct OnbConnection: Identifiable, Equatable {
+    enum Status: Equatable {
+        case connected, notConnected, comingSoon, notInLab
+        var word: String {
+            switch self {
+            case .connected: return "Connected"; case .notConnected: return "Not connected"
+            case .comingSoon: return "Coming soon"; case .notInLab: return "Not available in Lab"
+            }
+        }
+        var symbol: String {
+            switch self {
+            case .connected: return "checkmark.circle.fill"; case .notConnected: return "circle"
+            case .comingSoon: return "clock"; case .notInLab: return "circle.dashed"
+            }
+        }
+    }
+    enum Action: Equatable {
+        case connectHealth, manageHealth, manageWatch, pairBluetooth
+        var title: String {
+            switch self { case .connectHealth: return "Connect"; case .manageHealth, .manageWatch: return "Manage"; case .pairBluetooth: return "Pair" }
+        }
+    }
+    let id: String
+    let name: String
+    let icon: String
+    let detail: String
+    let status: Status
+    /// More exact words than the status where they help ("2 paired"); otherwise nil.
+    var note: String? = nil
+    var action: Action? = nil
+}
+
+enum OnbConnections {
+    static let order = ["health", "watch", "whoop", "garmin", "bluetooth"]
+    /// What the redesigned main app knows, read from the existing connection services (nothing is requested by reading).
+    struct Live: Equatable {
+        var healthAvailable = false, healthConnected = false
+        var watchConnected = false
+        var bluetoothPaired = 0
+    }
+    /// `live == nil` is Cyclift Lab: no service is consulted and no action exists.
+    static func rows(live: Live?) -> [OnbConnection] {
+        let lab = live == nil
+        let l = live ?? Live()
+        return [
+            OnbConnection(id: "health", name: "Apple Health", icon: "heart", detail: "Workouts, weight, resting heart rate, sleep",
+                          status: lab ? .notInLab : l.healthConnected ? .connected : .notConnected,
+                          note: !lab && !l.healthAvailable ? "Not available on this device" : nil,
+                          action: lab || !l.healthAvailable ? nil : l.healthConnected ? .manageHealth : .connectHealth),
+            OnbConnection(id: "watch", name: "Apple Watch", icon: "applewatch", detail: "Heart rate while you train",
+                          status: lab ? .notInLab : l.watchConnected ? .connected : .notConnected, action: lab ? nil : .manageWatch),
+            // no WHOOP or Garmin integration exists in the app: said so, with no button
+            OnbConnection(id: "whoop", name: "WHOOP", icon: "waveform.path.ecg", detail: "Recovery, strain and sleep", status: .comingSoon),
+            OnbConnection(id: "garmin", name: "Garmin", icon: "arrow.triangle.2.circlepath", detail: "Activities and daily health", status: .comingSoon),
+            OnbConnection(id: "bluetooth", name: "Bluetooth devices", icon: "dot.radiowaves.left.and.right", detail: "Supported heart-rate, power and cadence sensors",
+                          status: lab ? .notInLab : l.bluetoothPaired > 0 ? .connected : .notConnected,
+                          note: !lab && l.bluetoothPaired > 0 ? "\(l.bluetoothPaired) paired" : nil, action: lab ? nil : .pairBluetooth),
+        ]
+    }
+    /// The Plan changes starting point for a NEW athlete in the redesigned onboarding: "Always ask me" — applied once,
+    /// the first time the choice is shown to an athlete who has not finished onboarding. An athlete who was already
+    /// asked, or who finished onboarding under an earlier version, keeps the stored value untouched.
+    static func startingPlanChanges(asked: Bool?, onboarded: Bool, current: Bool) -> (autoAdapt: Bool, asked: Bool?) {
+        guard asked != true, !onboarded else { return (current, asked) }
+        return (false, true)
+    }
+}
+
 // MARK: - Profile › Devices & Connections (sheet P06): one row per device family, state in a word and a shape
 
 /// The six connection states of sheet P06. Told apart by word and symbol, never by colour.

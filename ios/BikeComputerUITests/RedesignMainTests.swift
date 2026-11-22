@@ -63,7 +63,21 @@ final class RedesignMainTests: XCTestCase {
         XCTAssertFalse(next.isEnabled, "an equipment environment is required with a strength session")
         app.descendants(matching: .any).matching(identifier: "onbEquipment").firstMatch.buttons["Home"].firstMatch.tap()
         XCTAssertTrue(next.isEnabled); next.tap()
-        page(5); XCTAssertFalse(app.staticTexts["onbLabDevices"].firstMatch.exists, "the main app does not show the Lab devices note"); next.tap()
+        page(5); XCTAssertFalse(app.staticTexts["onbLabDevices"].firstMatch.exists, "the main app does not show the Lab devices note")
+        // Connect your devices (22 Nov 2026, 15:55), main app: five integrations; the real services are behind Apple
+        // Health, Apple Watch and Bluetooth devices (an action is offered); WHOOP and Garmin say Coming soon and offer
+        // none. Nothing is pressed here — pressing Connect is what asks for a permission.
+        func any(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        for id in ["health", "watch", "whoop", "garmin", "bluetooth"] { must(any("onbConnection-\(id)"), "the \(id) row") }
+        for id in ["whoop", "garmin"] {
+            XCTAssertEqual(any("onbConnectionStatus-\(id)").label, "Coming soon", "\(id) is not claimed to work")
+            XCTAssertFalse(app.buttons["onbConnectionAction-\(id)"].firstMatch.exists, "no button for \(id)")
+        }
+        for id in ["health", "watch", "bluetooth"] { XCTAssertNotEqual(any("onbConnectionStatus-\(id)").label, "Not available in Lab", "\(id) uses the app's real service state") }
+        must(app.buttons["onbConnectionAction-watch"].firstMatch, "Manage Apple Watch"); must(app.buttons["onbConnectionAction-bluetooth"].firstMatch, "Pair a Bluetooth device")
+        XCTAssertTrue(app.buttons["onbConnectionAction-health"].firstMatch.exists || any("onbConnectionStatus-health").label == "Not available on this device", "Apple Health offers Connect or Manage where Health exists")
+        XCTAssertFalse(any("onbFTP").exists, "FTP is not asked in onboarding")
+        XCTAssertTrue(next.isEnabled, "nothing needs connecting to continue"); next.tap()
         page(6); must(app.staticTexts["onbEvolutionStage"].firstMatch, "the no-stage statement"); next.tap()
         page(7)
         let identity = app.staticTexts["blueprintIdentity"].firstMatch

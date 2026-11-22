@@ -267,7 +267,7 @@ struct OnboardingV34View: View {
         } else if i == 4 {
             railWeekBars
         } else if i == 5 {
-            Text(ftpKnown ? "FTP" : "✓").font(.caption2.weight(.bold)).foregroundStyle(theme.textPrimary)
+            Text("✓").font(.caption2.weight(.bold)).foregroundStyle(theme.textPrimary)      // FTP is no longer asked on this page
         } else {
             Image(systemName: "circle").font(.caption2.weight(.bold)).foregroundStyle(theme.textPrimary)
         }
@@ -291,14 +291,14 @@ struct OnboardingV34View: View {
         guard let g else { return theme.textPrimary }
         return g.sport == .strength ? theme.strength : g.sport == .cycling ? theme.endurance : theme.recovery
     }
-    private static let titles = ["", "About you", "What do you train?", "What are you aiming for?", "Build your week", "Connect and calibrate", "Athlete Evolution", "Athletic Blueprint"]
+    private static let titles = ["", "About you", "What do you train?", "What are you aiming for?", "Build your week", "Connect your devices", "Athlete Evolution", "Athletic Blueprint"]
     private func railWords(_ i: Int) -> String {
         switch i {
         case 1: return a.name ?? ""
         case 2: return AthleticRoster.identityLine(sports, priority: a.priority)
         case 3: return "main goal \(a.primaryGoal?.title ?? a.goals?.first?.title ?? "")"
         case 4: return "\(ChosenWeek.totals(a.schedule ?? ChosenWeek.empty).trainingDays) training days"
-        case 5: return ftpKnown ? "FTP entered" : "seen"
+        case 5: return "seen"
         default: return "seen"
         }
     }
@@ -365,8 +365,8 @@ struct OnboardingV34View: View {
             if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "This is your schedule, saved as you set it.", after: " Personalized plans for your sports are coming soon.") }
             if !waiting.isEmpty { return CoachLine(mark: "◆", tint: theme.accent, strong: "Your schedule. ", after: "Cyclift plans your cycling and strength days; your \(waiting.joined(separator: " and ")) days are saved. Nothing is scheduled until you approve.") }
             return CoachLine(mark: "◆", tint: theme.accent, before: "This is your schedule; the Coach plans inside it. ", strong: "Nothing is scheduled until you approve.")
-        case 5: return CoachLine(mark: "◆", tint: theme.accent, strong: "Increases to your plan are presented for your approval.",
-                                 after: " Reductions that protect recovery can be applied for you if you allow it. You can review why your plan changed.")
+        case 5: return CoachLine(mark: "◆", tint: theme.accent, strong: "Increases always need your approval.",
+                                 after: " Reductions that protect recovery are applied for you only if you allow it.")
         case 6: return CoachLine(mark: "▲", tint: theme.success, before: "Your stage is earned by ", strong: "recorded training only", after: ". Nothing you answered here can raise or lower it.")
         default:
             if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "No training plan is created.", after: " Your profile, sports and goals are saved, and you can change them first.") }
@@ -891,8 +891,8 @@ struct OnboardingV34View: View {
 
     private var pageConnect: some View {
         VStack(alignment: .leading, spacing: CySpace.m) {
-            heading(5, "Connect", "Connect and calibrate")
-            OnbConnectPage(a: $a, ftpKnown: $ftpKnown, ftpText: $ftpText, mode: mode, onEditingEnded: { toTop += 1 })
+            heading(5, "Connect", "Connect your devices", compact: true)
+            OnbConnectPage()
         }
     }
 

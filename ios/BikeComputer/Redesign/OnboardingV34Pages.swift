@@ -836,105 +836,133 @@ struct OnbEquipmentSheet: View {
     }
 }
 
-// MARK: - Page 5 · Connect and calibrate (sheet Y1, page 5)
+// MARK: - Page 5 · Connect your devices (sheet Y1, page 5 — owner's approved direction, 22 Nov 2026, 15:55)
+//
+// The compact connection rows of the sheet: five integrations in a fixed order with truthful statuses, an action only
+// where it does something real, then the Plan changes preference. No FTP. Lab consults no service and offers no action.
 
 struct OnbConnectPage: View {
     @EnvironmentObject private var store: Store
-    @Binding var a: OnboardingAnswers
-    @Binding var ftpKnown: Bool
-    @Binding var ftpText: String
-    let mode: TrainingMode
-    /// Called when the FTP field gives up the keyboard, so the onboarding screen can bring the page title back.
-    var onEditingEnded: () -> Void = {}
-    @FocusState private var ftpFocused: Bool
     @Environment(\.cyTheme) private var theme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: CySpace.m) {
+        VStack(alignment: .leading, spacing: 10) {
             if CycliftLab.isLab {
-                Text("Cyclift Lab: sensors, Apple Health and location are switched off in this demo app, so nothing can be connected here.")
+                Text("Cyclift Lab: connections are switched off in this demo app.")
                     .font(CyDyn.f(13)).foregroundStyle(theme.warning).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("onbLabDevices")
             }
             OnbGroupHeader(mark: .measured, title: "Connections", trailing: "all optional")
-            if CycliftLab.isLab { labRows } else { DeviceCardList() }
-            if mode.includesCycling { ftp }
+            if CycliftLab.isLab { OnbConnectionRows(rows: OnbConnections.rows(live: nil)) { _ in } } else { OnbLiveConnections() }
             planChanges
         }
-        .onChange(of: ftpFocused) { _, focused in if !focused { onEditingEnded() } }
-    }
-
-    /// Lab connects to nothing: the sheet's rows, each saying it is switched off. No state is imitated.
-    private var labRows: some View {
-        var rows: [(String, String, String)] = [("heart", "Apple Health", "Workouts, weight, resting HR, sleep"), ("applewatch", "Apple Watch", "Heart rate while you train")]
-        if mode.includesCycling {
-            rows.append(("rectangle.portrait", "Cyclift BikeComputer", "Live ride display"))
-            rows.append(("bolt", "Bike sensors", "Power, heart rate, cadence"))
-        }
-        return VStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { row in
-                HStack(spacing: CySpace.m) {
-                    Image(systemName: row.element.0).font(CyDyn.f(15)).foregroundStyle(theme.textSecondary).frame(width: 24).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(row.element.1).font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                        Text(row.element.2).font(CyDyn.f(12)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: CySpace.s)
-                    Text("off in Lab").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
-                }
-                // Simulator run 17: the page was about 45 pt taller than the iPhone 15 Pro screen, so after the FTP
-                // keyboard it rested with its title under the rail. These rows are not controls; they are drawn tighter.
-                .padding(.vertical, 5).frame(minHeight: 44)
-                .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
-                .accessibilityElement(children: .combine)
-                .accessibilityIdentifier("onbConnection-\(row.offset)")
-            }
-        }
-    }
-
-    /// The FTP question, same rule as before: "Don't know", or a typed number in 50–600 W. No watts are ever guessed.
-    private var ftp: some View {
-        VStack(alignment: .leading, spacing: CySpace.s) {
-            OnbGroupHeader(mark: .declared, title: "FTP", trailing: "declared by you — not tested")
-            CyChoiceBar(options: [(false, "Don't know"), (true, "I know it")], selection: Binding(get: { ftpKnown }, set: { v in
-                ftpKnown = v
-                if !v { a.ftpSource = .unknown; a.ftpWatts = nil; ftpText = "" } else { a.ftpSource = nil }
-            }))
-            .accessibilityIdentifier("onbFTP")
-            if ftpKnown {
-                HStack(spacing: CySpace.s) {
-                    TextField("FTP", text: $ftpText).keyboardType(.numberPad)
-                        .font(CyDyn.f(20, .bold)).foregroundStyle(theme.textPrimary)
-                        .onChange(of: ftpText) { _, v in
-                            // Entered only with a typed number in 50–600 W; otherwise the FTP stays Unknown
-                            if let n = Int(v), (50...600).contains(n) { a.ftpWatts = n; a.ftpSource = .entered }
-                            else { a.ftpWatts = nil; a.ftpSource = .unknown }
-                        }
-                        .focused($ftpFocused)
-                        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { ftpFocused = false }.accessibilityIdentifier("keyboardDone") } }
-                        .accessibilityLabel("FTP in watts").accessibilityIdentifier("onbFTPWatts")
-                    Text("watts").font(CyDyn.f(13)).foregroundStyle(theme.textSecondary)
-                }
-                .padding(.horizontal, 14).frame(minHeight: 48)
-                .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(theme.surface))
-                if a.ftpWatts == nil {
-                    Text("Type your FTP in watts (50–600). Until then it stays Unknown.").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            } else {
-                Text("Rides use heart rate and effort until you know it. No watts are ever guessed.").font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        .onAppear {
+            // "Always ask me" is where a new athlete starts; a stored choice is never overwritten
+            let s = OnbConnections.startingPlanChanges(asked: store.settings.planChangesAsked, onboarded: store.onboarded, current: store.settings.autoAdapt)
+            if s.asked != store.settings.planChangesAsked { store.settings.autoAdapt = s.autoAdapt; store.settings.planChangesAsked = s.asked }
         }
     }
 
     /// The Coach preference the app already has (Profile › Coach, "Adjust future sessions automatically"). On = the
     /// Coach's written rules may apply reductions; every increase still waits for approval either way.
     private var planChanges: some View {
-        VStack(alignment: .leading, spacing: CySpace.s) {
+        VStack(alignment: .leading, spacing: 6) {
             OnbGroupHeader(mark: .proposal, title: "Plan changes", trailing: "rules-based Coach")
             CyChoiceBar(options: [(false, "Always ask me"), (true, "Auto-apply reductions")], selection: $store.settings.autoAdapt)
                 .accessibilityIdentifier("onbPlanChanges")
+        }
+    }
+}
+
+/// The rows themselves: icon, name and what it provides, the status in a word and a symbol, and the action if there is one.
+struct OnbConnectionRows: View {
+    let rows: [OnbConnection]
+    let perform: (OnbConnection.Action) -> Void
+    @Environment(\.cyTheme) private var theme
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(rows) { r in
+                HStack(spacing: 10) {
+                    Image(systemName: r.icon).font(CyDyn.f(15)).foregroundStyle(theme.textSecondary).frame(width: 24).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(r.name).font(CyDyn.f(16, .semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                        Text(r.detail).font(CyDyn.f(12)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 6)
+                    HStack(spacing: 4) {
+                        Image(systemName: r.status.symbol).font(.system(size: 11, weight: .semibold)).accessibilityHidden(true)
+                        Text(r.note ?? r.status.word).font(CyDyn.f(12, .medium)).lineLimit(2).multilineTextAlignment(.trailing)
+                    }
+                    .foregroundStyle(r.status == .connected ? theme.success : theme.textSecondary)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(r.note ?? r.status.word)
+                    .accessibilityIdentifier("onbConnectionStatus-\(r.id)")
+                    if let a = r.action {
+                        Button { perform(a) } label: {
+                            Text(a.title).font(CyDyn.f(13, .semibold)).foregroundStyle(theme.textPrimary)
+                                .padding(.horizontal, 12).frame(minHeight: 30)
+                                .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
+                                .frame(minHeight: CyHit.min).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(a.title) \(r.name)").accessibilityIdentifier("onbConnectionAction-\(r.id)")
+                    }
+                }
+                .padding(.vertical, 4).frame(minHeight: 48)
+                .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("onbConnection-\(r.id)")
+            }
+        }
+    }
+}
+
+/// The redesigned main app only (never built into the view tree in Lab): statuses read from the existing connection
+/// services, and each action is the existing one — Apple Health's own permission request, the existing Apple Watch and
+/// Apple Health settings screens, and the existing Bluetooth pairing screen. A permission is asked for only when the
+/// athlete presses Connect.
+struct OnbLiveConnections: View {
+    @EnvironmentObject private var store: Store
+    @EnvironmentObject private var device: DeviceLink
+    @EnvironmentObject private var watch: WatchLink
+    @EnvironmentObject private var health: HealthAccess
+    @EnvironmentObject private var hub: SensorHub
+    @EnvironmentObject private var location: LocationService
+    private enum Sheet: String, Identifiable { case pair, health, watch; var id: String { rawValue } }
+    @State private var sheet: Sheet? = nil
+    @State private var healthNote: String? = nil
+    @Environment(\.cyTheme) private var theme
+
+    private var live: OnbConnections.Live {
+        OnbConnections.Live(healthAvailable: health.available,
+                            healthConnected: hub.deviceStates[DeviceCards.healthId]?.state.isConnectedOrBetter ?? false,
+                            watchConnected: hub.deviceStates[DeviceCards.watchId]?.state.isConnectedOrBetter ?? false,
+                            bluetoothPaired: hub.ble.paired.count)
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            OnbConnectionRows(rows: OnbConnections.rows(live: live)) { action in
+                switch action {
+                case .connectHealth:
+                    store.settings.appleHealthWanted = true
+                    health.request { ok in healthNote = ok ? nil : "Not allowed. Change it in iOS Settings › Health." }
+                case .manageHealth: sheet = .health
+                case .manageWatch: sheet = .watch
+                case .pairBluetooth: sheet = .pair
+                }
+            }
+            if let n = healthNote { Text(n).font(CyDyn.f(12)).foregroundStyle(theme.warning).accessibilityIdentifier("onbHealthNote") }
+        }
+        .onAppear { hub.refresh(device: device, watch: watch, location: location, powerVerified: PowerTrust.meterVerified) }
+        .sheet(item: $sheet, onDismiss: { hub.refresh(device: device, watch: watch, location: location, powerVerified: PowerTrust.meterVerified) }) { which in
+            NavigationStack {
+                switch which {
+                case .pair: BLEPairView(ble: hub.ble).navigationTitle("Add a sensor").navigationBarTitleDisplayMode(.inline)
+                case .health: HealthConnectionDetail()
+                case .watch: WatchConnectionDetail()
+                }
+            }
         }
     }
 }

@@ -352,6 +352,52 @@ final class RosterGoalsTests: XCTestCase {
         XCTAssertEqual(EquipmentGroup.allCases.filter(\.isProvisional), [.cycling, .running, .swimming, .mobility])
         XCTAssertTrue(EquipmentCatalogue.items.filter { $0.group.isProvisional }.allSatisfy { !$0.planner }, "no provisional item is presented as used for planning")
     }
+    // MARK: Connect your devices (owner's approved direction, 22 Nov 2026, 15:55)
+
+    /// Five integrations in a fixed order; Lab offers nothing and consults nothing; WHOOP and Garmin are never claimed.
+    func testConnectionRowsAreTruthful() {
+        let lab = OnbConnections.rows(live: nil)
+        XCTAssertEqual(lab.map(\.name), ["Apple Health", "Apple Watch", "WHOOP", "Garmin", "Bluetooth devices"])
+        XCTAssertEqual(lab.map(\.id), OnbConnections.order)
+        XCTAssertTrue(lab.allSatisfy { $0.action == nil }, "no button in Lab")
+        XCTAssertEqual(lab.map(\.status), [.notInLab, .notInLab, .comingSoon, .comingSoon, .notInLab])
+        let fresh = OnbConnections.rows(live: .init(healthAvailable: true))
+        XCTAssertEqual(fresh.map(\.status), [.notConnected, .notConnected, .comingSoon, .comingSoon, .notConnected])
+        XCTAssertEqual(fresh.map(\.action), [.connectHealth, .manageWatch, nil, nil, .pairBluetooth], "an action only where a real service exists")
+        let on = OnbConnections.rows(live: .init(healthAvailable: true, healthConnected: true, watchConnected: true, bluetoothPaired: 2))
+        XCTAssertEqual(on.map(\.status), [.connected, .connected, .comingSoon, .comingSoon, .connected])
+        XCTAssertEqual(on[0].action, .manageHealth); XCTAssertEqual(on[4].note, "2 paired")
+        let noHealth = OnbConnections.rows(live: .init(healthAvailable: false))[0]
+        XCTAssertNil(noHealth.action, "no Connect button where Apple Health does not exist"); XCTAssertEqual(noHealth.note, "Not available on this device")
+        XCTAssertFalse((lab + fresh + on).contains { $0.name.contains("BikeComputer") || $0.name.contains("sensors") })
+    }
+    /// "Always ask me" is where a new athlete starts — once; a stored choice and an existing athlete's are never changed.
+    func testPlanChangesStartingPoint() {
+        var r = OnbConnections.startingPlanChanges(asked: nil, onboarded: false, current: true)
+        XCTAssertFalse(r.autoAdapt); XCTAssertEqual(r.asked, true)
+        r = OnbConnections.startingPlanChanges(asked: true, onboarded: false, current: true)
+        XCTAssertTrue(r.autoAdapt, "a choice already made in onboarding is kept")
+        r = OnbConnections.startingPlanChanges(asked: nil, onboarded: true, current: true)
+        XCTAssertTrue(r.autoAdapt, "an existing athlete's preference is untouched"); XCTAssertNil(r.asked)
+        XCTAssertTrue(AppSettings().autoAdapt, "the app-wide default itself is unchanged")
+    }
+    /// FTP is no longer asked in onboarding: answers without an FTP leave the stored one exactly as it is, and an
+    /// athlete who never entered one stays Unknown.
+    func testOnboardingWithoutFTPLeavesTheStoredFTPAlone() {
+        let (s, _) = freshStore()
+        s.profile.setFTP(230, source: .entered)
+        let stored = (s.profile.ftpValue, s.profile.ftpSource, s.profile.ftpHow)
+        var a = OnboardingAnswers(); a.name = "Sam"; a.activities = ["roadCycling"]; a.mode = .cycling
+        XCTAssertNil(a.ftpSource); XCTAssertNil(a.ftpWatts)
+        OnboardingOutcome.commit(a, to: s)
+        XCTAssertEqual(s.profile.ftpValue, 230)
+        XCTAssertEqual(s.profile.ftpSource, stored.1); XCTAssertEqual(s.profile.ftpHow, stored.2, "a stored FTP and its source are not touched")
+        let (n, _) = freshStore()
+        let before = (n.profile.ftpKnown, n.profile.ftpValue)
+        OnboardingOutcome.commit(a, to: n)
+        XCTAssertEqual(n.profile.ftpKnown, before.0); XCTAssertEqual(n.profile.ftpValue, before.1, "nothing is invented for a new athlete")
+        XCTAssertFalse(n.profile.ftpKnown, "a new athlete's FTP is Unknown")
+    }
     /// The marker of an athlete without a plan is additive, off by default, and survives saving.
     func testProfileOnlyMarker() throws {
         XCTAssertFalse(RiderProfile().isProfileOnly)

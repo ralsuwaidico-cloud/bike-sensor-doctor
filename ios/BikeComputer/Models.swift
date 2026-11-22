@@ -698,6 +698,10 @@ struct AppSettings: Codable, Equatable {
     var rideLayout: RideLayout = .coach
     /// Adaptive coach: small bounded changes to future sessions are applied automatically (always listed, undoable).
     var autoAdapt = true
+    /// Redesigned onboarding (22 Nov 2026): set once the athlete has been shown the Plan changes choice there, so the
+    /// "Always ask me" starting point for a NEW athlete is applied once and a stored choice is never overwritten.
+    /// nil for every existing athlete — their `autoAdapt` is left exactly as it is. Additive.
+    var planChangesAsked: Bool? = nil
     /// Checkpoint F: the ride screen's appearance — Night (default: the approved dark cockpit), Daylight (the high-contrast
     /// outdoor display), Auto (follows `appearance`). Presentation only.
     enum RideDisplay: String, Codable, CaseIterable { case night, daylight, auto; var title: String { self == .auto ? "Auto" : self == .daylight ? "Daylight" : "Night" } }
@@ -729,6 +733,7 @@ struct AppSettings: Codable, Equatable {
         bleSensors = (try? c.decodeIfPresent([PairedSensor].self, forKey: .bleSensors)) ?? []
         rideLayout = (try? c.decodeIfPresent(RideLayout.self, forKey: .rideLayout)) ?? .coach
         autoAdapt = (try? c.decodeIfPresent(Bool.self, forKey: .autoAdapt)) ?? true
+        planChangesAsked = try? c.decodeIfPresent(Bool.self, forKey: .planChangesAsked)
     }
 }
 
