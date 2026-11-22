@@ -660,7 +660,7 @@ SCREENS = [
                   "A page hardcoded to cycling and strength; six unrelated stage illustrations."],
         commits="Implementation of the direction: c9e194c9, build fix 22756626; refinement of 18:47: 2402aefa (branch ios/lab). Not in any TestFlight build.",
         stages=[("Approved design", "YES", "Owner, 22 Nov 2026 19:47: approved and locked exactly as shown in run48_s7.png, commit 2402aefa. Layout and interaction 18:47; direction 17:33."),
-                ("Implemented in code", "YES — awaiting review", "Commit c9e194c9: explorable rail (a view state that is not stored), provisional names and proposed "
+                ("Implemented in code", "YES", "Final state 2402aefa. First implementation c9e194c9: explorable rail (a view state that is not stored), provisional names and proposed "
                  "descriptions, a proposed set of stage images (six stages × six themes, drawn by the same routine as the approved Welcome artwork), roster-based "
                  "declared and evidence lines, status 'Starting stage not yet assessed'. No assessment is calculated."),
                 ("Compiled", "YES", "Lab app built in focused check 47 (run 45029975902) at commit 22756626. Check 46 (run 45028993447, c9e194c9) FAILED TO BUILD: one "
