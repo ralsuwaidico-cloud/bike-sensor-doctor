@@ -800,6 +800,54 @@ final class LabFastOnboarding: XCTestCase {
         need(app, "onbConnection-bluetooth", "the page again after Back")
     }
 
+    // MARK: Home — full-page captures for the owner's visual review (23 Nov 2026). CAPTURE ONLY: these change nothing
+    // in the app and assert only that Home was reached; the pictures are stitched into one image per state afterwards.
+
+    /// Consecutive screenshots of a scrolling page from the top to the end: each step drags the page up by the same
+    /// distance and holds before lifting, so the page does not coast and no content is skipped between two pictures.
+    private func captureFullPage(_ app: XCUIApplication, _ name: String, steps: Int = 12) {
+        app.settleForScreenshot(1); shot("\(name)-00")
+        for i in 1...steps {
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62))
+            from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: -300)), withVelocity: .slow, thenHoldForDuration: 0.4)
+            Thread.sleep(forTimeInterval: 0.6)
+            shot(String(format: "%@-%02d", name, i))
+        }
+    }
+    /// Home of the Lab's demonstration athlete: a plan, ride history and a strength session today.
+    func testCaptureHomeDemoAthlete() {
+        let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launch()
+        XCTAssertTrue(el(app, "homeGreeting").waitForExistence(timeout: 30) || app.buttons["Home"].firstMatch.waitForExistence(timeout: 10), "required: Home of the demonstration athlete")
+        captureFullPage(app, "home-demo")
+    }
+    /// Home of a new cycling and strength athlete straight after approving a plan.
+    func testCaptureHomeNewAthleteWithPlan() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["roadCycling", "strength"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        el(app, "goal-endurance").tap()
+        next.tap(); page(app, 4)
+        for d in 0..<7 { app.chooseWeekDay(d, [d % 2 == 0 ? "strength" : "roadCycling"]) }      // every day, so today always holds a session
+        need(app, "onbEquipment", "the equipment choice").buttons["Home"].firstMatch.tap()
+        next.tap(); page(app, 5); next.tap(); page(app, 6); next.tap(); page(app, 7)
+        app.buttons["onbCreatePlan"].firstMatch.tap(); app.openHomeFromBlueprint()
+        XCTAssertTrue(app.waitForHome(name: "Sam", timeout: 20), "required: Home after approval")
+        captureFullPage(app, "home-plan")
+    }
+    /// Home of a runner who finished onboarding without a generated plan.
+    func testCaptureHomeAthleteWithoutPlan() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["running"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        el(app, "goal-runPace").tap()
+        next.tap(); page(app, 4)
+        app.chooseWeekDay(0, ["running"]); app.chooseWeekDay(3, ["running"])
+        next.tap(); page(app, 7)
+        app.buttons["onbCreateProfile"].firstMatch.tap(); app.openHomeFromBlueprint()
+        XCTAssertTrue(el(app, "homeGreeting").waitForExistence(timeout: 20), "required: Home after Create my profile")
+        captureFullPage(app, "home-noplan")
+    }
+
     /// Athletic Blueprint (owner's combined decision, 22 Nov 2026, 22:51), for a multisport athlete — cycling and gym
     /// planned, running not yet: every chosen activity is in "Your training week", two sessions on one
     /// day included, with the right totals; the Coach section guides only what it plans and says truthfully that the
