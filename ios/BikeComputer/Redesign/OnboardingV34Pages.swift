@@ -788,6 +788,9 @@ struct OnbEquipmentSheet: View {
         }
         .padding(.horizontal, CySpace.l).padding(.top, CySpace.l)
         .background(theme.background.ignoresSafeArea())
+        // a container: its own identifier must not replace its children's (check 40: without this the title, tick
+        // boxes and Done could not be found by theirs)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("equipSheet")
     }
     private func row(_ item: EquipmentItem) -> some View {
