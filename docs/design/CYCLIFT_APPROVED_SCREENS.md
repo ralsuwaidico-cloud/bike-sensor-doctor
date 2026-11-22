@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 17:30 (Dubai) · Screens recorded: 6
+Last updated: 22 Nov 2026, 17:40 (Dubai) · Screens recorded: 6
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -44,6 +44,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | EQ-01 | Equipment catalogue — strength | 22 Nov 2026, 14:36 | Barbell, dumbbells, kettlebell, bench, cable machine, weight machines (grouped), resistance bands, pull-up bar, trap bar: used by the existing strength planner to choose exercises. Squat rack, dip bars, gymnastic rings, weighted vest: stored only. | IMPLEMENTED — planner support only for the nine items it already knew |
 | EQ-02 | Equipment catalogue — cycling, running, swimming, mobility and recovery | 22 Nov 2026, 14:36 | Provisional, incomplete lists for recording what an athlete has. They change no generated training and are not exercise-planning support. | PROVISIONAL — STORAGE ONLY; lists to be reviewed |
 | EQ-03 | Equipment catalogue — individual machines | 22 Nov 2026, 14:36 | Individual machine types (leg press and others) to be representable later, alongside the grouped 'Weight machines' item, which is kept for compatibility. | NOT IMPLEMENTED — structure prepared, no individual types listed |
+| INT-09 | Blueprint | 22 Nov 2026, 17:19 | The Blueprint contains obsolete FTP and Plan changes links pointing back to Screen 6, which no longer holds either. To be corrected during the Blueprint review: FTP belongs in Performance Settings; Coach plan-change preferences belong in Profile › App Preferences › Coach. The Blueprint is not to be changed before that review. | OPEN — for the Blueprint review |
 | INT-04 | Goals (all screens) | 21 Nov 2026, 20:50 | Existing working goal names and planner mappings are retained. Goals are not renamed solely for cosmetic reasons. | IN FORCE — current behaviour |
 
 ## Summary
@@ -55,7 +56,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 3 | ONB-03 | Athletic Roster | YES | YES — selection only | YES | FUNCTION: PARTLY. VISUAL: NOT YET | NO |
 | 4 | ONB-04 | Goals | YES | YES | YES | YES — visual and functional | NO |
 | 5 | ONB-05 | Build Your Week | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | YES — functional (Lab, Obsidian, iPhone 15 Pro) | NO |
-| 6 | ONB-06 | Connect Your Devices | DIRECTION ONLY | YES | YES | LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — VISUAL PENDING. MAIN APP: NOT YET | LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — FINAL VISUAL APPROVAL PENDING | YES for the previous commit a02fc5e5 (same rows, earlier subtitles; Plan changes still on the page) | NO |
+| 6 | ONB-06 | Connect Your Devices | YES | YES | YES | LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — VISUAL PENDING. MAIN APP: NOT YET | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | YES for the previous commit a02fc5e5 (same rows, earlier subtitles; Plan changes still on the page) | NO |
 
 ---
 
@@ -499,9 +500,9 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 ## Screen 6 — Connect Your Devices (ONB-06)
 
 - **Navigation location:** Onboarding · page 5 of 7, after Build Your Week. Not shown to an athlete who finishes without a plan.
-- **Approval date:** 22 Nov 2026, 15:55 (design direction with modifications)
-- **Approval status:** VISUAL DIRECTION APPROVED (22 Nov 2026, 16:34; layout of fast-onb-5-connect-your-devices.png, commit a02fc5e5) — final wording and functional verification pending
-- **Original design reference and source:** Onboarding v3.3 design sheet Y1, page 5 (the LEFT column of the Screen 6 comparison board) — the compact connection-row design — WITH MODIFICATIONS. The sheet is an illustrative drawing; its title, its rows and its FTP block are changed by the decision.
+- **Approval date:** 22 Nov 2026, 15:55 (direction); 16:34 (layout, with refinements); approved and locked 17:19
+- **Approval status:** APPROVED AND LOCKED (22 Nov 2026, 17:19; fast-onb-5-connect-your-devices.png, commit a66577ee) — visually approved; functionally verified in the iPhone 15 Pro Lab simulator. Do not change without the owner's approval
+- **Original design reference and source:** Canonical design: the implementation screenshot the owner approved on 22 Nov 2026 at 17:19 (fast-onb-5-connect-your-devices.png, iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a66577ee). Origin: onboarding v3.3 design sheet Y1, page 5 (the LEFT column of the Screen 6 comparison board) — the compact connection-row design — WITH MODIFICATIONS. The sheet is an illustrative drawing; its title, its rows and its FTP block are changed by the decision.
 - **Implementation commit:** First implementation a02fc5e5; refinement a66577ee (branch ios/lab). Not in any TestFlight build.
 
 ### Exact approved wording
@@ -549,29 +550,29 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | Stage | State | Evidence |
 |---|---|---|
-| Approved design | DIRECTION ONLY | Owner, 22 Nov 2026 15:55. Not final visual approval. |
+| Approved design | YES | Owner, 22 Nov 2026 17:19: approved and locked exactly as shown, commit a66577ee. |
 | Implemented in code | YES | Commit a02fc5e5. One additive stored marker for the Plan changes starting point; the app-wide default is unchanged. |
 | Compiled | YES | Lab app built in focused check 43 (run 45020206508). |
 | Simulator-verified | LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — VISUAL PENDING. MAIN APP: NOT YET | Focused check 43, run 45020206508, commit a02fc5e5: the Connect your devices check PASSED — new title; the five integrations in order; Apple Health, Apple Watch and Bluetooth devices read 'Not available in Lab', WHOOP and Garmin 'Coming soon'; no Connect, Manage or Pair button in Lab; no BikeComputer row, bike-sensors row, FTP or 'calibrate'; 'Always ask me' selected for a new athlete; all rows, the preference and Continue on one screen below the title; Continue works with nothing connected; the preference is kept after Continue and Back and after reopening, and is not reset. In the same run the seven-page journey FAILED on page 1 (the typed name 'Sam' arrived as 'Sa' — About You, before this screen); re-run requested. Logic: 607 tests, 0 failures, including a stored FTP left untouched and a new athlete's FTP staying Unknown. Main app (real services): run 45022440091 requested, not yet reported. |
-| Simulator-verified — refinement of 22 Nov 16:34 | LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — FINAL VISUAL APPROVAL PENDING | Focused check 45, run 45023216295, commit a66577ee, 2 of 2 passed. Connect your devices: the five rows in order with the owner's subtitles and the same statuses; no Plan changes section and no wording about approval or reductions; the line 'Connect now or set up your devices later in Profile.'; one screen; Continue enabled with nothing connected; no system permission prompt; Back returns to the page. Seven-page journey: reaches an approved plan, and the Blueprint shows 'Always ask me' for a new athlete who was never asked. |
+| Simulator-verified — refinement of 22 Nov 16:34 | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | Focused check 45, run 45023216295, commit a66577ee, 2 of 2 passed. Connect your devices: the five rows in order with the owner's subtitles and the same statuses; no Plan changes section and no wording about approval or reductions; the line 'Connect now or set up your devices later in Profile.'; one screen; Continue enabled with nothing connected; no system permission prompt; Back returns to the page. Seven-page journey: reaches an approved plan, and the Blueprint shows 'Always ask me' for a new athlete who was never asked. |
 | Simulator-verified — redesigned main app | YES for the previous commit a02fc5e5 (same rows, earlier subtitles; Plan changes still on the page) | iOS run 308 (GitHub run 45022440091), 7 of 7 passed: in the main app the five rows exist; Apple Health, Apple Watch and Bluetooth devices show the app's real service state, with Manage for Apple Watch, Pair for Bluetooth and an Apple Health action where Health exists; WHOOP and Garmin read 'Coming soon' with no button; FTP is not asked; Continue works with nothing connected; the new athlete reaches an approved plan; the main app without the redesign setting keeps the existing interface. Not re-run on a66577ee. |
 | Physically verified on iPhone | NO |  |
 
-- **Visual verification:** PENDING — owner to review the simulator screenshot with connection statuses and the Coach preference.
+- **Visual verification:** APPROVED by the owner on 22 Nov 2026, 17:19, exactly as shown (commit a66577ee). Obsidian, iPhone 15 Pro simulator, Cyclift Lab only.
 - **Functional verification:** Lab simulator: passed at a02fc5e5 (see stages). Main app, larger text, other themes, VoiceOver and a physical iPhone: not verified.
 
 ### Remaining work or limitations
 
-- Owner's final visual approval of the refined screenshot (sent 22 Nov), after which the screen is locked.
-- Not verified: the Profile › Coach switch opened on the simulator in this round (it was not changed); the main app on commit a66577ee; whether the main app shows any permission prompt on this page without Connect being pressed (needs a real iPhone); larger text, other themes, VoiceOver.
-- Blueprint still shows FTP and Plan changes lines whose taps lead to this page, which no longer holds either — for the Blueprint review.
-- Whether pressing nothing on this page triggers any permission prompt in the main app is unproven until checked there and on a real iPhone.
-- Blueprint still shows an FTP line whose tap leads to this page, which no longer has FTP — for the Blueprint review.
-- After visual approval: Screen 7, three-column comparison.
+- PENDING — redesigned main app on the exact latest commit (a66577ee): last verified on a02fc5e5 (iOS run 308), before the subtitles changed and Plan changes was removed.
+- PENDING — real-device permissions: whether the main app shows any permission prompt on this page without Connect being pressed; the Apple Health request, Apple Watch and Bluetooth pairing on a physical iPhone.
+- PENDING — accessibility: larger text sizes, VoiceOver.
+- PENDING — the other five themes.
+- Not checked on screen in this round: the Profile › Coach switch (unchanged). A full Lab regression has not been run on this commit.
+- FOLLOW-UP (INT-09): the Blueprint's obsolete FTP and Plan changes links back to this screen, to be corrected in the Blueprint review.
 
 ### Images
 
-- `assets/S06_connect_refined_sim_a66577ee.png` — REFINED IMPLEMENTATION — FINAL APPROVAL PENDING. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a66577ee (check 45): the owner's subtitles, no Plan changes, the one line above Continue.
+- `assets/S06_connect_refined_sim_a66577ee.png` — APPROVED DESIGN — as implemented. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a66577ee (check 45): the owner's subtitles, no Plan changes, the one line above Continue.
 - `assets/S06_connect_impl_sim_a02fc5e5.png` — LAYOUT APPROVED 22 Nov 2026 16:34; its subtitles, Plan changes section and bottom paragraph are then changed. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a02fc5e5 (check 43).
 - `assets/S06_connect_comparison_board_0281b566.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y1, page 5 (the chosen visual reference, before the modifications). Middle: Build 6 (commit 9b9d3a68). Right: the implementation BEFORE the decision (commit 0281b566) — with the old title, BikeComputer and bike-sensor rows and FTP, all now removed.
 
@@ -581,3 +582,4 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 |---|---|---|
 | 22 Nov 2026, 15:55 | Sheet Y1 page 5 chosen as the visual reference with modifications: title 'Connect your devices'; five integrations in a fixed order; BikeComputer and the bike-sensors row removed from this page; FTP removed from onboarding and preserved elsewhere; truthful statuses and functional actions only; Lab isolation; 'Always ask me' as a new athlete's default; one screen at standard text size. | IN FORCE — Plan changes on this page superseded 16:34 |
 | 22 Nov 2026, 16:34 | Overall layout of fast-onb-5-connect-your-devices.png (a02fc5e5) APPROVED, with changes: the owner's five subtitles; the Plan changes section removed from onboarding (it belongs to Profile › App preferences › Coach); only one short line above Continue; iPhone-first device strategy recorded. | IN FORCE |
+| 22 Nov 2026, 17:19 | Approved and locked exactly as shown in fast-onb-5-connect-your-devices.png, commit a66577ee. Main-app verification on the latest commit, real-device permissions, accessibility and other themes recorded as pending. | IN FORCE |
