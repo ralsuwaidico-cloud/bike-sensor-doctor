@@ -1,2 +1,2 @@
-LabFastOnboarding/testAthleticBlueprintMultisport LabFastOnboarding/testARunnerCompletesOnboardingWithoutAPlan LabFastOnboarding/testAMixedRosterPlansOnlyTheGoalsChosen LabFastOnboarding/testSevenPagesApproveHomePlan
-request 50: Athletic Blueprint (after check 49)
+LabFastOnboarding/testCaptureHomeDemoAthlete LabFastOnboarding/testCaptureHomeNewAthleteWithPlan LabFastOnboarding/testCaptureHomeAthleteWithoutPlan
+request 51: Home full-page captures for visual review
