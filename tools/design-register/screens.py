@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "22 Nov 2026, 15:20 (Dubai)"
+UPDATED = "22 Nov 2026, 16:20 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -360,7 +360,7 @@ SCREENS = [
         number=5, id="ONB-05", name="Build Your Week",
         location="Onboarding · page 4 of 7, after Goals. Every athlete builds their week here, including athletes whose sports have no planner yet.",
         approved_on="21 Nov 2026, 21:18 (direction); calendar and scheduling layout 22 Nov 13:34; Equipment presentation 22 Nov 14:36",
-        status="VISUAL DESIGN APPROVED (calendar and scheduling: run39_s5.png, 8dbbd54a; Equipment: run41_s5_equipment.png, e5f4819a) — functional and copy refinements of 22 Nov 14:36 pending verification",
+        status="VISUAL DESIGN APPROVED (calendar and scheduling: run39_s5.png, 8dbbd54a; Equipment: run41_s5_equipment.png, e5f4819a) — functional and copy refinements of 22 Nov 14:36 IMPLEMENTED AND SIMULATOR-VERIFIED (48466cec); the refined sheet wording has not itself been visually reviewed by the owner",
         reference="The layout the owner chose from the Screen 5 comparison board (05_build_your_week.png): compact seven-day calendar, day editor, weekly totals, "
                   "equipment selector and Continue — WITH REQUIRED CHANGES. The owner's own screenshot was not received with the decision; the layout is taken "
                   "to be the current-implementation column of the board, whose elements match the decision's list. To be confirmed at visual review. Origin: "
@@ -434,7 +434,7 @@ SCREENS = [
                   "One ride length and one strength length applied to the whole week.",
                   "Large explanatory panels and technical wording.",
                   "Requiring an equipment choice from athletes with no strength training."],
-        commits="Calendar and scheduling: 8dbbd54a. Equipment revision: e5f4819a (branch ios/lab). Not in any TestFlight build.",
+        commits="Calendar and scheduling: 8dbbd54a. Equipment presentation: e5f4819a. Final conditions: 48466cec (branch ios/lab). Not in any TestFlight build.",
         stages=[("Approved design", "DIRECTION ONLY", "Owner, 21 Nov 2026 21:18. Not final visual approval."),
                 ("Implemented in code", "YES", "Commit 83ed8066, including the decisions of 22:22. Additive stored field for the chosen week; older records unchanged."),
                 ("Compiled", "YES", "Lab app built in focused check 37 (run 44935585991). Main-app build not run on this commit."),
@@ -462,11 +462,19 @@ SCREENS = [
                  "together; all kept after Continue and Back and after closing and reopening. Check 40 (run 45008788939, 0281b566): Build your week (one-screen fit "
                  "with the new row) and the seven-page journey PASSED; the equipment check FAILED — the sheet's own identifier hid its children's; corrected. Those "
                  "two were not re-run on e5f4819a (one accessibility line changed). Logic: 603 tests, 0 failures."),
+                ("Simulator-verified — final conditions of 22 Nov 14:36", "YES — functional (Lab, Obsidian, iPhone 15 Pro)", "Focused check 42, run 45013559824, commit "
+                 "48466cec, 3 of 3 passed: a strength athlete cannot continue without an equipment environment and the page says what is needed; Continue enables once "
+                 "one is chosen; a runner without strength sessions is never asked and continues; environment and all edited selections are kept after Continue, "
+                 "Back and reopening; the calendar, the expanded two-session editor, the summary, the Equipment row with its four choices and Continue are on one "
+                 "screen; the sheet leads with 'We'll choose exercises based on the equipment you have.' with the count as a secondary line; the Gym list is "
+                 "presented as a suggested starting list; saved-only items are disclosed once; ticking dumbbells and bands raises the planner's own count and a "
+                 "saved-only item does not. Logic: 604 tests, 0 failures, including that no barbell-only exercise is offered without a barbell."),
                 ("Physically verified on iPhone", "NO", "")],
         visual_verification="PENDING — owner to review screenshots of: all seven days at Rest; a running-only week; a multisport week with different durations and two sessions on one day.",
         functional_verification="Lab simulator: passed at 83ed8066 (see stages). Not verified: larger text on this commit, other themes, redesigned main app, full Lab regression, physical iPhone.",
         remaining=["Owner's visual verdict on the screenshots (sent 21 Nov).",
-                   "Final conditions of 22 Nov 14:36: written (branch ios/lab); focused simulator verification pending.",
+                   "OUTSTANDING — larger text sizes, the other five themes, VoiceOver, the redesigned main app, the full Lab regression and a physical iPhone. The "
+                   "seven-page journey, the mixed-roster check and the large-text check were not re-run on 48466cec.",
                    "For the owner's confirmation: 'Leg press' is offered as 'Weight machines (leg press and others)' — the planner has one name for all machines; "
                    "default ticks (Gym: its eight listed items; Home: the existing five-item home kit; Bodyweight and Custom: none); Gym no longer assumes a trap bar or "
                    "pull-up bar; before an environment is chosen none is selected and Continue is not blocked; the cycling, running, swimming and mobility items are "
@@ -475,7 +483,11 @@ SCREENS = [
                    "wraps and may then need scrolling (checked with three activities).",
                    "Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).",
                    "After approval: Screen 6, three-column comparison."],
-        images=[("S05_equipment_sim_e5f4819a.png",
+        images=[("S05_final_conditions_sim_48466cec.png",
+                 "AS IMPLEMENTED AFTER THE FINAL CONDITIONS — record of the verified state (the approved screenshots follow). iPhone 15 Pro simulator, Obsidian, commit "
+                 "48466cec (check 42). Left: Equipment row. Middle: Bodyweight checklist with the refined wording. Right: expanded two-session editor with summary, "
+                 "Equipment and Continue on one screen."),
+                ("S05_equipment_sim_e5f4819a.png",
                  "APPROVED DESIGN (Equipment presentation, 22 Nov 2026 14:36) — as implemented; the sheet's wording is then refined per the final conditions. iPhone 15 Pro simulator, Obsidian, commit e5f4819a (check 41). Left: Screen 5 with Gym | Home | Bodyweight | "
                  "Custom and the compact Edit control. Right: the Bodyweight checklist with dumbbells and resistance bands ticked."),
                 ("S05_week_refined_sim_8dbbd54a.png",
