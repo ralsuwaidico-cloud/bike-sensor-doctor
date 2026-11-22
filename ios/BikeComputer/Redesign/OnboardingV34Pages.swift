@@ -973,7 +973,7 @@ struct OnbEvolutionPage: View {
         let shown = exploring.flatMap { EvolutionStages.stage($0) }
         VStack(alignment: .leading, spacing: 8) {
             VStack(spacing: 4) {
-                hero(shown?.index ?? standing.stage ?? 0)
+                hero(shown?.index ?? standing.stage)
                 Text(shown.map { "\($0.code) · \($0.name)" } ?? "Establishing your baseline")
                     .font(CyDyn.f(21, .bold)).foregroundStyle(theme.textPrimary)
                     .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
@@ -982,8 +982,8 @@ struct OnbEvolutionPage: View {
                     .font(CyDyn.f(13.5)).foregroundStyle(theme.textSecondary).multilineTextAlignment(.center)
                     .lineLimit(dts.isAccessibilitySize ? 6 : 2, reservesSpace: !dts.isAccessibilitySize)
                     .accessibilityIdentifier("onbEvolutionSummary")
-                // exploring is said in words, so a stage being looked at is never read as the athlete's own
-                Text(shown == nil ? " " : "Exploring · not your stage")
+                // a preview is said in words (owner's wording, 22 Nov 2026 18:47), so it is never read as the athlete's own
+                Text(shown.map { "Previewing \($0.code)" } ?? " ")
                     .font(CyDyn.f(11, .semibold)).foregroundStyle(theme.accent)
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(Capsule().fill(theme.accent.opacity(shown == nil ? 0 : 0.14)))
@@ -1013,13 +1013,15 @@ struct OnbEvolutionPage: View {
 
     /// The stage's orbital form: one drawing family, more developed stage by stage (rendered from the same routine as
     /// the approved Welcome artwork). Falls back to the flat placeholder if an image is missing.
-    @ViewBuilder private func hero(_ stage: Int) -> some View {
-        let name = "EvolutionStage-\(stage)-\(theme.id.rawValue)"
+    /// No stage (not assessed, nothing previewed) has its own neutral form: an empty orbit, distinct from G0.
+    @ViewBuilder private func hero(_ stage: Int?) -> some View {
+        let name = stage.map { "EvolutionStage-\($0)-\(theme.id.rawValue)" } ?? "EvolutionNeutral-\(theme.id.rawValue)"
         Group {
             if UIImage(named: name) != nil { Image(name).resizable().scaledToFit() }
             else { SingularityPlaceholder(diameter: 64, detail: 1) }
         }
-        .frame(height: 96)
+        .frame(height: 132)
+        .padding(.vertical, -10)   // the image carries its own soft margin; the layout reserves the body only
         .accessibilityHidden(true)
         .id(name)
         .transition(.opacity)
@@ -1061,7 +1063,7 @@ struct OnbEvolutionPage: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(s.code), \(s.name)")
-                .accessibilityValue(on ? "exploring" : mine ? "your stage" : "")
+                .accessibilityValue(on ? "previewing" : mine ? "your stage" : "")
                 .accessibilityHint("Shows this stage. It does not change yours.")
                 .accessibilityAddTraits(on ? .isSelected : [])
                 .accessibilityIdentifier("onbStage-\(s.index)")
@@ -1094,8 +1096,6 @@ struct OnbEvolutionPage: View {
             }
             Text(standing.title).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("onbEvolutionStage")
-            Text("Looking at a stage above does not change yours.")
-                .font(CyDyn.f(12.5)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 }

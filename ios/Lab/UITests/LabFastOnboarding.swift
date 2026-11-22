@@ -799,7 +799,8 @@ final class LabFastOnboarding: XCTestCase {
             let about = need(app, "onbEvolutionSummary", "the stage description").label
             XCTAssertFalse(about.isEmpty || seen.contains(about), "required: G\(g) has its own description (\(about))"); seen.append(about)
             XCTAssertEqual(selected(), [g], "required: only G\(g) is highlighted")
-            XCTAssertEqual(need(app, "onbEvolutionExploring", "the exploring label").label, "Exploring · not your stage", "required: exploring is said in words")
+            // wording set by the owner on 22 Nov 2026 (18:47): "Previewing G3" (was my proposed "Exploring · not your stage")
+            XCTAssertEqual(need(app, "onbEvolutionExploring", "the preview label").label, "Previewing G\(g)", "required: a preview is said in words")
             XCTAssertEqual(el(app, "onbEvolutionStage").label, status, "required: exploring G\(g) does not change the athlete's status")
             XCTAssertFalse(el(app, "onbEvolutionBasis").exists, "required: exploring G\(g) is not shown as estimated or verified")
             fits("G\(g)")
