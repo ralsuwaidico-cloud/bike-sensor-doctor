@@ -2,7 +2,7 @@
 """Writes docs/design/CYCLIFT_APPROVED_SCREENS.md and .pdf from screens.py. No CI, no simulator: existing assets only."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from screens import SCREENS, UPDATED, CAPABILITY, INTEGRATION
+from screens import SCREENS, UPDATED, CAPABILITY, INTEGRATION, PHASE, WORKFLOW, WORKFLOW_RULES, OUTSTANDING
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
@@ -34,7 +34,7 @@ def summary_states(s):
     return out
 
 def markdown():
-    L = ["# Cyclift — Approved Screens Register", "",
+    L = ["# Cyclift — Approved Screens Report", "",
          f"Last updated: {UPDATED} · Screens recorded: {len(SCREENS)}", "",
          "This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved "
          "decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved "
@@ -43,6 +43,14 @@ def markdown():
          "The five statuses below are separate facts and are never treated as interchangeable: "
          "**Approved design · Implemented in code · Compiled · Simulator-verified · Physically verified on iPhone.**", "",
          "The visual book is `CYCLIFT_APPROVED_SCREENS.pdf` in this folder; images are in `assets/`.", "",
+         "## Onboarding design phase — closed and locked", ""] + [f"- {x}" for x in PHASE] + ["",
+         "## Onboarding workflow — first launch to Home", "",
+         "The complete first-launch journey, the eight screens and what each depends on. Details, wording, images and evidence are in each screen's own section.", "",
+         "| Step | Screen | What the athlete does and sees | Depends on | Hands on |", "|---|---|---|---|---|"] + ["| " + " | ".join(r) + " |" for r in WORKFLOW] + ["",
+         "Rules that hold across the whole journey:", ""] + [f"- {x}" for x in WORKFLOW_RULES] + ["",
+         "## Outstanding development requirements", "",
+         "Tracked separately. None blocks the design register, and an approved screen is never evidence that any of these works.", "",
+         "| Item | State | Tracked in |", "|---|---|---|"] + ["| " + " | ".join(r) + " |" for r in OUTSTANDING] + ["",
          "## Approved product direction", "",
          "**Cyclift is a universal multisport athlete platform** (owner, 21 Nov 2026 — `decisions/2026-11-21_universal-multisport-product-direction.md`). "
          "Every catalogue activity is selectable and any can be the primary sport; goals follow the selected sports; every athlete completes onboarding, "
@@ -135,6 +143,15 @@ def image_row(images, width, max_h):
                            ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), gap), ("TOPPADDING", (0, 1), (-1, 1), 5)]))
     return t
 
+def _table(head, rows, widths, width):
+    fixed = sum(w for w in widths if w)
+    cw = [w if w else width - fixed for w in widths]
+    data = [[Paragraph(x, CELLB) for x in head]] + [[Paragraph(esc(v), CELLB if i == 0 or (len(head) == 5 and i == 1) else CELL) for i, v in enumerate(r)] for r in rows]
+    t = Table(data, colWidths=cw, repeatRows=1)
+    t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("BACKGROUND", (0, 0), (-1, 0), SOFT),
+                           ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
+    return t
+
 def pdf():
     path = os.path.join(OUT, "CYCLIFT_APPROVED_SCREENS.pdf")
     W, H = A4; M = 16 * mm; width = W - 2 * M
@@ -168,6 +185,14 @@ def pdf():
                            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
     S += [t, Spacer(1, 4 * mm),
           Paragraph("All checks so far ran in the iOS Simulator (iPhone 15 Pro, Obsidian). Nothing in this book has been verified on a physical iPhone.", SMALL),
+          PageBreak(), Paragraph("Onboarding design phase — closed and locked", H1)] + [Paragraph("• " + esc(x), BODY) for x in PHASE] + [
+          Spacer(1, 4 * mm), Paragraph("Onboarding workflow — first launch to Home", H2),
+          Paragraph("The complete first-launch journey, the eight screens and what each depends on.", SMALL), Spacer(1, 2 * mm), _table(
+              ["Step", "Screen", "What the athlete does and sees", "Depends on", "Hands on"], WORKFLOW, [12 * mm, 27 * mm, None, 31 * mm, 41 * mm], width),
+          Spacer(1, 3 * mm), Paragraph("Rules that hold across the whole journey", H2)] + [Paragraph("• " + esc(x), BODY) for x in WORKFLOW_RULES] + [
+          PageBreak(), Paragraph("Outstanding development requirements", H1),
+          Paragraph("Tracked separately. None blocks the design register, and an approved screen is never evidence that any of these works.", SMALL), Spacer(1, 2 * mm),
+          _table(["Item", "State", "Tracked in"], OUTSTANDING, [42 * mm, None, 42 * mm], width),
           PageBreak(), Paragraph("Approved product direction", H1),
           Paragraph("<b>Cyclift is a universal multisport athlete platform</b> (owner, 21 Nov 2026). Every catalogue activity is selectable and any can be the primary "
                     "sport; goals follow the selected sports; every athlete completes onboarding — with a plan where planning exists, profile-only otherwise. Nothing "

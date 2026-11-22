@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "23 Nov 2026, 00:30 (Dubai)"
+UPDATED = "23 Nov 2026, 00:45 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -34,6 +34,95 @@ INTEGRATION = [
     ("EQ-03", "Equipment catalogue — individual machines", "22 Nov 2026, 14:36", "Individual machine types (leg press and others) to be representable later, alongside the grouped 'Weight machines' item, which is kept for compatibility.", "NOT IMPLEMENTED — structure prepared, no individual types listed"),
     ("INT-09", "Blueprint", "22 Nov 2026, 17:19", "The Blueprint contains obsolete FTP and Plan changes links pointing back to Screen 6, which no longer holds either. To be corrected during the Blueprint review: FTP belongs in Performance Settings; Coach plan-change preferences belong in Profile › App Preferences › Coach. The Blueprint is not to be changed before that review.", "IMPLEMENTED (91574cf5): both cells removed; simulator-verified in Cyclift Lab (check 50, run 45062192865) — awaiting the Screen 8 visual approval"),
     ("INT-04", "Goals (all screens)", "21 Nov 2026, 20:50", "Existing working goal names and planner mappings are retained. Goals are not renamed solely for cosmetic reasons.", "IN FORCE — current behaviour"),
+]
+
+PHASE = [
+    "ONBOARDING UI/UX DESIGN PHASE CLOSED by the owner on 23 Nov 2026 (00:12). Screens 1–8 below are the permanent record. Future development uses this "
+    "report as the visual and workflow source of truth. No approved onboarding screen is redesigned without the owner's explicit approval, and no screen "
+    "is silently changed to resolve an outstanding verification issue.",
+    "An approved interface is never proof that an unfinished feature works. For every screen the report keeps three things apart: the approved design, "
+    "what is implemented, and what has been verified.",
+    "Screen 3 (Athletic Roster): the Z2 / Z3 design and the multisport requirements are approved and recorded; its implemented screenshot has NOT received "
+    "a separate explicit visual sign-off, and is not marked visually verified.",
+    "Everything recorded as verified was verified in the iOS Simulator (iPhone 15 Pro, Obsidian), almost all of it in Cyclift Lab. Nothing has been "
+    "verified on a physical iPhone. Nothing here is in a TestFlight build.",
+]
+
+# (step, screen, what the athlete does and sees, what it needs from earlier steps, what it hands on / where it leads)
+WORKFLOW = [
+    ("1", "Welcome (ONB-01)", "Black-hole hero, headline and a circular control held for three seconds; a ring fills, releasing early resets it, a tap does nothing. "
+     "VoiceOver and Switch Control activate without the hold. The screen dissolves into About You.",
+     "First launch of a new athlete. Shown once.", "The athlete continues without an account; page 1 opens."),
+    ("2", "About You (ONB-02) · page 1 of 7", "First name, date of birth (typed day / month / year in a compact sheet with Cancel and Done), weight, height, and a compact "
+     "'Units: Metric' selector. All four are required; Continue stays disabled and the page names what is missing or invalid.",
+     "Nothing.", "Name, date of birth, weight and height in the athlete record; units converted for display only. Back and Continue keep the answers; they survive reopening."),
+    ("3", "Athletic Roster (ONB-03) · page 2", "Sports and activities are chosen from an extensible catalogue with a searchable library; any number, any as the main sport; "
+     "a balance setting when cycling and strength are both main. Each activity states truthfully what Cyclift plans and records for it.",
+     "Nothing.", "The roster: it decides the goals offered (page 3), the activities offered in the day editor (page 4), the identity line and the sport line-up (page 7)."),
+    ("4", "Goals (ONB-04) · page 3", "Compact goal cards grouped by the athlete's sports; several goals, exactly one main goal (star); cycling and strength experience "
+     "asked only where the planner needs it; a summary card for the main goal with a training-mix bar counted from the real planner, or a truthful no-plan summary.",
+     "The roster.", "Goals, main goal and experience levels. Whether a plan is possible is decided here and on page 4: a planned sport in the roster with a goal its planner knows."),
+    ("5", "Build Your Week (ONB-05) · page 4", "Seven rest days to start. Tapping a day opens its editor: activities from the roster, up to two sessions a day, each with its own "
+     "length, confirmed per day; Rest in the editor header; icon-only tiles; weekly total, counts and by-sport line. Equipment (Gym, Home, Bodyweight, Custom, each "
+     "with its own checklist sheet) appears only with a strength session and is then required. Continue needs at least one confirmed session.",
+     "The roster (activities offered); goals (whether a plan is possible).", "The athlete's declared week — stored whole, whatever the sport — and the equipment environment and selections. "
+     "The planner is given only the sessions it can plan. An athlete with nothing plannable goes straight to page 7."),
+    ("6", "Connect Your Devices (ONB-06) · page 5", "Five rows with truthful statuses: Apple Health, Apple Watch, WHOOP, Garmin, Bluetooth devices. Actions appear only where they "
+     "work; in Cyclift Lab nothing connects and no permission is requested. Everything is optional.",
+     "Shown only when a plan is possible.", "Nothing is required. FTP and Plan changes are not asked here (Performance Settings; Profile › App preferences › Coach). A new athlete keeps explicit approval of plan changes."),
+    ("7", "Athlete Evolution (ONB-07) · page 6", "Neutral orbital form and 'Starting stage not yet assessed'. G0–G5 can be tapped to preview each stage's form, provisional name and "
+     "description ('Previewing G3'). Declared experience and measured evidence are listed by sport. Button: 'See my blueprint'.",
+     "The roster and experience levels (declared lines); recorded sessions (evidence). Shown only when a plan is possible.",
+     "Nothing is stored. Previewing never changes or saves a stage. No stage is calculated: the assessment policy is not activated."),
+    ("8", "Athletic Blueprint (ONB-08) · page 7", "Name, identity and experience; the sport line-up; the main goal; YOUR TRAINING WEEK exactly as confirmed, with whole-week totals; "
+     "COACH'S TRAINING PROPOSAL with the planner's guidance for what it plans and a truthful line for sessions it does not — or 'No training plan is created'; "
+     "declared goals and equipment. Tapping a part opens its page, whose button returns to the Blueprint. Button: 'Approve my blueprint', or 'Create my profile' without a plan.",
+     "Every earlier answer; a dry run of the existing planner on exactly the inputs approval will save.",
+     "Nothing is committed before approval. Approval is ONE write of the profile, the declared week and — where possible — the plan the existing planner generates; "
+     "sessions it cannot plan stay as selected preferences; nothing is fabricated or substituted."),
+    ("9", "Confirmation (ONB-08, after approval)", "Shown only after the stored file has been read back and holds the result: 'Approved and saved' with 'Plan version 1 · approved', or "
+     "'Saved. Your profile and training week are saved. No training plan was created.' The page can no longer be edited. Button: 'Open Home'. A failed write shows "
+     "'Not saved', rolls everything back and offers the approval again; an unconfirmed one shows 'Save not confirmed' with 'Check again'.",
+     "A confirmed save.", "Open Home opens the app. After a relaunch an approved athlete opens Home directly; an athlete whose save failed is still in onboarding with every answer kept."),
+]
+
+WORKFLOW_RULES = [
+    "Navigation: the rail at the top shows the seven pages; a finished page can be reopened from it; Back returns one page. From the Blueprint, an edited page offers "
+    "'Back to blueprint' in place of Continue. Pages 5 and 6 are not offered to an athlete without a plan.",
+    "Persistence: answers are kept through Back and Continue and after closing and reopening the app, including the roster, goals, the chosen week with each day's own "
+    "lengths, the equipment environment and each environment's own selections.",
+    "Cancellation: leaving a day editor without Confirm changes nothing; Cancel in the date sheet stores nothing; closing the equipment sheet keeps what was ticked; "
+    "leaving onboarding before approval creates no plan.",
+    "Validation: About You names the missing or invalid field; Build Your Week needs one confirmed session, and an equipment environment when strength is scheduled; "
+    "the Goals page needs a goal.",
+    "Truthfulness: no plan, session, measurement, connection or stage is shown that does not exist. Sports without a planner are selectable, schedulable and saved, "
+    "and are described as saved with plans coming soon.",
+    "One layout language: Obsidian, compact one-screen pages at standard text size on the iPhone 15 Pro (larger accessibility sizes may scroll), the three provenance "
+    "marks — declared by you, Coach's proposal (rules-based), measured evidence — and one sport icon system.",
+]
+
+# (item, state, where it is tracked) — tracked separately; none of these blocks the design register, and none is implied to work by an approved screen
+OUTSTANDING = [
+    ("Planning and recording for additional sports", "NOT BUILT. Running, swimming, walking and hiking, mobility and recovery, bodyweight and calisthenics are selectable, schedulable and saved only. "
+     "Discipline-specific cycling is planned as general cycling.", "Approved product direction table above; Screen 3."),
+    ("WHOOP and Garmin integrations", "NOT BUILT. Shown as 'Coming soon' with no action.", "Screen 6."),
+    ("Cyclift Watch and BikeComputer", "IN DEVELOPMENT, separately gated. Not shown in onboarding. Hardware and firmware unverified.", "Hardware workstream."),
+    ("Athlete Evolution assessment and verification policy", "NOT ACTIVATED. Proposed policy specification with six items awaiting approval; verification thresholds and any lowering policy separately gated.",
+     "product/evolution/STARTING_STAGE_POLICY_SPECIFICATION.md; Screen 7."),
+    ("Missing experience questions", "NOT ASKED for running, swimming, walking and hiking, mobility and recovery, bodyweight strength; no training-history questions. Adding them changes locked pages and needs approval.",
+     "Policy specification, Part B."),
+    ("Production integration and compatibility", "NOT DONE. The redesign runs in Cyclift Lab and in the main app only under a development setting. The redesigned main app was last run on an earlier commit "
+     "(Screen 6, a02fc5e5); Screens 7 and 8 have not been run there. Screen 8 changed one line of the shared app shell.", "Screens 6–8; release plan."),
+    ("Accessibility", "NOT VERIFIED on the final screens: larger text sizes, VoiceOver labels and order, High Contrast.", "Each screen's remaining work."),
+    ("Other themes", "NOT VERIFIED: Arctic, Ocean, Forest, Sandstone, High Contrast have no reviewed screenshots of the final screens.", "Each screen's remaining work."),
+    ("Physical-device testing", "NONE. Hold gesture and haptics, keyboard and date sheet, permissions for Apple Health, Apple Watch and Bluetooth pairing.", "Each screen's remaining work."),
+    ("Full Lab regression", "NOT RUN on the final onboarding commit. Each screen was verified by focused checks only.", "CI policy; release gates."),
+    ("Build 216 downgrade / data-loss risk", "OPEN — a release blocker until resolved. Build 216 is the protected production baseline.", "E1 readiness package; risk register."),
+    ("Persistence changes made during onboarding work", "ADDITIVE fields only (roster, chosen week, equipment environment and selections, a plan-changes marker). Approval is now one write with rollback. "
+     "Compatibility with older builds and export / import not re-assessed for release.", "Screens 3, 5, 6, 8; E1 requirements."),
+    ("Screen-level follow-ups", "Welcome hold intermittently not opening page 1 right after a cold launch (cause unproven); Blueprint 'Save not confirmed' state not exercised; no route yet for an athlete "
+     "without a plan to set one up later; where BMI is shown; goal lists for sports without a planner are provisional.", "Screens 1, 2, 4, 8."),
+    ("Release", "NOT AUTHORIZED. No TestFlight upload, production merge, firmware change, external AI activation or athlete-data transmission without explicit approval.", "Master instructions."),
 ]
 
 SCREENS = [
@@ -439,7 +528,7 @@ SCREENS = [
         stages=[("Approved design", "YES", "Owner: direction 21 Nov 2026 21:18; calendar, day editor and summary approved 22 Nov 13:34 (run39_s5.png, 8dbbd54a); Equipment presentation approved 22 Nov 14:36 (run41_s5_equipment.png, e5f4819a) with final conditions."),
                 ("Implemented in code", "YES", "Commit 83ed8066, including the decisions of 22:22. Additive stored field for the chosen week; older records unchanged."),
                 ("Compiled", "YES", "Lab app built in focused check 37 (run 44935585991). Main-app build not run on this commit."),
-                ("Simulator-verified", "FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING", "Focused check 37, run 44935585991, commit 83ed8066, 4 of 4 passed: seven "
+                ("Simulator-verified", "YES — visual (approved 22 Nov 13:34 and 14:36) and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); final state: check 42", "First round — focused check 37, run 44935585991, commit 83ed8066, 4 of 4 passed: seven "
                  "rest days for a new athlete; Continue disabled until a confirmed session, enabled by one session for a cycling-and-strength athlete; only roster "
                  "activities offered, each with its icon; a day changes only on Confirm; a session removed on its own row; two sessions on a day with independent "
                  "lengths, the same activity twice included, no third; different lengths on different days; a day back to Rest; totals, counts and by-sport breakdown "
@@ -717,9 +806,9 @@ SCREENS = [
     dict(
         number=8, id="ONB-08", name="Athletic Blueprint",
         location="Onboarding · page 7 of 7, the last page: reached from Athlete Evolution, or directly from Build Your Week by an athlete who finishes without a plan.",
-        approved_on="22 Nov 2026, 22:51 — COMBINED DESIGN DIRECTION. Not final visual approval.",
-        status="COMBINED DESIGN DIRECTION APPROVED — implementation and final visual verification PENDING. Not locked.",
-        reference="A combination chosen by the owner on 22 Nov 2026 at 22:51: design sheet v3.3 Y5, drawing B1 (the LEFT reference) as the visual foundation and drawing "
+        approved_on="22 Nov 2026, 22:51 (combined design direction); approved and locked 23 Nov 2026, 00:12 with the close of the onboarding design phase (canonical screenshot run50_s8.png, commit d2ebe9f8).",
+        status="APPROVED AND LOCKED (23 Nov 2026, 00:12) — the combined layout and workflow. Corrected implementation simulator-verified in Cyclift Lab (check 50, 4 of 4). Do not change without the owner's approval",
+        reference="Canonical screenshot: run50_s8.png (iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit d2ebe9f8, check 50). Origin: a combination chosen by the owner on 22 Nov 2026 at 22:51: design sheet v3.3 Y5, drawing B1 (the LEFT reference) as the visual foundation and drawing "
                   "B3 for the confirmation state, with the useful functionality of the current implementation (editing, navigation, approval). The sheets are "
                   "illustrative drawings; obsolete data and controls on them are not reproduced.",
         wording=[("Section A", "YOUR TRAINING WEEK — the athlete's chosen schedule. Never labelled 'Coach's proposal'."),
@@ -761,13 +850,13 @@ SCREENS = [
                   "Replacing days of sports without planning support with Rest.",
                   "Reproducing obsolete data or controls because they appear on the reference sheet."],
         commits="Implementation of the direction: 91574cf5; three visual corrections d2ebe9f8 (branch ios/lab). Not in any TestFlight build.",
-        stages=[("Approved design", "DIRECTION ONLY", "Owner, 22 Nov 2026 22:51. Final visual approval pending."),
+        stages=[("Approved design", "YES", "Owner, 23 Nov 2026 00:12: the combined layout and workflow locked with the close of the onboarding design phase. Direction 22 Nov 22:51."),
                 ("Implemented in code", "YES", "Commit 91574cf5, corrections d2ebe9f8: one layout for every athlete; 'Your training week' from the confirmed "
                  "schedule (icon-only tiles, whole-week totals); 'Coach's training proposal' with the planner's guidance for what it plans and one truthful line for "
                  "sessions it does not; FTP, Plan changes and the 'interest' wording removed; measured evidence only when something is recorded; approval as one "
                  "durable write with a read-back check; confirmation state with Open Home; failed and unconfirmed saves shown as such."),
                 ("Compiled", "YES", "Lab app built in focused checks 49 and 50. Main-app build not run."),
-                ("Simulator-verified", "FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING", "Focused check 50, run 45062192865, code commit d2ebe9f8, 4 of 4 "
+                ("Simulator-verified", "YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro)", "Focused check 50, run 45062192865, code commit d2ebe9f8, 4 of 4 "
                  "passed. CYCLING/STRENGTH: 'Your training week' shows the four chosen sessions and '3 h · 4 sessions'; the week is not labelled the Coach's proposal; "
                  "guidance names the main goal and '2 lifts … 30 min each', then the first session; goals and equipment declared; no FTP, Plan changes, 'interest' "
                  "wording or stage; everything on one screen; the week edited from the Blueprint (a Saturday ride added) and the Blueprint follows ('4 h · 5 "
@@ -783,7 +872,7 @@ SCREENS = [
                  "and running + cycling checks FAILED on one assertion each that looked for the letters 'lift', which the Lab badge 'CYCLIFT LAB' contains — an "
                  "error in the check, corrected to look for the strength-guidance wording. Logic: 616 tests, 0 failures at 91574cf5."),
                 ("Physically verified on iPhone", "NO", "")],
-        visual_verification="PRESENTED 23 Nov 2026 (run50_s8.png) — awaiting the owner's decision.",
+        visual_verification="LOCKED by the owner on 23 Nov 2026 (00:12), who directed that the corrected implementation be marked visually verified once check 50's final result was obtained; check 50 passed 4 of 4 (run 45062192865, d2ebe9f8). The canonical screenshot run50_s8.png differs from the first preview (run49_s8.png) only by the three corrections reported with it: the running icon reads 'Running', the approved mark sits on its own line, and '· Saved' is removed from the week title. Obsidian, simulator, Cyclift Lab only.",
         functional_verification="Logic: 38 focused tests pass at 91574cf5 (whole-week totals; truthful status for unplanned sessions; guidance only for what is planned in the chosen week; outcome wording; the whole declared week is stored). Simulator: check 50, as listed.",
         remaining=["The 'Save not confirmed' state (Check again) has not been exercised on the simulator.",
                    "PENDING — owner's final visual approval.",
@@ -794,12 +883,14 @@ SCREENS = [
                    "is replaced by the sport's name ('Running').",
                    "No route yet for an athlete without a plan to set one up later (recorded earlier)."],
         images=[("S08_blueprint_impl_sim_d2ebe9f8.png",
-                 "IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit d2ebe9f8 (check 50). Left to right: cycling/strength "
+                 "APPROVED DESIGN — as implemented (run50_s8.png). iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit d2ebe9f8 (check 50). Left to right: cycling/strength "
                  "before approval; multisport with all chosen activities; runner-only without a generated plan; after approval."),
                 ("S08_blueprint_comparison_board_22756626.png",
                  "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y5, drawings B1 and B3 (the visual foundation). Middle: Build 6. Right: the "
                  "implementation BEFORE the decision (commit 22756626; runner at 48466cec) — with the week labelled 'Coach's proposal', FTP and Plan changes, all now changed.")],
-        history=[("22 Nov 2026, 22:51", "Combined design decision: Y5 / B1 as the visual foundation with the current implementation's working functionality; the "
+        history=[("23 Nov 2026, 00:12", "Combined layout and workflow LOCKED with the close of the onboarding UI/UX design phase. The corrected implementation to be "
+                  "marked visually verified on the final result of check 50 (obtained: 4 of 4 passed).", "IN FORCE"),
+                 ("22 Nov 2026, 22:51", "Combined design decision: Y5 / B1 as the visual foundation with the current implementation's working functionality; the "
                   "athlete's week ('Your training week') separated from the 'Coach's training proposal'; FTP and Plan changes removed; one screen; Y5 / B3 "
                   "confirmation only after a confirmed save; profile-only path kept with truthful wording.", "IN FORCE — direction only")],
     ),
