@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "22 Nov 2026, 19:10 (Dubai)"
+UPDATED = "22 Nov 2026, 19:20 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -658,7 +658,7 @@ SCREENS = [
         rejected=["Simply showing G0 or 'None' rather than (eventually) an estimated starting stage.",
                   "Assigning a stage from a tap, or from a declared level alone.",
                   "A page hardcoded to cycling and strength; six unrelated stage illustrations."],
-        commits="Implementation of the direction: c9e194c9, build fix 22756626 (branch ios/lab). Not in any TestFlight build.",
+        commits="Implementation of the direction: c9e194c9, build fix 22756626; refinement of 18:47: 2402aefa (branch ios/lab). Not in any TestFlight build.",
         stages=[("Approved design", "LAYOUT AND INTERACTION: YES. FINAL VISUAL: PENDING", "Owner, 22 Nov 2026 18:47: the LEFT Y5 layout and the interactive G0–G5 progression approved; visual refinement requested. Direction 17:33."),
                 ("Implemented in code", "YES — awaiting review", "Commit c9e194c9: explorable rail (a view state that is not stored), provisional names and proposed "
                  "descriptions, a proposed set of stage images (six stages × six themes, drawn by the same routine as the approved Welcome artwork), roster-based "
@@ -673,8 +673,14 @@ SCREENS = [
                  "stage', with the status unchanged; tapping the highlighted stage clears it; G5 explored is not kept after Back, is not shown on the Blueprint "
                  "after Continue, and nothing is highlighted or assigned after closing and reopening the app. Seven-page journey: reaches an approved plan. The "
                  "change of the black-hole image itself is confirmed by the screenshots, not by an automated assertion."),
+                ("Simulator-verified — refinement of 22 Nov 18:47", "FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — FINAL VISUAL APPROVAL PENDING", "Focused check 48, "
+                 "run 45034834520, code commit 2402aefa, 1 of 1 passed: with the larger hero, the page still fits one screen in the default state and with each "
+                 "of G0–G5 previewed; the label reads 'Previewing G0' … 'Previewing G5'; status 'Starting stage not yet assessed' throughout; previewing G5 is "
+                 "not kept after Back, not shown on the Blueprint after Continue, and nothing is highlighted or assigned after closing and reopening. The "
+                 "neutral default form and the stage images are confirmed by the screenshots. The seven-page journey was not re-run on this commit (last passed "
+                 "on 22756626). The small line under the status was removed to make room for the larger hero."),
                 ("Physically verified on iPhone", "NO", "")],
-        visual_verification="PRESENTED 22 Nov 2026 (run47_s7.png: default, G0, G3, G5) — awaiting the owner's decision. The stage visual set and descriptions are proposals.",
+        visual_verification="REFINED VERSION PRESENTED 22 Nov 2026 (run48_s7.png) — awaiting the owner's final visual approval. Earlier: PRESENTED (run47_s7.png: default, G0, G3, G5) — awaiting the owner's decision. The stage visual set and descriptions are proposals.",
         functional_verification="Logic: 33 focused tests pass at c9e194c9 (status is not assessed; six stages with the working names; declared and evidence lines follow the roster). Simulator: check 47, as listed.",
         remaining=["PENDING APPROVAL — the six stage visuals (proposed set).",
                    "PENDING APPROVAL — the stage descriptions and the 'Exploring · not your stage' wording.",
@@ -683,11 +689,16 @@ SCREENS = [
                    "Experience is asked only for cycling and strength today; other sports read 'experience not asked yet'. Asking it would change an approved screen.",
                    "Not verified: redesigned main app, larger text, other themes, VoiceOver, physical iPhone.",
                    "For the owner's view: the default state shows the same image as G0; the hero is drawn at a modest size to keep everything on one screen."],
-        images=[("S07_evolution_impl_sim_22756626.png",
-                 "IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit 22756626 (check 47). Left to right: default state; G0 "
+        images=[("S07_evolution_refined_sim_2402aefa.png",
+                 "REFINED IMPLEMENTATION — AWAITING FINAL VISUAL APPROVAL. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit 2402aefa (check 48). Left to "
+                 "right: default (neutral, not assessed); G0, G3 and G5 previewed."),
+                ("S07_stage_visual_set_v2_obsidian.png",
+                 "REFINED STAGE VISUAL SET — AWAITING APPROVAL. Neutral (not assessed), then G0 to G5, Obsidian."),
+                ("S07_evolution_impl_sim_22756626.png",
+                 "SUPERSEDED BY THE REFINEMENT (layout and interaction approved from this version, 18:47). IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit 22756626 (check 47). Left to right: default state; G0 "
                  "selected; G3 selected; G5 selected. The yellow badge and Theme / Scenario / Restore controls are Cyclift Lab controls."),
                 ("S07_stage_visual_set_proposed_obsidian.png",
-                 "PROPOSED STAGE VISUAL SET — NOT APPROVED. G0 to G5, Obsidian, drawn by the routine of the approved black-hole artwork with more rings, streaks "
+                 "FIRST STAGE VISUAL SET — kept as the visual direction (18:47), then refined. G0 to G5, Obsidian, drawn by the routine of the approved black-hole artwork with more rings, streaks "
                  "and reach at each stage."),
                 ("S07_evolution_comparison_board_a66577ee.png",
                  "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y5 (the chosen direction). Middle: Build 6. Right: the implementation BEFORE the "

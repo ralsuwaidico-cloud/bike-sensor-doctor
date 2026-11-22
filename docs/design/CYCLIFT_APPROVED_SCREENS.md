@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 19:10 (Dubai) · Screens recorded: 7
+Last updated: 22 Nov 2026, 19:20 (Dubai) · Screens recorded: 7
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -57,7 +57,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 4 | ONB-04 | Goals | YES | YES | YES | YES — visual and functional | NO |
 | 5 | ONB-05 | Build Your Week | YES | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING (later rounds: see the screen's status table) | NO |
 | 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only (later rounds: see the screen's status table) | NO |
-| 7 | ONB-07 | Athlete Evolution | LAYOUT AND INTERACTION: YES. FINAL VISUAL: PENDING | YES — awaiting review | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | NO |
+| 7 | ONB-07 | Athlete Evolution | LAYOUT AND INTERACTION: YES. FINAL VISUAL: PENDING | YES — awaiting review | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING (later rounds: see the screen's status table) | NO |
 
 ---
 
@@ -593,7 +593,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 - **Approval date:** 22 Nov 2026, 17:33 (design direction); 18:47 (layout and interaction approved, with a final visual refinement). Not approval of stage-assessment activation.
 - **Approval status:** LAYOUT AND INTERACTION APPROVED (22 Nov 2026, 18:47) — final visual refinement and assessment-policy activation PENDING. Not locked.
 - **Original design reference and source:** Design sheet v3.3 Y5, the LEFT design (page 6, Athlete Evolution), chosen by the owner on 22 Nov 2026 at 17:33 with substantial interactive improvements described in his written direction. The sheet is an illustrative drawing.
-- **Implementation commit:** Implementation of the direction: c9e194c9, build fix 22756626 (branch ios/lab). Not in any TestFlight build.
+- **Implementation commit:** Implementation of the direction: c9e194c9, build fix 22756626; refinement of 18:47: 2402aefa (branch ios/lab). Not in any TestFlight build.
 
 ### Exact approved wording
 
@@ -641,9 +641,10 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | Implemented in code | YES — awaiting review | Commit c9e194c9: explorable rail (a view state that is not stored), provisional names and proposed descriptions, a proposed set of stage images (six stages × six themes, drawn by the same routine as the approved Welcome artwork), roster-based declared and evidence lines, status 'Starting stage not yet assessed'. No assessment is calculated. |
 | Compiled | YES | Lab app built in focused check 47 (run 45029975902) at commit 22756626. Check 46 (run 45028993447, c9e194c9) FAILED TO BUILD: one line on the new page was written in a form the compiler rejects; corrected in 22756626. Main-app build not run. |
 | Simulator-verified | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | Focused check 47, run 45029975902, code commit 22756626, 2 of 2 passed. Athlete Evolution, for a cycling, strength and running athlete: title, headline, description, the six stages, Declared, Measured, Your stage and 'See my blueprint' on one screen, in the default state and with each stage selected; default status 'Starting stage not yet assessed' with no 'Estimated' or 'Verified' label and no stage highlighted; the three declared lines from the roster; nothing recorded, and running said not to be recorded yet; each of G0–G5 shows its own name and its own description, is the only stage highlighted, and is labelled 'Exploring · not your stage', with the status unchanged; tapping the highlighted stage clears it; G5 explored is not kept after Back, is not shown on the Blueprint after Continue, and nothing is highlighted or assigned after closing and reopening the app. Seven-page journey: reaches an approved plan. The change of the black-hole image itself is confirmed by the screenshots, not by an automated assertion. |
+| Simulator-verified — refinement of 22 Nov 18:47 | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — FINAL VISUAL APPROVAL PENDING | Focused check 48, run 45034834520, code commit 2402aefa, 1 of 1 passed: with the larger hero, the page still fits one screen in the default state and with each of G0–G5 previewed; the label reads 'Previewing G0' … 'Previewing G5'; status 'Starting stage not yet assessed' throughout; previewing G5 is not kept after Back, not shown on the Blueprint after Continue, and nothing is highlighted or assigned after closing and reopening. The neutral default form and the stage images are confirmed by the screenshots. The seven-page journey was not re-run on this commit (last passed on 22756626). The small line under the status was removed to make room for the larger hero. |
 | Physically verified on iPhone | NO |  |
 
-- **Visual verification:** PRESENTED 22 Nov 2026 (run47_s7.png: default, G0, G3, G5) — awaiting the owner's decision. The stage visual set and descriptions are proposals.
+- **Visual verification:** REFINED VERSION PRESENTED 22 Nov 2026 (run48_s7.png) — awaiting the owner's final visual approval. Earlier: PRESENTED (run47_s7.png: default, G0, G3, G5) — awaiting the owner's decision. The stage visual set and descriptions are proposals.
 - **Functional verification:** Logic: 33 focused tests pass at c9e194c9 (status is not assessed; six stages with the working names; declared and evidence lines follow the roster). Simulator: check 47, as listed.
 
 ### Remaining work or limitations
@@ -657,8 +658,10 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Images
 
-- `assets/S07_evolution_impl_sim_22756626.png` — IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit 22756626 (check 47). Left to right: default state; G0 selected; G3 selected; G5 selected. The yellow badge and Theme / Scenario / Restore controls are Cyclift Lab controls.
-- `assets/S07_stage_visual_set_proposed_obsidian.png` — PROPOSED STAGE VISUAL SET — NOT APPROVED. G0 to G5, Obsidian, drawn by the routine of the approved black-hole artwork with more rings, streaks and reach at each stage.
+- `assets/S07_evolution_refined_sim_2402aefa.png` — REFINED IMPLEMENTATION — AWAITING FINAL VISUAL APPROVAL. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit 2402aefa (check 48). Left to right: default (neutral, not assessed); G0, G3 and G5 previewed.
+- `assets/S07_stage_visual_set_v2_obsidian.png` — REFINED STAGE VISUAL SET — AWAITING APPROVAL. Neutral (not assessed), then G0 to G5, Obsidian.
+- `assets/S07_evolution_impl_sim_22756626.png` — SUPERSEDED BY THE REFINEMENT (layout and interaction approved from this version, 18:47). IMPLEMENTATION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit 22756626 (check 47). Left to right: default state; G0 selected; G3 selected; G5 selected. The yellow badge and Theme / Scenario / Restore controls are Cyclift Lab controls.
+- `assets/S07_stage_visual_set_proposed_obsidian.png` — FIRST STAGE VISUAL SET — kept as the visual direction (18:47), then refined. G0 to G5, Obsidian, drawn by the routine of the approved black-hole artwork with more rings, streaks and reach at each stage.
 - `assets/S07_evolution_comparison_board_a66577ee.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y5 (the chosen direction). Middle: Build 6. Right: the implementation BEFORE the decision (commit a66577ee).
 
 ### Decision history
