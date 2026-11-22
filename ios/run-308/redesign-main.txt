@@ -1,0 +1,174 @@
+=== redesign-main: errors / failures ===
+=== redesign-main: full filter ===
+Test Case '-[BikeComputerUITests.RedesignMainProfileTests testALostLinkAndAPairedBoardReadTheSameOnTheirPages]' passed (99.771 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainProfileTests testDevicePagesShowTheirStateAndActionsInTheRedesignedMainApp]' passed (405.664 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainProfileTests testPermissionsPageStatesTheRealPermissions]' passed (53.378 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 558.813 (558.819) seconds
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' passed (314.662 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testProfileDevicesAndAnEditInTheRedesignedMainApp]' passed (121.258 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testStrengthSessionFromPreparationToReviewInTheRedesignedMainApp]' passed (68.520 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.098 seconds).
+	 Executed 4 tests, with 0 failures (0 unexpected) in 511.538 (511.541) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1070.351 (1070.362) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1070.351 (1070.363) seconds
+** TEST EXECUTE SUCCEEDED **
+=== redesign-main: last 150 lines ===
+    t =    31.49s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    31.58s Checking existence of `"nextSetFinish" Button`
+    t =    32.68s Checking existence of `"restSkip" Button`
+    t =    33.75s Checking existence of `"logSet" Button`
+    t =    34.04s Tap "logSet" Button
+    t =    34.04s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    34.07s     Find the "logSet" Button
+    t =    34.25s     Check for interrupting elements affecting "logSet" Button
+    t =    34.41s     Synthesize event
+    t =    34.72s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    34.81s Checking existence of `"nextSetFinish" Button`
+    t =    35.79s Checking existence of `"restSkip" Button`
+    t =    36.81s Checking existence of `"logSet" Button`
+    t =    36.93s Tap "logSet" Button
+    t =    36.93s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    36.99s     Find the "logSet" Button
+    t =    37.10s     Check for interrupting elements affecting "logSet" Button
+    t =    37.26s     Synthesize event
+    t =    37.57s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    37.58s Checking existence of `"nextSetFinish" Button`
+    t =    37.67s Waiting 5.0s for "nextSetFinish" Button to exist
+    t =    38.72s     Checking `Expect predicate `existsNoRetry == 1` for object "nextSetFinish" Button`
+    t =    38.72s         Checking existence of `"nextSetFinish" Button`
+    t =    38.79s Tap "nextSetFinish" Button
+    t =    38.79s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    38.80s     Find the "nextSetFinish" Button
+    t =    38.83s     Check for interrupting elements affecting "nextSetFinish" Button
+    t =    38.95s     Synthesize event
+    t =    39.25s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    39.31s Waiting 10.0s for "finishOverline" Any to exist
+    t =    40.38s     Checking `Expect predicate `existsNoRetry == 1` for object "finishOverline" Any`
+    t =    40.38s         Checking existence of `"finishOverline" Any`
+    t =    40.62s Find the "finishCount" Any
+    t =    40.87s Find the "finishPlan" Any
+    t =    41.19s Find the "finishOverline" Any
+    t =    41.50s Waiting 10.0s for "saveWorkout" Button to exist
+    t =    42.56s     Checking `Expect predicate `existsNoRetry == 1` for object "saveWorkout" Button`
+    t =    42.56s         Checking existence of `"saveWorkout" Button`
+    t =    42.84s Tap "saveWorkout" Button
+    t =    42.84s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    42.85s     Find the "saveWorkout" Button
+    t =    42.92s     Check for interrupting elements affecting "saveWorkout" Button
+    t =    43.12s     Synthesize event
+    t =    43.42s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    43.49s Waiting 10.0s for "saveConfirmed" Any to exist
+    t =    44.53s     Checking `Expect predicate `existsNoRetry == 1` for object "saveConfirmed" Any`
+    t =    44.54s         Checking existence of `"saveConfirmed" Any`
+    t =    44.69s Find the "savedPlan" Any
+    t =    45.03s Tap "saveReview" Button
+    t =    45.03s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    45.04s     Find the "saveReview" Button
+    t =    45.06s     Check for interrupting elements affecting "saveReview" Button
+    t =    45.22s     Synthesize event
+    t =    45.51s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    45.90s Waiting 10.0s for "reviewV14" Any to exist
+    t =    46.93s     Checking `Expect predicate `existsNoRetry == 1` for object "reviewV14" Any`
+    t =    46.94s         Checking existence of `"reviewV14" Any`
+    t =    46.97s Find the "reviewIntensityValue" Any
+    t =    47.12s Find the "reviewPerformanceValue" Any
+    t =    47.28s Find the "reviewEffortValue" Any
+    t =    47.50s Find the "reviewSave" Button
+    t =    47.57s Tap "reviewPerformancePlus" Button
+    t =    47.57s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    47.57s     Find the "reviewPerformancePlus" Button
+    t =    47.67s     Check for interrupting elements affecting "reviewPerformancePlus" Button
+    t =    47.90s     Synthesize event
+    t =    48.20s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    48.21s Find the "reviewPerformanceValue" Any
+    t =    48.40s Find the "reviewEffortValue" Any
+    t =    48.70s Find the "reviewSave" Button
+    t =    48.78s Tap "reviewSave" Button
+    t =    48.78s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    48.79s     Find the "reviewSave" Button
+    t =    48.82s     Check for interrupting elements affecting "reviewSave" Button
+    t =    48.94s     Synthesize event
+    t =    49.24s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    49.77s Waiting 2.0s for "reviewNotSaved" Any to exist
+    t =    50.82s     Checking `Expect predicate `existsNoRetry == 1` for object "reviewNotSaved" Any`
+    t =    50.82s         Checking existence of `"reviewNotSaved" Any`
+    t =    51.98s         Capturing element debug description
+    t =    51.99s     Checking existence of `"reviewNotSaved" Any`
+    t =    53.00s Collecting debug information to assist test failure triage
+    t =    53.00s     Requesting snapshot of accessibility hierarchy for app with pid 95381
+    t =    53.44s Waiting 6.0s for "Done" Button to exist
+    t =    54.48s     Checking `Expect predicate `existsNoRetry == 1` for object "Done" Button`
+    t =    54.49s         Checking existence of `"Done" Button`
+    t =    54.56s Tap "Done" Button
+    t =    54.56s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    54.56s     Find the "Done" Button
+    t =    54.61s     Check for interrupting elements affecting "Done" Button
+    t =    54.82s     Synthesize event
+    t =    55.17s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    55.93s Waiting 10.0s for "homeV23" Any to exist
+    t =    56.97s     Checking `Expect predicate `existsNoRetry == 1` for object "homeV23" Any`
+    t =    56.97s         Checking existence of `"homeV23" Any`
+    t =    57.25s Terminate com.ralsuwaidico.bikecomputer:95381
+    t =    58.32s Open com.ralsuwaidico.bikecomputer
+    t =    58.32s     Launch com.ralsuwaidico.bikecomputer
+2026-11-22 13:10:20.647 xcodebuild[53038:133891] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-22 13:10:20.648 xcodebuild[53038:133891] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    59.73s         Setting up automation session
+    t =    61.10s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    64.51s Waiting 40.0s for "homeV23" Any to exist
+    t =    65.55s     Checking `Expect predicate `existsNoRetry == 1` for object "homeV23" Any`
+    t =    65.56s         Checking existence of `"homeV23" Any`
+    t =    66.15s Tap "centreButton" Button
+    t =    66.15s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    66.33s     Find the "centreButton" Button
+    t =    66.40s     Check for interrupting elements affecting "centreButton" Button
+    t =    66.63s     Synthesize event
+    t =    66.99s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    67.00s Waiting 10.0s for "trainPanel" Any to exist
+    t =    68.03s     Checking `Expect predicate `existsNoRetry == 1` for object "trainPanel" Any`
+    t =    68.04s         Checking existence of `"trainPanel" Any`
+    t =    68.06s Checking existence of `"trainPanelPrimary" Button`
+    t =    68.10s Find the "trainPanelPrimary" Button
+    t =    68.24s Tear Down
+Test Case '-[BikeComputerUITests.RedesignMainTests testStrengthSessionFromPreparationToReviewInTheRedesignedMainApp]' passed (68.520 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' started.
+    t =     0.00s Start Test at 2026-11-22 13:10:30.839
+    t =     0.03s Set Up
+    t =     0.03s Open com.ralsuwaidico.bikecomputer
+    t =     0.03s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.03s         Terminate com.ralsuwaidico.bikecomputer:97627
+2026-11-22 13:10:31.906 xcodebuild[53038:133891] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-22 13:10:31.906 xcodebuild[53038:133891] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     1.59s         Setting up automation session
+    t =     3.52s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =     5.55s Waiting 40.0s for "onboardingContinue" Button to exist
+    t =     6.56s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingContinue" Button`
+    t =     6.56s         Checking existence of `"onboardingContinue" Button`
+    t =     6.66s Checking existence of `"onboardingV34" Any`
+    t =     6.88s Tear Down
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.098 seconds).
+Test Suite 'RedesignMainTests' passed at 2026-11-22 13:10:37.937.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 511.538 (511.541) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-22 13:10:37.938.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1070.351 (1070.362) seconds
+Test Suite 'Selected tests' passed at 2026-11-22 13:10:37.938.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1070.351 (1070.363) seconds
+2026-11-22 13:11:11.981 xcodebuild[53038:133891] [MT] IDETestOperationsObserverDebug: 1121.042 elapsed -- Testing started completed.
+2026-11-22 13:11:11.982 xcodebuild[53038:133891] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-22 13:11:11.982 xcodebuild[53038:133891] [MT] IDETestOperationsObserverDebug: 1121.042 sec, +1121.042 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-ahmzwafzcgkqthdqbpstblmwexsg/Logs/Test/Test-BikeComputer-2026.11.22_12-52-20-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+=== redesign-main: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.RedesignMainProfileTests testALostLinkAndAPairedBoardReadTheSameOnTheirPages]' passed (99.771 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainProfileTests testDevicePagesShowTheirStateAndActionsInTheRedesignedMainApp]' passed (405.664 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainProfileTests testPermissionsPageStatesTheRealPermissions]' passed (53.378 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testNewAthleteReachesAnApprovedPlanInTheRedesignedMainApp]' passed (314.662 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testProfileDevicesAndAnEditInTheRedesignedMainApp]' passed (121.258 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testStrengthSessionFromPreparationToReviewInTheRedesignedMainApp]' passed (68.520 seconds).
+Test Case '-[BikeComputerUITests.RedesignMainTests testWithoutTheSettingTheMainAppKeepsTheExistingInterface]' passed (7.098 seconds).
+=== redesign-main: E0-DIAG lines ===

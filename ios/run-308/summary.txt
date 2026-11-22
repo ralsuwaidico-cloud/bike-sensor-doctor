@@ -1,0 +1,17 @@
+BikeComputer iOS CI — run 308 — scope full — jobs: quick=skipped test=success release=skipped testflight=skipped
+
+## journeys
+BikeComputer iOS CI — build 308 — 2026-11-22 12:28 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: 6478AFFB-AE17-412A-A1E5-51BCFFD300B6
+RESULT build (Release, for testing): ok · 17m23s
+  recorded journeys: NOT RUN (focused redesigned-main-app check)
+RESULT redesigned main app (switch on, real services, test athlete): ok · 7 test(s) · 20m11s
+RESULT journey (recorded): not run — focused check · 42m15s
+Total: 42m30s
+
+GATE flows: ok
+commit a02fc5e5022ccfedaedc9369daa1ec21febba0c4  branch ios/lab  job failure
