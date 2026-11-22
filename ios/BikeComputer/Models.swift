@@ -981,6 +981,9 @@ final class Store: ObservableObject {
     /// E1: set when a workout save could not be written to storage (the record was NOT added); cleared by the next
     /// committed save. The save screens show "Not saved — Try again" from this.
     @Published var saveFailure: String? = nil
+    /// Onboarding › Athletic Blueprint: the athlete has approved and the confirmation is on screen until they open
+    /// Home. Never stored: after a relaunch an approved athlete simply opens Home.
+    @Published var blueprintConfirmation = false
     /// E1: what the launch found, in plain words for Profile and the recovery screen (records set aside, copy kept).
     @Published private(set) var storageNotice: String? = nil
     /// E1-F4: other holders of personal data on this iPhone (diagnostic history, device reports) register here and are

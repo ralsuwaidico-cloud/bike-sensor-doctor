@@ -120,6 +120,15 @@ extension XCUIApplication {
         return false
     }
 
+    /// Onboarding › Athletic Blueprint. Since the owner's decision of 22 Nov 2026 (22:51) approving shows a confirmation
+    /// first ("Approved and saved", sheet B3) and Home opens from its "Open Home" button; checks that tapped Approve and
+    /// expected Home directly now pass through it. Fails when the confirmation does not appear.
+    func openHomeFromBlueprint(file: StaticString = #filePath, line: UInt = #line) {
+        let open = buttons["onbOpenHome"].firstMatch
+        XCTAssertTrue(open.waitForExistence(timeout: 20), "required: the saved confirmation with Open Home after approval", file: file, line: line)
+        open.tap()
+    }
+
     /// Onboarding › Build your week. Since the owner's decision of 21 Nov 2026 (21:18) the week starts as seven rest
     /// days and nothing is proposed, so a check that used to accept the proposed week now chooses its days: open the
     /// day, choose the activities from the roster, confirm. Fails when a control is missing.

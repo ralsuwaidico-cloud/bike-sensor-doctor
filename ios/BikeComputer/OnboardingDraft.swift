@@ -817,6 +817,98 @@ enum OnbConnections {
     }
 }
 
+// MARK: - Onboarding › Athletic Blueprint (owner's combined design decision, 22 Nov 2026, 22:51)
+//
+// Two things are kept apart on the Blueprint:
+//   · YOUR TRAINING WEEK — the exact schedule the athlete confirmed on Build your week: every activity, every day,
+//     every length, whatever the sport. It is the athlete's, never a "Coach's proposal".
+//   · COACH'S TRAINING PROPOSAL — what the existing planner will do INSIDE that week: its own rules for the goal and
+//     the sessions it can plan. Sessions of a sport without a planner stay in the week exactly as chosen and get one
+//     truthful line; nothing is planned, replaced or invented for them.
+
+enum BlueprintPreview {
+    static let weekTitle = "Your training week"
+    static let coachTitle = "Coach's training proposal"
+
+    /// "3 h 30 min · 5 sessions" — the whole chosen week, every sport.
+    static func totals(_ week: ChosenWeek.Week) -> String {
+        let t = ChosenWeek.totals(week)
+        return "\(OnboardingWeek.durationText(t.minutes)) · \(t.sessions) session\(t.sessions == 1 ? "" : "s")"
+    }
+    /// The sports in the chosen week that no planner covers, in week order: ["Running", "Swimming"].
+    static func unplannedSports(_ week: ChosenWeek.Week) -> [String] {
+        var out: [String] = []
+        for s in ChosenWeek.normalised(week).joined() where ChosenWeek.engine(s.activity) == nil {
+            let name = AthleticRoster.activity(s.activity)?.family.title ?? "Other"
+            if !out.contains(name) { out.append(name) }
+        }
+        return out
+    }
+    /// One truthful line for the chosen sessions the Coach does not plan. nil when every session is planned.
+    static func unplannedStatus(_ week: ChosenWeek.Week) -> String? {
+        let sports = unplannedSports(week)
+        guard !sports.isEmpty else { return nil }
+        return "\(sports.joined(separator: ", ")): kept in your week as you chose \(sports.count == 1 ? "it" : "them"). Coach workouts for \(sports.count == 1 ? "it" : "them") are coming soon."
+    }
+    /// The planner's guidance for the sessions it plans in THIS week — at most two lines, each a rule the existing
+    /// planner applies. A riding rule is not shown for a week without rides, nor a lifting rule without lifts.
+    static func guidance(week: ChosenWeek.Week, primary: GoalID?, mode: TrainingMode, ftpKnown: Bool, ftpWatts: Int?, equipmentProvisional: Bool) -> [String] {
+        let planned = ChosenWeek.plannable(week)
+        let rides = planned.joined().filter { ChosenWeek.engine($0.activity) == .cycling }
+        let lifts = planned.joined().filter { ChosenWeek.engine($0.activity) == .strength }
+        var out: [String] = []
+        if let g = primary, g.sport == .cycling ? !rides.isEmpty : g.sport == .strength ? !lifts.isEmpty : !(rides.isEmpty && lifts.isEmpty) {
+            var first = GoalInfo.effect(g).split(separator: ";").first.map { String($0).trimmingCharacters(in: .whitespaces) } ?? GoalInfo.effect(g)
+            if !first.hasSuffix(".") { first += "." }
+            out.append("\(g.title): \(first)")
+        }
+        if mode.includesLifting, !lifts.isEmpty {
+            let l = lifts.count, lengths = Set(lifts.map { $0.minutes })
+            let each = lengths.count == 1 ? ", \(lengths.first!) min each" : ", at the lengths you chose"
+            out.append(l <= 3 ? "\(l) lift\(l == 1 ? "" : "s") as full body — not split by muscle\(each)." : "\(l) lifts, upper and lower alternating\(each).")
+        } else if !rides.isEmpty {
+            out.append("\(rides.count) ride\(rides.count == 1 ? "" : "s"), mostly easy, one steadier.")
+        }
+        if out.count < 2, !rides.isEmpty {
+            out.append(ftpKnown && ftpWatts != nil ? "Power targets from your \(ftpWatts!) W FTP." : "Heart rate or effort guides your rides — never guessed watts.")
+        } else if out.count < 2, !lifts.isEmpty {
+            out.append(equipmentProvisional ? "Bodyweight until you confirm equipment." : "Loads start from what you log in week 1.")
+        }
+        return Array(out.prefix(2))
+    }
+    /// Why there is no plan, in the Coach section of an athlete who finishes without one.
+    static func noPlan(rosterHasPlannedSport: Bool) -> String {
+        rosterHasPlannedSport
+            ? "No training plan is created: you chose no goal or session for a sport Cyclift plans today. Your week is saved as you chose it."
+            : "No training plan is created: Coach plans for your sports are coming soon. Your week is saved as you chose it."
+    }
+}
+
+/// What happened when the athlete approved. Success is only ever one of the two `saved` cases, and only after the
+/// store wrote the result and the file read back holds it.
+enum BlueprintOutcome: Equatable {
+    case planSaved, profileSaved
+    case failed(String)
+    case unconfirmed
+    var isSaved: Bool { self == .planSaved || self == .profileSaved }
+    var strong: String {
+        switch self {
+        case .planSaved: return "Approved and saved."
+        case .profileSaved: return "Saved."
+        case .failed: return "Not saved."
+        case .unconfirmed: return "Save not confirmed."
+        }
+    }
+    func detail(firstSession: String?) -> String {
+        switch self {
+        case .planSaved: return " \(firstSession.map { "Your first session is \($0). " } ?? "")Home and Plan now show your plan."
+        case .profileSaved: return " Your profile and training week are saved. No training plan was created."
+        case .failed: return " Cyclift could not write your blueprint to storage. Nothing was approved — try again."
+        case .unconfirmed: return " Cyclift could not confirm your blueprint is in storage yet. Check again."
+        }
+    }
+}
+
 // MARK: - Onboarding › Athlete Evolution (owner's approved direction, 22 Nov 2026, 17:33)
 //
 // Six stages, G0–G5, that the athlete can EXPLORE on the page: tapping one shows its orbital form, its name and a short

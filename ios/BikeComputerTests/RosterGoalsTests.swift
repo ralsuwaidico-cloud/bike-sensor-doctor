@@ -465,4 +465,59 @@ final class RosterGoalsTests: XCTestCase {
         let runner = EvolutionPage.evidence(roster: ["running"], rides: 0, lifts: 0)
         XCTAssertEqual(runner.title, "Nothing recorded yet"); XCTAssertEqual(runner.note, "Recording for your sports is coming soon.")
     }
+
+    // MARK: Athletic Blueprint (owner's combined decision, 22 Nov 2026, 22:51)
+
+    private func s(_ a: String, _ m: Int) -> ChosenSession { ChosenSession(activity: a, minutes: m) }
+    private var mixedWeek: ChosenWeek.Week { [[s("strength", 30)], [s("roadCycling", 60), s("running", 30)], [], [s("swimming", 30)], [], [s("roadCycling", 60)], []] }
+
+    /// The Blueprint's totals are the whole chosen week, every sport — not only what the Coach plans.
+    func testBlueprintTotalsAreTheWholeChosenWeek() {
+        XCTAssertEqual(BlueprintPreview.totals(mixedWeek), "3 h 30 min · 5 sessions")
+        XCTAssertEqual(BlueprintPreview.totals([[s("running", 45)], [], [], [], [], [], []]), "45 min · 1 session")
+        XCTAssertEqual(ChosenWeek.totals(ChosenWeek.plannable(mixedWeek)).sessions, 3, "the planner is given three of the five")
+    }
+    /// Sessions the Coach does not plan stay in the week and get one truthful line; a fully planned week gets none.
+    func testBlueprintUnplannedStatusIsTruthful() {
+        XCTAssertEqual(BlueprintPreview.unplannedSports(mixedWeek), ["Running", "Swimming"])
+        let line = BlueprintPreview.unplannedStatus(mixedWeek) ?? ""
+        XCTAssertTrue(line.hasPrefix("Running, Swimming: kept in your week as you chose them") && line.contains("coming soon"), line)
+        XCTAssertNil(BlueprintPreview.unplannedStatus([[s("strength", 30)], [s("roadCycling", 60)], [], [], [], [], []]))
+        XCTAssertTrue((BlueprintPreview.unplannedStatus([[s("running", 30)], [], [], [], [], [], []]) ?? "").hasPrefix("Running: kept in your week as you chose it"))
+    }
+    /// Guidance is only for what is planned in THIS week: no lifting rule without lifts, no riding rule without rides,
+    /// lengths as chosen, and nothing at all for a week the planner cannot plan.
+    func testBlueprintGuidanceFollowsTheChosenWeek() {
+        let both = BlueprintPreview.guidance(week: mixedWeek, primary: .endurance, mode: .hybrid, ftpKnown: false, ftpWatts: nil, equipmentProvisional: false)
+        XCTAssertEqual(both.count, 2); XCTAssertTrue(both[0].hasPrefix("Endurance:")); XCTAssertEqual(both[1], "1 lift as full body — not split by muscle, 30 min each.")
+        let mixedLengths: ChosenWeek.Week = [[s("strength", 30)], [], [s("strength", 45)], [], [], [], []]
+        let lifts = BlueprintPreview.guidance(week: mixedLengths, primary: .muscle, mode: .strength, ftpKnown: false, ftpWatts: nil, equipmentProvisional: false)
+        XCTAssertTrue(lifts.contains { $0.hasPrefix("2 lifts as full body") && $0.contains("at the lengths you chose") }, "\(lifts)")
+        XCTAssertFalse(lifts.contains { $0.lowercased().contains("ride") || $0.contains("FTP") }, "no riding guidance without rides: \(lifts)")
+        // a cycling goal, but the athlete scheduled only strength this week: the riding rule is not shown
+        let noRides = BlueprintPreview.guidance(week: [[s("strength", 30)], [], [], [], [], [], []], primary: .endurance, mode: .hybrid, ftpKnown: false, ftpWatts: nil, equipmentProvisional: false)
+        XCTAssertFalse(noRides.contains { $0.hasPrefix("Endurance:") }, "\(noRides)")
+        let ridesOnly = BlueprintPreview.guidance(week: [[s("roadCycling", 60)], [s("running", 30)], [], [], [], [], []], primary: .endurance, mode: .cycling, ftpKnown: false, ftpWatts: nil, equipmentProvisional: false)
+        XCTAssertFalse(ridesOnly.contains { $0.lowercased().contains("lift") || $0.lowercased().contains("run") }, "\(ridesOnly)")
+        XCTAssertEqual(BlueprintPreview.guidance(week: [[s("running", 30)], [], [], [], [], [], []], primary: nil, mode: .cycling, ftpKnown: false, ftpWatts: nil, equipmentProvisional: false), [])
+        // an unknown FTP is never turned into watts
+        XCTAssertFalse(BlueprintPreview.guidance(week: [[s("roadCycling", 60)], [], [], [], [], [], []], primary: nil, mode: .cycling, ftpKnown: false, ftpWatts: nil, equipmentProvisional: false).contains { $0.contains(" W ") })
+    }
+    /// Success is only ever said by a saved outcome; a failed or unconfirmed save never reads as saved.
+    func testBlueprintOutcomeWording() {
+        XCTAssertTrue(BlueprintOutcome.planSaved.isSaved && BlueprintOutcome.profileSaved.isSaved)
+        XCTAssertFalse(BlueprintOutcome.failed("x").isSaved || BlueprintOutcome.unconfirmed.isSaved)
+        XCTAssertEqual(BlueprintOutcome.planSaved.strong, "Approved and saved.")
+        XCTAssertTrue(BlueprintOutcome.planSaved.detail(firstSession: "Monday").contains("Your first session is Monday"))
+        let p = BlueprintOutcome.profileSaved.strong + BlueprintOutcome.profileSaved.detail(firstSession: nil)
+        XCTAssertTrue(p.contains("profile and training week are saved") && p.contains("No training plan was created") && !p.contains("Approved"))
+        XCTAssertTrue((BlueprintOutcome.failed("x").strong + BlueprintOutcome.failed("x").detail(firstSession: nil)).contains("Nothing was approved"))
+    }
+    /// Approving saves the profile and the WHOLE declared week; the plan covers only what the planner can plan.
+    func testApprovalKeepsTheWholeDeclaredWeek() {
+        var a = OnboardingAnswers(); a.schedule = mixedWeek
+        var x = PlanInputs(profile: RiderProfile(), availability: nil, equipment: EquipmentProfile(), strengthPrefs: StrengthPrefs())
+        a.apply(to: &x)
+        XCTAssertEqual(x.profile.chosenWeek, ChosenWeek.normalised(mixedWeek), "every chosen session is stored, running and swimming included")
+    }
 }

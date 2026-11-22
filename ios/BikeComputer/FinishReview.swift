@@ -106,4 +106,14 @@ extension Store {
               let p = try? JSONDecoder().decode(Probe.self, from: data) else { return .unreadable }
         return (p.strength ?? []).contains { $0.id == id } ? .confirmed : .notOnDisk
     }
+
+    /// Onboarding › Athletic Blueprint: is the approved result really in the file? Read back, never assumed.
+    func onboardingSaveCheck() -> SaveCheck {
+        guard onboarded else { return .notInHistory }
+        if UITestSupport.takeUnconfirmedSaveCheck() { return .notOnDisk }
+        struct Probe: Decodable { let onboarded: Bool? }
+        guard let data = try? Data(contentsOf: dir.appendingPathComponent("store.json")),
+              let p = try? JSONDecoder().decode(Probe.self, from: data) else { return .unreadable }
+        return p.onboarded == true ? .confirmed : .notOnDisk
+    }
 }

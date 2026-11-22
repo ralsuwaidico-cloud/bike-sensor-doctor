@@ -85,6 +85,7 @@ final class RedesignMainTests: XCTestCase {
         must(identity, "Blueprint identity"); XCTAssertEqual(identity.label, "Cycling/Strength hybrid · balanced")
         shot("7-blueprint")
         let approve = app.buttons["onbCreatePlan"].firstMatch; must(approve, "Approve my plan"); approve.tap()
+        app.openHomeFromBlueprint()      // owner decision 22 Nov 2026 (22:51): a saved confirmation precedes Home
 
         // the real planner made the plan; Home and the new navigation show it
         XCTAssertTrue(app.waitForHome(name: "Sam", timeout: 25), "required: Home for the new athlete after approval")

@@ -913,6 +913,7 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(app.staticTexts["blueprintWeekTotals"].firstMatch.exists, "the proposed week's totals")
         shot("journey-7-blueprint")
         app.buttons["onbCreatePlan"].firstMatch.tap()
+        app.openHomeFromBlueprint()      // owner decision 22 Nov 2026 (22:51): a saved confirmation precedes Home
         // Home and Plan show the approved athlete and week
         XCTAssertTrue(app.waitForHome(name: "Sam", timeout: 20), "approval lands on Home for the new athlete"); shot("journey-8-home")
         tab(app, "Plan")

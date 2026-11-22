@@ -21,6 +21,25 @@ final class LabFastOnboarding: XCTestCase {
         return app
     }
     private func el(_ app: XCUIApplication, _ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+    /// Athletic Blueprint (owner decision 22 Nov 2026, 22:51): everything on one screen at standard text size — from
+    /// the name to the last section, above the line and the button — and nothing obsolete on it.
+    private func blueprintFits(_ app: XCUIApplication, _ what: String, last ids: [String]) {
+        let title = need(app, "onbTitle", "the athlete's name"), line = need(app, "onbCoachLine", "the line above the button")
+        let rail = app.buttons["onboardingBack"].firstMatch
+        XCTAssertTrue(title.isHittable && title.frame.minY >= rail.frame.maxY - 1, "required (\(what)): the name is wholly visible")
+        for id in ["blueprintSports", "blueprintMainGoal", "blueprintWeek", "blueprintCoach"] + ids {
+            let e = need(app, id, id)
+            XCTAssertTrue(e.frame.minY >= title.frame.minY - 1 && e.frame.maxY <= line.frame.minY + 1, "required (\(what)): \(id) is on screen above the button area (\(e.frame), line \(line.frame))")
+        }
+        for gone in ["blueprintCell-ftp", "blueprintCell-planChanges"] { XCTAssertFalse(el(app, gone).exists, "required (\(what)): \(gone) is no longer on the Blueprint") }
+        let obsolete = NSPredicate(format: "label CONTAINS[c] 'FTP' OR label CONTAINS[c] 'Plan changes' OR label CONTAINS[c] 'Always ask me' OR label CONTAINS[c] 'interest'")
+        XCTAssertFalse(app.staticTexts.matching(obsolete).firstMatch.exists || app.buttons.matching(obsolete).firstMatch.exists, "required (\(what)): no FTP, Plan changes or 'interest' wording")
+        let stage = NSPredicate(format: "label CONTAINS 'Estimated' OR label CONTAINS 'Verified' OR label MATCHES '.*G[0-5] · .*'")
+        XCTAssertFalse(app.staticTexts.matching(stage).firstMatch.exists, "required (\(what)): no Evolution stage is assigned")
+        let weekHead = NSPredicate(format: "label BEGINSWITH[c] 'Your training week'"), coachOverWeek = NSPredicate(format: "label BEGINSWITH[c] %@", "Coach's proposal · week")
+        XCTAssertTrue(app.staticTexts.matching(weekHead).firstMatch.exists, "required (\(what)): the week is headed 'Your training week'")
+        XCTAssertFalse(app.staticTexts.matching(coachOverWeek).firstMatch.exists, "required (\(what)): the athlete's week is not labelled the Coach's proposal")
+    }
     /// Required element: fails when absent. Returns it for further checks.
     @discardableResult private func need(_ app: XCUIApplication, _ id: String, _ what: String, timeout: TimeInterval = 8) -> XCUIElement {
         let e = el(app, id)
@@ -488,11 +507,22 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(create.waitForExistence(timeout: 8), "required: Create my profile")
         XCTAssertFalse(app.buttons["onbCreatePlan"].firstMatch.exists, "required: there is no plan to approve")
         XCTAssertEqual(app.staticTexts["onbTitle"].firstMatch.label, "Sam"); XCTAssertEqual(app.staticTexts["blueprintIdentity"].firstMatch.label, "Runner")
-        XCTAssertTrue(need(app, "blueprintSport-running", "running on the Blueprint").label.contains("plans coming soon"), "required: the sport's status is stated")
-        XCTAssertTrue(need(app, "blueprintGoal-runPace", "the main goal on the Blueprint").label.contains("main goal"))
-        need(app, "blueprintGoal-runDistance", "the other goal on the Blueprint")
-        XCTAssertTrue(need(app, "blueprintNoPlan", "the no-plan statement").label.contains("No training plan is created"), "required: the Blueprint says no plan is created")
-        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'First session' OR label CONTAINS[c] 'rides ·' OR label CONTAINS[c] 'sessions a week'")).firstMatch.exists, "required: no week or session on this Blueprint")
+        // Owner's combined decision, 22 Nov 2026 (22:51): the Blueprint is one layout for every athlete. The runner's
+        // sport, goals and CHOSEN WEEK are shown (the earlier check required no week on this Blueprint, and looked for
+        // list rows that no longer exist); what must still be absent is any planned session.
+        XCTAssertTrue(need(app, "blueprintSport-running", "running in the line-up").label.contains("main"), "required: running is the main sport")
+        XCTAssertTrue(need(app, "blueprintMainGoal", "the main goal").label.contains("Pace"), "required: the runner's main goal (\(el(app, "blueprintMainGoal").label))")
+        XCTAssertTrue(need(app, "blueprintGoalLine", "the other goals").label.contains("Distance"), "required: the other goal is named")
+        XCTAssertTrue(need(app, "blueprintCell-goals", "the declared goals").label.contains("Pace ★"), "required: declared goals")
+        XCTAssertTrue(need(app, "blueprintDay-0", "Monday").label.contains("Road running 30 minutes") && need(app, "blueprintDay-3", "Thursday").label.contains("Road running 45 minutes"),
+                      "required: the Blueprint shows the week exactly as chosen (\(el(app, "blueprintDay-0").label); \(el(app, "blueprintDay-3").label))")
+        XCTAssertTrue(el(app, "blueprintDay-1").label.hasSuffix(", rest"), "required: an unchosen day is rest")
+        XCTAssertEqual(need(app, "blueprintWeekTotals", "the week totals").label, "1 h 45 min · 3 sessions", "required: the totals of the chosen week")
+        XCTAssertTrue(need(app, "blueprintNoPlan", "the no-plan statement").label.contains("No training plan is created"), "required: the Blueprint says no plan is created (\(el(app, "blueprintNoPlan").label))")
+        XCTAssertFalse(el(app, "blueprintCoachLine-0").exists, "required: no Coach guidance without a plan")
+        XCTAssertFalse(el(app, "blueprintCell-equipment").exists, "required: no equipment line for a runner")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'First session' OR label CONTAINS[c] 'rides ·' OR label CONTAINS[c] 'Zone' OR label CONTAINS[c] 'lift'")).firstMatch.exists, "required: no planned session and no cycling or strength guidance on this Blueprint")
+        blueprintFits(app, "runner", last: ["blueprintDeclared"])
         // 21 Nov 2026 (21:18): page 4 is now visited by every athlete; pages 5 and 6 still describe a plan
         for i in 5...6 { XCTAssertFalse(app.buttons["railSlot-\(i)"].firstMatch.isEnabled, "required: page \(i) is not offered to an athlete without a plan") }
         app.settleForScreenshot(1); shot("onb-7-blueprint-profile-only")
@@ -502,8 +532,16 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: Back returns to Goals with the selection kept")
         next.tap(); page(app, 4); next.tap(); page(app, 7)
 
-        // into Cyclift without a plan
+        // into Cyclift without a plan — through the saved confirmation (owner decision 22 Nov 2026, 22:51)
         create.tap()
+        let openHome = app.buttons["onbOpenHome"].firstMatch
+        XCTAssertTrue(openHome.waitForExistence(timeout: 20), "required: the confirmation after Create my profile")
+        let savedLine = el(app, "onbCoachLine").label
+        XCTAssertTrue(savedLine.contains("Saved.") && savedLine.contains("profile and training week are saved") && savedLine.contains("No training plan was created"), "required: the confirmation says what was saved and claims no plan (\(savedLine))")
+        XCTAssertFalse(el(app, "blueprintApprovedTag").exists, "required: no 'plan approved' mark without a plan")
+        XCTAssertTrue(el(app, "blueprintDay-3").label.contains("Road running 45 minutes"), "required: the saved week is still shown")
+        app.settleForScreenshot(1); shot("onb-7-blueprint-profile-saved")
+        openHome.tap()
         let greeting = el(app, "homeGreeting")
         XCTAssertTrue(greeting.waitForExistence(timeout: 20), "required: Home opens after Create my profile")
         XCTAssertTrue(greeting.label.contains("Sam"), "required: Home greets the athlete (\(greeting.label))")
@@ -553,10 +591,14 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(el(app, "onbCoachLine").label.contains("saved"), "required: without a cycling goal the week is a saved schedule (\(el(app, "onbCoachLine").label))")
         next.tap(); page(app, 7)
         XCTAssertTrue(app.buttons["onbCreateProfile"].firstMatch.waitForExistence(timeout: 8), "required: without a cycling goal no cycling plan is built")
-        XCTAssertTrue(need(app, "blueprintSport-roadCycling", "road cycling on the Blueprint").label.contains("work today"), "required: the Blueprint says cycling planning and recording work")
-        XCTAssertTrue(need(app, "blueprintSport-running", "running on the Blueprint").label.contains("plans coming soon"))
+        // Owner's combined decision, 22 Nov 2026 (22:51): one Blueprint layout. The per-sport status rows and the
+        // "Change" buttons this check used are gone; the chosen week is shown instead, and goals are changed from
+        // the declared Goals cell.
+        need(app, "blueprintSport-roadCycling", "road cycling in the line-up"); need(app, "blueprintSport-running", "running in the line-up")
+        XCTAssertTrue(need(app, "blueprintDay-0", "Monday").label.contains("Road running") && need(app, "blueprintDay-1", "Tuesday").label.contains("Road cycling"), "required: both chosen days are shown as chosen")
+        XCTAssertTrue(need(app, "blueprintNoPlan", "the no-plan statement").label.contains("you chose no goal"), "required: why there is no plan (\(el(app, "blueprintNoPlan").label))")
         app.settleForScreenshot(1); shot("onb-7-blueprint-mixed-profile-only")
-        tap(app, app.buttons["blueprintEditGoals"].firstMatch, "Change goals")
+        tap(app, app.buttons["blueprintCell-goals"].firstMatch, "the declared goals")
         page(app, 3)
         el(app, "goal-endurance").tap()
         XCTAssertEqual(mainGoalTitle(app), "PACE · MAIN GOAL", "required: the chosen cycling goal does not take the main goal away")
@@ -569,8 +611,21 @@ final class LabFastOnboarding: XCTestCase {
         // page used to be skipped for an athlete without a plan.
         page(app, 7)
         XCTAssertTrue(app.buttons["onbCreatePlan"].firstMatch.waitForExistence(timeout: 8), "required: a plan can now be approved")
-        XCTAssertTrue(need(app, "blueprintDay-1", "Tuesday on the Blueprint").label.contains("Road cycling"), "required: the chosen ride is in the plan")
-        XCTAssertTrue(need(app, "blueprintDay-0", "Monday on the Blueprint").label.hasSuffix(", rest"), "required: the running day is not planned as cycling or strength (\(el(app, "blueprintDay-0").label))")
+        XCTAssertTrue(need(app, "blueprintDay-1", "Tuesday on the Blueprint").label.contains("Road cycling"), "required: the chosen ride is in the week")
+        // Owner's decision 22 Nov 2026 (22:51): "Your training week" is the athlete's schedule, so the running day is
+        // SHOWN AS CHOSEN (this check used to require it to read "rest", when the strip showed only planned sessions).
+        // That it is not planned as cycling or strength is now stated by the Coach section instead.
+        XCTAssertTrue(need(app, "blueprintDay-0", "Monday on the Blueprint").label.contains("Road running 30 minutes"), "required: the running day stays in the week as chosen (\(el(app, "blueprintDay-0").label))")
+        XCTAssertEqual(need(app, "blueprintWeekTotals", "the week totals").label, "1 h 30 min · 2 sessions", "required: totals of the whole chosen week")
+        let status = need(app, "blueprintCoachStatus", "the status of the unplanned session").label
+        XCTAssertTrue(status.hasPrefix("Running: kept in your week as you chose it") && status.contains("coming soon"), "required: a truthful status for running (\(status))")
+        let guidance = need(app, "blueprintCoachLine-0", "the Coach's guidance").label
+        XCTAssertTrue(guidance.contains("Endurance") || guidance.contains("ride"), "required: guidance for the ride the Coach plans (\(guidance))")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'lift'")).firstMatch.exists, "required: no strength guidance for an athlete without strength")
+        XCTAssertTrue(need(app, "blueprintMainGoal", "the main goal").label.contains("Pace"), "required: the athlete's own main goal stays Pace")
+        XCTAssertTrue(need(app, "blueprintGoalLine", "what the plan follows").label.contains("Coach plan follows Endurance"), "required: the goal the plan follows is said")
+        blueprintFits(app, "running + cycling", last: ["blueprintDeclared"])
+        app.settleForScreenshot(1); shot("onb-7-blueprint-running-cycling-plan")
     }
 
     /// Equipment on Build your week (owner decision 22 Nov 2026, 13:34): Gym | Home | Bodyweight | Custom — no "Not
@@ -743,6 +798,96 @@ final class LabFastOnboarding: XCTestCase {
         next.tap(); page(app, 6)
         app.buttons["onboardingBack"].firstMatch.tap(); page(app, 5)
         need(app, "onbConnection-bluetooth", "the page again after Back")
+    }
+
+    /// Athletic Blueprint (owner's combined decision, 22 Nov 2026, 22:51), for a multisport athlete — cycling and gym
+    /// planned, running not yet: every chosen activity is in "Your training week", two sessions on one
+    /// day included, with the right totals; the Coach section guides only what it plans and says truthfully that the
+    /// other sessions are kept; nothing obsolete is linked; a save that fails shows no success and writes nothing;
+    /// approval shows the confirmation only once saved; Plan then holds no session for running.
+    func testAthleticBlueprintMultisport() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_NEW_ATHLETE"] = "1"; app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launchEnvironment["BC_UITEST_SAVE_FAIL"] = "1"            // simulator only: the first Approve tap takes the failure path
+        app.launch()
+        reachGoalsPage(app, roster: ["roadCycling", "strength", "running"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        el(app, "goal-endurance").tap()
+        next.tap(); page(app, 4)
+        app.chooseWeekDay(0, ["strength"]); app.chooseWeekDay(1, ["roadCycling", "running"]); app.chooseWeekDay(3, ["running"]); app.chooseWeekDay(5, ["roadCycling"])
+        XCTAssertEqual(need(app, "onbWeekCounts", "the counts").label, "5 sessions · 4 training days · 3 rest days")
+        let total = need(app, "onbWeekTotal", "the weekly total").label
+        need(app, "onbEquipment", "the equipment choice").buttons["Home"].firstMatch.tap()
+        next.tap(); page(app, 5); next.tap(); page(app, 6); next.tap(); page(app, 7)
+
+        // every sport, none called an interest
+        for id in ["roadCycling", "strength", "running"] { need(app, "blueprintSport-\(id)", "\(id) in the line-up") }
+        // the week exactly as chosen
+        XCTAssertTrue(need(app, "blueprintDay-0", "Monday").label.contains("Gym training 30 minutes"), "required: Monday (\(el(app, "blueprintDay-0").label))")
+        let tue = need(app, "blueprintDay-1", "Tuesday").label
+        XCTAssertTrue(tue.contains("Road cycling 60 minutes") && tue.contains("Road running 30 minutes"), "required: both of Tuesday's sessions (\(tue))")
+        XCTAssertTrue(need(app, "blueprintDay-3", "Thursday").label.contains("Road running 30 minutes"), "required: Thursday's run is kept, not shown as rest (\(el(app, "blueprintDay-3").label))")
+        XCTAssertTrue(need(app, "blueprintDay-5", "Saturday").label.contains("Road cycling 60 minutes"))
+        for d in [2, 4, 6] { XCTAssertTrue(el(app, "blueprintDay-\(d)").label.hasSuffix(", rest"), "required: day \(d) is rest") }
+        XCTAssertEqual(need(app, "blueprintWeekTotals", "the week totals").label, "\(total) · 5 sessions", "required: the Blueprint's totals are the chosen week's")
+        XCTAssertEqual(total, "3 h 30 min", "required: 30 + 60 + 30 + 30 + 60 minutes")
+        // the Coach: guidance for what it plans, a truthful status for the rest
+        XCTAssertTrue(need(app, "blueprintCoachLine-0", "guidance").label.hasPrefix("Endurance:"))
+        let lifts = need(app, "blueprintCoachLine-1", "strength guidance").label
+        XCTAssertTrue(lifts.hasPrefix("1 lift as full body"), "required: guidance matches the one strength session chosen (\(lifts))")
+        let status = need(app, "blueprintCoachStatus", "the status of unplanned sessions").label
+        XCTAssertTrue(status.hasPrefix("Running: kept in your week as you chose it") && status.contains("coming soon"), "required: a truthful status for running (\(status))")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'run workout' OR label CONTAINS[c] 'pace target' OR label CONTAINS[c] ' km'")).firstMatch.exists, "required: no running workout is claimed")
+        blueprintFits(app, "multisport", last: ["blueprintDeclared", "blueprintCell-equipment"])
+        app.settleForScreenshot(1); shot("onb-7-blueprint-multisport")
+
+        // a save that fails: no success, still the Blueprint, nothing written
+        let approve = app.buttons["onbCreatePlan"].firstMatch
+        XCTAssertTrue(approve.exists && approve.label == "Approve my blueprint")
+        approve.tap()
+        let line = need(app, "onbCoachLine", "the line above the button")
+        XCTAssertTrue(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS 'Not saved.'"), object: line)], timeout: 6) == .completed, "required: a failed save is said (\(line.label))")
+        XCTAssertFalse(app.buttons["onbOpenHome"].firstMatch.exists, "required: no success and no Open Home when saving failed")
+        XCTAssertFalse(el(app, "blueprintApprovedTag").exists, "required: nothing is marked approved")
+        XCTAssertTrue(approve.exists, "required: the athlete can try again")
+        app.settleForScreenshot(1); shot("onb-7-blueprint-not-saved")
+        app.terminate()
+        let again = XCUIApplication(); again.launchEnvironment["LAB_THEME"] = "obsidian"; again.launch()
+        XCTAssertTrue(again.staticTexts["onboardingProgress"].firstMatch.waitForExistence(timeout: 30), "required: after a failed save and a relaunch the athlete is still in onboarding — nothing was approved")
+        XCTAssertFalse(el(again, "homeGreeting").exists, "required: Home is not shown for an unapproved athlete")
+        for _ in 0..<7 {
+            let counter = again.staticTexts["onboardingProgress"].firstMatch
+            guard let n = Int(counter.label.prefix(1)), n < 7 else { break }
+            again.buttons["onboardingNext"].firstMatch.tap()
+            _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "NOT (label BEGINSWITH %@)", "\(n) of 7"), object: counter)], timeout: 5)
+        }
+        page(again, 7)
+        XCTAssertEqual(need(again, "blueprintWeekTotals", "the week totals after reopening").label, "3 h 30 min · 5 sessions", "required: the chosen week survived")
+        XCTAssertTrue(need(again, "blueprintDay-1", "Tuesday after reopening").label.contains("Road running 30 minutes"), "required: the unplanned session survived")
+
+        // approve for real: confirmation, then Home and Plan
+        again.buttons["onbCreatePlan"].firstMatch.tap()
+        let openHome = again.buttons["onbOpenHome"].firstMatch
+        XCTAssertTrue(openHome.waitForExistence(timeout: 20), "required: the confirmation after approval")
+        XCTAssertTrue(el(again, "onbCoachLine").label.contains("Approved and saved."), "required: approved and saved is said (\(el(again, "onbCoachLine").label))")
+        XCTAssertEqual(el(again, "blueprintWeekTotals").label, "3 h 30 min · 5 sessions")
+        again.settleForScreenshot(1); shot("onb-7-blueprint-multisport-approved")
+        openHome.tap()
+        XCTAssertTrue(again.waitForHome(name: "Sam", timeout: 20), "required: Home after Open Home")
+        // closed and opened again: the approval was stored
+        again.terminate()
+        let third = XCUIApplication(); third.launchEnvironment["LAB_THEME"] = "obsidian"; third.launch()
+        XCTAssertTrue(third.waitForHome(name: "Sam", timeout: 30), "required: after reopening the approved athlete opens Home")
+        let planTab = third.buttons["Plan"].firstMatch
+        XCTAssertTrue(planTab.waitForExistence(timeout: 8), "required: the Plan tab"); planTab.tap()
+        XCTAssertTrue(third.staticTexts["planTitle"].firstMatch.waitForExistence(timeout: 8), "required: Plan is shown")
+        let nextWeek = third.buttons["planWeekNext"].firstMatch
+        if nextWeek.waitForExistence(timeout: 8), nextWeek.isEnabled { nextWeek.tap(); third.settleForScreenshot(1) }
+        let days = third.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'planDay-'")).allElementsBoundByIndex.map { $0.label }
+        XCTAssertTrue(days.contains { $0.hasPrefix("Monday") && $0.contains("session") } && days.contains { $0.hasPrefix("Saturday") && $0.contains("session") }, "required: the planned strength and ride days are in Plan (\(days))")
+        XCTAssertFalse(days.contains { $0.hasPrefix("Thursday") && $0.contains("session") }, "required: no session is invented for the running day (\(days))")
+        XCTAssertTrue(days.contains { $0.hasPrefix("Tuesday") && $0.contains("session") && !$0.contains("2 sessions") }, "required: Tuesday holds the ride only — nothing substituted for the run (\(days))")
+        shot("onb-9-plan-multisport")
     }
 
     /// Athlete Evolution (owner's approved direction, 22 Nov 2026, 17:33), for a cycling, gym and running athlete: the
@@ -1064,43 +1209,66 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(need(app, "blueprintMainGoal", "the main goal").label.contains("Endurance"), "required: the main goal is named")
         // four sessions were chosen on page 4 (it was five proposed plus one added before 21 Nov 2026)
         XCTAssertTrue(need(app, "blueprintWeekTotals", "the week totals").label.contains("4 sessions"), "required: the blueprint shows the chosen week (\(el(app, "blueprintWeekTotals").label))")
-        need(app, "blueprintWeek", "the proposed week")
+        need(app, "blueprintWeek", "the athlete's week")
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "blueprintDay-3").firstMatch.label.contains("Road cycling 60 minutes"), "required: Thursday's ride is in the blueprint, with its own length")
+        XCTAssertEqual(el(app, "blueprintWeekTotals").label, "3 h · 4 sessions", "required: the totals of the chosen week")
         need(app, "blueprintDeclared", "the declared group")
-        // FTP is no longer entered in onboarding (22 Nov 2026, 15:55), so a new athlete's is Unknown — never an invented number
-        XCTAssertTrue(need(app, "blueprintCell-ftp", "the FTP line").label.contains("Unknown"), "required: an FTP that was never entered is shown as Unknown (\(el(app, "blueprintCell-ftp").label))")
+        // Owner's combined decision, 22 Nov 2026 (22:51): FTP and Plan changes are removed from this page (they live in
+        // Performance Settings and Profile › App preferences › Coach), and "Measured evidence" appears only when
+        // something is recorded. The earlier checks required all three here.
         XCTAssertTrue(need(app, "blueprintCell-equipment", "the declared equipment").label.contains("Home"), "required: the chosen equipment")
-        // a new athlete keeps the safe default — explicit approval — though the choice is no longer asked in onboarding
-        XCTAssertTrue(need(app, "blueprintCell-planChanges", "the plan-changes line").label.contains("Always ask me"), "required: a new athlete starts with explicit approval (\(el(app, "blueprintCell-planChanges").label))")
-        XCTAssertTrue(need(app, "blueprintMeasuredLine", "the measured line").label.hasPrefix("No recorded training yet"), "required: no evidence is claimed")
+        XCTAssertTrue(need(app, "blueprintCell-goals", "the declared goals").label.contains("Endurance ★"), "required: the declared goals")
+        XCTAssertFalse(el(app, "blueprintMeasuredLine").exists, "required: no measured evidence is shown when nothing is recorded")
+        XCTAssertTrue(need(app, "blueprintLevels", "declared experience").label.contains("rider") && el(app, "blueprintLevels").label.contains("lifter"), "required: sport-specific experience")
+        let g0 = need(app, "blueprintCoachLine-0", "the Coach's first line").label, g1 = need(app, "blueprintCoachLine-1", "the Coach's second line").label
+        XCTAssertTrue(g0.hasPrefix("Endurance:"), "required: guidance for the main goal (\(g0))")
+        XCTAssertTrue(g1.hasPrefix("2 lifts as full body") && g1.contains("30 min each"), "required: guidance matches the two strength sessions chosen (\(g1))")
+        XCTAssertTrue(need(app, "blueprintCoachLine-2", "the first session").label.hasPrefix("First session:"), "required: the first planned session")
+        XCTAssertFalse(el(app, "blueprintCoachStatus").exists, "required: no 'coming soon' status when every session is planned")
+        blueprintFits(app, "cycling + strength", last: ["blueprintDeclared", "blueprintCell-equipment"])
         let approve = app.buttons["onbCreatePlan"].firstMatch
         XCTAssertTrue(approve.exists && approve.label == "Approve my blueprint", "required: the approval button (\(approve.label))")
         app.settleForScreenshot(1); shot("onb-7-blueprint")
-        _ = app.reveal(el(app, "blueprintMeasured"), top: 110, bottomMargin: 230)
-        app.settleForScreenshot(1); shot("onb-7-blueprint-end")
-        // Added after simulator run 17: the last declared answer must be reachable clear of the fixed Approve zone.
-        let lastCell = app.buttons["blueprintCell-planChanges"].firstMatch
-        XCTAssertTrue(lastCell.exists, "required: the plan-changes answer is a button")
-        XCTAssertTrue(app.reveal(lastCell, top: 110, bottomMargin: 180) && lastCell.isHittable, "required: the plan-changes answer can be scrolled clear of the Approve zone")
+        // the last declared answer is a button, on screen without scrolling (it used to be Plan changes, scrolled into view)
+        let lastCell = app.buttons["blueprintCell-equipment"].firstMatch
+        XCTAssertTrue(lastCell.exists && lastCell.isHittable, "required: the equipment answer is a button on screen")
 
-        tap(app, el(app, "blueprintProposal"), "the proposal group")
+        tap(app, el(app, "blueprintYourWeek"), "your training week")
         page(app, 4)
         let back = app.buttons["onbBackToBlueprint"].firstMatch
         XCTAssertTrue(back.waitForExistence(timeout: 5), "required: Back to blueprint replaces Continue")
         XCTAssertFalse(next.exists, "required: an edit from the blueprint does not offer Continue")
         XCTAssertTrue(el(app, "onbCoachLine").label.contains("Editing from your blueprint"), "required: the page says it was opened from the blueprint")
         app.settleForScreenshot(1); shot("onb-7-edit-week")
+        // edit the week from the Blueprint and return: the preview follows the latest confirmed answers
+        tap(app, app.buttons["onbDay-5"].firstMatch, "open Saturday"); tap(app, app.buttons["onbAct-roadCycling"].firstMatch, "a ride on Saturday")
+        tap(app, app.buttons["onbDayConfirm"].firstMatch, "confirm Saturday")
         back.tap()
         page(app, 7)
+        XCTAssertEqual(el(app, "blueprintWeekTotals").label, "4 h · 5 sessions", "required: the Blueprint follows the edited week")
+        XCTAssertTrue(el(app, "blueprintDay-5").label.contains("Road cycling 60 minutes"), "required: Saturday's new ride is on the Blueprint")
         tap(app, app.buttons["blueprintCell-goals"].firstMatch, "the declared goals")
         page(app, 3)
         XCTAssertTrue(back.waitForExistence(timeout: 5), "required: Back to blueprint on the goals page")
         back.tap()
         page(app, 7)
 
-        // Approve → Home → Plan
+        // Approve → the saved confirmation (sheet B3) → Home → Plan
         approve.tap()
-        XCTAssertTrue(app.waitForHome(name: "Sam", timeout: 20), "required: approval opens Home with the entered name")
+        let openHome = app.buttons["onbOpenHome"].firstMatch
+        XCTAssertTrue(openHome.waitForExistence(timeout: 20), "required: the confirmation after approval")
+        XCTAssertEqual(openHome.label, "Open Home", "required: the confirmation offers Open Home")
+        let savedLine = el(app, "onbCoachLine").label
+        XCTAssertTrue(savedLine.contains("Approved and saved.") && savedLine.contains("Your first session is"), "required: the confirmation says the blueprint was approved and saved (\(savedLine))")
+        XCTAssertEqual(need(app, "blueprintApprovedTag", "the approved mark").label, "PLAN VERSION 1 · APPROVED")
+        XCTAssertFalse(approve.exists, "required: nothing left to approve")
+        XCTAssertEqual(el(app, "blueprintWeekTotals").label, "4 h · 5 sessions", "required: the saved week is the chosen week, with the Saturday ride added from the Blueprint")
+        el(app, "blueprintYourWeek").tap()
+        XCTAssertTrue(openHome.exists && !app.buttons["onbBackToBlueprint"].firstMatch.exists, "required: the confirmation cannot be edited")
+        blueprintFits(app, "approved", last: ["blueprintDeclared"])
+        app.settleForScreenshot(1); shot("onb-7-blueprint-approved")
+        openHome.tap()
+        XCTAssertTrue(app.waitForHome(name: "Sam", timeout: 20), "required: Open Home opens Home with the entered name")
         app.settleForScreenshot(1); shot("onb-8-home")
         let planTab = app.buttons["Plan"].firstMatch
         XCTAssertTrue(planTab.waitForExistence(timeout: 8), "required: the Plan tab"); planTab.tap()
@@ -1152,12 +1320,13 @@ final class LabFastOnboarding: XCTestCase {
         next.tap(); page(app, 6)
         next.tap(); page(app, 7)
         XCTAssertEqual(app.staticTexts["onbTitle"].firstMatch.label, "Sam", "required: the blueprint is headed by the athlete's name")
-        for id in ["blueprintSports", "blueprintMainGoal", "blueprintWeek", "blueprintDeclared", "blueprintMeasuredLine"] { need(app, id, "blueprint part") }
+        // 22 Nov 2026 (22:51): "Measured evidence" is shown only when something is recorded; the Coach section replaces it here
+        for id in ["blueprintSports", "blueprintMainGoal", "blueprintWeek", "blueprintCoach", "blueprintDeclared"] { need(app, id, "blueprint part") }
         XCTAssertTrue(app.buttons["onbCreatePlan"].firstMatch.exists, "required: the approval button")
         app.settleForScreenshot(1); shot("onb-large-7-blueprint")
         _ = app.reveal(el(app, "blueprintDeclared"), top: 110, bottomMargin: 300)
         app.settleForScreenshot(1); shot("onb-large-7-blueprint-declared")
-        _ = app.reveal(el(app, "blueprintMeasuredLine"), top: 110, bottomMargin: 300)
+        _ = app.reveal(el(app, "blueprintCell-equipment"), top: 110, bottomMargin: 300)
         app.settleForScreenshot(1); shot("onb-large-7-blueprint-end")
     }
 }

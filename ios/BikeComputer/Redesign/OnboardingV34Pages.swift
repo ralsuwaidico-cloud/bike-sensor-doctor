@@ -1100,14 +1100,20 @@ struct OnbEvolutionPage: View {
     }
 }
 
-// MARK: - Page 7 · Athletic Blueprint (sheet Y5, B1)
+// MARK: - Page 7 · Athletic Blueprint (sheet Y5, B1 and B3 — owner's combined design decision, 22 Nov 2026, 22:51)
+//
+// The sheet's one-screen composition: name and identity, the sport line-up, the main goal, a seven-day strip, a short
+// training explanation, what was declared, the approval button. Two corrections from the decision:
+//   · the week is the ATHLETE'S ("Your training week": every chosen activity, icons only, totals beside the title);
+//     the Coach's part is a separate section below it ("Coach's training proposal") — guidance inside that week;
+//   · FTP and Plan changes are not on this page (Performance Settings and Profile › App preferences › Coach hold them).
+// No Evolution stage is shown: none is assigned. After approval the same page becomes the confirmation (sheet B3).
 
-/// Everything the blueprint shows, worked out by the onboarding screen from the answers and the planner's dry run.
 struct OnbBlueprintModel {
-    struct SportMark: Identifiable { let id: String; let short: String; let icon: String; let role: String; let strength: Bool; let main: Bool; let interest: Bool }
+    struct SportMark: Identifiable { let id: String; let short: String; let icon: String; let role: String; let strength: Bool; let main: Bool }
     struct Cell: Identifiable { let id: String; let title: String; let value: String; let page: Int }
     var name: String
-    /// "Intermediate rider · beginner lifter"
+    /// "Intermediate rider · beginner lifter" — sport-specific experience where it is known; empty otherwise.
     var levels: String
     /// "Balanced" for a hybrid athlete, otherwise the sport; spoken as the full roster line.
     var lead: String
@@ -1116,16 +1122,21 @@ struct OnbBlueprintModel {
     var goalTitle: String?
     var goalIsStrength: Bool
     var goalLine: String
-    var kinds: [DayKind]
-    var ride: Int
-    var lift: Int
-    /// The chosen plannable sessions with each day's own minutes (nil = the week-wide lengths above are drawn).
-    var sessions: [[ChosenSession]]? = nil
-    /// "3 h 30 min · 5 sessions"
+    /// The week exactly as the athlete confirmed it: every activity, whatever the sport.
+    var week: [[ChosenSession]]
+    /// "3 h 30 min · 5 sessions" — the whole chosen week.
     var weekTotals: String
-    var proposalLines: [String]
+    /// The planner's guidance for what it plans in this week (empty when there is no plan).
+    var coachLines: [String]
+    /// One truthful line for chosen sessions the Coach does not plan yet.
+    var coachStatus: String?
+    /// Why no plan exists (an athlete who finishes without one); nil when a plan will be made.
+    var noPlan: String?
     var cells: [Cell]
-    var measured: String
+    /// Recorded training, only when there genuinely is some.
+    var measured: String?
+    /// nil before approval; the saved result afterwards (the page is then a confirmation and cannot be edited).
+    var saved: BlueprintOutcome? = nil
 }
 
 struct OnbBlueprintPage: View {
@@ -1134,42 +1145,46 @@ struct OnbBlueprintPage: View {
     let onEdit: (Int) -> Void
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var dts
+    private var locked: Bool { m.saved != nil }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: CySpace.m) {
+        VStack(alignment: .leading, spacing: 10) {
             header
             sportsRow
             goal
-            proposal
-            declared
-            measured
+            week
+            coach
+            if !m.cells.isEmpty { declared }
+            if m.measured != nil { measured }
         }
     }
     private func tappable<V: View>(_ id: String, page: Int, hint: String, @ViewBuilder _ content: () -> V) -> some View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .onTapGesture { onEdit(page) }
+            .onTapGesture { if !locked { onEdit(page) } }
             .accessibilityElement(children: .contain)
-            .accessibilityAction(named: Text(hint)) { onEdit(page) }
+            .accessibilityAction(named: Text(hint)) { if !locked { onEdit(page) } }
             .accessibilityIdentifier(id)
     }
 
     private var header: some View {
         let layout = dts.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: CySpace.s))
-        return VStack(alignment: .leading, spacing: 4) {
+        return VStack(alignment: .leading, spacing: 2) {
             (Text("07").foregroundColor(theme.accent) + Text(" · ATHLETIC BLUEPRINT").foregroundColor(theme.textSecondary))
                 .font(CyFont.overline).tracking(1.2)
                 .accessibilityLabel("Page 7, Athletic Blueprint")
             layout {
-                Text(m.name).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
+                Text(m.name).font(CyDyn.f(30, .bold)).foregroundStyle(theme.textPrimary)
                     .lineLimit(2).minimumScaleFactor(0.7).accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("onbTitle")
                 if !dts.isAccessibilitySize { Spacer(minLength: CySpace.s) }
                 VStack(alignment: dts.isAccessibilitySize ? .leading : .trailing, spacing: 1) {
-                    Text(m.levels).font(CyDyn.f(13)).foregroundStyle(theme.textSecondary)
-                        .multilineTextAlignment(dts.isAccessibilitySize ? .leading : .trailing).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("blueprintLevels")
+                    if !m.levels.isEmpty {
+                        Text(m.levels).font(CyDyn.f(13)).foregroundStyle(theme.textSecondary)
+                            .multilineTextAlignment(dts.isAccessibilitySize ? .leading : .trailing).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("blueprintLevels")
+                    }
                     Text(m.lead).font(CyDyn.f(13)).foregroundStyle(theme.textSecondary)
                         .accessibilityLabel(m.identity)
                         .accessibilityIdentifier("blueprintIdentity")
@@ -1178,6 +1193,7 @@ struct OnbBlueprintPage: View {
         }
     }
 
+    /// Every sport on the roster: main sports filled, the others outlined. Many sports scroll sideways — all stay reachable.
     private var sportsRow: some View {
         tappable("blueprintSports", page: 2, hint: "Change your sports") {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -1190,23 +1206,19 @@ struct OnbBlueprintPage: View {
     }
     private func sportMark(_ s: OnbBlueprintModel.SportMark) -> some View {
         let tint = s.strength ? theme.strength : theme.endurance
-        let size: CGFloat = s.main ? 44 : 34
-        return VStack(spacing: 3) {
+        let size: CGFloat = s.main ? 40 : 32
+        return VStack(spacing: 2) {
             ZStack {
-                if s.main {
-                    Circle().fill(tint)
-                } else {
-                    Circle().strokeBorder(tint, style: StrokeStyle(lineWidth: 1.2, dash: s.interest ? [3, 3] : []))
-                }
+                if s.main { Circle().fill(tint) } else { Circle().strokeBorder(tint, lineWidth: 1.2) }
                 Image(systemName: s.icon).font(s.main ? Font.body.weight(.semibold) : Font.footnote.weight(.semibold))
                     .foregroundStyle(s.main ? theme.background : tint)
             }
             .frame(width: size, height: size)
-            .frame(height: 44)
+            .frame(height: 40)
             Text(s.short).font(s.main ? Font.caption.weight(.bold) : Font.caption).foregroundStyle(s.main ? theme.textPrimary : theme.textSecondary).lineLimit(1)
             if !s.role.isEmpty { Text(s.role).font(.caption2).foregroundStyle(theme.textSecondary).lineLimit(1) }
         }
-        .frame(minWidth: 48)
+        .frame(minWidth: 46)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(s.short)\(s.role.isEmpty ? "" : ", \(s.role)")")
         .accessibilityIdentifier("blueprintSport-\(s.id)")
@@ -1214,46 +1226,73 @@ struct OnbBlueprintPage: View {
 
     private var goal: some View {
         tappable("blueprintGoal", page: 3, hint: "Change your goals") {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 (Text("Main goal · ").foregroundColor(theme.textPrimary)
                  + Text(m.goalTitle ?? "not chosen").foregroundColor(m.goalTitle == nil ? theme.textSecondary : (m.goalIsStrength ? theme.strength : theme.endurance)))
-                    .font(CyDyn.f(20, .bold)).fixedSize(horizontal: false, vertical: true)
+                    .font(CyDyn.f(19, .bold)).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("blueprintMainGoal")
                 if !m.goalLine.isEmpty {
-                    Text(m.goalLine).font(CyDyn.f(14)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    Text(m.goalLine).font(CyDyn.f(13.5)).foregroundStyle(theme.textSecondary)
+                        .lineLimit(dts.isAccessibilitySize ? nil : 1).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("blueprintGoalLine")
                 }
             }
         }
     }
 
-    private var proposal: some View {
-        tappable("blueprintProposal", page: 4, hint: "Change your week") {
-            VStack(alignment: .leading, spacing: CySpace.s) {
-                OnbGroupHeader(mark: .proposal, title: "Coach's proposal · week 1", trailing: m.weekTotals, trailingId: "blueprintWeekTotals")
-                OnbWeekStrip(kinds: m.kinds, ride: m.ride, lift: m.lift, sessions: m.sessions, idPrefix: "blueprintDay", containerId: "blueprintWeek")
-                ForEach(Array(m.proposalLines.enumerated()), id: \.offset) { pair in bullet(pair.element, tint: theme.accent, glyph: "◆") }
+    /// The athlete's own week — never called the Coach's.
+    private var week: some View {
+        tappable("blueprintYourWeek", page: 4, hint: "Change your week") {
+            VStack(alignment: .leading, spacing: 6) {
+                OnbGroupHeader(mark: .declared, title: m.saved == nil ? BlueprintPreview.weekTitle : BlueprintPreview.weekTitle + " · saved",
+                               trailing: m.weekTotals, trailingId: "blueprintWeekTotals")
+                OnbWeekStrip(kinds: [], ride: 0, lift: 0, sessions: m.week, iconsOnly: true, idPrefix: "blueprintDay", containerId: "blueprintWeek")
             }
         }
     }
-    /// A proposal line: what comes before the first colon is the subject and is drawn stronger, as on the sheet.
+
+    /// What the planner will do inside that week — or, truthfully, that it makes no plan.
+    private var coach: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                OnbGroupHeader(mark: .proposal, title: BlueprintPreview.coachTitle)
+                if m.saved == .planSaved {
+                    Text("PLAN VERSION 1 · APPROVED").font(CyDyn.f(10.5, .bold)).tracking(0.6).foregroundStyle(theme.success)
+                        .lineLimit(1).minimumScaleFactor(0.7).accessibilityIdentifier("blueprintApprovedTag")
+                }
+            }
+            if let none = m.noPlan {
+                bullet(none, tint: theme.textSecondary, glyph: "◆").accessibilityIdentifier("blueprintNoPlan")
+            } else {
+                ForEach(Array(m.coachLines.enumerated()), id: \.offset) { pair in
+                    bullet(pair.element, tint: theme.accent, glyph: "◆").accessibilityIdentifier("blueprintCoachLine-\(pair.offset)")
+                }
+                if let status = m.coachStatus {
+                    bullet(status, tint: theme.textSecondary, glyph: "◆").accessibilityIdentifier("blueprintCoachStatus")
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("blueprintCoach")
+    }
+    /// A line: what comes before the first colon is the subject and is drawn stronger, as on the sheet.
     private func bullet(_ text: String, tint: Color, glyph: String) -> some View {
         let parts = text.split(separator: ":", maxSplits: 1).map(String.init)
-        let head = parts.count == 2 && parts[0].count <= 24 ? parts[0] + ":" : ""
+        let head = parts.count == 2 && parts[0].count <= 28 ? parts[0] + ":" : ""
         let tail = head.isEmpty ? text : parts[1]
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(glyph).font(CyDyn.f(10, .bold)).foregroundStyle(tint).accessibilityHidden(true)
+            Text(glyph).font(CyDyn.f(9, .bold)).foregroundStyle(tint).accessibilityHidden(true)
             (Text(head).fontWeight(.semibold) + Text(tail))
-                .font(CyDyn.f(14)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                .font(CyDyn.f(13.5)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .combine)
     }
 
     private var declared: some View {
-        VStack(alignment: .leading, spacing: CySpace.s) {
-            OnbGroupHeader(mark: .declared, title: "Declared by you", trailing: "tap to change")
-            // Simulator run 17: this was a LazyVGrid, which does not build the rows below the visible part of the
-            // page, so the last answers (plan changes) did not exist for VoiceOver or the checks until scrolled to.
-            // At most seven short cells: they are all built.
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 5) {
+            OnbGroupHeader(mark: .declared, title: "Declared by you", trailing: locked ? nil : "tap to change")
+            // every cell is built (not lazily), so each exists for VoiceOver and the checks without scrolling
+            VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(cellRows.enumerated()), id: \.offset) { row in
                     HStack(alignment: .top, spacing: 8) {
                         ForEach(row.element) { c in cell(c) }
@@ -1273,32 +1312,27 @@ struct OnbBlueprintPage: View {
         return stride(from: 0, to: m.cells.count, by: n).map { i in Array(m.cells[i..<min(i + n, m.cells.count)]) }
     }
     private func cell(_ c: OnbBlueprintModel.Cell) -> some View {
-        Button { onEdit(c.page) } label: {
+        Button { if !locked { onEdit(c.page) } } label: {
             VStack(alignment: .leading, spacing: 1) {
                 Text(c.title).font(CyDyn.f(12)).foregroundStyle(theme.textSecondary)
-                Text(c.value).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textPrimary)
-                    .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                Text(c.value).font(CyDyn.f(14.5, .semibold)).foregroundStyle(theme.textPrimary)
+                    .multilineTextAlignment(.leading).lineLimit(dts.isAccessibilitySize ? nil : 2).fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading).contentShape(Rectangle())
+            .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        // Simulator run 17: `.accessibilityElement(children: .ignore)` stood here and replaced the Button with a plain
-        // element — no button trait, so "blueprintCell-goals" was not found as a button and VoiceOver could not
-        // activate it. The Button itself now carries the label and the identifier.
         .accessibilityLabel("\(c.title): \(c.value)")
-        .accessibilityHint("Opens its page; you return to the blueprint")
+        .accessibilityHint(locked ? "" : "Opens its page; you return to the blueprint")
         .accessibilityIdentifier("blueprintCell-\(c.id)")
     }
 
     private var measured: some View {
-        tappable("blueprintMeasured", page: 5, hint: "Change connections") {
-            VStack(alignment: .leading, spacing: CySpace.s) {
-                OnbGroupHeader(mark: .measured, title: "Measured evidence")
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("▲").font(CyDyn.f(10, .bold)).foregroundStyle(theme.success).accessibilityHidden(true)
-                    Text(m.measured).font(CyDyn.f(14)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("blueprintMeasuredLine")
-                }
+        VStack(alignment: .leading, spacing: 5) {
+            OnbGroupHeader(mark: .measured, title: "Measured evidence")
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("▲").font(CyDyn.f(9, .bold)).foregroundStyle(theme.success).accessibilityHidden(true)
+                Text(m.measured ?? "").font(CyDyn.f(13.5)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("blueprintMeasuredLine")
             }
         }
     }

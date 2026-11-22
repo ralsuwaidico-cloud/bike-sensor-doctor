@@ -45,6 +45,9 @@ struct OnboardingV34View: View {
     @State private var library = false
     /// A group of the Blueprint was tapped: this page was opened from page 7 and its button returns there.
     @State private var fromBlueprint = false
+    /// Athletic Blueprint: what happened when the athlete approved (nil = not approved yet).
+    @State private var outcome: BlueprintOutcome? = nil
+    @State private var savedWithPlan = false
     /// Counts requests to bring the page back to its top (page 5, when the FTP keyboard closes).
     @State private var toTop = 0
     private static let topID = "onbPageTop"
@@ -221,6 +224,7 @@ struct OnboardingV34View: View {
     private var rail: some View {
         HStack(spacing: 5) {
             Button {
+                if outcome?.isSaved == true { return }                        // approved and saved: the answers are now changed in Profile
                 if fromBlueprint { if canContinue { backToBlueprint() } }
                 else if page == Self.pages, !planPossible { page = 4 }       // the profile-only Blueprint was reached from Build your week
                 else { page -= 1 }
@@ -241,7 +245,7 @@ struct OnboardingV34View: View {
     private func railSlot(_ i: Int) -> some View {
         // pages 5–6 were never visited by an athlete without a plan: they are not offered as places to go back to
         let done = i < page && (planPossible || i <= 4), here = i == page
-        return Button { if done { fromBlueprint = false; page = i } } label: {
+        return Button { if done, outcome?.isSaved != true { fromBlueprint = false; page = i } } label: {
             railMark(i, done: done, here: here)
                 .frame(maxWidth: .infinity).frame(height: 26)
                 .background(Capsule().fill(done ? theme.surface2 : Color.clear))
@@ -372,8 +376,11 @@ struct OnboardingV34View: View {
         case 5: return CoachLine(mark: "", tint: theme.textSecondary, before: "Connect now or set up your devices later in Profile.")
         case 6: return CoachLine(mark: "▲", tint: theme.success, before: "Your stage comes from ", strong: "your training", after: ", not from what you tap here.")
         default:
-            if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "No training plan is created.", after: " Your profile, sports and goals are saved, and you can change them first.") }
-            return CoachLine(mark: "◆", tint: theme.accent, strong: "Nothing is scheduled until you approve.", after: " Tap any part of the blueprint to change it first.")
+            if let o = outcome {
+                return CoachLine(mark: o.isSaved ? "◆" : "▲", tint: o.isSaved ? theme.success : theme.warning, strong: o.strong, after: o.detail(firstSession: firstSessionDay))
+            }
+            if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "No training plan is created.", after: " Tap any part to change it first.") }
+            return CoachLine(mark: "◆", tint: theme.accent, strong: "Nothing is scheduled until you approve.", after: " Tap any part to change it first.")
         }
     }
     /// Back to the Blueprint after an edit. If the edit made a plan possible for an athlete who had none, the week has
@@ -383,7 +390,28 @@ struct OnboardingV34View: View {
         page = (planPossible && !sawWeek) ? 4 : Self.pages
     }
     /// A Blueprint group opens the page it came from; that page's button returns here.
-    private func editFromBlueprint(_ p: Int) { fromBlueprint = true; page = p }
+    private func editFromBlueprint(_ p: Int) { guard outcome?.isSaved != true else { return }; outcome = nil; fromBlueprint = true; page = p }
+
+    /// Approve (or, without a plan, Create my profile): ONE durable write of exactly what the Blueprint shows. The
+    /// confirmation appears only when the store wrote it AND the file read back holds it; a failed write rolls
+    /// everything back and says so; an unconfirmed one is checked again, never assumed.
+    private func approveBlueprint() {
+        let plan = planPossible
+        if UITestSupport.takeFailedSave() { outcome = .failed("test"); return }      // simulator only: the failure path, nothing written
+        store.blueprintConfirmation = true                                           // the confirmation stays on screen until Open Home
+        let written = store.durably {
+            if plan { OnboardingFlow.approve(a, store: store) } else { OnboardingFlow.createProfileOnly(a, store: store) }
+            return true
+        }
+        guard written else { store.blueprintConfirmation = false; outcome = .failed(store.saveFailure ?? ""); return }
+        savedWithPlan = plan
+        outcome = store.onboardingSaveCheck() == .confirmed ? (plan ? .planSaved : .profileSaved) : .unconfirmed
+    }
+    private func checkBlueprintAgain() {
+        var result = store.onboardingSaveCheck()
+        if result != .confirmed, store.writeAgain() { result = store.onboardingSaveCheck() }
+        if result == .confirmed { outcome = savedWithPlan ? .planSaved : .profileSaved }
+    }
 
     private var bottom: some View {
         let line = coachLine
@@ -393,7 +421,7 @@ struct OnboardingV34View: View {
                 if !line.mark.isEmpty { Text(line.mark).font(CyDyn.f(10, .bold)).foregroundStyle(line.tint).accessibilityHidden(true) }
                 (Text(line.before).foregroundColor(theme.textSecondary) + Text(line.strong).fontWeight(.semibold).foregroundColor(theme.textPrimary) + Text(line.after).foregroundColor(theme.textSecondary))
                     .font(CyDyn.f(14))
-                    .lineLimit(dts.isAccessibilitySize ? 6 : 3, reservesSpace: !dts.isAccessibilitySize)
+                    .lineLimit(dts.isAccessibilitySize ? 6 : (page == Self.pages ? 2 : 3), reservesSpace: !dts.isAccessibilitySize)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .clipped()                              // Lab run 13: a long line was drawn over the page above it
@@ -403,12 +431,19 @@ struct OnboardingV34View: View {
             if fromBlueprint, page < Self.pages {
                 CyPrimaryButton(title: "Back to blueprint", isEnabled: canContinue, action: backToBlueprint)
                     .accessibilityIdentifier("onbBackToBlueprint")
+            } else if page == Self.pages, outcome?.isSaved == true {
+                // the confirmation (sheet B3): shown only after storage confirmed the result
+                CyPrimaryButton(title: "Open Home") { store.blueprintConfirmation = false }
+                    .accessibilityIdentifier("onbOpenHome")
+            } else if page == Self.pages, outcome == .unconfirmed {
+                CyPrimaryButton(title: "Check again", action: checkBlueprintAgain)
+                    .accessibilityIdentifier("onbCheckAgain")
             } else if page == Self.pages, !planPossible {
-                // profile-only: nothing is approved because no plan exists; the profile is saved and the app opens
-                CyPrimaryButton(title: "Create my profile") { OnboardingFlow.createProfileOnly(a, store: store) }
+                // profile-only: nothing is approved because no plan exists; the profile and the chosen week are saved
+                CyPrimaryButton(title: "Create my profile", action: approveBlueprint)
                     .accessibilityIdentifier("onbCreateProfile")
             } else if page == Self.pages {
-                CyPrimaryButton(title: "Approve my blueprint") { OnboardingFlow.approve(a, store: store) }
+                CyPrimaryButton(title: "Approve my blueprint", action: approveBlueprint)
                     .accessibilityIdentifier("onbCreatePlan")
             } else {
                 CyPrimaryButton(title: page == 6 ? "See my blueprint" : "Continue", isEnabled: canContinue, action: next)
@@ -924,144 +959,114 @@ struct OnboardingV34View: View {
 
     // MARK: 7 — Athletic Blueprint
 
-    @ViewBuilder private var pageBlueprint: some View {
-        if planPossible { OnbBlueprintPage(m: blueprintModel, onEdit: editFromBlueprint) }
-        else { profileBlueprint }
+    private var pageBlueprint: some View {
+        var m = blueprintModel
+        m.saved = outcome?.isSaved == true ? outcome : nil
+        return OnbBlueprintPage(m: m, onEdit: editFromBlueprint)
     }
-    /// The Blueprint of an athlete without a training plan (owner decision 21 Nov 2026): who they are, every sport they
-    /// selected with what Cyclift does for it today, their goals, and a plain statement that no plan is created. No
-    /// week, no session and no figure appears, because none exists.
-    private var profileBlueprint: some View {
-        let v = roster, sel = goalSelection
-        let all = v.mains + v.also
-        return VStack(alignment: .leading, spacing: CySpace.l) {
-            VStack(alignment: .leading, spacing: 4) {
-                (Text("07").foregroundColor(theme.accent) + Text(" · ATHLETIC BLUEPRINT").foregroundColor(theme.textSecondary))
-                    .font(CyFont.overline).tracking(1.2).accessibilityLabel("Page 7, Athletic Blueprint")
-                Text((a.name ?? "").trimmingCharacters(in: .whitespaces)).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(theme.textPrimary)
-                    .lineLimit(2).minimumScaleFactor(0.7).accessibilityAddTraits(.isHeader).accessibilityIdentifier("onbTitle")
-                Text(AthleticRoster.identity(sports)).font(CyDyn.f(15, .semibold)).foregroundStyle(theme.textSecondary)
-                    .accessibilityIdentifier("blueprintIdentity")
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                blueprintGroupHeader("Your sports", edit: 2, id: "blueprintEditSports")
-                ForEach(all) { x in
-                    HStack(spacing: CySpace.m) {
-                        Image(systemName: Self.symbol(x)).foregroundStyle(theme.textSecondary).frame(width: 26).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(x.title + (x == v.main ? " · main" : "")).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                            Text(x.planning != nil ? "Planning and recording work today" : "Saved · plans coming soon")
-                                .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .frame(minHeight: 48)
-                    .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("blueprintSport-\(x.id)")
-                }
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                blueprintGroupHeader("Your goals", edit: 3, id: "blueprintEditGoals")
-                ForEach(sel.ids.compactMap { RosterGoals.goal($0) }) { g in
-                    HStack(spacing: CySpace.m) {
-                        Image(systemName: sel.main == g.id ? "star.fill" : "circle.fill").font(sel.main == g.id ? .footnote : .system(size: 6))
-                            .foregroundStyle(sel.main == g.id ? theme.accent : theme.textSecondary).frame(width: 26).accessibilityHidden(true)
-                        Text(g.title + (g.family.map { " · " + ($0 == .walking ? "Walking" : $0 == .recovery ? "Mobility & recovery" : $0.title) } ?? "") + (sel.main == g.id ? " · main goal" : ""))
-                            .font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 0)
-                    }
-                    .frame(minHeight: 44)
-                    .overlay(alignment: .bottom) { Rectangle().fill(theme.separator).frame(height: 1).accessibilityHidden(true) }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("blueprintGoal-\(g.id)")
-                }
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                Text("NO TRAINING PLAN YET").font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
-                Text(all.contains { $0.planning != nil }
-                     ? "Your profile, sports and goals are saved. No training plan is created, because you chose no goal for a sport Cyclift plans today. Personalized plans for your other sports are coming soon."
-                     : "Your profile, sports and goals are saved. No training plan is created: personalized plans for your sports are coming soon. Nothing is scheduled for you.")
-                    .font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("blueprintNoPlan")
-            }
+    /// The week exactly as the athlete confirmed it on Build your week (every sport). An athlete who has not been
+    /// through that page yet has the stored availability, read as their roster's activities.
+    private var blueprintWeek: ChosenWeek.Week {
+        if let w = a.schedule { return ChosenWeek.normalised(w) }
+        let kinds = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? proposedWeek
+        let ride = sports.first { AthleticRoster.activity($0)?.planning == .cycling } ?? "roadCycling"
+        let lift = sports.first { AthleticRoster.activity($0)?.planning == .strength } ?? "strength"
+        let rm = a.rideMinutes ?? OnboardingWeek.defaultRideMinutes, lm = a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes
+        return kinds.map { k -> [ChosenSession] in
+            var day: [ChosenSession] = []
+            if k.lifts { day.append(ChosenSession(activity: lift, minutes: lm)) }
+            if k.rides { day.append(ChosenSession(activity: ride, minutes: rm)) }
+            return day
         }
     }
-    private func blueprintGroupHeader(_ title: String, edit page: Int, id: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title.uppercased()).font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary).accessibilityAddTraits(.isHeader)
-            Spacer(minLength: CySpace.s)
-            Button("Change") { editFromBlueprint(page) }
-                .font(CyFont.caption.weight(.semibold)).foregroundStyle(theme.accent).frame(minHeight: CyHit.min).contentShape(Rectangle()).buttonStyle(.plain)
-                .accessibilityLabel("Change \(title.lowercased())").accessibilityIdentifier(id)
-        }
-    }
-    private var blueprintModel: OnbBlueprintModel {
+    /// The first session the planner would schedule, from a dry run on exactly the inputs Approve will save.
+    private var firstPlanned: Workout? {
+        guard planPossible else { return nil }
         let kinds = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? proposedWeek
         let ride = a.rideMinutes ?? OnboardingWeek.defaultRideMinutes, lift = a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes
         let plan = OnboardingFlow.dryRun(a, store: store, kinds: kinds, ride: ride, lift: lift, weekOffset: 0)
-        let first = OnboardingApproach.firstWorkout(in: plan, from: Date())
+        return OnboardingApproach.firstWorkout(in: plan, from: Date())
             ?? OnboardingApproach.firstWorkout(in: OnboardingFlow.dryRun(a, store: store, kinds: kinds, ride: ride, lift: lift, weekOffset: 1), from: Date())
-        var lines = Array(OnboardingApproach.lines(primary: a.primaryGoal, mode: mode, kinds: kinds, liftMinutes: lift, ftpKnown: store.profile.ftpKnown,
-                                                   ftpWatts: store.profile.ftpValue, equipmentProvisional: store.equipment.isProvisional).prefix(2))
-        if let w = first { lines.append("First session: \(w.date.formatted(.dateTime.weekday(.wide))) · \(w.displayTitle) · \(w.minutes) min.") }
+    }
+    private var firstSessionDay: String? { savedWithPlan ? OnboardingApproach.firstWorkout(in: store.plan, from: Date())?.date.formatted(.dateTime.weekday(.wide)) : nil }
+    private var blueprintModel: OnbBlueprintModel {
+        let week = blueprintWeek
+        let plan = planPossible
+        var lines: [String] = []
+        if plan {
+            lines = BlueprintPreview.guidance(week: week, primary: a.primaryGoal, mode: mode, ftpKnown: store.profile.ftpKnown, ftpWatts: store.profile.ftpValue,
+                                              equipmentProvisional: store.equipment.isProvisional)
+            if outcome?.isSaved != true, let w = firstPlanned { lines.append("First session: \(w.date.formatted(.dateTime.weekday(.wide))) · \(w.displayTitle) · \(w.minutes) min.") }
+        }
         let v = roster
+        let sel = goalSelection
+        let single: String = v.main?.family.title ?? ""
+        let lead: String = v.mode == .hybrid ? leadWord : single
+        // goals: the planner's own goal when there is one; otherwise the athlete's roster goals (running, swimming …)
         let main = a.primaryGoal ?? a.goals?.first
         let others = (a.goals ?? []).filter { $0 != main }
-        let chosen = a.schedule.map { ChosenWeek.plannable($0) }       // what the plan covers, with each day's own minutes
-        let n = chosen.map { ChosenWeek.totals($0).sessions } ?? OnbWeekText.sessions(kinds)
-        let single: String = (v.mainEndurance ?? v.mainStrength)?.title ?? ""
-        let lead: String = v.mode == .hybrid ? leadWord : single
+        let rosterGoals = sel.ids.compactMap { RosterGoals.goal($0) }
+        let rosterMain = rosterGoals.first { $0.id == sel.main } ?? rosterGoals.first
+        // The main goal is the ATHLETE'S (a runner's Pace stays Pace); when the Coach's plan follows another goal, that is said.
+        let also = rosterGoals.filter { $0.id != rosterMain?.id }.map(\.title)
+        var goalTitle: String? = rosterMain?.title
         var goalLine = ""
-        if let g = main {
+        if plan, let g = main, rosterMain == nil || rosterMain?.id == g.rawValue {
             goalLine = GoalInfo.line(g)
             if !others.isEmpty { goalLine += " · also " + others.map(\.title).joined(separator: ", ") }
+        } else {
+            var parts: [String] = []
+            if plan, let g = main { parts.append("Coach plan follows \(g.title)") }
+            if !also.isEmpty { parts.append("also " + also.joined(separator: ", ")) }
+            goalLine = parts.joined(separator: " · ")
+            goalLine = goalLine.prefix(1).uppercased() + goalLine.dropFirst()
         }
-        let isStrengthGoal: Bool = main.map { $0.sport == .strength } ?? false
-        let time: String = chosen.map { OnboardingWeek.durationText(ChosenWeek.totals($0).minutes) } ?? OnbWeekText.total(kinds, ride: ride, lift: lift)
-        let totals: String = "\(time) · \(n) session\(n == 1 ? "" : "s")"
+        if goalTitle == nil { goalTitle = main?.title }
+        var goalNames: [String] = []
+        if let m0 = rosterMain { goalNames = [m0.title] + also } else { if let g = main { goalNames.append(g.title) }; goalNames += others.map(\.title) }
+        var strengthGoal = false
+        if let m0 = rosterMain { strengthGoal = m0.family == .strength } else if let g = main { strengthGoal = g.sport == .strength }
+        let rosterPlans: Bool = (v.mains + v.also).contains { $0.planning != nil }
+        let noPlan: String? = plan ? nil : BlueprintPreview.noPlan(rosterHasPlannedSport: rosterPlans)
+        let identity: String = plan ? AthleticRoster.identityLine(sports, priority: a.priority) : AthleticRoster.identity(sports)
+        let rides = store.rides.count, lifts = store.strength.count
         return OnbBlueprintModel(
             name: (a.name ?? "").trimmingCharacters(in: .whitespaces),
-            levels: levelsLine,
+            levels: plan ? levelsLine : "",
             lead: lead,
-            identity: AthleticRoster.identityLine(sports, priority: a.priority),
+            identity: identity,
             sports: blueprintSports(v),
-            goalTitle: main?.title,
-            goalIsStrength: isStrengthGoal,
+            goalTitle: goalTitle,
+            goalIsStrength: strengthGoal,
             goalLine: goalLine,
-            kinds: kinds, ride: ride, lift: lift, sessions: chosen,
-            weekTotals: totals,
-            proposalLines: lines,
-            cells: blueprintCells(v, main: main, others: others),
-            measured: measuredLine + " " + connectedLine)
+            week: week,
+            weekTotals: BlueprintPreview.totals(week),
+            coachLines: lines,
+            coachStatus: plan ? BlueprintPreview.unplannedStatus(week) : nil,
+            noPlan: noPlan,
+            cells: blueprintCells(v, goals: goalNames),
+            measured: rides + lifts > 0 ? measuredLine : nil)
     }
     private var leadWord: String {
         switch a.priority ?? .balanced { case .cycling: return "Endurance-led"; case .strength: return "Strength-led"; case .balanced: return "Balanced" }
     }
-    /// The roster as the sheet's line-up: main sports filled, other planned sports outlined, interests dashed.
+    /// The roster as the sheet's line-up: every selected sport, main sports filled, the others outlined. No sport is
+    /// called an "interest": each is a sport the athlete does (multisport direction, 21 Nov 2026).
     private func blueprintSports(_ v: AthleticRoster.Page) -> [OnbBlueprintModel.SportMark] {
         func mark(_ x: RosterActivity, main: Bool) -> OnbBlueprintModel.SportMark {
-            OnbBlueprintModel.SportMark(id: x.id, short: OnbWeekText.short(x.title), icon: Self.symbol(x),
-                                        role: main ? "main" : x.capability.plannable ? "" : "interest",
-                                        strength: x.domain == .strength, main: main, interest: !x.capability.plannable)
+            OnbBlueprintModel.SportMark(id: x.id, short: OnbWeekText.short(x.title), icon: Self.symbol(x), role: main ? "main" : "", strength: x.domain == .strength, main: main)
         }
         return v.mains.map { mark($0, main: true) } + v.also.map { mark($0, main: false) }
     }
-    /// What the athlete declared, each with the page that changes it.
-    private func blueprintCells(_ v: AthleticRoster.Page, main: GoalID?, others: [GoalID]) -> [OnbBlueprintModel.Cell] {
+    /// What the athlete declared, each with the page that changes it. FTP and Plan changes are not here (owner,
+    /// 22 Nov 2026): FTP lives in Performance Settings, Coach approval preferences in Profile › App preferences › Coach.
+    private func blueprintCells(_ v: AthleticRoster.Page, goals: [String]) -> [OnbBlueprintModel.Cell] {
         var out: [OnbBlueprintModel.Cell] = []
-        if let g = main { out.append(.init(id: "goals", title: "Goals", value: ([g.title + " ★"] + others.map(\.title)).joined(separator: " · "), page: 3)) }
-        if v.mode == .hybrid { out.append(.init(id: "lead", title: "When time is short", value: leadWord, page: 2)) }
-        if mode.includesLifting { out.append(.init(id: "equipment", title: "Equipment", value: a.environment.map { e in let n = e.selection(in: a.equipmentSets).count; return "\(e.title) · \(n == 0 ? "no equipment" : n == 1 ? "1 item" : "\(n) items")" } ?? "Not chosen", page: 4)) }
-        if mode.includesCycling {
-            let p = store.profile
-            let value = p.ftpKnown ? "\(p.ftpValue.map { "\($0) W" } ?? "Entered") · \(p.ftpSource == .tested ? "tested" : "not tested")" : "Unknown"
-            out.append(.init(id: "ftp", title: "FTP", value: value, page: 5))
+        if let first = goals.first { out.append(.init(id: "goals", title: "Goals", value: ([first + " ★"] + goals.dropFirst()).joined(separator: " · "), page: 3)) }
+        // equipment matters to a week with strength in it (the same rule as Build your week)
+        if ChosenWeek.needsEnvironment(blueprintWeek) || a.environment != nil {
+            out.append(.init(id: "equipment", title: "Equipment", value: a.environment.map { e in let n = e.selection(in: a.equipmentSets).count; return "\(e.title) · \(n == 0 ? "no equipment" : n == 1 ? "1 item" : "\(n) items")" } ?? "Not chosen", page: 4))
         }
-        out.append(.init(id: "planChanges", title: "Plan changes", value: store.settings.autoAdapt ? "Auto-apply reductions" : "Always ask me", page: 5))
-        // selected activities Cyclift does not plan yet — part of the athlete's roster, not "interests" (20 Nov 2026)
-        let unplanned = (v.mains + v.also).filter { !$0.capability.plannable }.map(\.title)
-        if !unplanned.isEmpty { out.append(.init(id: "interests", title: "Saved · plans coming soon", value: unplanned.joined(separator: " · "), page: 2)) }
         return out
     }
     private var measuredLine: String {
