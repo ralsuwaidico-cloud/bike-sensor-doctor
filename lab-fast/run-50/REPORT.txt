@@ -1,0 +1,30 @@
+FAST focused Lab check — selected: LabFastOnboarding/testAthleticBlueprintMultisport LabFastOnboarding/testARunnerCompletesOnboardingWithoutAPlan LabFastOnboarding/testAMixedRosterPlansOnlyTheGoalsChosen LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from de3a3d92 · files changed since then: 3
+TIME setup: 14s
+  timing: CompileAssetCatalogVariant (1 task) | 83.443 seconds
+  timing: SwiftCompile (6 tasks) | 40.167 seconds
+  timing: SwiftEmitModule (2 tasks) | 9.418 seconds
+  timing: Ld (18 tasks) | 7.746 seconds
+  timing: SwiftDriver (2 tasks) | 5.085 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.723 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.701 seconds
+  timing: SwiftDriver Compilation (2 tasks) | 0.389 seconds
+  stages: packages at 222s · packages prepared at 281s · dependency graph at 281s · inputs at 281s · build description at 281s · first link at 295s · first Swift step at 296s · asset catalogue at 300s · finished at 383s
+  compiled in this run: 17 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 384s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 10s
+	 Executed 4 tests, with 0 failures (0 unexpected) in 904.977 (904.989) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 904.977 (904.993) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 904.977 (904.994) seconds
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAMixedRosterPlansOnlyTheGoalsChosen]' passed (175.723 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testARunnerCompletesOnboardingWithoutAPlan]' passed (240.907 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAthleticBlueprintMultisport]' passed (215.998 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (272.350 seconds).
+RESULT selected screen checks: ok
+TIME tests: 1028s
+TIME total on the Mac: 1439s
+commit c424b06d162ab5a8e55c9b039ae125d14a196b3c  branch ios/lab
