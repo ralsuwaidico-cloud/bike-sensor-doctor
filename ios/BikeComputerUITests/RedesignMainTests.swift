@@ -59,6 +59,9 @@ final class RedesignMainTests: XCTestCase {
         // Owner decision 21 Nov 2026 (21:18): the week starts as seven rest days; the earlier check accepted a proposed week.
         page(4); must(el(app, "onbWeek"), "the week builder"); XCTAssertFalse(next.isEnabled, "Continue needs a chosen training day")
         app.chooseWeekDay(0, ["strength"]); app.chooseWeekDay(1, ["roadCycling"]); app.chooseWeekDay(3, ["roadCycling"])
+        // 22 Nov 2026 (14:36): a week with a strength session needs an equipment environment before Continue
+        XCTAssertFalse(next.isEnabled, "an equipment environment is required with a strength session")
+        app.descendants(matching: .any).matching(identifier: "onbEquipment").firstMatch.buttons["Home"].firstMatch.tap()
         XCTAssertTrue(next.isEnabled); next.tap()
         page(5); XCTAssertFalse(app.staticTexts["onbLabDevices"].firstMatch.exists, "the main app does not show the Lab devices note"); next.tap()
         page(6); must(app.staticTexts["onbEvolutionStage"].firstMatch, "the no-stage statement"); next.tap()

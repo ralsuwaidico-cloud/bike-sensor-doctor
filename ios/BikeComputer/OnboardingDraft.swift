@@ -71,6 +71,9 @@ enum EquipmentGroup: String, CaseIterable {
         case .mobility: return "Mobility and recovery"
         }
     }
+    /// Owner decision 22 Nov 2026 (14:36): the lists for sports other than strength are PROVISIONAL and incomplete —
+    /// a place to record what an athlete has, not exercise-planning support. Nothing in them changes any training.
+    var isProvisional: Bool { self != .strength }
 }
 
 struct EquipmentItem: Identifiable, Equatable {
@@ -80,6 +83,10 @@ struct EquipmentItem: Identifiable, Equatable {
     let group: EquipmentGroup
     /// true = the strength planner uses it to choose exercises today.
     let planner: Bool
+    /// For a future individual machine type (a leg press, a lat pulldown …): the grouped item it belongs to. None is
+    /// listed yet — the planner knows machines only as the one grouped "Weight machines" item ("machine"), which stays
+    /// as it is; an individual type added later names it here, so older selections of the group keep their meaning.
+    var partOf: String? = nil
 }
 
 enum EquipmentCatalogue {
@@ -117,10 +124,16 @@ enum EquipmentCatalogue {
         let t = q.trimmingCharacters(in: .whitespaces).lowercased()
         return t.isEmpty ? items : items.filter { $0.title.lowercased().contains(t) || $0.group.title.lowercased().contains(t) }
     }
+    /// The grouped machines item the planner understands. Kept under this identifier for compatibility.
+    static let machines = "machine"
+    /// What the planner is told is owned: the ticked items, plus the group of any ticked individual type (`partOf`).
+    static func plannerOwned(_ ids: [String]) -> Set<String> {
+        Set(ids).union(ids.compactMap { item($0)?.partOf })
+    }
     /// How many of the app's strength exercises the EXISTING planner could offer with this equipment — its own rule
     /// (`EquipmentProfile.hasEquipment`), nothing estimated. Items the planner does not understand change nothing.
     static func eligibleExercises(_ ids: [String]) -> (can: Int, of: Int) {
-        let e = EquipmentProfile(owned: Set(ids), confirmed: true)
+        let e = EquipmentProfile(owned: plannerOwned(ids), confirmed: true)
         let all = ExerciseCatalogue.builtIn
         return (all.filter { e.hasEquipment(for: $0) }.count, all.count)
     }
@@ -141,8 +154,9 @@ enum EquipmentEnvironment: String, CaseIterable, Hashable, Codable {
         case .custom: return EquipmentCatalogue.items.map(\.id)
         }
     }
-    /// What the preset provides before the athlete edits it — shown ticked, and editable. Gym: its checklist (not every
-    /// piece of equipment that exists). Home: the app's existing home kit. Bodyweight and Custom: nothing.
+    /// The SUGGESTED STARTING SELECTION before the athlete edits it — shown ticked, reviewed and changed in the checklist;
+    /// not a guarantee that a gym has every machine (owner, 22 Nov 2026, 14:36). Gym: its checklist (not every piece of
+    /// equipment that exists). Home: the app's existing home kit. Bodyweight and Custom: nothing.
     var preset: [String] {
         switch self {
         case .gym: return checklist
@@ -495,6 +509,9 @@ enum ChosenWeek {
     /// week. That is safe: the planner plans exactly the sessions it is given, and a week with only rides or only
     /// strength sessions yields only those (testAHybridAthleteMayScheduleOneSportOnly). The other notes are the
     /// planner's existing ones, counted over every chosen session; none of them blocks.
+    /// Owner decision 22 Nov 2026 (14:36): a week with any strength session the planner builds needs a training
+    /// environment (Gym, Home, Bodyweight or Custom) before Continue. Never asked of a week without one.
+    static func needsEnvironment(_ w: Week) -> Bool { normalised(w).joined().contains { engine($0.activity) == .strength } }
     static func feasibility(_ w: Week, strengthLevel: StrengthPrefs.Experience?) -> OnboardingWeek.Feasibility {
         let n = normalised(w), t = totals(n), k = kinds(n)
         if t.sessions == 0 { return .init(ok: false, blocking: true, text: "Pick at least one training day.") }
@@ -642,7 +659,7 @@ struct OnboardingAnswers: Equatable {
         }
         if let env = environment {
             // exactly what is ticked for the chosen environment — never more; the athlete's exercise exclusions are kept
-            x.equipment = EquipmentProfile(owned: Set(env.selection(in: equipmentSets)), excluded: x.equipment.excluded, confirmed: true)
+            x.equipment = EquipmentProfile(owned: EquipmentCatalogue.plannerOwned(env.selection(in: equipmentSets)), excluded: x.equipment.excluded, confirmed: true)
             x.profile.equipmentEnvironment = env.rawValue
         } else if let e = equipment { x.equipment = e.apply(to: x.equipment) }
         if let s = equipmentSets { x.profile.equipmentSets = s }      // every environment's selection, kept when another is chosen

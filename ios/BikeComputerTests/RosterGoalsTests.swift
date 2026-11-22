@@ -338,6 +338,20 @@ final class RosterGoalsTests: XCTestCase {
         XCTAssertEqual(EquipmentCatalogue.eligibleExercises(["dumbbell", "band"]).can, kit.count); XCTAssertEqual(EquipmentCatalogue.eligibleExercises([]).of, all.count)
         XCTAssertGreaterThan(can(EquipmentEnvironment.gym.preset).count, kit.count)
     }
+    /// 22 Nov 2026 (14:36): an environment is needed only by a week with a strength session the planner builds; the
+    /// grouped machines item keeps its identifier; the non-strength equipment lists are classed as provisional.
+    func testEnvironmentIsNeededOnlyWithStrength() {
+        var run = ChosenWeek.empty; run[0] = [.init(activity: "running", minutes: 30)]; run[2] = [.init(activity: "roadCycling", minutes: 60)]
+        XCTAssertFalse(ChosenWeek.needsEnvironment(run), "a runner or rider is not asked for equipment")
+        var lift = run; lift[4] = [.init(activity: "strength", minutes: 30)]
+        XCTAssertTrue(ChosenWeek.needsEnvironment(lift))
+        XCTAssertFalse(ChosenWeek.needsEnvironment(ChosenWeek.empty))
+        XCTAssertEqual(EquipmentCatalogue.item(EquipmentCatalogue.machines)?.title, "Weight machines (leg press and others)")
+        XCTAssertTrue(EquipmentCatalogue.plannerOwned(["machine", "squat rack"]).contains("machine"))
+        XCTAssertTrue(EquipmentCatalogue.items.allSatisfy { $0.partOf == nil || EquipmentCatalogue.item($0.partOf!) != nil }, "an individual type names a group that exists")
+        XCTAssertEqual(EquipmentGroup.allCases.filter(\.isProvisional), [.cycling, .running, .swimming, .mobility])
+        XCTAssertTrue(EquipmentCatalogue.items.filter { $0.group.isProvisional }.allSatisfy { !$0.planner }, "no provisional item is presented as used for planning")
+    }
     /// The marker of an athlete without a plan is additive, off by default, and survives saving.
     func testProfileOnlyMarker() throws {
         XCTAssertFalse(RiderProfile().isProfileOnly)

@@ -180,7 +180,11 @@ struct OnboardingV34View: View {
         case 3: return !goalSelection.ids.isEmpty
         // 21 Nov 2026, 21:18: the week starts as seven rest days; Continue needs at least one valid training day
         // (22:22: any one valid session is enough — a cycling-and-strength athlete need not schedule both)
-        case 4: return !ChosenWeek.feasibility(a.schedule ?? ChosenWeek.empty, strengthLevel: a.strengthLevel).blocking
+        // (22 Nov, 14:36: a week with a strength session also needs the training environment chosen)
+        case 4:
+            let w = a.schedule ?? ChosenWeek.empty
+            if ChosenWeek.needsEnvironment(w), a.environment == nil { return false }
+            return !ChosenWeek.feasibility(w, strengthLevel: a.strengthLevel).blocking
         default: return true
         }
     }
@@ -356,6 +360,7 @@ struct OnboardingV34View: View {
             // the athlete's chosen schedule is told apart from a generated programme, and sports without a planner are named truthfully
             let w = ChosenWeek.normalised(a.schedule)
             if ChosenWeek.totals(w).sessions == 0 { return CoachLine(mark: "", tint: theme.textSecondary, before: "Every day starts as rest. Tap a day to choose your training.") }
+            if ChosenWeek.needsEnvironment(w), a.environment == nil { return CoachLine(mark: "◆", tint: theme.warning, strong: "Choose Gym, Home, Bodyweight or Custom to continue.") }
             let waiting = ChosenWeek.bySport(w.map { $0.filter { ChosenWeek.engine($0.activity) == nil } }).map { $0.sport.lowercased() }
             if !planPossible { return CoachLine(mark: "◆", tint: theme.accent, strong: "This is your schedule, saved as you set it.", after: " Personalized plans for your sports are coming soon.") }
             if !waiting.isEmpty { return CoachLine(mark: "◆", tint: theme.accent, strong: "Your schedule. ", after: "Cyclift plans your cycling and strength days; your \(waiting.joined(separator: " and ")) days are saved. Nothing is scheduled until you approve.") }

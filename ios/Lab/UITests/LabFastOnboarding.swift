@@ -591,6 +591,9 @@ final class LabFastOnboarding: XCTestCase {
         let edit = need(app, "onbEquipmentEdit", "the compact Edit equipment control")
         XCTAssertFalse(edit.isEnabled, "required: nothing to edit before an environment is chosen")
         let line = need(app, "onbCoachLine", "the line above Continue")
+        // Owner decision 22 Nov 2026 (14:36): a week with a strength session needs an environment before Continue
+        XCTAssertFalse(next.isEnabled, "required: a strength athlete cannot continue without choosing an equipment environment")
+        XCTAssertTrue(line.label.contains("Choose Gym, Home, Bodyweight or Custom"), "required: the page says what is needed (\(line.label))")
 
         func ticked(_ id: String) -> Bool { (need(app, "equip-\(id)", "the \(id) tick box").value as? String) == "ticked" }
         func tick(_ id: String) { let r = need(app, "equip-\(id)", "the \(id) tick box"); if !r.isHittable { app.swipeUp() }; r.tap() }
@@ -603,11 +606,15 @@ final class LabFastOnboarding: XCTestCase {
 
         // Bodyweight: nothing needed by default; dumbbells and bands can be added
         kit.buttons["Bodyweight"].firstMatch.tap()
+        XCTAssertTrue(next.isEnabled, "required: Continue once an environment is chosen")
         XCTAssertEqual(edit.label, "No equipment. Edit equipment", "required: bodyweight starts with no equipment")
         XCTAssertLessThanOrEqual(kit.frame.maxY, line.frame.minY + 1, "required: the page is still one screen")
         app.settleForScreenshot(1); shot("onb-4-equipment-main")
         openSheet("Bodyweight")
-        need(app, "equipNoneNeeded", "the 'no equipment is needed' line")
+        XCTAssertEqual(need(app, "equipIntro", "the plain-words line").label, "We’ll choose exercises based on the equipment you have.")
+        XCTAssertTrue(need(app, "equipHint", "the bodyweight hint").label.contains("No equipment is needed"))
+        need(app, "equipSavedOnlyNote", "the one note about items that are saved only")
+        XCTAssertEqual(el(app, "equip-dip bars").label, "Dip bars, saved only"); XCTAssertEqual(el(app, "equip-dumbbell").label, "Dumbbells")
         for id in ["pull-up bar", "dip bars", "band", "gymnastic rings", "weighted vest", "exercise mat", "dumbbell"] { XCTAssertFalse(ticked(id), "required: \(id) is offered and not ticked by default") }
         XCTAssertFalse(app.buttons["equip-barbell"].firstMatch.exists, "required: the Bodyweight list is its own list")
         let bare = offered()
@@ -627,6 +634,7 @@ final class LabFastOnboarding: XCTestCase {
         kit.buttons["Gym"].firstMatch.tap()
         XCTAssertEqual(edit.label, "8 items. Edit equipment")
         openSheet("Gym")
+        XCTAssertTrue(need(app, "equipHint", "the gym hint").label.contains("suggested starting list"), "required: the gym preset is presented as a suggestion")
         for id in ["barbell", "dumbbell", "bench", "cable", "squat rack", "machine", "kettlebell", "band"] { XCTAssertTrue(ticked(id), "required: the Gym preset provides \(id), visibly") }
         XCTAssertFalse(app.buttons["equip-trap bar"].firstMatch.exists, "required: a gym is not assumed to have everything")
         let gymAll = offered(); tick("barbell")
@@ -740,7 +748,9 @@ final class LabFastOnboarding: XCTestCase {
             XCTAssertLessThanOrEqual(need(app, id, id).frame.maxY, line.frame.minY + 1, "required: with two sessions open \(id) is not under the Continue area (\(el(app, id).frame), line \(line.frame))")
         }
         confirm.tap()
-        need(app, "onbEquipment", "the equipment choice, once a strength session is in the week")
+        // 22 Nov 2026 (14:36): with a strength session in the week the environment must be chosen before Continue
+        XCTAssertFalse(next.isEnabled, "required: a strength session needs an equipment environment before Continue")
+        need(app, "onbEquipment", "the equipment choice, once a strength session is in the week").buttons["Gym"].firstMatch.tap()
         XCTAssertTrue(el(app, "onbDay-2").label.contains("Gym training 45 minutes") && el(app, "onbDay-2").label.contains("Road running 30 minutes"), "required: Wednesday holds both sessions (\(el(app, "onbDay-2").label))")
         XCTAssertEqual(el(app, "onbWeekTotal").label, "2 h 15 min"); XCTAssertEqual(el(app, "onbWeekCounts").label, "3 sessions · 2 training days · 5 rest days")
 
@@ -980,6 +990,7 @@ final class LabFastOnboarding: XCTestCase {
         let kit = need(app, "onbEquipment", "the equipment choice")
         // Added after simulator run 17 ("Bodyweight" was broken mid-word): all four choices are still offered at large text.
         for t in ["Gym", "Home", "Bodyweight", "Custom"] { XCTAssertTrue(kit.buttons[t].firstMatch.exists, "required: the \(t) equipment choice at large text") }
+        tap(app, kit.buttons["Home"].firstMatch, "Home equipment")      // 22 Nov 2026 (14:36): required with a strength session
         _ = app.reveal(el(app, "onbEquipment"), top: 110, bottomMargin: 300)
         app.settleForScreenshot(1); shot("onb-large-4-week-equipment")
         next.tap(); page(app, 5)

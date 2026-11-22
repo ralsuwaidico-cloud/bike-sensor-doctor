@@ -683,7 +683,7 @@ struct OnbWeekPage: View {
         let words = n.map { $0 == 0 ? "No equipment" : $0 == 1 ? "1 item" : "\($0) items" } ?? "Choose where you train"
         return Button { editingEquipment = true } label: {
             HStack(spacing: 4) {
-                Text(n == nil ? words : "\(words) · Edit").font(CyDyn.f(12, .semibold)).foregroundStyle(n == nil ? theme.textSecondary : theme.accent).lineLimit(1)
+                Text(n == nil ? words : "\(words) · Edit").font(CyDyn.f(12, .semibold)).foregroundStyle(n == nil ? theme.warning : theme.accent).lineLimit(1)
                 if n != nil { Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold)).foregroundStyle(theme.accent).accessibilityHidden(true) }
             }
             .frame(minHeight: 22).contentShape(Rectangle().inset(by: -10))
@@ -751,14 +751,17 @@ struct OnbEquipmentSheet: View {
                     .font(CyDyn.f(16, .semibold)).foregroundStyle(theme.accent).frame(minWidth: CyHit.min, minHeight: CyHit.min)
                     .accessibilityIdentifier("equipDone")
             }
-            Text("\(count.can) of \(count.of) strength exercises can be offered with this")
-                .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("equipEffect")
-            if environment == .bodyweight {
-                Text("No equipment is needed. Tick anything you also have.")
-                    .font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("equipNoneNeeded")
+            // plain words first (owner, 22 Nov 2026, 14:36); the exact count stays as secondary information
+            Text("We’ll choose exercises based on the equipment you have.")
+                .font(CyDyn.f(14)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("equipIntro")
+            if let hint = Self.hint(environment) {
+                Text(hint).font(CyDyn.f(13)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("equipHint")
             }
+            Text("\(count.can) of \(count.of) strength exercises available")
+                .font(CyDyn.f(12)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("equipEffect")
             if whole {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass").font(.footnote).foregroundStyle(theme.textSecondary).accessibilityHidden(true)
@@ -775,6 +778,13 @@ struct OnbEquipmentSheet: View {
                     ForEach(shown) { item in row(item) }
                     if shown.isEmpty {
                         Text("Nothing in the catalogue matches.").font(CyDyn.f(14)).foregroundStyle(theme.textSecondary).padding(.vertical, 12)
+                    }
+                    if shown.contains(where: { !$0.planner }) {
+                        // said once, not on every row
+                        Label("Saved to your profile. Not used to choose exercises yet.", systemImage: "bookmark")
+                            .font(CyDyn.f(12)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 8)
+                            .accessibilityIdentifier("equipSavedOnlyNote")
                     }
                     if environment != .custom {
                         Button { showAll.toggle(); query = "" } label: {
@@ -793,6 +803,15 @@ struct OnbEquipmentSheet: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("equipSheet")
     }
+    /// One short line per environment: what its starting list is.
+    static func hint(_ e: EquipmentEnvironment) -> String? {
+        switch e {
+        case .gym: return "A suggested starting list. Untick anything your gym doesn’t have."
+        case .home: return "A suggested starting list. Tick what you have at home."
+        case .bodyweight: return "No equipment is needed. Tick anything you also have."
+        case .custom: return nil
+        }
+    }
     private func row(_ item: EquipmentItem) -> some View {
         let on = ticked.contains(item.id)
         return Button { toggle(item.id) } label: {
@@ -801,16 +820,16 @@ struct OnbEquipmentSheet: View {
                     .font(.system(size: 20, weight: .medium)).foregroundStyle(on ? theme.accent : theme.textSecondary).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.title).font(CyDyn.f(15, .medium)).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    Text(item.planner ? (whole ? item.group.title : "used to choose your exercises") : "\(whole ? item.group.title + " · " : "")saved · not used to choose training yet")
-                        .font(CyDyn.f(11.5)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    if whole { Text(item.group.title).font(CyDyn.f(11.5)).foregroundStyle(theme.textSecondary) }
                 }
                 Spacer(minLength: 0)
+                if !item.planner { Image(systemName: "bookmark").font(.system(size: 12, weight: .medium)).foregroundStyle(theme.textTertiary).accessibilityHidden(true) }
             }
             .frame(maxWidth: .infinity, minHeight: CyHit.min, alignment: .leading).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(item.title)
+        .accessibilityLabel(item.planner ? item.title : "\(item.title), saved only")
         .accessibilityValue(on ? "ticked" : "not ticked")
         .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("equip-\(item.id)")

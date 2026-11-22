@@ -895,6 +895,9 @@ final class LabChecks: XCTestCase {
         // athlete chooses. The earlier check accepted the proposed week as it was.
         XCTAssertFalse(next.isEnabled, "page 4: Continue needs a chosen training day")
         app.chooseWeekDay(0, ["strength"]); app.chooseWeekDay(1, ["roadCycling"]); app.chooseWeekDay(3, ["roadCycling"]); app.chooseWeekDay(4, ["strength"])
+        // 22 Nov 2026 (14:36): a week with strength sessions needs an equipment environment before Continue
+        XCTAssertFalse(next.isEnabled, "page 4: an equipment environment is required with strength sessions")
+        app.descendants(matching: .any).matching(identifier: "onbEquipment").firstMatch.buttons["Home"].firstMatch.tap()
         shot("journey-4-week"); XCTAssertTrue(next.isEnabled, "the chosen week can be continued"); next.tap()
         // 5 Connect
         page(5); XCTAssertTrue(app.staticTexts["onbLabDevices"].firstMatch.exists, "Lab says devices are switched off")
