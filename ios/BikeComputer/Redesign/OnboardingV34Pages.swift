@@ -980,7 +980,7 @@ struct OnbEvolutionPage: View {
                     .accessibilityIdentifier("onbEvolutionState")
                 Text(shown?.summary ?? "Tap a stage to see what it looks like. Yours comes from your training.")
                     .font(CyDyn.f(13.5)).foregroundStyle(theme.textSecondary).multilineTextAlignment(.center)
-                    .lineLimit(dts.isAccessibilitySize ? nil : 2, reservesSpace: !dts.isAccessibilitySize)
+                    .lineLimit(dts.isAccessibilitySize ? 6 : 2, reservesSpace: !dts.isAccessibilitySize)
                     .accessibilityIdentifier("onbEvolutionSummary")
                 // exploring is said in words, so a stage being looked at is never read as the athlete's own
                 Text(shown == nil ? " " : "Exploring · not your stage")
