@@ -1,0 +1,28 @@
+FAST focused Lab check — selected: LabFastOnboarding/testAthleteEvolution LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from a66577ee · files changed since then: 78
+TIME setup: 65s
+  timing: SwiftCompile (8 tasks) | 499.630 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 85.835 seconds
+  timing: SwiftEmitModule (2 tasks) | 16.089 seconds
+  timing: Ld (18 tasks) | 7.984 seconds
+  timing: SwiftDriver (2 tasks) | 7.813 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.569 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.293 seconds
+  timing: SwiftDriver Compilation (2 tasks) | 0.270 seconds
+  stages: packages at 230s · packages prepared at 280s · dependency graph at 282s · inputs at 323s · build description at 323s · first link at 372s · first Swift step at 374s · asset catalogue at 380s · finished at 763s
+  compiled in this run: 85 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 764s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 8s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 586.758 (586.762) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 586.758 (586.763) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 586.758 (586.765) seconds
+Test Case '-[CycliftLabUITests.LabFastOnboarding testAthleteEvolution]' passed (329.898 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (256.860 seconds).
+RESULT selected screen checks: ok
+TIME tests: 688s
+TIME total on the Mac: 1530s
+commit c8487ab821089208c35751a143d0f718b1e12f59  branch ios/lab
