@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "22 Nov 2026, 17:00 (Dubai)"
+UPDATED = "22 Nov 2026, 17:30 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -565,7 +565,7 @@ SCREENS = [
                   "The Cyclift BikeComputer row and the separate bike-sensors row on this page.",
                   "Asking for FTP in onboarding.",
                   "Buttons that look like actions but connect nothing; claiming WHOOP or Garmin connectivity."],
-        commits="Implemented and checked in Lab at commit a02fc5e5 (branch ios/lab). Not in any TestFlight build.",
+        commits="First implementation a02fc5e5; refinement a66577ee (branch ios/lab). Not in any TestFlight build.",
         stages=[("Approved design", "DIRECTION ONLY", "Owner, 22 Nov 2026 15:55. Not final visual approval."),
                 ("Implemented in code", "YES", "Commit a02fc5e5. One additive stored marker for the Plan changes starting point; the app-wide default is unchanged."),
                 ("Compiled", "YES", "Lab app built in focused check 43 (run 45020206508)."),
@@ -576,15 +576,30 @@ SCREENS = [
                  "nothing connected; the preference is kept after Continue and Back and after reopening, and is not reset. In the same run the seven-page journey "
                  "FAILED on page 1 (the typed name 'Sam' arrived as 'Sa' — About You, before this screen); re-run requested. Logic: 607 tests, 0 failures, "
                  "including a stored FTP left untouched and a new athlete's FTP staying Unknown. Main app (real services): run 45022440091 requested, not yet reported."),
+                ("Simulator-verified — refinement of 22 Nov 16:34", "LAB: FUNCTIONAL YES (Obsidian, iPhone 15 Pro) — FINAL VISUAL APPROVAL PENDING", "Focused check 45, "
+                 "run 45023216295, commit a66577ee, 2 of 2 passed. Connect your devices: the five rows in order with the owner's subtitles and the same statuses; no "
+                 "Plan changes section and no wording about approval or reductions; the line 'Connect now or set up your devices later in Profile.'; one screen; "
+                 "Continue enabled with nothing connected; no system permission prompt; Back returns to the page. Seven-page journey: reaches an approved plan, and "
+                 "the Blueprint shows 'Always ask me' for a new athlete who was never asked."),
+                ("Simulator-verified — redesigned main app", "YES for the previous commit a02fc5e5 (same rows, earlier subtitles; Plan changes still on the page)", "iOS "
+                 "run 308 (GitHub run 45022440091), 7 of 7 passed: in the main app the five rows exist; Apple Health, Apple Watch and Bluetooth devices show the "
+                 "app's real service state, with Manage for Apple Watch, Pair for Bluetooth and an Apple Health action where Health exists; WHOOP and Garmin read "
+                 "'Coming soon' with no button; FTP is not asked; Continue works with nothing connected; the new athlete reaches an approved plan; the main app "
+                 "without the redesign setting keeps the existing interface. Not re-run on a66577ee."),
                 ("Physically verified on iPhone", "NO", "")],
         visual_verification="PENDING — owner to review the simulator screenshot with connection statuses and the Coach preference.",
         functional_verification="Lab simulator: passed at a02fc5e5 (see stages). Main app, larger text, other themes, VoiceOver and a physical iPhone: not verified.",
-        remaining=["Refinement of 22 Nov 16:34: written (branch ios/lab); focused simulator check and new screenshot pending.",
-                   "Main-app verification that the working integrations use the real services (run 45022440091).",
+        remaining=["Owner's final visual approval of the refined screenshot (sent 22 Nov), after which the screen is locked.",
+                   "Not verified: the Profile › Coach switch opened on the simulator in this round (it was not changed); the main app on commit a66577ee; whether "
+                   "the main app shows any permission prompt on this page without Connect being pressed (needs a real iPhone); larger text, other themes, VoiceOver.",
+                   "Blueprint still shows FTP and Plan changes lines whose taps lead to this page, which no longer holds either — for the Blueprint review.",
                    "Whether pressing nothing on this page triggers any permission prompt in the main app is unproven until checked there and on a real iPhone.",
                    "Blueprint still shows an FTP line whose tap leads to this page, which no longer has FTP — for the Blueprint review.",
                    "After visual approval: Screen 7, three-column comparison."],
-        images=[("S06_connect_impl_sim_a02fc5e5.png",
+        images=[("S06_connect_refined_sim_a66577ee.png",
+                 "REFINED IMPLEMENTATION — FINAL APPROVAL PENDING. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a66577ee (check 45): the owner's subtitles, no "
+                 "Plan changes, the one line above Continue."),
+                ("S06_connect_impl_sim_a02fc5e5.png",
                  "LAYOUT APPROVED 22 Nov 2026 16:34; its subtitles, Plan changes section and bottom paragraph are then changed. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, commit a02fc5e5 (check 43)."),
                 ("S06_connect_comparison_board_0281b566.png",
                  "COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left: design sheet Y1, page 5 (the chosen visual reference, before the modifications). Middle: Build 6 "
