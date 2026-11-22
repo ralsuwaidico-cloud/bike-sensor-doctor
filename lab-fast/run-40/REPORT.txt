@@ -1,0 +1,31 @@
+FAST focused Lab check — selected: LabFastOnboarding/testEquipmentEnvironments LabFastOnboarding/testBuildYourWeek LabFastOnboarding/testSevenPagesApproveHomePlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 8dbbd54a · files changed since then: 7
+TIME setup: 84s
+  timing: SwiftCompile (10 tasks) | 773.523 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 71.569 seconds
+  timing: SwiftDriver (2 tasks) | 6.439 seconds
+  timing: SwiftEmitModule (2 tasks) | 6.225 seconds
+  timing: Ld (18 tasks) | 4.711 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.678 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.166 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.155 seconds
+  stages: packages at 199s · packages prepared at 214s · dependency graph at 214s · inputs at 215s · build description at 215s · first link at 223s · first Swift step at 224s · asset catalogue at 226s · finished at 666s
+  compiled in this run: 100 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 667s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 9s
+	 Executed 3 tests, with 2 failures (0 unexpected) in 779.752 (779.757) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 779.752 (779.759) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 779.752 (779.761) seconds
+Lab/UITests/LabFastOnboarding.swift:27: error: -[CycliftLabUITests.LabFastOnboarding testEquipmentEnvironments] : XCTAssertTrue failed - required: the equipment sheet (equipTitle)
+Lab/UITests/LabFastOnboarding.swift:600: error: -[CycliftLabUITests.LabFastOnboarding testEquipmentEnvironments] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"equipTitle" IN identifiers'`, given input App element pid: 47930
+Test Case '-[CycliftLabUITests.LabFastOnboarding testBuildYourWeek]' passed (321.553 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testEquipmentEnvironments]' failed (133.750 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testSevenPagesApproveHomePlan]' passed (324.448 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 925s
+TIME total on the Mac: 1691s
+commit 0281b566af5200579d9216e3c8087ae683a4f6b8  branch ios/lab
