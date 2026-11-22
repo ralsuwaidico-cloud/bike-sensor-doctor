@@ -1,6 +1,6 @@
 # Athlete Evolution — proposed starting-stage assessment method
 
-**Status: PROPOSAL FOR THE OWNER'S DECISION. Nothing in this document is enabled in the app.**
+**Status: SUPERSEDED on 22 Nov 2026 (18:47) by the owner's decisions, recorded in `STARTING_STAGE_POLICY_SPECIFICATION.md`. Kept as the record of what was proposed. Nothing in this document is enabled in the app.**
 Prepared 22 Nov 2026 in response to the Screen 7 design direction (22 Nov 2026, 17:33).
 Separate from the Screen 7 interface, which shows "Starting stage not yet assessed" for every athlete until a method is approved.
 
