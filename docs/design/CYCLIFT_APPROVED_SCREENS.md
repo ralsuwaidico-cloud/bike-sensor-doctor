@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Register
 
-Last updated: 22 Nov 2026, 15:40 (Dubai) · Screens recorded: 5
+Last updated: 22 Nov 2026, 15:20 (Dubai) · Screens recorded: 5
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -41,6 +41,9 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | INT-06 | Home and Plan | 21 Nov 2026, 22:22 | Home and Plan must not lose or misrepresent the athlete's selected week. | NOT IMPLEMENTED — for the Home and Plan reviews |
 | INT-07 | Goals | 21 Nov 2026, 22:22 | The Goals summary distinguishes a provisional planner mix from the athlete's confirmed schedule. | NOT IMPLEMENTED — needs the owner's authorization to touch approved Screen 4 |
 | INT-08 | Icons (all screens) | 21 Nov 2026, 22:22 | Distinctive mobility, yoga and recovery icons — a later visual refinement. Until then the existing sport icon system is reused. | LATER REFINEMENT |
+| EQ-01 | Equipment catalogue — strength | 22 Nov 2026, 14:36 | Barbell, dumbbells, kettlebell, bench, cable machine, weight machines (grouped), resistance bands, pull-up bar, trap bar: used by the existing strength planner to choose exercises. Squat rack, dip bars, gymnastic rings, weighted vest: stored only. | IMPLEMENTED — planner support only for the nine items it already knew |
+| EQ-02 | Equipment catalogue — cycling, running, swimming, mobility and recovery | 22 Nov 2026, 14:36 | Provisional, incomplete lists for recording what an athlete has. They change no generated training and are not exercise-planning support. | PROVISIONAL — STORAGE ONLY; lists to be reviewed |
+| EQ-03 | Equipment catalogue — individual machines | 22 Nov 2026, 14:36 | Individual machine types (leg press and others) to be representable later, alongside the grouped 'Weight machines' item, which is kept for compatibility. | NOT IMPLEMENTED — structure prepared, no individual types listed |
 | INT-04 | Goals (all screens) | 21 Nov 2026, 20:50 | Existing working goal names and planner mappings are retained. Goals are not renamed solely for cosmetic reasons. | IN FORCE — current behaviour |
 
 ## Summary
@@ -392,8 +395,8 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 ## Screen 5 — Build Your Week (ONB-05)
 
 - **Navigation location:** Onboarding · page 4 of 7, after Goals. Every athlete builds their week here, including athletes whose sports have no planner yet.
-- **Approval date:** 21 Nov 2026, 21:18 (design direction with required changes)
-- **Approval status:** CALENDAR AND SCHEDULING LAYOUT APPROVED (22 Nov 2026, 13:34; run39_s5.png, commit 8dbbd54a) — Equipment revision implemented and simulator-checked; its visual approval is PENDING
+- **Approval date:** 21 Nov 2026, 21:18 (direction); calendar and scheduling layout 22 Nov 13:34; Equipment presentation 22 Nov 14:36
+- **Approval status:** VISUAL DESIGN APPROVED (calendar and scheduling: run39_s5.png, 8dbbd54a; Equipment: run41_s5_equipment.png, e5f4819a) — functional and copy refinements of 22 Nov 14:36 pending verification
 - **Original design reference and source:** The layout the owner chose from the Screen 5 comparison board (05_build_your_week.png): compact seven-day calendar, day editor, weekly totals, equipment selector and Continue — WITH REQUIRED CHANGES. The owner's own screenshot was not received with the decision; the layout is taken to be the current-implementation column of the board, whose elements match the decision's list. To be confirmed at visual review. Origin: onboarding v3.3 sheet Y4.
 - **Implementation commit:** Calendar and scheduling: 8dbbd54a. Equipment revision: e5f4819a (branch ios/lab). Not in any TestFlight build.
 
@@ -416,6 +419,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Mandatory functionality and dependencies
 
+- FINAL CONDITIONS 22 Nov 14:36 — (1) the Gym preset is a suggested starting selection, not a guarantee that every machine exists; easy to review and modify. (2) If any strength session is scheduled, a Gym, Home, Bodyweight or Custom selection is required before Continue; never imposed on athletes without relevant strength sessions. (3) The prominent exercise-count message is replaced by 'We'll choose exercises based on the equipment you have.'; exact counts may stay as secondary information. (4) Concise, user-friendly equipment wording; saved-but-not-yet-used items disclosed accurately without repetitive technical labels. (5) The grouped 'Weight machines' item is kept for compatibility, with room for individual machine types later. (6) The multisport equipment lists are retained as PROVISIONAL and incomplete — not exercise-planning support.
 - EQUIPMENT REVISION 22 Nov 13:34 — the Equipment control has four choices: Gym | Home | Bodyweight | Custom. 'Not sure' is not an equipment environment. These are training environments or presets, not limits on what an athlete can own.
 - EQUIPMENT REVISION — an Edit equipment action opens a compact bottom sheet with a checklist of individual tick boxes. Each environment has its own editable selection. Initial lists — Gym: barbell, dumbbells, bench, cable machine, squat rack, leg press, kettlebell, resistance bands. Home: dumbbells, resistance bands, kettlebell, bench, pull-up bar, exercise mat, barbell. Bodyweight: no equipment required by default; pull-up bar, dip bars, resistance bands, gymnastic rings, weighted vest, exercise mat, dumbbells. Custom: searchable full catalogue. The lists are examples, not mutually exclusive rules; equipment is never silently removed because it belongs to another category.
 - EQUIPMENT REVISION — selecting an environment loads its saved choices; switching never deletes other selections; every choice is editable; selections persist after Back, Continue and restart; a gym is not assumed to have every piece of equipment; the effect on eligible exercises is shown where the existing planner can calculate it accurately.
@@ -463,7 +467,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 ### Remaining work or limitations
 
 - Owner's visual verdict on the screenshots (sent 21 Nov).
-- Owner's visual verdict on the Equipment presentation (screenshots sent 22 Nov).
+- Final conditions of 22 Nov 14:36: written (branch ios/lab); focused simulator verification pending.
 - For the owner's confirmation: 'Leg press' is offered as 'Weight machines (leg press and others)' — the planner has one name for all machines; default ticks (Gym: its eight listed items; Home: the existing five-item home kit; Bodyweight and Custom: none); Gym no longer assumes a trap bar or pull-up bar; before an environment is chosen none is selected and Continue is not blocked; the cycling, running, swimming and mobility items are a provisional initial list; items the planner does not use are stored and labelled as not used to choose training yet.
 - The '2 sessions' count was removed from the editor header to make room for the tag and Rest. A roster with more activities than one chip row wraps and may then need scrolling (checked with three activities).
 - Confirm with the owner which screenshot the chosen layout refers to (not received with the decision).
@@ -471,7 +475,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Images
 
-- `assets/S05_equipment_sim_e5f4819a.png` — EQUIPMENT REVISION — NOT YET APPROVED. iPhone 15 Pro simulator, Obsidian, commit e5f4819a (check 41). Left: Screen 5 with Gym | Home | Bodyweight | Custom and the compact Edit control. Right: the Bodyweight checklist with dumbbells and resistance bands ticked.
+- `assets/S05_equipment_sim_e5f4819a.png` — APPROVED DESIGN (Equipment presentation, 22 Nov 2026 14:36) — as implemented; the sheet's wording is then refined per the final conditions. iPhone 15 Pro simulator, Obsidian, commit e5f4819a (check 41). Left: Screen 5 with Gym | Home | Bodyweight | Custom and the compact Edit control. Right: the Bodyweight checklist with dumbbells and resistance bands ticked.
 - `assets/S05_week_refined_sim_8dbbd54a.png` — APPROVED 22 Nov 2026 13:34 FOR THE CALENDAR, DAY EDITOR AND WEEKLY SUMMARY (the Equipment row shown, with 'Not sure', is NOT approved and is being revised). iPhone 15 Pro simulator, Obsidian, commit 8dbbd54a (check 39). Left: multisport week, editor closed. Right: a two-session day with the editor expanded, equipment visible.
 - `assets/S05_week_impl_sim_83ed8066.png` — SUPERSEDED — NOT APPROVED (minutes on the tiles; equipment hidden during an edit — refinement requested 22 Nov 01:03). iPhone 15 Pro simulator, Obsidian, commit 83ed8066 (check 37). Left to right: all seven days at Rest; a running-only week; a multisport week with different durations and two-session days; the day editor with two sessions open.
 - `assets/S05_week_comparison_board_75335114.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Left two: design sheet Y4 (drawings). Middle: Build 6 (commit 9b9d3a68). Right two: the implementation BEFORE the required changes (commit 75335114, check 32) — it still shows a pre-filled proposed week and week-wide lengths, both now rejected.
@@ -485,3 +489,4 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 22 Nov 2026, 00:10 | Record only (no decision): implementation sent for review (check 37, commit 83ed8066) with minutes on the calendar tiles and the equipment choice stepping aside during an edit. | NOTE |
 | 22 Nov 2026, 01:03 | Not approved as sent. Refinement: icon-only calendar tiles; Rest easy to find in the editor; unconfirmed edits distinguished; strict one-screen fit including the expanded two-session editor with equipment visible. Screens 1–4 untouched; Screen 6 waits. | IN FORCE |
 | 22 Nov 2026, 13:34 | APPROVED: the calendar, day editor and weekly summary layout of run39_s5.png, commit 8dbbd54a. Equipment section to be revised before complete visual approval: Gym | Home | Bodyweight | Custom, per-environment editable checklists in a bottom sheet, extensible multisport catalogue, truthful planner integration. | IN FORCE |
+| 22 Nov 2026, 14:36 | APPROVED: the Equipment presentation of run41_s5_equipment.png, commit e5f4819a — four environments, compact row and Edit action, separate checklist sheet, individual items, independent selections per environment, effect on eligible exercises where the planner supports it, no checklist permanently expanded on the page. With six final conditions (see Mandatory functionality). | IN FORCE |
