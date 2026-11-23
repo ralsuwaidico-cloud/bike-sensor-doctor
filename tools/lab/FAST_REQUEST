@@ -1,2 +1,2 @@
-LabFastOnboarding/testCaptureConsistencyDemoAthlete LabFastOnboarding/testCaptureConsistencyAthleteWithoutPlan
-Check 57: Consistency destination full-page captures (no app code changed)
+LabFastOnboarding/testConsistencyDashboardHistory LabFastOnboarding/testConsistencyDashboardWithoutPlan LabFastOnboarding/testHomeFinalBaselineAndCoachCard LabChecks/test0HomeControlsPresentTheirPages
+Check 58: Consistency Dashboard (history, no plan) and Home unchanged
