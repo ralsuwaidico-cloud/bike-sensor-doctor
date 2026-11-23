@@ -103,12 +103,11 @@ struct HomeView: View {
         var actions = Home21Actions()
         actions.onCoach = { showCoach = true }
         if let c = item {
-            let ownPage = c.opensCoachPageInRedesign
+            // Owner's final Home decision (23 Nov 2026, 09:40): the entire card opens the Coach page, whatever the item,
+            // and there is no separate "Coach page" link. The item and its decision are on the Coach page.
             coach = Home21Coach(model: CyCoachPreviewModel(text: c.title, needsDecision: c.needsDecision),
                                 identifier: "homeCoachAction", spokenPrefix: CycliftLab.isLab ? "Demo, rule-based, not AI. " : "",
-                                hint: ownPage ? "Opens the Coach page" : "Opens \(c.actionLabel ?? "details")")
-            actions.onCoach = { coachTapped(c) }
-            if !ownPage { actions.onCoachPage = { showCoach = true } }
+                                hint: "Opens the Coach page")
         }
         actions.onAvatar = { tab = 4 }                                   // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
         actions.onConsistency = { path.append(.weekOverview(now)) }

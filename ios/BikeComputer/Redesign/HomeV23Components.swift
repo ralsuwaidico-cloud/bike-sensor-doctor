@@ -118,25 +118,25 @@ struct CyCompactSportCard: View {
 
     var body: some View {
         Button(action: onOpen) {
-            VStack(alignment: .leading, spacing: HomeType.v(8, before: 6)) {
+            VStack(alignment: .leading, spacing: 6) {
                 if let m = model {
                     HStack(spacing: 6) {
                         Image(systemName: m.category.icon).font(.footnote.weight(.semibold)).foregroundStyle(m.category.color(theme))
-                        Text(m.title).font(HomeType.f(.cardTitle, CyFont.label)).foregroundStyle(theme.textSecondary)
+                        Text(m.title).font(CyFont.label).foregroundStyle(theme.textSecondary)
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(theme.textTertiary)
                     }
                     if let empty = m.emptyText {
-                        Text(empty).font(HomeType.f(.cardPlanned, CyFont.footnote)).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                        Text(empty).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
                     } else {
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(m.done ?? "—").font(HomeType.f(.cardTotal, CyFont.value)).foregroundStyle(theme.textPrimary)
-                            if let p = m.planned { Text("/ \(p)").font(HomeType.f(.cardPlanned, CyFont.footnote)).foregroundStyle(theme.textSecondary) }
+                            Text(m.done ?? "—").font(CyFont.value).foregroundStyle(theme.textPrimary)
+                            if let p = m.planned { Text("/ \(p)").font(CyFont.footnote).foregroundStyle(theme.textSecondary) }
                         }
                         .lineLimit(1).minimumScaleFactor(0.7)
                         CyGradientBar(fraction: m.fraction ?? 0, color: m.category.color(theme))
-                        Text(m.secondary ?? " ").font(HomeType.f(.meta, .caption2)).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
+                        Text(m.secondary ?? " ").font(.caption2).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
                     }
                 } else {
                     CySkeleton(height: 10, width: 70); CySkeleton(height: 18, width: 100); CySkeleton(height: 4); CySkeleton(height: 8, width: 60)
@@ -294,17 +294,17 @@ struct CyMixRingGlyph: View {
     var showsCentre: Bool = true
     @Environment(\.cyTheme) private var theme
     var body: some View {
-        let outer: CGFloat = HomeType.v(5, before: 6.5), gap: CGFloat = HomeType.v(3, before: 3.5)      // refined: slimmer double ring, so the value fits and its weight matches the single rings
+        let outer: CGFloat = 6.5, gap: CGFloat = 3.5
         ZStack {
             CyProgressRingGlyph(fraction: model == nil ? 0 : model?.endurance.fraction, color: theme.endurance, diameter: diameter, lineWidth: outer)
             CyProgressRingGlyph(fraction: model == nil ? 0 : model?.strength.fraction, color: theme.strength,
                                 diameter: diameter - 2 * (outer * theme.ringLineWidthScale + gap), lineWidth: outer)
             if let m = model, showsCentre {
                 Text(m.ratioText ?? "—")
-                    .font(HomeType.f(.ringValue, .system(size: diameter * 0.17, weight: .bold, design: .rounded))).monospacedDigit()
+                    .font(.system(size: diameter * 0.17, weight: .bold, design: .rounded)).monospacedDigit()
                     .foregroundStyle(m.ratioText == nil ? theme.textTertiary : theme.textPrimary)
-                    .lineLimit(1).minimumScaleFactor(HomeType.v(0.85, before: 0.7))
-                    .frame(width: diameter * HomeType.v(0.66, before: 0.5))
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .frame(width: diameter * 0.5)
             }
         }
         .frame(width: diameter, height: diameter)
@@ -325,18 +325,18 @@ struct CyRecoveryGlyph: View {
         ZStack {
             switch model?.state {
             case .some(.numericSample(let pct, _)):
-                CyProgressRingGlyph(fraction: Double(pct) / 100, color: theme.ringRecovery, diameter: diameter, lineWidth: HomeType.v(6.5, before: 8))
+                CyProgressRingGlyph(fraction: Double(pct) / 100, color: theme.ringRecovery, diameter: diameter)
                 if showsCentre {
-                    Text("\(pct)%").font(HomeType.f(.ringValue, CyFont.metricSmall)).foregroundStyle(theme.textPrimary).minimumScaleFactor(0.6).lineLimit(1).padding(.horizontal, 12)
+                    Text("\(pct)%").font(CyFont.metricSmall).foregroundStyle(theme.textPrimary).minimumScaleFactor(0.6).lineLimit(1).padding(.horizontal, 12)
                 }
             case .some(.qualitative):
                 Circle().strokeBorder(theme.ringRecovery.opacity(theme.id == .highContrast ? 1 : 0.75), lineWidth: 2.5 * theme.ringLineWidthScale).padding(3)
                 if showsCentre { Image(systemName: "text.alignleft").font(.system(size: diameter * 0.22, weight: .semibold)).foregroundStyle(theme.ringRecovery) }
             case .some(.partial):
-                CyProgressRingGlyph(fraction: nil, color: theme.ringRecovery, diameter: diameter, lineWidth: HomeType.v(6.5, before: 8))
+                CyProgressRingGlyph(fraction: nil, color: theme.ringRecovery, diameter: diameter)
                 if showsCentre { Image(systemName: "circle.lefthalf.filled").font(.system(size: diameter * 0.22)).foregroundStyle(theme.textSecondary) }
             case .some(.awaiting):
-                CyProgressRingGlyph(fraction: nil, color: theme.ringRecovery, diameter: diameter, lineWidth: HomeType.v(6.5, before: 8))
+                CyProgressRingGlyph(fraction: nil, color: theme.ringRecovery, diameter: diameter)
                 if showsCentre { Image(systemName: "minus").font(.system(size: diameter * 0.22)).foregroundStyle(theme.textTertiary) }
             case .none:
                 CyProgressRingGlyph(fraction: 0, color: theme.ringRecovery, diameter: diameter)
@@ -368,23 +368,22 @@ struct CyIndicatorRow: View {
 
     var body: some View {
         let big = typeSize.isAccessibilitySize
-        let ring: CGFloat = HomeType.v(90, before: 76)        // refined: three equal, slightly larger rings
         let layout = big ? AnyLayout(VStackLayout(alignment: .leading, spacing: CySpace.m)) : AnyLayout(HStackLayout(alignment: .top, spacing: CySpace.s))
         layout {
             tile(id: "indicatorConsistency", title: "Consistency", info: consistencyText, big: big, action: onConsistency) {
                 ZStack {
-                    CyProgressRingGlyph(fraction: isLoading ? 0 : consistency?.fraction, color: theme.ringConsistency, diameter: big ? 56 : ring, lineWidth: HomeType.v(6.5, before: 8))
+                    CyProgressRingGlyph(fraction: isLoading ? 0 : consistency?.fraction, color: theme.ringConsistency, diameter: big ? 56 : 76)
                     if isLoading { EmptyView() }
                     else if let c = consistency, c.fraction != nil {
-                        if !big { Text(c.text).font(HomeType.f(.ringValue, CyFont.metricSmall)).foregroundStyle(theme.textPrimary).minimumScaleFactor(0.6).lineLimit(1).padding(.horizontal, 12) }
+                        if !big { Text(c.text).font(CyFont.metricSmall).foregroundStyle(theme.textPrimary).minimumScaleFactor(0.6).lineLimit(1).padding(.horizontal, 12) }
                     } else { Image(systemName: "minus").foregroundStyle(theme.textTertiary) }
                 }
             }
             tile(id: "indicatorMix", title: "Training Mix", info: mixText, big: big, action: onMix) {
-                CyMixRingGlyph(model: isLoading ? nil : mix, diameter: big ? 56 : ring, showsCentre: !big)
+                CyMixRingGlyph(model: isLoading ? nil : mix, diameter: big ? 56 : 76, showsCentre: !big)
             }
             tile(id: "indicatorRecovery", title: "Recovery", info: recoveryText, big: big, action: onRecovery) {
-                CyRecoveryGlyph(model: isLoading ? nil : recovery, diameter: big ? 56 : ring, showsCentre: !big)
+                CyRecoveryGlyph(model: isLoading ? nil : recovery, diameter: big ? 56 : 76, showsCentre: !big)
             }
         }
     }
@@ -403,10 +402,10 @@ struct CyIndicatorRow: View {
                         Spacer(minLength: 0)
                     }
                 } else {
-                    VStack(spacing: HomeType.v(8, before: 6)) {
+                    VStack(spacing: 6) {
                         g
-                        Text(title).font(HomeType.f(.ringLabel, CyFont.caption)).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
-                        Text(info.line).font(HomeType.f(.ringSupport, .caption2)).foregroundStyle(theme.textSecondary).multilineTextAlignment(.center)
+                        Text(title).font(CyFont.caption).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.8)
+                        Text(info.line).font(.caption2).foregroundStyle(theme.textSecondary).multilineTextAlignment(.center)
                             .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity)
@@ -504,19 +503,6 @@ struct CyCompactSchedule: View {
             .frame(minHeight: CyHit.min)
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("scheduleEmpty")
-        } else if HomeType.isRefined {
-            // refined — one component: seven equal tiles on one quiet surface, joined by hairlines; today is a soft inset
-            HStack(spacing: 0) {
-                ForEach(days) { d in
-                    cell(d)
-                    if d.id != days.last?.id {
-                        Rectangle().fill(theme.separator.opacity(0.6)).frame(width: 0.5).padding(.vertical, 12).accessibilityHidden(true)
-                    }
-                }
-            }
-            .padding(.horizontal, 3)
-            .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.surface))
-            .overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: theme.borderWidth))
         } else {
             HStack(spacing: 0) { ForEach(days) { d in cell(d) } }
         }
@@ -525,8 +511,8 @@ struct CyCompactSchedule: View {
     private func cell(_ d: CyScheduleDay) -> some View {
         let two = d.sessions.count > 1
         return Button(action: { onDay(d) }) {
-            VStack(spacing: HomeType.v(7, before: 5)) {
-                Text(d.letter).font(HomeType.f(d.isToday ? .weekdayToday : .weekday, .caption2.weight(d.isToday ? .bold : .medium))).foregroundStyle(d.isToday ? theme.accent : theme.textSecondary)
+            VStack(spacing: 5) {
+                Text(d.letter).font(.caption2.weight(d.isToday ? .bold : .medium)).foregroundStyle(d.isToday ? theme.accent : theme.textSecondary)
                 HStack(spacing: two ? 5 : 0) {
                     if d.sessions.isEmpty {
                         VStack(spacing: 3) {
@@ -539,8 +525,8 @@ struct CyCompactSchedule: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: HomeType.v(62, before: 54))
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(d.isToday ? theme.selectedFill : Color.clear).padding(.horizontal, HomeType.v(3, before: 1)).padding(.vertical, HomeType.v(4, before: 0)))
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(d.isToday ? theme.selectedFill : Color.clear).padding(.horizontal, 1))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(d.isToday && theme.id == .highContrast ? theme.accent : Color.clear, lineWidth: 1.5).padding(.horizontal, 1))
             .contentShape(Rectangle())
         }
@@ -568,32 +554,32 @@ struct CySleepBar: View {
         Button(action: onOpen) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: "moon.stars.fill").font(.footnote).foregroundStyle(model?.lastNight == nil ? HomeType.tone(theme.ringRecovery, refined: theme.textTertiary) : theme.ringRecovery)
-                    Text("Sleep").font(HomeType.f(.rowTitle, CyFont.label)).foregroundStyle(theme.textPrimary)
-                    Text("last night").font(HomeType.f(.meta, .caption2)).foregroundStyle(theme.textSecondary)
+                    Image(systemName: "moon.stars.fill").font(.footnote).foregroundStyle(theme.ringRecovery)
+                    Text("Sleep").font(CyFont.label).foregroundStyle(theme.textPrimary)
+                    Text("last night").font(.caption2).foregroundStyle(theme.textSecondary)
                     Spacer(minLength: CySpace.s)
                     if let m = model {
-                        if let last = m.lastNight { Text(CySleepModel.text(last)).font(HomeType.f(.rowValue, CyFont.value)).foregroundStyle(theme.textPrimary) }
-                        else { Text("No record").font(HomeType.f(.metaLarge, CyFont.footnote)).foregroundStyle(HomeType.tone(theme.textSecondary, refined: theme.textTertiary)) }
+                        if let last = m.lastNight { Text(CySleepModel.text(last)).font(CyFont.value).foregroundStyle(theme.textPrimary) }
+                        else { Text("No record").font(CyFont.footnote).foregroundStyle(theme.textSecondary) }
                     } else { CySkeleton(height: 16, width: 70) }
                     Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(theme.textTertiary)
                 }
                 if let m = model {
-                    CyGradientBar(fraction: (m.lastNight != nil && (m.target ?? 0) > 0) ? Double(m.lastNight ?? 0) / Double(m.target ?? 1) : 0, color: theme.ringRecovery, height: HomeType.v(4, before: 5))
+                    CyGradientBar(fraction: (m.lastNight != nil && (m.target ?? 0) > 0) ? Double(m.lastNight ?? 0) / Double(m.target ?? 1) : 0, color: theme.ringRecovery, height: 5)
                     let stats = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: CySpace.s))
                     stats {
                         stat("7-day avg", m.average7.map(CySleepModel.text) ?? "—")
                         if !typeSize.isAccessibilitySize { Spacer(minLength: CySpace.s) }
                         if let t = m.target { stat(m.targetLabel, CySleepModel.text(t)) }
-                        else if m.canSetTarget { Text("Target not set · Set").font(HomeType.f(.metaStrong, CyFont.footnote.weight(.semibold))).foregroundStyle(theme.accent).lineLimit(1) }
-                        else { Text("Target not set").font(HomeType.f(.metaLarge, CyFont.footnote)).foregroundStyle(theme.textSecondary).lineLimit(1) }
+                        else if m.canSetTarget { Text("Target not set · Set").font(CyFont.footnote.weight(.semibold)).foregroundStyle(theme.accent).lineLimit(1) }
+                        else { Text("Target not set").font(CyFont.footnote).foregroundStyle(theme.textSecondary).lineLimit(1) }
                     }
                 } else {
                     CySkeleton(height: 5); CySkeleton(height: 10, width: 200)
                 }
             }
             .padding(.vertical, CySpace.s)
-            .padding(.horizontal, HomeType.v(0, before: CySpace.xs))          // refined: on the page margin, like every heading
+            .padding(.horizontal, CySpace.xs)
             .frame(minHeight: CyHit.min)
             .contentShape(Rectangle())
         }
@@ -607,8 +593,8 @@ struct CySleepBar: View {
     }
     private func stat(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 5) {
-            Text(label).font(HomeType.f(.metaLarge, CyFont.footnote)).foregroundStyle(theme.textSecondary)
-            Text(value).font(HomeType.f(.metaStrong, CyFont.footnote.weight(.semibold))).monospacedDigit().foregroundStyle(theme.textPrimary)
+            Text(label).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+            Text(value).font(CyFont.footnote.weight(.semibold)).monospacedDigit().foregroundStyle(theme.textPrimary)
         }
         .lineLimit(1).minimumScaleFactor(0.85)
     }
@@ -623,8 +609,9 @@ struct CySleepBar: View {
 
 // MARK: Coach preview (v2.3)
 
-/// Compact, text-only, tappable. No Review / Approve / Not now / Decline here — decisions live in the conversation's
-/// proposal detail. About two lines of text; longer text is truncated.
+/// Compact, text-only; the WHOLE card is one button that opens the Coach page (background, text and chevron alike).
+/// No Review / Approve / Not now / Decline here — decisions live on the Coach page. The finding is read in full: the
+/// card grows with it and is never cut to two lines (owner's final Home decision, 23 Nov 2026 09:40).
 struct CyCoachPreview: View {
     let model: CyCoachPreviewModel?  // nil while loading or when there is nothing to say
     var emptyText: String? = nil
@@ -644,20 +631,20 @@ struct CyCoachPreview: View {
                 Image(systemName: "sparkles").font(.footnote.weight(.semibold)).foregroundStyle(theme.accent)
                     .frame(width: 22, height: 22)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: HomeType.v(6, before: 4)) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("Coach").font(HomeType.f(.rowTitle, CyFont.caption.weight(.semibold))).foregroundStyle(HomeType.tone(theme.textSecondary, refined: theme.textPrimary))
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("Coach").font(CyFont.caption.weight(.semibold)).foregroundStyle(theme.textSecondary)
                         if model?.needsDecision == true && !isLoading {
                             Circle().fill(theme.accent).frame(width: 6, height: 6)
-                            Text("Needs your decision").font(HomeType.f(.status, .caption2)).foregroundStyle(HomeType.tone(theme.textSecondary, refined: theme.accent)).lineLimit(1)
+                            Text("Needs your decision").font(.caption2).foregroundStyle(theme.textSecondary).lineLimit(1)
                         }
                     }
                     if isLoading {
                         CySkeleton(); CySkeleton(width: 200)
                     } else {
                         Text(model?.text ?? emptyText ?? "Nothing to report yet.")
-                            .font(HomeType.f(.coachText, CyFont.callout)).foregroundStyle(model == nil ? theme.textSecondary : theme.textPrimary)
-                            .lineLimit(HomeType.isRefined ? nil : (typeSize.isAccessibilitySize ? 4 : 2)).truncationMode(.tail)   // refined: the finding is read in full; the card grows
+                            .font(CyFont.callout).foregroundStyle(model == nil ? theme.textSecondary : theme.textPrimary)
+                            .lineLimit(nil)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -697,8 +684,8 @@ struct CyMetricGrid: View {
 
     var body: some View {
         let cols = typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: CySpace.s), GridItem(.flexible(), spacing: CySpace.s)]
-        VStack(alignment: .leading, spacing: HomeType.v(CySpace.s, before: CySpace.m)) {
-            Text("Key metrics").font(HomeType.f(.heading, CyFont.title)).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+        VStack(alignment: .leading, spacing: CySpace.m) {
+            Text("Key metrics").font(CyFont.title).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
             if style == .rows { rows } else {
             LazyVGrid(columns: cols, spacing: CySpace.s) {
                 if isLoading {
@@ -728,15 +715,15 @@ struct CyMetricGrid: View {
                     Button(action: { onTile(t) }) {
                         HStack(spacing: CySpace.m) {
                             Image(systemName: t.icon).font(.footnote.weight(.semibold)).foregroundStyle(theme.textSecondary).frame(width: 22)
-                            Text(t.name.uppercased()).font(HomeType.f(.metricLabel, .caption.weight(.semibold))).tracking(0.7).foregroundStyle(theme.textPrimary)
+                            Text(t.name.uppercased()).font(.caption.weight(.semibold)).tracking(0.7).foregroundStyle(theme.textPrimary)
                                 .lineLimit(typeSize.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.8)
                             Spacer(minLength: CySpace.s)
                             VStack(alignment: .trailing, spacing: 0) {
                                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                                    Text(t.value ?? "—").font(HomeType.f(.metricValue, CyFont.value)).foregroundStyle(t.value == nil ? theme.textTertiary : theme.textPrimary)
-                                    if t.value != nil { Text(t.unit).font(HomeType.f(.meta, .caption2)).foregroundStyle(theme.textSecondary) }
+                                    Text(t.value ?? "—").font(CyFont.value).foregroundStyle(t.value == nil ? theme.textTertiary : theme.textPrimary)
+                                    if t.value != nil { Text(t.unit).font(.caption2).foregroundStyle(theme.textSecondary) }
                                 }
-                                Text(t.value == nil ? "No data" : (t.baseline ?? t.trend ?? " ")).font(HomeType.f(.meta, .caption2)).foregroundStyle(theme.textSecondary)
+                                Text(t.value == nil ? "No data" : (t.baseline ?? t.trend ?? " ")).font(.caption2).foregroundStyle(theme.textSecondary)
                             }
                             .lineLimit(1)
                             Group {
@@ -748,7 +735,7 @@ struct CyMetricGrid: View {
                             Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(theme.textTertiary)
                         }
                         .padding(.horizontal, CySpace.m)
-                        .frame(minHeight: HomeType.v(52, before: 54))
+                        .frame(minHeight: 54)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(CyRingButtonStyle())
@@ -758,7 +745,7 @@ struct CyMetricGrid: View {
                     .accessibilityAddTraits(.isButton)
                     .accessibilityHint("Opens details")
                     .accessibilityIdentifier("metricRow-\(t.id)")
-                    if t.id != tiles.last?.id { Rectangle().fill(theme.separator.opacity(0.6)).frame(height: 0.5).padding(.leading, CySpace.m + 22 + CySpace.m).padding(.trailing, HomeType.v(CySpace.m, before: 0)) }
+                    if t.id != tiles.last?.id { Rectangle().fill(theme.separator.opacity(0.6)).frame(height: 0.5).padding(.leading, CySpace.m + 22 + CySpace.m) }
                 }
             }
         }

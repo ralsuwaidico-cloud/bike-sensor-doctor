@@ -9,8 +9,8 @@ import SwiftUI
 //  • no SAMPLE tag (the values are the athlete's own records; the Lab app labels its demo athlete in its own strip);
 //  • the name carries the identifier the app's tests already use for Home ("homeGreeting");
 //  • a discipline the athlete does not train has no card (cycling-only / strength-only), instead of an empty one;
-//  • the Coach preview is named by the host, and a "Coach page" line can follow it (see HomeView: a suggestion that
-//    opens its own sheet must not hide the way to the Coach page — audit of 16 Nov 2026).
+//  • the Coach preview is named by the host. The whole card opens the Coach page and there is no separate "Coach page"
+//    line (owner's final Home decision, 23 Nov 2026 09:40; it replaces the line added after the audit of 16 Nov 2026).
 
 struct Home21Actions {
     var onAvatar: () -> Void = {}
@@ -23,7 +23,6 @@ struct Home21Actions {
     var onStrength: () -> Void = {}
     var onSleep: () -> Void = {}
     var onCoach: () -> Void = {}
-    var onCoachPage: (() -> Void)? = nil          // nil = no separate "Coach page" line
     var onTrendsInfo: () -> Void = {}
     var onGraphDay: (CyGraphDate, [CyTrendDetailRow]) -> Void = { _, _ in }
     var onMetric: (CyHomeMetric) -> Void = { _ in }
@@ -62,21 +61,9 @@ struct Home21Content: View {
             sportCards.id("cards")
             CySleepBar(model: isLoading ? nil : data.sleep, onOpen: actions.onSleep)
             if coach.isShown {
-                VStack(alignment: .trailing, spacing: 0) {
-                    CyCoachPreview(model: isLoading ? nil : coach.model, emptyText: data.coachEmpty, isLoading: isLoading,
-                                   identifier: coach.identifier, spokenPrefix: coach.spokenPrefix, hint: coach.hint, onOpen: actions.onCoach)
-                    if let open = actions.onCoachPage {
-                        Button(action: open) {
-                            HStack(spacing: 4) { Text("Coach page"); Image(systemName: "chevron.right").font(.caption2.weight(.semibold)) }
-                                .font(HomeType.f(.link, CyFont.caption)).foregroundStyle(theme.accent)
-                                .frame(minHeight: CyHit.min).contentShape(Rectangle())
-                        }
-                        .buttonStyle(CyRingButtonStyle())
-                        .accessibilityHint("Opens the Coach's notes and conversation")
-                        .accessibilityIdentifier("homeCoachOpen")
-                    }
-                }
-                .id("coach")
+                CyCoachPreview(model: isLoading ? nil : coach.model, emptyText: data.coachEmpty, isLoading: isLoading,
+                               identifier: coach.identifier, spokenPrefix: coach.spokenPrefix, hint: coach.hint, onOpen: actions.onCoach)
+                    .id("coach")
             }
             CyTrendsGraph(ranges: data.graph, isLoading: isLoading, emptyText: data.graph.isEmpty ? (data.trendsEmpty ?? "Nothing recorded yet.") : nil,
                           isSample: showSampleTag, onInfo: actions.onTrendsInfo, onDay: actions.onGraphDay)
@@ -120,9 +107,9 @@ struct Home21Header: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: CySpace.m) {
-            VStack(alignment: .leading, spacing: HomeType.v(2, before: 3)) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(overline.uppercased()).font(HomeType.f(.overline, CyFont.overline)).tracking(0.8).foregroundStyle(theme.textSecondary)
+                    Text(overline.uppercased()).font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
                         .lineLimit(typeSize.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.8)
                         .accessibilityIdentifier("homeDate")
                     if showSampleTag {
@@ -134,7 +121,7 @@ struct Home21Header: View {
                 }
                 if isLoading { CySkeleton(height: 22, width: 140) }
                 else {
-                    Text(data.name.isEmpty ? "Home" : data.name).font(HomeType.f(.name, CyFont.name)).foregroundStyle(theme.textPrimary)
+                    Text(data.name.isEmpty ? "Home" : data.name).font(CyFont.name).foregroundStyle(theme.textPrimary)
                         .lineLimit(typeSize.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.75).truncationMode(.tail)
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("homeGreeting")
