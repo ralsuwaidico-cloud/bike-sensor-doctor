@@ -9,6 +9,8 @@ import SwiftUI
 enum HomeRoute: Hashable {
     case weekOverview(Date)
     case consistency                      // the Consistency Dashboard (23 Nov 2026) — the Home Consistency ring
+    case trainingMix                      // the Training Mix dashboard (23 Nov 2026) — the second Home circle
+    case recoveryDashboard                // the Recovery dashboard (23 Nov 2026) — the third Home circle; `.recovery` stays its detail page
     case cycling
     case strength
     case day(Date)

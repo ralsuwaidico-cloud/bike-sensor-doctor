@@ -1122,6 +1122,247 @@ final class LabFastOnboarding: XCTestCase {
         toTop(app); captureFullPage(app, "cons-5-noplan", steps: 4)
     }
 
+    // MARK: Training Mix and Recovery dashboards (owner's shared design direction, 23 Nov 2026, 19:55)
+
+    /// The floating label of a dashboard graph: on screen, wholly inside the graph card and inside the plotted area, at
+    /// the chosen column. Returns its line and, when there is one, its second line.
+    private func tip(_ app: XCUIApplication, _ prefix: String, at i: Int, _ what: String) -> (String, String) {
+        let t = app.staticTexts["\(prefix)Tooltip"].firstMatch
+        XCTAssertTrue(t.waitForExistence(timeout: 5), "required: a floating label at \(what)")
+        guard t.exists else { return ("", "") }
+        let graph = el(app, "\(prefix)Graph").frame, col = app.buttons["\(prefix)Point-\(i)"].firstMatch.frame
+        let d = app.staticTexts["\(prefix)TooltipDetail"].firstMatch
+        for f in [t.frame] + (d.exists ? [d.frame] : []) {
+            XCTAssertTrue(graph.contains(f), "required: the label stays inside the chart at \(what) (label \(f), chart \(graph))")
+            XCTAssertTrue(f.minY >= col.minY - 1 && f.maxY <= col.maxY + 1, "required: the label is inside the plotted area at \(what)")
+            XCTAssertLessThanOrEqual(abs(f.midX - col.midX), col.width + f.width / 2 + 14, "required: the label is at the chosen column at \(what)")
+        }
+        return (t.label, d.exists ? d.label : "")
+    }
+    private func pick(_ app: XCUIApplication, _ prefix: String, _ i: Int) { app.buttons["\(prefix)Point-\(i)"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.35) }
+    private func launchHistory(_ extra: String? = nil) -> XCUIApplication {
+        let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+        app.launchEnvironment[extra ?? "LAB_DEMO_CONSISTENCY"] = "1"; app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete")
+        XCTAssertTrue(app.staticTexts["CYCLIFT LAB · DEMO DATA"].firstMatch.exists, "required: the page is marked as Lab demo data")
+        return app
+    }
+    private func openCircle(_ app: XCUIApplication, _ ring: String, page: String, title: String) -> String {
+        let r = el(app, ring)
+        XCTAssertTrue(r.waitForExistence(timeout: 8), "required: \(ring) on Home")
+        let value = r.value as? String ?? ""
+        r.tap()
+        XCTAssertTrue(el(app, page).waitForExistence(timeout: 8), "required: the circle opens \(page)")
+        XCTAssertTrue(app.navigationBars[title].firstMatch.waitForExistence(timeout: 4), "required: the page is titled \(title)")
+        return value
+    }
+
+    /// Training Mix for the "Consistency history" athlete: last week holds 3 h 28 min of rides (58 + 115 + 35 min) and
+    /// 1 h 24 min of strength (two sessions of 42 min) against 3 h 45 min and 1 h 20 min planned; Thursday holds one
+    /// strength session recorded and a planned ride with nothing recorded.
+    func testTrainingMixDashboard() {
+        let app = launchHistory()
+        let ring = openCircle(app, "indicatorMix", page: "trainingMixDashboard", title: "Training Mix")
+        XCTAssertFalse(text(app, "mixSummaryLine").contains("%"), "required: no standalone ratio in the header")
+        XCTAssertFalse(app.staticTexts["mixTooltip"].exists || el(app, "mixInspection").exists, "nothing is chosen until a column is pressed")
+        let first = el(app, "mixInsight").label
+        for i in 0..<8 {
+            pick(app, "mix", i)
+            let t = tip(app, "mix", at: i, "week \(i)")
+            XCTAssertTrue(t.0.contains(" · "), "required: the label names its period (\(t.0))")
+            if i < 7 { XCTAssertTrue(t.0.contains("h") && t.1.contains("Cycling") && t.1.contains("Strength"), "required: week \(i) shows its recorded time and distribution (\(t))") }
+        }
+        pick(app, "mix", 6)
+        let t = tip(app, "mix", at: 6, "last week")
+        XCTAssertTrue(t.0.hasPrefix("4 h 52 min"), "required: last week's recorded time (\(t.0))")
+        XCTAssertEqual(t.1, "Cycling 71% · Strength 29%", "required: last week's distribution")
+        XCTAssertTrue(text(app, "mixSummaryLine").hasPrefix("4 h 52 min"), "required: the header follows the chosen week")
+        XCTAssertTrue(text(app, "mixPlanned").contains("5 h 5 min"), "required: the planned time of that week")
+        XCTAssertTrue(text(app, "mixInspectionCycling").contains("3 h 28 min recorded") && text(app, "mixInspectionCycling").contains("3 h 45 min planned"), "required: cycling recorded and planned")
+        XCTAssertTrue(text(app, "mixInspectionStrength").contains("1 h 24 min recorded") && text(app, "mixInspectionStrength").contains("1 h 20 min planned"), "required: strength recorded and planned")
+        let coach = el(app, "mixInsight").label
+        XCTAssertTrue(coach.contains("Cycling accounted for most of your recorded training in this week (71%)") && coach != first, "required: the one summary follows the chosen week (\(coach))")
+        XCTAssertTrue(coach.contains("does not record them yet"), "required: and says the other roster sports are not recorded")
+        XCTAssertFalse(coach.lowercased().contains("overtrain") || coach.lowercased().contains("ideal"), "no balance is judged")
+        captureFullPage(app, "mix-1-weeks-selected", steps: 6); toTop(app)
+        pick(app, "mix", 6)
+        XCTAssertFalse(app.staticTexts["mixTooltip"].exists || el(app, "mixInspection").exists, "required: pressing the chosen column again clears the selection")
+        pick(app, "mix", 6); press(app, "mixViewDetails")
+        XCTAssertTrue(el(app, "weekOverviewTitle").waitForExistence(timeout: 8), "required: View week opens the existing weekly overview")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(el(app, "trainingMixDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
+
+        toTop(app); app.buttons["mixMode-days"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        XCTAssertFalse(app.staticTexts["mixTooltip"].exists, "switching the view clears the selection")
+        let wants: [(Int, String, String)] = [(0, "58 min", "Cycling 100%"), (1, "42 min", "Strength 100%"), (2, "No recorded training", ""), (3, "42 min", "Strength 100%"),
+                                              (4, "No recorded training", ""), (5, "1 h 55 min", "Cycling 100%"), (6, "35 min", "Cycling 100%")]
+        for (i, a, b) in wants {
+            pick(app, "mix", i)
+            let d = tip(app, "mix", at: i, "day \(i)")
+            XCTAssertTrue(d.0.hasPrefix(a) && d.1 == b, "required: day \(i) says \(a) / \(b) (\(d))")
+        }
+        pick(app, "mix", 3)
+        XCTAssertTrue(text(app, "mixInspectionTitle").contains("Thursday"), "required: the card is Thursday's")
+        XCTAssertTrue(text(app, "mixInspectionStrength").contains("42 min recorded"), "required: Thursday's strength time")
+        XCTAssertTrue(text(app, "mixInspectionCycling").contains("nothing recorded") && text(app, "mixInspectionCycling").contains("45 min planned"), "required: Thursday's planned ride has nothing recorded")
+        let day = el(app, "mixInsight").label
+        XCTAssertTrue(day.contains("On Thursday you recorded 42 min") && day.contains("Planned and not recorded"), "required: the summary follows the chosen day (\(day))")
+        captureFullPage(app, "mix-2-days-selected", steps: 6); toTop(app)
+        press(app, "mixViewDetails")
+        XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 8), "required: View Thursday opens the existing day page")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(el(app, "trainingMixDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
+
+        XCTAssertTrue(el(app, "mixSport-cycling").label.contains("3 h 28 min"), "required: cycling row (\(el(app, "mixSport-cycling").label))")
+        XCTAssertTrue(el(app, "mixSport-strength").label.contains("1 h 24 min"), "required: strength row")
+        for id in ["running", "swimming"] {
+            let l = el(app, "mixSport-\(id)").label
+            XCTAssertTrue(l.contains("not recorded yet") && !l.contains("%"), "required: \(id) says Not recorded yet and shows no figure (\(l))")
+        }
+        press(app, "mixSport-cycling")
+        XCTAssertTrue(text(app, "mixSportDetailLine").contains("3 h 28 min recorded"), "required: the chosen sport shows its own time")
+        XCTAssertTrue(el(app, "mixSportSession-0").waitForExistence(timeout: 4), "required: and its sessions")
+        toTop(app); captureFullPage(app, "mix-3-sport-expanded", steps: 7)
+        press(app, "mixSportSession-0")
+        XCTAssertTrue(el(app, "homeRideDetail").waitForExistence(timeout: 8), "required: a recorded session opens its existing record")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(el(app, "trainingMixDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
+        press(app, "mixDetailsToggle")
+        XCTAssertTrue(el(app, "mixDetail-0").waitForExistence(timeout: 4) && el(app, "mixOpenOverview").exists, "required: Session details opens with the way to the existing pages")
+        app.navigationBars.buttons.firstMatch.tap()
+        let again = el(app, "indicatorMix")
+        XCTAssertTrue(again.waitForExistence(timeout: 8), "required: back returns to Home")
+        XCTAssertEqual(again.value as? String ?? "", ring, "required: the Home circle says what it said before")
+    }
+
+    /// Recovery for the "Consistency history" athlete: eight weeks of demo readings of sleep, resting heart rate and HRV
+    /// with regular gaps. One metric at a time on its own scale; every reading with its source; no score anywhere.
+    func testRecoveryDashboard() {
+        let app = launchHistory()
+        let ring = openCircle(app, "indicatorRecovery", page: "recoveryDashboard", title: "Recovery")
+        XCTAssertEqual(text(app, "recSummaryLine"), "Latest readings")
+        for k in ["sleep", "restingHR", "hrv"] { XCTAssertFalse(el(app, "recSummary-\(k)").label.contains("%"), "required: no percentage in the header (\(k))") }
+        XCTAssertTrue(el(app, "recSummary-restingHR").label.contains("bpm") && el(app, "recSummary-hrv").label.contains("ms"), "required: each latest reading with its unit")
+        let first = el(app, "recInsight").label
+        XCTAssertTrue(first.contains("sleep"), "required: the summary is about the chosen metric (\(first))")
+        for i in 0..<8 {
+            pick(app, "rec", i)
+            let t = tip(app, "rec", at: i, "week \(i)")
+            XCTAssertTrue(t.0.hasPrefix("Avg ") && t.0.contains(" h") && t.1.contains("of 7 nights") && !t.0.contains("%"), "required: week \(i) shows the average of its readings and how many (\(t))")
+        }
+        pick(app, "rec", 6)
+        let week = el(app, "recInsight").label
+        XCTAssertTrue(week.contains("averaged") && week != first, "required: the one summary follows the chosen week (\(week))")
+        XCTAssertFalse(week.lowercased().contains("ready") || week.lowercased().contains("fatigue") || week.contains("%"), "no readiness, diagnosis or score")
+        XCTAssertTrue(el(app, "recInspection-sleep").label.contains("average") && el(app, "recInspection-hrv").label.contains("HRV"), "required: the card lists each indicator for the period")
+        captureFullPage(app, "rec-1-weeks", steps: 6); toTop(app)
+        pick(app, "rec", 6)
+        XCTAssertFalse(app.staticTexts["recTooltip"].exists || el(app, "recInspection").exists, "required: pressing the chosen point again clears the selection")
+
+        pick(app, "rec", 6); app.buttons["recMode-days"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        var readings = 0, chosen = -1
+        for i in 0..<7 {
+            pick(app, "rec", i)
+            let t = tip(app, "rec", at: i, "day \(i)")
+            if t.0.hasPrefix("No reading") { XCTAssertEqual(t.1, "", "a day without a reading shows no value") }
+            else { readings += 1; chosen = i; XCTAssertTrue(t.0.contains(" h") && t.1.hasPrefix("Demo data · "), "required: day \(i) shows the value, its source and time (\(t))") }
+        }
+        XCTAssertGreaterThanOrEqual(readings, 5, "the demo week holds at least five sleep readings")
+        pick(app, "rec", chosen)
+        XCTAssertTrue(el(app, "recInsight").label.contains("your recorded sleep was"), "required: the summary follows the chosen day")
+        XCTAssertTrue(el(app, "recInspection-sleep").label.contains("Demo data"), "required: the card names the source")
+        captureFullPage(app, "rec-2-days-selected", steps: 6); toTop(app)
+        // each metric on its own scale and unit
+        app.buttons["recMetric-restingHR"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        XCTAssertTrue(text(app, "recGraphCaption").contains("bpm"), "required: resting heart rate is drawn in bpm")
+        app.buttons["recMode-weeks"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        pick(app, "rec", 5)
+        XCTAssertTrue(tip(app, "rec", at: 5, "resting HR, week 5").0.contains("bpm"), "required: the label is in bpm")
+        XCTAssertTrue(el(app, "recInsight").label.contains("resting heart rate"), "required: the summary follows the chosen metric")
+        app.buttons["recMetric-hrv"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        XCTAssertTrue(tip(app, "rec", at: 5, "HRV, week 5").0.contains("ms"), "required: HRV is in ms")
+        app.buttons["recMetric-sleep"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        press(app, "recViewDetails")
+        XCTAssertTrue(el(app, "homeRecoveryPage").waitForExistence(timeout: 8), "required: View recovery details opens the existing Recovery page")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(el(app, "recoveryDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
+
+        for k in ["sleep", "restingHR", "hrv"] {
+            let l = el(app, "recRow-\(k)").label
+            XCTAssertTrue(l.contains("latest") && l.contains("Demo data") && !l.contains("%"), "required: the \(k) row shows its latest reading and source, no score (\(l))")
+        }
+        press(app, "recRow-sleep")
+        XCTAssertTrue(text(app, "recRowReading-0").contains("Demo data"), "required: the expanded row lists real readings with their source")
+        toTop(app); captureFullPage(app, "rec-3-metric-expanded", steps: 7)
+        press(app, "recOpenDetails")
+        XCTAssertTrue(el(app, "homeRecoveryPage").waitForExistence(timeout: 8), "required: the row opens the existing Recovery page")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(el(app, "recoveryDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
+        press(app, "recDetailsToggle")
+        XCTAssertTrue(text(app, "recSource-sleep").contains("source: Demo data"), "required: Readings and sources names the source")
+        XCTAssertTrue(text(app, "recSourceNote").contains("no recovery score"), "required: and says no score is calculated")
+        app.navigationBars.buttons.firstMatch.tap()
+        let again = el(app, "indicatorRecovery")
+        XCTAssertTrue(again.waitForExistence(timeout: 8), "required: back returns to Home")
+        XCTAssertEqual(again.value as? String ?? "", ring, "required: the Home circle says what it said before")
+        XCTAssertFalse(ring.contains("%"), "Recovery on Home shows no percentage")
+    }
+
+    /// Recovery with readings from one source for one metric only (sleep, ten days): the other two say so truthfully.
+    func testRecoveryDashboardPartialData() {
+        let app = launchHistory("LAB_DEMO_RECOVERY_PARTIAL")
+        _ = openCircle(app, "indicatorRecovery", page: "recoveryDashboard", title: "Recovery")
+        XCTAssertTrue(el(app, "recSummary-sleep").label.contains(" h"), "required: sleep has a latest reading")
+        XCTAssertTrue(el(app, "recSummary-restingHR").label.contains("No reading") && el(app, "recSummary-hrv").label.contains("No reading"), "required: the other two say No reading")
+        pick(app, "rec", 7)
+        XCTAssertTrue(tip(app, "rec", at: 7, "this week").0.hasPrefix("Avg "), "required: this week has a sleep average")
+        pick(app, "rec", 2)
+        XCTAssertTrue(tip(app, "rec", at: 2, "a week before the readings begin").0.hasPrefix("No reading"), "required: a week without readings says so, never zero")
+        pick(app, "rec", 7)
+        captureFullPage(app, "rec-4-partial", steps: 6); toTop(app)
+        app.buttons["recMetric-hrv"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        XCTAssertTrue(text(app, "recEmpty").contains("No HRV readings yet"), "required: a metric without data shows a truthful empty state")
+        XCTAssertTrue(el(app, "recInsight").label.contains("There are no HRV readings yet"), "required: and the summary says so")
+        XCTAssertTrue(el(app, "recRow-hrv").label.contains("Not connected"), "required: HRV is not claimed to be connected")
+        XCTAssertTrue(el(app, "recRow-sleep").label.contains("Demo data"), "required: sleep names its one source")
+    }
+
+    /// An athlete with nothing recorded and no readings (a runner with goals saved and no plan): both dashboards say so,
+    /// show no figure, and show no cycling or strength analysis.
+    func testDashboardsWithNoData() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["running"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        el(app, "goal-runPace").tap()
+        next.tap(); page(app, 4)
+        app.chooseWeekDay(0, ["running"]); app.chooseWeekDay(3, ["running"])
+        next.tap(); page(app, 7)
+        app.buttons["onbCreateProfile"].firstMatch.tap(); app.openHomeFromBlueprint()
+        XCTAssertTrue(el(app, "homeGreeting").waitForExistence(timeout: 20), "required: Home after Create my profile")
+        _ = openCircle(app, "indicatorMix", page: "trainingMixDashboard", title: "Training Mix")
+        XCTAssertEqual(text(app, "mixSummaryLine"), "No recorded training")
+        XCTAssertFalse(app.staticTexts["mixDistribution"].exists || app.staticTexts["mixPlanned"].exists, "required: no distribution or plan line without records")
+        XCTAssertFalse(el(app, "mixSport-cycling").exists || el(app, "mixSport-strength").exists, "required: a runner sees no cycling or strength row")
+        let run = el(app, "mixSport-running").label
+        XCTAssertTrue(run.contains("not recorded yet") && !run.contains("%"), "required: running says Not recorded yet (\(run))")
+        pick(app, "mix", 7)
+        let t = tip(app, "mix", at: 7, "this week, nothing recorded")
+        XCTAssertTrue(t.0.hasPrefix("Nothing recorded yet") && t.1.isEmpty, "required: the label says nothing is recorded, no figure (\(t))")
+        pick(app, "mix", 7)
+        XCTAssertTrue(el(app, "mixInsight").label.contains("No training is recorded yet this week"), "required: the summary says so")
+        captureFullPage(app, "mix-5-no-records", steps: 4); toTop(app)
+        app.navigationBars.buttons.firstMatch.tap()
+        _ = openCircle(app, "indicatorRecovery", page: "recoveryDashboard", title: "Recovery")
+        XCTAssertEqual(text(app, "recSummaryLine"), "No recovery measurements")
+        XCTAssertTrue(text(app, "recEmpty").contains("No sleep readings yet"), "required: a truthful empty graph")
+        XCTAssertTrue(el(app, "recInsight").label.contains("no recovery measurements yet"), "required: the summary says so")
+        for k in ["sleep", "restingHR", "hrv"] {
+            let l = el(app, "recRow-\(k)").label
+            XCTAssertTrue(l.contains("Not connected") && !l.contains("%"), "required: \(k) is not claimed connected and has no figure (\(l))")
+        }
+        captureFullPage(app, "rec-5-no-readings", steps: 4)
+    }
+
     /// Athletic Blueprint (owner's combined decision, 22 Nov 2026, 22:51), for a multisport athlete — cycling and gym
     /// planned, running not yet: every chosen activity is in "Your training week", two sessions on one
     /// day included, with the right totals; the Coach section guides only what it plans and says truthfully that the

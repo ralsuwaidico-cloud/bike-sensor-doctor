@@ -111,8 +111,8 @@ struct HomeView: View {
         }
         actions.onAvatar = { tab = 4 }                                   // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
         actions.onConsistency = { path.append(.consistency) }      // owner 23 Nov 2026: the Consistency Dashboard; Weekly overview stays its drill-down
-        actions.onMix = { path.append(.weekOverview(now)) }
-        actions.onRecovery = { path.append(.recovery) }
+        actions.onMix = { path.append(.trainingMix) }              // owner 23 Nov 2026, 19:55: the Training Mix dashboard
+        actions.onRecovery = { path.append(.recoveryDashboard) }   // owner 23 Nov 2026, 19:55: the Recovery dashboard; Sleep and Key metrics still open the existing page
         actions.onSleep = { path.append(.recovery) }
         actions.onStep = { s in if s.id == HomeSetupItem.Step.heartRate.rawValue || s.id == HomeSetupItem.Step.health.rawValue { tab = 4 } else { tab = 1 } }
         actions.onDay = { d in if let date = Calendar.current.date(byAdding: .day, value: d.id, to: monday) { path.append(.day(date)) } }
@@ -206,6 +206,8 @@ struct HomeView: View {
         case .menu(.help): HelpSupportPage()
         case .weekOverview(let d): HomeWeekOverviewView(weekOf: d, perform: perform, open: { path.append($0) })
         case .consistency: ConsistencyDashboardView(open: { path.append($0) })
+        case .trainingMix: TrainingMixDashboardView(open: { path.append($0) })
+        case .recoveryDashboard: RecoveryDashboardView(open: { path.append($0) })
         case .cycling: HomeCyclingSummaryView(perform: perform, open: { path.append($0) })
         case .strength: HomeStrengthSummaryView(perform: perform, open: { path.append($0) })
         case .day(let d): HomeDayDetailView(date: d, perform: perform, open: { path.append($0) })

@@ -37,7 +37,10 @@ final class LabChecks: XCTestCase {
             // Consistency Dashboard that day (11:59), so the earlier expectation no longer describes the product. The
             // requirement is unchanged: the ring presents its page at the first tap and back returns to Home.
             ("the Consistency ring", el("indicatorConsistency"), "consistencyDashboard"),
-            ("the Recovery indicator", el("indicatorRecovery"), "homeRecoveryPage"),
+            // Changed 23 Nov 2026: this row expected "homeRecoveryPage". The owner made the Recovery dashboard the circle's
+            // destination that day (19:55); the existing Recovery page stays the detail view, still opened by the Sleep bar
+            // and the Key metrics rows below. The requirement — first tap presents the page, back returns — is unchanged.
+            ("the Recovery indicator", el("indicatorRecovery"), "recoveryDashboard"),
             ("the Endurance card", el("sportCard-endurance"), "homeCyclingSummary"),
             ("the Strength card", el("sportCard-strength"), "homeStrengthSummary"),
             ("the Sleep bar", el("sleepBar"), "homeRecoveryPage"),

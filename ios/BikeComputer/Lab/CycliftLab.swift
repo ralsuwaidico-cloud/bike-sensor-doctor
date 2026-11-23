@@ -112,7 +112,7 @@ struct LabChrome: ViewModifier {
 /// records; the app's own planner, session builder and Coach rules produce what is shown. Nothing is drawn by hand,
 /// nothing is real, and choosing one only rewrites Lab's own folder at the next launch.
 enum LabScenario: String, CaseIterable, Identifiable {
-    case normal, supersets, proposal, cycling, consistency, newAthlete
+    case normal, supersets, proposal, cycling, consistency, recoveryPartial, newAthlete
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -121,6 +121,7 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .proposal: return "Coach suggestion waiting"
         case .cycling: return "Cycling day"
         case .consistency: return "Consistency history"
+        case .recoveryPartial: return "Recovery · one source"
         case .newAthlete: return "New athlete"
         }
     }
@@ -130,7 +131,8 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .supersets: return "The same athlete prefers supersets, so today's session pairs exercises."
         case .proposal: return "The same athlete has a routine today that the Coach's rules suggest increasing. It waits for a decision."
         case .cycling: return "Today's planned session is a ride. The ride screen is a simulation: no sensor, no GPS, nothing saved."
-        case .consistency: return "A multisport athlete with seven earlier planned weeks: some complete, some with missed sessions. Running and swimming are in the roster but not tracked."
+        case .consistency: return "A multisport athlete with seven earlier planned weeks: some complete, some with missed sessions. Running and swimming are in the roster but not tracked. Eight weeks of sleep, resting heart rate and HRV demo readings."
+        case .recoveryPartial: return "The same athlete with sleep readings only, for the last ten days, and no resting heart rate or HRV."
         case .newAthlete: return "No athlete at all. Lab opens at onboarding."
         }
     }
@@ -192,6 +194,7 @@ enum LabDemoData {
         if env["LAB_DEMO_PROPOSAL"] == "1" { return .proposal }
         if env["LAB_DEMO_SUPERSETS"] == "1" { return .supersets }
         if env["LAB_DEMO_CONSISTENCY"] == "1" { return .consistency }
+        if env["LAB_DEMO_RECOVERY_PARTIAL"] == "1" { return .recoveryPartial }
         if env["LAB_FRESH_DEMO"] == "1" { return .normal }       // screen tests that name nothing start from the plain athlete
         if let d = recordDir, let raw = try? String(contentsOf: note("scenario", d), encoding: .utf8),
            let s = LabScenario(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines)) { return s }
@@ -257,7 +260,8 @@ enum LabDemoData {
         var rides: [[String: Any]] = []
         // "Consistency history": the seven weeks before this one carry a plan of their own (below), so the generic riding
         // and lifting history starts before them
-        let history = scenario == .consistency ? 7 : 0
+        let rich = scenario == .consistency || scenario == .recoveryPartial
+        let history = rich ? 7 : 0
         for k in history..<16 {
             let m = cal.date(byAdding: .day, value: -7 * (k + 1), to: monday)!
             let pattern: [[Int]] = [[50, 75], [45, 60, 110], [60, 90], [40, 70, 95]]
@@ -289,7 +293,7 @@ enum LabDemoData {
         // the 1-minute record saved from workout mode with no set ticked, linked to tomorrow's session
         strength.append(["id": UUID().uuidString, "date": d(today, 9), "minutes": 1, "focus": "fullBody", "customName": "", "notes": "", "source": "manual",
                          "workoutId": tomorrowId, "startedAt": d(today, 8.98), "finishedAt": d(today, 9)])
-        if scenario == .consistency {
+        if rich {
             // Seven earlier weeks, each with five planned sessions (Mon ride, Tue strength, Wed tempo, Fri strength, Sat long
             // ride) and a recording only for the ones marked done — so the app's own ledger reports 100, 60, 40, 80, 100
             // and 60 %. Last week differs: Thursday holds two sessions with only the first recorded, Wednesday's ride was
@@ -333,13 +337,32 @@ enum LabDemoData {
                                       "sports": ["roadCycling", "strength"], "version": 3, "updatedAt": "2026-10-25T20:00:00Z", "wheelMm": 2096, "cadenceLow": 85, "cadenceHigh": 95, "hrZoneMethod": "maxHR",
                                       "trainingMode": "hybrid", "priority": "balanced", "cyclingDaysPerWeek": 3, "liftDaysPerWeek": 3, "liftingHoursPerWeek": 1, "preferredDays": [0, 2, 4, 5],
                                       "hybridGoal": "balanced", "strengthSplit": "fullBody"]
-        if scenario == .consistency { profile["activities"] = ["roadCycling", "strength", "running", "swimming"]; profile["sports"] = ["roadCycling", "strength", "running", "swimming"] }
-        let settings: [String: Any] = ["units": "metric", "phoneOnlyMode": true, "hrPref": "strap", "keepScreenOn": true, "autoConnectBoard": false, "enabledConnections": [] as [Any], "appearance": "system",
+        if rich { profile["activities"] = ["roadCycling", "strength", "running", "swimming"]; profile["sports"] = ["roadCycling", "strength", "running", "swimming"] }
+        var settings: [String: Any] = ["units": "metric", "phoneOnlyMode": true, "hrPref": "strap", "keepScreenOn": true, "autoConnectBoard": false, "enabledConnections": [] as [Any], "appearance": "system",
                                        "backgroundNotice": true, "coachTalk": "normal", "coachEnabled": true, "appleHealthImportWorkouts": false]
         let file: [String: Any] = ["schema": 1, "profile": profile, "settings": settings, "plan": plan, "rides": rides, "tiles": ["power", "cadence", "hr", "speed", "time", "dist"],
                                    "onboarded": true, "guest": true, "createdAt": "2026-06-01T10:00:00Z", "boardSync": [] as [Any], "onboardingStage": 0, "templates": [] as [Any], "customExercises": [] as [Any],
                                    "appliedProposals": [] as [Any], "equipment": ["owned": ["dumbbell", "bench", "kettlebell"], "excluded": [] as [Any]], "ignoredInsights": [] as [Any], "strength": strength]
         var out = file
+        // Recovery demo readings (synthetic, source "Demo data"): one value a day from fixed tables, with regular gaps so a
+        // day without a reading can be seen. "Consistency history" has eight weeks of sleep, resting heart rate and HRV;
+        // "Recovery · one source" has ten days of sleep only. The other scenarios have none. Lab reads nothing from Health.
+        if rich {
+            let sleep: [Double] = [7.4, 6.9, 7.8, 7.1, 6.5, 8.0, 7.3, 7.6, 6.8, 7.2, 7.9, 6.6, 7.0, 7.5]
+            let rhr: [Double] = [52, 51, 53, 50, 54, 52, 55, 51, 53, 52]
+            let hrv: [Double] = [61, 58, 66, 63, 55, 70, 60, 64, 57, 62, 68]
+            var entries: [[String: Any]] = []
+            let full = scenario == .consistency
+            for back in stride(from: full ? 55 : 9, through: 0, by: -1) {
+                let day = cal.date(byAdding: .day, value: -back, to: today)!
+                if back % 9 != 4 { entries.append(["kind": "sleep", "value": sleep[back % sleep.count], "date": d(day, 6.6), "source": "Demo data"]) }
+                if full, back % 6 != 3 { entries.append(["kind": "restingHR", "value": rhr[back % rhr.count], "date": d(day, 7.1), "source": "Demo data"]) }
+                if full, back % 5 != 2 { entries.append(["kind": "hrv", "value": hrv[back % hrv.count], "date": d(day, 7.1), "source": "Demo data"]) }
+            }
+            out["recoveryLog"] = ["entries": entries]
+            settings["healthReads"] = ["sleep": true, "restingHR": full, "hrv": full, "weight": false]
+            out["settings"] = settings
+        }
         // LAB_DEMO_SUPERSETS=1 (screen tests): the demo athlete has said they prefer supersets, so the app's own session
         // builder pairs exercises and the preparation screen and recorder show a real superset. Nothing is drawn by hand.
         if scenario == .supersets { out["strengthPrefs"] = ["prefersSupersets": true] }
