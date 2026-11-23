@@ -1,2 +1,2 @@
-LabFastOnboarding/testConsistencyDashboardHistory LabFastOnboarding/testConsistencyDashboardWithoutPlan LabFastOnboarding/testHomeFinalBaselineAndCoachCard LabChecks/test0HomeControlsPresentTheirPages
-Check 58: Consistency Dashboard (history, no plan) and Home unchanged
+LabFastOnboarding/testConsistencyDashboardHistory LabFastOnboarding/testConsistencyDashboardWithoutPlan LabFastOnboarding/testHomeFinalBaselineAndCoachCard
+Check 59: Consistency Dashboard refinements (tooltip, single summary) and Home unchanged
