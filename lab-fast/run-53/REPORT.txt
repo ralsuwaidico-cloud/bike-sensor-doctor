@@ -1,0 +1,24 @@
+FAST focused Lab check — selected: LabFastOnboarding/testCaptureHomeTypographyOptions
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 1d6d2a07 · files changed since then: 6
+TIME setup: 9s
+  timing: CompileAssetCatalogVariant (1 task) | 53.685 seconds
+  timing: SwiftCompile (4 tasks) | 23.793 seconds
+  timing: SwiftEmitModule (2 tasks) | 6.315 seconds
+  timing: Ld (18 tasks) | 5.261 seconds
+  timing: SwiftDriver (2 tasks) | 3.836 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.095 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.460 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.161 seconds
+  stages: packages at 140s · packages prepared at 178s · dependency graph at 178s · inputs at 180s · build description at 180s · first link at 229s · asset catalogue at 229s · first Swift step at 283s · finished at 285s
+  compiled in this run: 12 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 286s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 6s
+Test Case '-[CycliftLabUITests.LabFastOnboarding testCaptureHomeTypographyOptions]' passed (144.853 seconds).
+RESULT selected screen checks: ok
+TIME tests: 186s
+TIME total on the Mac: 489s
+commit c4e61080e48d6354c23da7e0bd3d4a8e76439fa9  branch ios/lab
