@@ -1,0 +1,36 @@
+FAST focused Lab check — selected: LabFastOnboarding/testHomeFinalBaselineAndCoachCard LabChecks/test0HomeControlsPresentTheirPages
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from ef0dd8bc · files changed since then: 6
+TIME setup: 16s
+  timing: SwiftCompile (8 tasks) | 782.997 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 114.657 seconds
+  timing: SwiftEmitModule (2 tasks) | 11.849 seconds
+  timing: Ld (18 tasks) | 10.327 seconds
+  timing: SwiftDriver (2 tasks) | 9.014 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.558 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.385 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.304 seconds
+  stages: packages at 173s · packages prepared at 355s · dependency graph at 356s · inputs at 358s · build description at 359s · first link at 395s · asset catalogue at 396s · first Swift step at 510s · finished at 860s
+  compiled in this run: 176 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 861s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 13s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1073.334 (1073.346) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1073.334 (1073.351) seconds
+Test Case '-[CycliftLabUITests.LabChecks test0HomeControlsPresentTheirPages]' passed (759.965 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testHomeFinalBaselineAndCoachCard]' passed (313.369 seconds).
+RESULT selected screen checks: ok
+TIME tests: 1161s
+LAB-NOTE Home Coach card: Demo, rule-based, not AI. Coach | Needs your decision. Coach suggests: Make Wed's tempo an endurance ride (same duration); frame (20.00000000000003, 588.6666666666666, 353.0, 103.66666666666674)
+LAB-NOTE Home navigation: a Key metrics row presented its page at the first tap: true
+LAB-NOTE Home navigation: the Consistency ring presented its page at the first tap: true
+LAB-NOTE Home navigation: the Endurance card presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day, again after returning presented its page at the first tap: true
+LAB-NOTE Home navigation: the Recovery indicator presented its page at the first tap: true
+LAB-NOTE Home navigation: the Sleep bar presented its page at the first tap: true
+LAB-NOTE Home navigation: the Strength card presented its page at the first tap: true
+TIME total on the Mac: 2053s
+commit 7fb2bc51ff2400953d8e6dfeaa436c277a99b134  branch ios/lab
