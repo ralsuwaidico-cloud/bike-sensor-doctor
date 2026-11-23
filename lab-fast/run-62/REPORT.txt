@@ -1,0 +1,36 @@
+FAST focused Lab check — selected: LabFastOnboarding/testTrainingMixDashboard LabFastOnboarding/testRecoveryDashboard LabFastOnboarding/testRecoveryDashboardPartialData LabFastOnboarding/testDashboardsWithNoData LabFastOnboarding/testHomeFinalBaselineAndCoachCard
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 0dd189d8 · files changed since then: 10
+TIME setup: 17s
+  timing: SwiftCompile (10 tasks) | 1091.177 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 206.388 seconds
+  timing: Ld (18 tasks) | 10.344 seconds
+  timing: SwiftEmitModule (2 tasks) | 7.472 seconds
+  timing: SwiftDriver (2 tasks) | 4.918 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.129 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.742 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.444 seconds
+  stages: packages at 154s · packages prepared at 209s · dependency graph at 209s · inputs at 209s · build description at 209s · first link at 219s · asset catalogue at 219s · first Swift step at 426s · finished at 849s
+  compiled in this run: 100 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 852s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 12s
+	 Executed 5 tests, with 4 failures (0 unexpected) in 1891.822 (1891.836) seconds
+	 Executed 5 tests, with 4 failures (0 unexpected) in 1891.822 (1891.837) seconds
+	 Executed 5 tests, with 4 failures (0 unexpected) in 1891.822 (1891.840) seconds
+Lab/UITests/LabFastOnboarding.swift:1272: error: -[CycliftLabUITests.LabFastOnboarding testRecoveryDashboard] : XCTAssertTrue failed - required: the summary follows the chosen day
+Lab/UITests/LabFastOnboarding.swift:1273: error: -[CycliftLabUITests.LabFastOnboarding testRecoveryDashboard] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"recInspection-sleep" IN identifiers'`, given input App element pid: 50463
+Lab/UITests/LabFastOnboarding.swift:58: error: -[CycliftLabUITests.LabFastOnboarding testDashboardsWithNoData] : XCTAssertTrue failed - required: the page counter
+Lab/UITests/LabFastOnboarding.swift:61: error: -[CycliftLabUITests.LabFastOnboarding testDashboardsWithNoData] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type StaticText` -> `Elements matching predicate '"onboardingProgress" IN identifiers'`, given input App element pid: 30601
+Test Case '-[CycliftLabUITests.LabFastOnboarding testDashboardsWithNoData]' failed (84.205 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testHomeFinalBaselineAndCoachCard]' passed (396.112 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testRecoveryDashboard]' failed (359.484 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testRecoveryDashboardPartialData]' passed (164.037 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testTrainingMixDashboard]' passed (887.984 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 2037s
+LAB-NOTE Home Coach card: Demo, rule-based, not AI. Coach | Needs your decision. Coach suggests: Make Wed's tempo an endurance ride (same duration); frame (20.00000000000003, 588.6666666666666, 353.0, 103.66666666666674)
+TIME total on the Mac: 2928s
+commit 50c6af1e8c3334363654fac51b1a80bd301fe8c1  branch ios/lab
