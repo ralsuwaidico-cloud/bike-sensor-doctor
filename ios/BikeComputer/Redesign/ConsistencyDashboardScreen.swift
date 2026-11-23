@@ -210,7 +210,7 @@ struct ConsistencyDashboardView: View {
                     let est = Double(p.tooltip.count) * 6.9 + (p.kind == .evaluated ? 32 : 20)
                     let place = ConsistencyTooltip.place(px: Double(x(i)), py: Double(py(p)), w: est, h: Double(Self.tipHeight),
                                                          width: Double(g.size.width), height: Double(h), others: others)
-                    let slot = tipSlot(side: place.side, px: x(i), width: g.size.width)
+                    let slot = tipSlot(centre: CGFloat(place.box.x), width: g.size.width)
                     tooltip(p)
                         .frame(width: slot.width, height: Self.tipHeight, alignment: slot.alignment)
                         .offset(x: slot.x, y: CGFloat(place.box.y) - Self.tipHeight / 2)
@@ -226,19 +226,12 @@ struct ConsistencyDashboardView: View {
         }
     }
     private static let tipHeight: CGFloat = 26
-    /// The horizontal box the floating label is laid out in: it starts or ends beside the point near an edge, is centred
-    /// on the point elsewhere, and never reaches past the chart.
-    private func tipSlot(side: ConsistencyTooltip.Side, px: CGFloat, width W: CGFloat) -> (x: CGFloat, width: CGFloat, alignment: Alignment) {
-        let gap = CGFloat(ConsistencyTooltip.gap)
-        switch side {
-        case .right: return (px + gap, max(40, W - px - gap), .leading)
-        case .left: return (0, max(40, px - gap), .trailing)
-        case .above, .below, .top:
-            if px < W / 3 { let x0 = max(0, px - 24); return (x0, W - x0, .leading) }
-            if px > W * 2 / 3 { let x1 = min(W, px + 24); return (0, x1, .trailing) }
-            let half = min(px, W - px)
-            return (px - half, half * 2, .center)
-        }
+    /// The horizontal box the floating label is laid out in: centred where the placement rule put it, and no wider than
+    /// the distance to the nearer edge allows — so the label is where the rule checked it to be clear of other points
+    /// (check 60: an edge-aligned box put the label over a neighbouring point), and it cannot leave the chart.
+    private func tipSlot(centre bx: CGFloat, width W: CGFloat) -> (x: CGFloat, width: CGFloat, alignment: Alignment) {
+        let half = max(20, min(bx, W - bx))
+        return (bx - half, half * 2, .center)
     }
     /// The floating label of the chosen point: its figure and period, or the truthful status where there is no figure.
     private func tooltip(_ p: ConsistencyPoint) -> some View {
