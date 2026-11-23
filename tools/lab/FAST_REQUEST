@@ -1,2 +1,2 @@
-LabFastOnboarding/testCapturePlanDemoAthlete LabFastOnboarding/testCapturePlanAthleteWithoutPlan
-request 56: Plan full-page captures for visual review
+LabFastOnboarding/testCaptureConsistencyDemoAthlete LabFastOnboarding/testCaptureConsistencyAthleteWithoutPlan
+Check 57: Consistency destination full-page captures (no app code changed)
