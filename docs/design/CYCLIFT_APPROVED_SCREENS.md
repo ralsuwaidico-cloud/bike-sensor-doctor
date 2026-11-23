@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 23 Nov 2026, 21:30 (Dubai) · Screens recorded: 10
+Last updated: 23 Nov 2026, 22:40 (Dubai) · Screens recorded: 12
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -114,6 +114,8 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 8 | ONB-08 | Athletic Blueprint | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | NO |
 | 9 | APP-01 | Main App — Home | YES | YES | YES | YES — visual baseline and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | NO |
 | 10 | APP-02 | Home › Consistency Dashboard | YES | YES | YES — Cyclift Lab | FUNCTIONAL — first implementation (superseded by the refinements below) (later rounds: see the screen's status table) | NO |
+| 11 | APP-03 | Home › Training Mix Dashboard | DIRECTION ONLY — final visual sign-off pending | YES — awaiting review | YES — Cyclift Lab | FUNCTIONAL — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved | NO |
+| 12 | APP-04 | Home › Recovery Dashboard | DIRECTION ONLY — final visual sign-off pending | YES — awaiting review | YES — Cyclift Lab | FUNCTIONAL — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved | NO |
 
 ---
 
@@ -979,3 +981,164 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 23 Nov 2026, 14:04 | Visual direction of check 58 (b6c91def) ACCEPTED with final corrections: remove the large header percentage; floating percentage label at the chosen point; keep the inspection card; one Coach card that follows the chosen day or week; sport rows preserved; calculation rules unchanged, with the three differences tracked for a separate product decision. Final implementation verification and visual sign-off pending. | IN FORCE |
 | 23 Nov 2026, 11:59 | Both Weekly overview designs rejected as the Consistency destination. NEW DESIGN DIRECTION approved: Consistency Dashboard (summary, interactive Weeks / Days graph with inspection, two summaries from the records, consistency by sport, expandable session details), one shared calculation, truthful empty states. Final UI approval pending screenshots. Home and its ring unchanged. | IN FORCE |
 | 23 Nov 2026, 10:50 | Home interactive review begun, item 1 of 17: the Consistency circle. Comparison of the Weekly overview presented (check 57). | NOTE |
+
+---
+
+## Screen 11 — Home › Training Mix Dashboard (APP-03)
+
+- **Navigation location:** Main app · Home › the Training Mix circle (the second circle). The Weekly overview and Day pages are its drill-downs.
+- **Approval date:** 23 Nov 2026, 19:55 — SHARED DESIGN DIRECTION approved (built on the approved Consistency Dashboard). Final visual sign-off PENDING.
+- **Approval status:** SHARED DESIGN DIRECTION APPROVED (23 Nov 2026, 19:55); implementation and final visual sign-off PENDING. Implemented and simulator-checked in Cyclift Lab (checks 62 and 64) and sent for review. NOT visually approved.
+- **Original design reference and source:** The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. The canonical design will be the implementation screenshots the owner approves; none is approved yet.
+- **Implementation commit:** becbfdc8 (models, shared kit, screen, Lab fixtures); af9a2443 on top (Recovery-only adjustments in the shared chart frame). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.
+
+### Exact approved wording
+
+- **Title:** Training Mix
+- **Summary (no standalone ratio):** <period> · In progress / <total> recorded / Cycling <time> (<n>%) · Strength <time> (<n>%) / Planned <time>
+- **Graph:** Weeks | Days · Recorded time · legend: Cycling · Strength · Planned
+- **Floating label:** 4 h 52 min · 16 Nov / Cycling 71% · Strength 29% — or 'No recorded training · Fri', 'Nothing recorded yet · 23 Nov', 'Upcoming · Sat'
+- **Inspection:** <period> — <total> recorded / Cycling · <time> recorded · <time> planned / Strength · … / sessions / View week · View <weekday>
+- **Coach card label (one card only):** COACH · FROM YOUR RECORDS
+- **Sports:** Training by sport · <n>% of recorded time · <time> planned · Not recorded yet · In your roster · recording coming soon
+- **Details:** Session details · Open weekly overview / Open <weekday>
+
+### Approved layout, visual elements and interactions
+
+- Same structure, margins, cards, typography, selector, floating label, inspection card, single Coach card, row style and expandable details as the approved Consistency Dashboard.
+- Graph: stacked bars of recorded time per period — cycling below, strength above — with a short line at the planned total; eight weeks, or Monday–Sunday of the chosen week; scale in hours.
+- Sport colours tell the sports apart (cycling blue, strength amber); unavailable data is neutral. NO adherence bands: Training Mix is a distribution, not a score.
+- The floating label sits in the clear strip above the chosen bar, so it never covers a bar.
+- Sport rows: icon, name, recorded time, share of recorded time, planned time, a bar of the share in the sport's colour; a sport that cannot be recorded shows a dashed empty bar and 'Not recorded yet'.
+
+### Mandatory functionality and dependencies
+
+- ONE DEFINITION (the Home circle's own, TrainingLedger): recorded minutes by sport beside planned minutes.
+- Cycling = durations of recorded and imported rides, plus minutes the athlete typed for a planned ride marked done. Strength = minutes of strength sessions (logged, quick-logged, imported), plus typed minutes of a planned session marked done. A session without a duration adds none; nothing is estimated.
+- Planned minutes = the planned, not skipped, rides and strength sessions of the period.
+- Overlapping recordings: each counts in full for its own sport; the app has no rule for recordings that overlap in time.
+- LIMITATION OF THE HOME CIRCLE, documented not changed: the circle and this dashboard cover cycling and strength only, because those are the only sports Cyclift records. Every other roster sport keeps its own row saying 'Not recorded yet' — never 0%, never folded into cycling or strength. An athlete who only runs sees no cycling or strength analysis. PROPOSAL for when another sport gains a recorder: it gets its own colour, its own stacked segment and its own row with no change to the existing minutes; the Home circle's two-ring drawing would then need its own decision.
+- The one Coach card is fixed sentences from the recorded minutes of the chosen week, or of the chosen day in Days view. No balance is judged, no overtraining or recovery is inferred, no cause is stated.
+- INTERACTION MAP — Home circle → Training Mix. Back → Home. Weeks/Days switch. Bar → floating label and inspection card (another bar replaces both; the same bar clears both; horizontal drag moves them). View week → existing Weekly overview. View <weekday> → existing Day page. Sport row → its sessions in place. Session row → the recorded ride or strength session, or the planned session's page. Session details → the period's sessions, then Open weekly overview / Open <weekday>.
+- The dashboard reads records only; it writes nothing.
+
+### Explicitly rejected alternatives
+
+- The Weekly overview as the Training Mix destination (it was the circle's destination until 23 Nov 2026; both Weekly overview designs were rejected as a dashboard on 23 Nov, 11:59).
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY — final visual sign-off pending | Owner, 23 Nov 2026 19:55: shared design direction. No screenshot is approved. |
+| Implemented in code | YES — awaiting review | Commit becbfdc8. |
+| Compiled | YES — Cyclift Lab | Checks 62 and 64. The redesigned main-app target has not been built at these commits. |
+| Simulator-verified | FUNCTIONAL — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved | Focused check 62, run 45213385881 (second attempt; the first got no runner), commit 50c6af1e (code becbfdc8): the Training Mix check PASSED. 'Consistency history' athlete: no ratio in the header; all eight week bars show a floating label inside the chart at their column, each earlier week with its recorded time and distribution; last week reads 4 h 52 min, 'Cycling 71% · Strength 29%', planned 5 h 5 min, cycling 3 h 28 min recorded of 3 h 45 min planned, strength 1 h 24 min of 1 h 20 min; the Coach card follows the chosen week; the same bar clears the selection; View week opens the Weekly overview and returns. Days: 58 min, 42 min, no recorded training, 42 min, no recorded training, 1 h 55 min, 35 min, each with its distribution; Thursday shows strength 42 min recorded and the planned 45 min ride with nothing recorded, and the Coach card says so; View Thursday opens the Day page and returns. Sport rows: cycling 3 h 28 min, strength 1 h 24 min, running and swimming 'Not recorded yet' with no figure; cycling expands to its sessions; a recorded ride opens its record; Session details opens; the Home circle reads the same afterwards. Focused check 64, run 45227865589, commit d90e2f86 (code af9a2443), 3 of 3 passed, including the athlete with nothing recorded: 'No recorded training', no distribution or plan line, no cycling or strength row, running 'Not recorded yet', label 'Nothing recorded yet', Coach card says so. The full Training Mix check was NOT re-run on af9a2443 (that commit changed only the Recovery graph's inset and scale). Home: its final-baseline check passed in check 62. Logic: 4 dashboard tests pass, including that the week's minutes equal the Home circle's; full suite 628 tests, 0 failures, 12 skipped, at becbfdc8. NOT exercised: drag across the graph, larger text, other themes, VoiceOver, the redesigned main app. |
+| Physically verified on iPhone | NO | Not run on a physical iPhone. |
+
+- **Visual verification:** None — awaiting the owner's review of the screenshots.
+- **Functional verification:** Lab simulator: checks 62 and 64, as listed.
+
+### Remaining work or limitations
+
+- Owner's visual sign-off.
+- The 'multisport athlete' screenshot is the same demonstration athlete as the others (cycling, strength, running, swimming): only cycling and strength can hold recorded time today.
+- Planned mobility / other-activity sessions are not part of the mix (the Home circle does not count them either) — the same open product decision as Consistency.
+- Day totals are whole minutes per day; a week's total can differ from the sum of its days by a minute or two of rounding.
+- Not verified: drag inspection, larger text, other themes, VoiceOver, physical iPhone, the redesigned main-app target.
+
+### Images
+
+- `assets/H03_mix-1-weeks-selected.png` — SENT FOR REVIEW — NOT APPROVED. Weeks, last week selected. Complete page. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 62, 'Consistency history' demonstration athlete (synthetic data; a multisport roster).
+- `assets/H03_mix-2-days-selected.png` — SENT FOR REVIEW — NOT APPROVED. Days, Thursday selected.
+- `assets/H03_mix-3-sport-expanded.png` — SENT FOR REVIEW — NOT APPROVED. Cycling expanded with its sessions; running and swimming 'Not recorded yet'.
+- `assets/H03_mix-5-no-records.png` — SENT FOR REVIEW — NOT APPROVED. Athlete with nothing recorded (check 64).
+- `assets/H03_H04_three_dashboards_board.png` — COMPARISON BOARD. Consistency (approved), Training Mix and Recovery (not yet approved) side by side.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 23 Nov 2026, 19:55 | Shared design direction approved: Training Mix built on the approved Consistency Dashboard design system — compact summary, Weeks / Days, stacked duration graph with a floating label, inspection card, one Coach card, breakdown by sport, expandable details; a distribution measure with sport colours and no adherence bands. Implementation and final visual sign-off pending. | IN FORCE |
+
+---
+
+## Screen 12 — Home › Recovery Dashboard (APP-04)
+
+- **Navigation location:** Main app · Home › the Recovery circle (the third circle). The existing Recovery page stays as its detail view; the Sleep row and Key metrics rows on Home still open that page directly.
+- **Approval date:** 23 Nov 2026, 19:55 — SHARED DESIGN DIRECTION approved (built on the approved Consistency Dashboard). Final visual sign-off PENDING.
+- **Approval status:** SHARED DESIGN DIRECTION APPROVED (23 Nov 2026, 19:55); implementation and final visual sign-off PENDING. Implemented and simulator-checked in Cyclift Lab (check 64, 3 of 3) and sent for review. NOT visually approved. No recovery score exists or is shown.
+- **Original design reference and source:** The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. None is approved yet.
+- **Implementation commit:** becbfdc8 (models, shared kit, screen, Lab fixtures); 441b4f01 and af9a2443 (tighter sleep scale, less empty room above the line). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.
+
+### Exact approved wording
+
+- **Title:** Recovery
+- **Summary:** <period> / Latest readings / Sleep · Resting HR · HRV, each with its latest value or 'No reading' — or 'No recovery measurements'
+- **Graph:** Weeks | Days · Sleep | Resting HR | HRV · '<metric> · weekly average, in <unit> · last 8 weeks' · legend: Reading · No reading
+- **Floating label:** Avg 7 h 27 min · 16 Nov / 6 of 7 nights — a day: 6 h 54 min · Sun / Demo data · 06:36 — or 'No reading · Thu', 'Upcoming · Sat'
+- **Inspection:** <period> — average <value> / one line per indicator with value, count or time, and source, or '— no reading' / View recovery details
+- **Coach card label (one card only):** COACH · FROM YOUR RECORDS
+- **Rows:** Recovery measures · latest value · 'Inside / Below / Above your usual range (…)' or 'No usual range yet' · source, time and freshness · 'Not connected' · 'No reading in the last 14 days'
+- **Details:** Readings and sources · '<n> readings stored · source: … · latest is fresh' · 'Cyclift estimates none of them, and it calculates no recovery score.'
+
+### Approved layout, visual elements and interactions
+
+- Same structure, margins, cards, typography, selectors, floating label, inspection card, single Coach card, row style and expandable details as the approved Consistency Dashboard.
+- Graph: ONE metric at a time, chosen with a second selector, each on its own scale and unit (hours, bpm, ms) — never a shared axis. Points joined by a thin line; a period without a reading leaves a gap and a quiet baseline mark.
+- One neutral colour for readings: no green / red judgement and no bands.
+- Rows are adapted, not sport bars: instead of a progress bar, a strip of the last 14 days shows on which days a reading exists.
+- A metric with no data shows a written empty state in the graph.
+
+### Mandatory functionality and dependencies
+
+- THERE IS NO RECOVERY SCORE. Nothing is combined, weighted or turned into a percentage. No validated score exists in the app, and none is to be created until a scoring method is separately approved.
+- Indicators: sleep, resting heart rate and heart-rate variability — the three Home already uses. Weight is also read from Apple Health but is not treated as a recovery indicator here.
+- Data: the app's existing readings log — one reading per indicator per day, read from Apple Health, each stored with the source Apple Health names and the time of the sample, kept for 90 days. Cyclift estimates none of them.
+- A day's point is that day's reading. A week's point is the plain average of the readings recorded in that week, always shown with how many there were. A day or week without a reading has none — never zero.
+- 'Usual range' and 'fresh / older than a day / stale' are the existing Recovery page's own calculations (the 28 days before the latest reading, at least 7 records), reused unchanged.
+- The one Coach card is fixed sentences about the chosen metric for the chosen week, or the chosen day in Days view: the average and how many readings, and whether it is higher or lower than the week before when both weeks hold at least three readings; otherwise it says there is not enough data. No readiness, no diagnosis, no cause.
+- A source is never called connected when it is not: an indicator that is off says 'Not connected'; one that is on with nothing stored says so.
+- In Cyclift Lab the readings are synthetic and their source reads 'Demo data'. Lab reads nothing from Apple Health.
+- INTERACTION MAP — Home circle → Recovery. Back → Home. Weeks/Days switch. Metric switch. Point → floating label and inspection card (another point replaces both; the same point clears both; horizontal drag moves them). View recovery details → the existing Recovery page. Measure row → its recent readings in place, then Open recovery details → the existing Recovery page. Readings and sources → what is stored and from where.
+- NESTED SCREEN STILL TO REVIEW: the existing Recovery page (also opened from Home's Sleep row and Key metrics rows — items 7 and 12–14 of the Home review).
+
+### Explicitly rejected alternatives
+
+- A recovery percentage or readiness score (standing since 12 Nov 2026; restated 23 Nov 2026, 19:55).
+- Several metrics on one shared axis.
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY — final visual sign-off pending | Owner, 23 Nov 2026 19:55: shared design direction. No screenshot is approved. |
+| Implemented in code | YES — awaiting review | Commit af9a2443. |
+| Compiled | YES — Cyclift Lab | Check 64 (run 45227865589, commit d90e2f86). The redesigned main-app target has not been built at this commit. |
+| Simulator-verified | FUNCTIONAL — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved | Focused check 64, run 45227865589, commit d90e2f86 (code af9a2443), 3 of 3 passed. 'Consistency history' athlete with eight weeks of demo readings: the header shows each latest reading with its unit and no percentage; every one of the eight week points shows 'Avg …' with 'n of 7 nights' in a floating label inside the chart at its point; the Coach card follows the chosen week; the same point clears the selection. Days: each day shows its value with 'Demo data' and the time, or 'No reading' with no value; the Coach card and the inspection card follow the chosen day and name the source. Resting HR is drawn and labelled in bpm and HRV in ms, each on its own scale, and the Coach card follows the chosen metric. View recovery details opens the existing Recovery page and returns. Rows show the latest reading, usual range and source with no score; the sleep row expands to its recent readings with their source and opens the existing Recovery page; Readings and sources names the source and states that no score is calculated; the Home circle reads the same afterwards and shows no percentage. ONE SOURCE ONLY (sleep, ten days): sleep has its readings; a week before they begin says 'No reading'; resting HR and HRV say 'No reading' in the header, HRV's graph says 'No HRV readings yet', its row says 'Not connected'. NO MEASUREMENTS: 'No recovery measurements', a written empty graph, the Coach card says there is nothing to describe, all three rows 'Not connected' with no figure. Earlier: in check 62 (code becbfdc8) the one-source check passed; the main Recovery check FAILED on an error in the check itself — it pressed an already chosen day again, which clears it as approved, then read the week's text; the check was corrected with its reason; the no-data check failed before reaching either dashboard (onboarding did not leave the Welcome screen at launch — the known intermittent issue, cause unproven). Check 63 was cancelled before it started: its commit did not compile (a half-applied edit), corrected in af9a2443. Logic: 4 dashboard tests pass (no reading is ever zero; each metric on its own scale; no percentage; truthful summaries). Full suite 628 tests, 0 failures, 12 skipped, at becbfdc8 — NOT re-run after the scale change, whose focused tests pass. NOT exercised: drag across the graph, larger text, other themes, VoiceOver, the redesigned main app, and real Apple Health readings on a device. |
+| Physically verified on iPhone | NO | Not run on a physical iPhone. Real Apple Health readings have not been seen in this dashboard. |
+
+- **Visual verification:** None — awaiting the owner's review of the screenshots.
+- **Functional verification:** Lab simulator: check 64, as listed.
+
+### Remaining work or limitations
+
+- Owner's visual sign-off.
+- For the owner's view: the header's 'Latest readings' are the newest readings whatever week is chosen, while the line above names the chosen week; when a point sits low near the right edge its label can be placed in the strip at the top of the chart rather than beside it.
+- All data is read from Apple Health; there is no separate 'device-measured' or 'estimated' kind to distinguish. WHOOP and Garmin are not integrated.
+- Readings older than 90 days are not kept by the app.
+- Not verified: drag inspection, larger text, other themes, VoiceOver, physical iPhone, real Health data, the redesigned main-app target.
+
+### Images
+
+- `assets/H04_rec-1-weeks.png` — SENT FOR REVIEW — NOT APPROVED. Weeks, sleep, last week selected. Complete page. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 64, demonstration athlete with synthetic readings ('Demo data').
+- `assets/H04_rec-2-days-selected.png` — SENT FOR REVIEW — NOT APPROVED. Days, a day selected.
+- `assets/H04_rec-3-metric-expanded.png` — SENT FOR REVIEW — NOT APPROVED. Sleep row expanded with its recent readings.
+- `assets/H04_rec-4-partial.png` — SENT FOR REVIEW — NOT APPROVED. Readings from one source for one metric only.
+- `assets/H04_rec-5-no-readings.png` — SENT FOR REVIEW — NOT APPROVED. No recovery measurements.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 23 Nov 2026, 19:55 | Shared design direction approved: Recovery built on the approved Consistency Dashboard design system — compact summary of available observations, Weeks / Days, one selectable metric on its own scale with a floating label, inspection card, one Coach card, recovery measure rows, expandable sources; no synthetic recovery score, no diagnosis. Implementation and final visual sign-off pending. | IN FORCE |
