@@ -1,0 +1,36 @@
+FAST focused Lab check — selected: LabFastOnboarding/testHomeRefinementKeepsEverything LabChecks/test0HomeControlsPresentTheirPages
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from c4e61080 · files changed since then: 6
+TIME setup: 32s
+  timing: CompileAssetCatalogVariant (1 task) | 109.924 seconds
+  timing: SwiftCompile (4 tasks) | 35.888 seconds
+  timing: Ld (18 tasks) | 8.865 seconds
+  timing: SwiftEmitModule (2 tasks) | 8.124 seconds
+  timing: SwiftDriver (2 tasks) | 5.454 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.490 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.856 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.329 seconds
+  stages: packages at 193s · packages prepared at 218s · dependency graph at 218s · inputs at 219s · build description at 219s · first link at 228s · first Swift step at 228s · asset catalogue at 264s · finished at 378s
+  compiled in this run: 12 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 380s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 16s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1138.166 (1138.202) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1138.166 (1138.204) seconds
+Test Case '-[CycliftLabUITests.LabChecks test0HomeControlsPresentTheirPages]' passed (659.839 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testHomeRefinementKeepsEverything]' passed (478.326 seconds).
+RESULT selected screen checks: ok
+TIME tests: 1214s
+LAB-NOTE Home navigation: a Key metrics row presented its page at the first tap: true
+LAB-NOTE Home navigation: the Consistency ring presented its page at the first tap: true
+LAB-NOTE Home navigation: the Endurance card presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day presented its page at the first tap: true
+LAB-NOTE Home navigation: the first schedule day, again after returning presented its page at the first tap: true
+LAB-NOTE Home navigation: the Recovery indicator presented its page at the first tap: true
+LAB-NOTE Home navigation: the Sleep bar presented its page at the first tap: true
+LAB-NOTE Home navigation: the Strength card presented its page at the first tap: true
+LAB-NOTE Home refinement: 34 controls and headings compared; dock ["centreButton: 14,746 72x72", "Home: 101,758 91x48", "Plan: 192,758 91x48", "Progress: 282,758 91x48"]
+TIME total on the Mac: 1649s
+commit ef0dd8bc4b9430e024a36c04d51e981550602c2e  branch ios/lab
