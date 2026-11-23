@@ -1,0 +1,28 @@
+FAST focused Lab check — selected: LabFastOnboarding/testConsistencyDashboardHistory LabFastOnboarding/testConsistencyDashboardWithoutPlan
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from a1b5cb03 · files changed since then: 2
+TIME setup: 13s
+  timing: CompileAssetCatalogVariant (1 task) | 149.346 seconds
+  timing: SwiftCompile (5 tasks) | 17.536 seconds
+  timing: SwiftEmitModule (2 tasks) | 9.007 seconds
+  timing: Ld (18 tasks) | 7.672 seconds
+  timing: SwiftDriver (2 tasks) | 5.519 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 3.293 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.830 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.556 seconds
+  stages: packages at 219s · packages prepared at 252s · dependency graph at 253s · inputs at 253s · build description at 253s · first link at 268s · asset catalogue at 269s · first Swift step at 419s · finished at 423s
+  compiled in this run: 11 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 424s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 14s
+	 Executed 2 tests, with 0 failures (0 unexpected) in 978.085 (978.092) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 978.085 (978.094) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 978.085 (978.097) seconds
+Test Case '-[CycliftLabUITests.LabFastOnboarding testConsistencyDashboardHistory]' passed (811.235 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testConsistencyDashboardWithoutPlan]' passed (166.850 seconds).
+RESULT selected screen checks: ok
+TIME tests: 1128s
+TIME total on the Mac: 1585s
+commit 7a2f8dd3603d2c37fbb4925f14b9f9aabaf8c16c  branch ios/lab
