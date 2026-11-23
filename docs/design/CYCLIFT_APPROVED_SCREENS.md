@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 23 Nov 2026, 09:45 (Dubai) · Screens recorded: 9
+Last updated: 23 Nov 2026, 10:40 (Dubai) · Screens recorded: 9
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -112,7 +112,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only (later rounds: see the screen's status table) | NO |
 | 7 | ONB-07 | Athlete Evolution | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); final state: check 48 (later rounds: see the screen's status table) | NO |
 | 8 | ONB-08 | Athletic Blueprint | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | NO |
-| 9 | APP-01 | Main App — Home | DIRECTION ONLY | YES — awaiting verification | PENDING | PENDING | NO |
+| 9 | APP-01 | Main App — Home | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | NO |
 
 ---
 
@@ -853,22 +853,25 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | Stage | State | Evidence |
 |---|---|---|
 | Approved design | DIRECTION ONLY | Owner, 23 Nov 2026 08:57. Final visual approval pending. |
-| Implemented in code | YES — awaiting verification | Commit 2e4fe538, presentation only. The Home as it was stays in the code under a capture-only setting until the refinement is approved. |
-| Compiled | PENDING | Focused check 54 (run 45115115038) requested. |
-| Simulator-verified | PENDING | Focused check 54. |
+| Implemented in code | YES | Commit 2e4fe538, presentation only. The Home as it was stays in the code under a capture-only setting until the refinement is approved. |
+| Compiled | YES | Lab app built in focused check 54 (run 45115115038). Main-app build not run. |
+| Simulator-verified | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | Focused check 54, run 45115115038, commit ef0dd8bc (code 2e4fe538), 2 of 2 passed. BEFORE and AFTER on the same demonstration athlete and date: 34 controls and headings compared one by one — header, avatar, three indicators, seven days, both activity cards, Sleep, Coach and its page link, Trends controls, series and chart, every Key metrics row — each present in both and saying exactly the same (label and value). The dock is at the same position and size (Train ball 72 pt; Home, Plan, Progress 91 × 48 pt). Trends: the second view and the four-week range can be chosen, and touching the graph inspects a day that can be opened. Home navigation (existing check): the first day, Consistency, Recovery, Endurance, Strength, Sleep and a Key metrics row each present their page at the first tap and return; the Coach card is tappable; the avatar opens Profile. Larger text (Accessibility Large): every section still exists and the page scrolls. Whether text is cut off is judged from the screenshots, not asserted. |
 | Physically verified on iPhone | NO |  |
 
-- **Visual verification:** NOT YET PRESENTED.
-- **Functional verification:** Pending focused check 54: identical contents before and after, dock unchanged, graph interaction, Home navigation.
+- **Visual verification:** PRESENTED 23 Nov 2026 (before / after full pages and close-ups, check 54) — awaiting the owner's decision.
+- **Functional verification:** Lab simulator: check 54, as listed.
 
 ### Remaining work or limitations
 
-- PENDING — before / after full-page screenshots and the owner's visual decision.
+- PENDING — the owner's visual decision.
+- DEVIATION: ring values are 21 pt, not the 23 pt target — '100:0' does not fit inside the Training Mix's inner ring at 23 pt, and one size is used for all three rings.
+- CONFIRMED at larger text (Accessibility Large): the Coach status 'Needs your decision' is cut off ('Needs your de…'), and the two Trends view buttons sit closer together than before. Not corrected — awaiting the owner's decision.
 - INT-01 (open): activity cards and week icons are drawn per category (endurance = bicycle, strength = dumbbell); making them follow the roster needs model and builder changes, so it is NOT part of this visual refinement.
 - Not verified: redesigned main app, other themes, VoiceOver, physical iPhone, full Lab regression.
 
 ### Images
 
+- `assets/H01_home_refinement_before_after_ef0dd8bc.png` — IMPLEMENTATION — NOT YET APPROVED. Complete pages, iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 54 (commit ef0dd8bc), same demonstration athlete and date. Left: BEFORE, unchanged. Right: AFTER, refined.
 - `assets/H01_home_three_versions_full_1d6d2a07.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Complete pages before the refinement. Left: Home v2.2 UI Lab prototype (reference, never approved). Middle: the earlier Home (Lab run 19, a4de9d30). Right: Home v2.3 as it was (check 52, 1d6d2a07).
 
 ### Decision history
