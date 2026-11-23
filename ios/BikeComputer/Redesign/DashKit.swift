@@ -52,7 +52,7 @@ struct DashChart<Marks: View>: View {
         VStack(spacing: 4) {
             GeometryReader { g in
                 let n = max(columns.count, 1)
-                let geo = DashGeo(left: left, cw: (g.size.width - left) / CGFloat(n), width: g.size.width, height: g.size.height, top: Self.topInset, bottom: Self.bottomInset)
+                let geo = DashGeo(left: left, cw: (g.size.width - left) / CGFloat(n), width: g.size.width, height: g.size.height, top: topInset, bottom: Self.bottomInset)
                 ZStack(alignment: .topLeading) {
                     ForEach(0..<3, id: \.self) { k in
                         let f = 1 - Double(k) / 2
@@ -65,7 +65,7 @@ struct DashChart<Marks: View>: View {
                     }
                     if let i = selected, i < columns.count {
                         RoundedRectangle(cornerRadius: 8, style: .continuous).fill(theme.selectedFill)
-                            .frame(width: geo.cw - 4, height: geo.height - Self.topInset + 14).offset(x: left + geo.cw * CGFloat(i) + 2, y: Self.topInset - 14)
+                            .frame(width: geo.cw - 4, height: geo.height - topInset + 14).offset(x: left + geo.cw * CGFloat(i) + 2, y: topInset - 14)
                     }
                     marks(geo)
                     if let e = empty {
