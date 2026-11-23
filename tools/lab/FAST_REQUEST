@@ -1,2 +1,2 @@
-LabFastOnboarding/testTrainingMixDashboard LabFastOnboarding/testRecoveryDashboard LabFastOnboarding/testRecoveryDashboardPartialData LabFastOnboarding/testDashboardsWithNoData LabFastOnboarding/testHomeFinalBaselineAndCoachCard
-Check 62: Training Mix and Recovery dashboards, and Home unchanged
+LabFastOnboarding/testRecoveryDashboard LabFastOnboarding/testRecoveryDashboardPartialData LabFastOnboarding/testDashboardsWithNoData
+Check 63: Recovery dashboard and the no-data states
