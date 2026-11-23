@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 23 Nov 2026, 11:50 (Dubai) · Screens recorded: 9
+Last updated: 23 Nov 2026, 13:30 (Dubai) · Screens recorded: 10
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -113,6 +113,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 7 | ONB-07 | Athlete Evolution | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); final state: check 48 (later rounds: see the screen's status table) | NO |
 | 8 | ONB-08 | Athletic Blueprint | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | NO |
 | 9 | APP-01 | Main App — Home | YES | YES | YES | YES — visual baseline and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | NO |
+| 10 | APP-02 | Home › Consistency Dashboard | DIRECTION ONLY — final visual approval pending | YES — first implementation, awaiting review | YES — Cyclift Lab | FUNCTIONAL ONLY — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved | NO |
 
 ---
 
@@ -876,3 +877,93 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 23 Nov 2026, 08:57 | Implementation brief: Option A typography and six visual hierarchy directions, strict functional preservation, before / after full-page screenshots, focused verification. Implemented (2e4fe538) and presented (check 54). | SUPERSEDED 09:40 — not selected |
 | 23 Nov 2026, 07:41 | Home content accepted as the current baseline; typography review requested (options A and B, capture only). | NOTE |
 | 12 Nov 2026 | Standing decisions for Home v2.1–v2.3: three indicators (Consistency, Training Mix, Recovery without a percentage); compact header; compact Endurance and Strength cards; sleep bar; text-only Coach preview; one trends chart; key metrics as rows. v2.3 never formally approved. | IN FORCE |
+
+---
+
+## Screen 10 — Home › Consistency Dashboard (APP-02)
+
+- **Navigation location:** Main app · Home › the Consistency ring. Replaces the Weekly overview page as the ring's destination; the Weekly overview and Day pages remain as its drill-downs.
+- **Approval date:** 23 Nov 2026, 11:59 — NEW DESIGN DIRECTION approved (both Weekly overview designs rejected). Final visual approval PENDING.
+- **Approval status:** NEW DASHBOARD DESIGN DIRECTION APPROVED (23 Nov 2026, 11:59); implementation, calculation reconciliation and final visual approval PENDING. First implementation built and simulator-checked in Cyclift Lab (check 58, 4 of 4) and sent for review. NOT visually approved. Three calculation differences between Home, Weekly overview and Progress are reported and await the owner's decision.
+- **Original design reference and source:** No drawing exists. The reference is the owner's written direction of 23 Nov 2026, 11:59 (page order A–G, graph rules, colour bands, data-integrity rules). The canonical design will be the implementation screenshot the owner approves; none is approved yet.
+- **Implementation commit:** First implementation: b6c91def (branch ios/lab). Not in any TestFlight build. Production (build 216 interface) is not changed: only the redesigned Home's ring is re-pointed.
+
+### Exact approved wording
+
+- **Title:** Consistency
+- **Period line:** This week · 23–29 Nov / Week of 16–22 Nov
+- **Summary:** <n>% (or — when nothing was planned) · <d> of <p> planned sessions completed · Missed <n> · Skipped <n> · To come <n> · In progress
+- **Graph:** Weeks | Days · Last 8 weeks · legend: 80–100% · 50–79% · 0–49% · In progress
+- **Statuses without a figure:** Rest day · Skipped · Nothing planned · Upcoming · No planned sessions · Before your plan
+- **Inspection actions:** View week · View <weekday>
+- **Summary cards label:** COACH · FROM YOUR RECORDS (fixed sentences built from the counts; not written by an AI model)
+- **Sports:** Consistency by sport · <d> / <p> sessions · Not tracked yet · In your roster · plans coming soon · No planned sessions
+- **Details:** Session details · Open weekly overview / Open <weekday>
+
+### Approved layout, visual elements and interactions
+
+- Order: period line · compact summary · interactive graph with Weeks / Days · inspection card (only when a point is chosen) · overall summary · Consistency by sport · sport summary · Session details (closed by default).
+- Graph: eight weeks ending with the current one, or Monday–Sunday of the chosen week; 0–100% axis; points joined by a thin line; the current week joined by a dotted line and drawn as a hollow ring marked 'now'.
+- Bands are shown by colour AND shape AND words: green circle 80–100%, blue diamond 50–79%, red triangle 0–49%. Initial visual bands only — not a performance classification or coaching threshold.
+- A period without a figure is drawn as a quiet mark on the baseline (moon = rest day, dash = nothing planned), never as 0%.
+- Sport rows: icon, name, completed / planned, percentage with its band mark, horizontal bar; an untracked sport shows a dashed empty bar and 'Not tracked yet'.
+- Obsidian tokens and existing type scale; the approved dock and Train control are untouched.
+
+### Mandatory functionality and dependencies
+
+- ONE DEFINITION (the Home ring's own): consistency = completed eligible planned sessions ÷ eligible planned sessions.
+- Eligible = a planned ride or strength session that is not skipped. Completed = recorded, imported or marked done; one recording completes at most one planned session.
+- Skipped sessions are left out of both numbers and counted separately. Missed = an eligible session whose day has passed without completion; today and later days are never missed. A started session is still planned, not completed.
+- A moved session is counted on the day it now has; the plan keeps no record of a move, so there is NO separate rescheduled count.
+- Recordings outside the plan are listed and never counted. Planned sessions of another kind (mobility, other activity) are listed as 'not counted'.
+- No eligible planned session = no percentage: never 0% for a rest day, a later day, a week without a plan, an athlete without a plan, or a roster sport Cyclift does not track.
+- The current week is marked In progress and carries no colour band.
+- No streak is shown: no well-defined existing streak calculation exists.
+- Sport rows follow the Athletic Roster. Every cycling activity shares the one 'Cycling' row and every gym activity the one 'Strength' row, because the plan stores rides and strength sessions without the roster activity (the catalogue's existing mapping). Running, swimming and other activities keep their own row and say 'Not tracked yet'.
+- The two summaries are fixed sentences from the counts. No cause (fatigue, recovery, motivation) is ever stated; no external AI is used.
+- INTERACTION MAP — Home ring → Consistency Dashboard. Back → Home. Weeks/Days switch. Graph point → inspection card in place (another point replaces it; the same point closes it; horizontal drag moves it). View week → existing Weekly overview for that week. View <weekday> → existing Day page. Sport row → opens its sessions in place. Session row → the recorded ride or strength session, or the planned session's own page. Session details → the period's sessions, then Open weekly overview / Open <weekday>.
+- NESTED SCREENS STILL TO REVIEW: Weekly overview (now a drill-down), Day page, planned-session page, recorded ride details, recorded strength details.
+- The dashboard reads records only; it writes nothing and changes no stored history.
+
+### Explicitly rejected alternatives
+
+- The previous Weekly overview (main-app run 245) and the current Weekly overview (check 57) as the Consistency destination — both rejected by the owner on 23 Nov 2026, 11:59. The page remains in the app as a drill-down.
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY — final visual approval pending | Owner, 23 Nov 2026 11:59: new dashboard design direction. No screenshot is approved. |
+| Implemented in code | YES — first implementation, awaiting review | Commit b6c91def: shared calculation, dashboard screen, Lab 'Consistency history' demonstration athlete. |
+| Compiled | YES — Cyclift Lab | Check 58 (run 45136727856, commit 6014a9d9). The redesigned main-app target has not been built at this commit. |
+| Simulator-verified | FUNCTIONAL ONLY — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved | Focused check 58, run 45136727856, commit 6014a9d9 (code b6c91def), 4 of 4 passed. Demonstration athlete: the dashboard states the Home ring's own count; all eight week points answer with 100, 60, 40, 80, 100, 60, 80% and the current week; another point replaces the inspection and the same point closes it; View week opens the Weekly overview for that week and returns; Days: Thursday 50% (1 of 2, Completed + Missed), a rest day and a skipped-only day show no percentage, an unplanned ride is listed and not counted; View Thursday opens the Day page and returns; Cycling 2 of 3, Strength 2 of 2, running and swimming 'Not tracked yet' with no percentage; a sport's sessions open and a recorded ride opens its record; Session details opens; Home ring unchanged afterwards. No-plan athlete: no percentage in the summary, in any week or any day; running 'Not tracked yet'. Home: the final-baseline check and the Home-controls check passed; the first Home frame is pixel-identical to check 55 apart from the clock. Logic: 6 new tests pass; full logic suite 622 tests, 0 failures, 12 skipped (older tests that skip themselves in this environment or on a Monday). NOT exercised: dragging across the graph, larger text, other themes, VoiceOver, the redesigned main app. |
+| Physically verified on iPhone | NO | Not run on a physical iPhone. |
+
+- **Visual verification:** None — awaiting the owner's review of the check 58 screenshots.
+- **Functional verification:** Lab simulator: check 58, as listed.
+
+### Remaining work or limitations
+
+- OWNER DECISION 1 — mobility / other planned sessions: the Home ring (and this dashboard) count only rides and strength sessions; the Weekly overview also counts planned mobility and 'other activity' sessions. The two can disagree when such a session is planned.
+- OWNER DECISION 2 — a skipped ride with a ride recorded that day: the Home ring (and this dashboard) leave it out of both numbers and list the ride as outside the plan; the Weekly overview counts it as planned and done (read from the code, not exercised).
+- OWNER DECISION 3 — Progress › Training consistency measures something else (weeks with at least one session, last 14 weeks, participation) under a similar name. Not merged; naming and relationship to be decided.
+- Rescheduled sessions cannot be shown separately: the plan does not record moves.
+- Visual items for review: the '—' shown when there is no percentage renders as a heavy bar; the no-plan graph is an empty grid with baseline marks; untracked sport rows wrap to three lines.
+- The history check takes about 26 minutes on its own; it should be split before it is used routinely.
+- Not verified: drag inspection, larger text, other themes, VoiceOver, physical iPhone, the redesigned main-app target.
+
+### Images
+
+- `assets/H02_consistency_full_b6c91def.png` — SENT FOR REVIEW — NOT APPROVED. Complete page, this week in progress, nothing inspected. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 58, 'Consistency history' demonstration athlete (synthetic data).
+- `assets/H02_consistency_weeks_inspected.png` — SENT FOR REVIEW — NOT APPROVED. Weeks, last week inspected (80%), complete page.
+- `assets/H02_consistency_days_inspected.png` — SENT FOR REVIEW — NOT APPROVED. Days, Thursday inspected (two planned, one completed, 50%), complete page.
+- `assets/H02_consistency_sport_selected.png` — SENT FOR REVIEW — NOT APPROVED. Cycling selected with its sessions, and the sport summary.
+- `assets/H02_consistency_noplan.png` — SENT FOR REVIEW — NOT APPROVED. Athlete with goals saved and no plan: no percentage anywhere.
+- `assets/H02_weekly_overview_rejected.png` — REJECTED as the Consistency destination (23 Nov 2026, 11:59): the Weekly overview, check 57. Kept as design history; the page remains a drill-down.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 23 Nov 2026, 11:59 | Both Weekly overview designs rejected as the Consistency destination. NEW DESIGN DIRECTION approved: Consistency Dashboard (summary, interactive Weeks / Days graph with inspection, two summaries from the records, consistency by sport, expandable session details), one shared calculation, truthful empty states. Final UI approval pending screenshots. Home and its ring unchanged. | IN FORCE |
+| 23 Nov 2026, 10:50 | Home interactive review begun, item 1 of 17: the Consistency circle. Comparison of the Weekly overview presented (check 57). | NOTE |
