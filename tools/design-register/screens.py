@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "23 Nov 2026, 13:30 (Dubai)"
+UPDATED = "23 Nov 2026, 16:10 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -962,22 +962,24 @@ SCREENS = [
     dict(
         number=10, id="APP-02", name="Home › Consistency Dashboard",
         location="Main app · Home › the Consistency ring. Replaces the Weekly overview page as the ring's destination; the Weekly overview and Day pages remain as its drill-downs.",
-        approved_on="23 Nov 2026, 11:59 — NEW DESIGN DIRECTION approved (both Weekly overview designs rejected). Final visual approval PENDING.",
-        status="NEW DASHBOARD DESIGN DIRECTION APPROVED (23 Nov 2026, 11:59); implementation, calculation reconciliation and final visual approval PENDING. "
-               "First implementation built and simulator-checked in Cyclift Lab (check 58, 4 of 4) and sent for review. NOT visually approved. "
-               "Three calculation differences between Home, Weekly overview and Progress are reported and await the owner's decision.",
+        approved_on="23 Nov 2026, 11:59 — new design direction; 14:04 — VISUAL DIRECTION ACCEPTED with tooltip and single-Coach refinements. Final visual sign-off PENDING.",
+        status="VISUAL DIRECTION ACCEPTED WITH TOOLTIP AND SINGLE-COACH REFINEMENTS (23 Nov 2026, 14:04); final implementation verification and visual sign-off PENDING. "
+               "Refinements implemented and simulator-checked in Cyclift Lab (check 61, 2 of 2) and sent for review. NOT visually signed off. "
+               "The dashboard keeps its current calculation for this iteration; three calculation differences are tracked for a separate product decision.",
         reference="No drawing exists. The reference is the owner's written direction of 23 Nov 2026, 11:59 (page order A–G, graph rules, colour bands, data-integrity rules). "
                   "The canonical design will be the implementation screenshot the owner approves; none is approved yet.",
         wording=[("Title", "Consistency"),
                  ("Period line", "This week · 23–29 Nov / Week of 16–22 Nov"),
-                 ("Summary", "<n>% (or — when nothing was planned) · <d> of <p> planned sessions completed · Missed <n> · Skipped <n> · To come <n> · In progress"),
+                 ("Summary (no headline percentage)", "<period> · In progress / <d> of <p> planned sessions completed / Missed <n> · Skipped <n> · To come <n>"),
+                 ("Floating label at the chosen point", "80% · 16 Nov / 50% · Thu / In progress · 0% / Rest day · Fri / Skipped · Wed / Nothing planned · Sun / Upcoming · Sat / No plan · 23 Nov"),
                  ("Graph", "Weeks | Days · Last 8 weeks · legend: 80–100% · 50–79% · 0–49% · In progress"),
                  ("Statuses without a figure", "Rest day · Skipped · Nothing planned · Upcoming · No planned sessions · Before your plan"),
                  ("Inspection actions", "View week · View <weekday>"),
-                 ("Summary cards label", "COACH · FROM YOUR RECORDS (fixed sentences built from the counts; not written by an AI model)"),
+                 ("Coach card label (one card only)", "COACH · FROM YOUR RECORDS (fixed sentences built from the counts; not written by an AI model)"),
                  ("Sports", "Consistency by sport · <d> / <p> sessions · Not tracked yet · In your roster · plans coming soon · No planned sessions"),
                  ("Details", "Session details · Open weekly overview / Open <weekday>")],
-        design=["Order: period line · compact summary · interactive graph with Weeks / Days · inspection card (only when a point is chosen) · overall summary · Consistency by sport · sport summary · Session details (closed by default).",
+        design=["REFINEMENTS 23 Nov 2026, 14:04 — (1) no large percentage in the header: period, completed / planned and the summary counts stay, compactly; the graph is the page's primary element. (2) The chosen point carries a compact floating label with its percentage and period, immediately above it; below or beside it when there is no room or another point is in the way; always inside the chart; a truthful status instead of a number where there is no figure. (3) The inspection card below the graph is kept. (4) ONE Coach card, below the inspection area, following the chosen week or day; the second card under the sports is removed. (5) Sport rows and drill-downs unchanged.",
+                "Order: compact summary · interactive graph with Weeks / Days · inspection card (only when a point is chosen) · the one Coach card · Consistency by sport · Session details (closed by default).",
                 "Graph: eight weeks ending with the current one, or Monday–Sunday of the chosen week; 0–100% axis; points joined by a thin line; the current week joined by a dotted line and drawn as a hollow ring marked 'now'.",
                 "Bands are shown by colour AND shape AND words: green circle 80–100%, blue diamond 50–79%, red triangle 0–49%. Initial visual bands only — not a performance classification or coaching threshold.",
                 "A period without a figure is drawn as a quiet mark on the baseline (moon = rest day, dash = nothing planned), never as 0%.",
@@ -992,40 +994,57 @@ SCREENS = [
                    "The current week is marked In progress and carries no colour band.",
                    "No streak is shown: no well-defined existing streak calculation exists.",
                    "Sport rows follow the Athletic Roster. Every cycling activity shares the one 'Cycling' row and every gym activity the one 'Strength' row, because the plan stores rides and strength sessions without the roster activity (the catalogue's existing mapping). Running, swimming and other activities keep their own row and say 'Not tracked yet'.",
-                   "The two summaries are fixed sentences from the counts. No cause (fatigue, recovery, motivation) is ever stated; no external AI is used.",
-                   "INTERACTION MAP — Home ring → Consistency Dashboard. Back → Home. Weeks/Days switch. Graph point → inspection card in place (another point replaces it; the same point closes it; horizontal drag moves it). "
+                   "The one Coach card is fixed sentences from the counts of the chosen week — or of the chosen day in Days view. No cause (fatigue, recovery, motivation) is ever stated; no external AI is used. A chosen sport shows its facts in its own expandable area, not in another Coach card.",
+                   "CALCULATION (owner, 14:04): the current dashboard definition is retained for this visual iteration; no existing rule is changed. The three differences below need a separate product decision before any wider reconciliation.",
+                   "INTERACTION MAP — Home ring → Consistency Dashboard. Back → Home. Weeks/Days switch. Graph point → floating label at the point and inspection card below the graph (another point replaces both; the same point clears both; horizontal drag moves them). "
                    "View week → existing Weekly overview for that week. View <weekday> → existing Day page. Sport row → opens its sessions in place. Session row → the recorded ride or strength session, or the planned session's own page. "
                    "Session details → the period's sessions, then Open weekly overview / Open <weekday>.",
                    "NESTED SCREENS STILL TO REVIEW: Weekly overview (now a drill-down), Day page, planned-session page, recorded ride details, recorded strength details.",
                    "The dashboard reads records only; it writes nothing and changes no stored history."],
         rejected=["The previous Weekly overview (main-app run 245) and the current Weekly overview (check 57) as the Consistency destination — both rejected by the owner on 23 Nov 2026, 11:59. The page remains in the app as a drill-down."],
-        commits="First implementation: b6c91def (branch ios/lab). Not in any TestFlight build. Production (build 216 interface) is not changed: only the redesigned Home's ring is re-pointed.",
-        stages=[("Approved design", "DIRECTION ONLY — final visual approval pending", "Owner, 23 Nov 2026 11:59: new dashboard design direction. No screenshot is approved."),
-                ("Implemented in code", "YES — first implementation, awaiting review", "Commit b6c91def: shared calculation, dashboard screen, Lab 'Consistency history' demonstration athlete."),
-                ("Compiled", "YES — Cyclift Lab", "Check 58 (run 45136727856, commit 6014a9d9). The redesigned main-app target has not been built at this commit."),
-                ("Simulator-verified", "FUNCTIONAL ONLY — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved",
+        commits="Refinements: f56560fc, label corrections 6fe979f0 and 3b6162cc. First implementation: b6c91def (branch ios/lab). Not in any TestFlight build. Production (build 216 interface) is not changed: only the redesigned Home's ring is re-pointed.",
+        stages=[("Approved design", "DIRECTION ACCEPTED WITH REFINEMENTS — final visual sign-off pending", "Owner, 23 Nov 2026 14:04: visual direction of check 58 accepted with five corrections. Direction first given 11:59. No screenshot is signed off."),
+                ("Implemented in code", "YES — refinements implemented, awaiting sign-off", "Commit 3b6162cc on b6c91def: header without the large percentage; floating label; one Coach card following the chosen week or day; calculation untouched."),
+                ("Compiled", "YES — Cyclift Lab", "Check 61 (run 45166124073, commit 0dd189d8). The redesigned main-app target has not been built at this commit."),
+                ("Simulator-verified — refinements of 23 Nov 14:04", "FUNCTIONAL YES — Cyclift Lab (Obsidian, iPhone 15 Pro); visual sign-off pending",
+                 "Focused check 61, run 45166124073, commit 0dd189d8 (code 3b6162cc), 2 of 2 passed. No headline percentage and no percentage in the header; the dashboard still states the Home ring's count; nothing is selected at first. "
+                 "Every one of the eight week points and seven day points shows a floating label that is wholly inside the chart, inside the plotted area (clear of the Weeks / Days control and the legend) and at its point: 100, 60, 40, 80, 100, 60, 80% and 'In progress' for the weeks; 100%, 100%, 'Skipped', 50%, 'Rest day', 100%, 'Nothing planned' for the days — never a figure where none exists. "
+                 "Another point replaces label and card; the same point clears both. The inspection card keeps its counts, session states and View week / View Thursday, which open the existing pages and return. "
+                 "The one Coach card follows the chosen week (its count changes) and the chosen day ('1 of 2 … Thursday … Missed'); there is no second card, also after a sport is selected. Sport rows, their counts, 'Not tracked yet', drill-down, opening a recorded ride, Session details, and the unchanged Home ring all as before. "
+                 "No-plan athlete: no percentage anywhere; the label reads 'No plan'. "
+                 "Earlier rounds: check 59 (run 45153624925, a1b5cb03) FAILED — Sunday's long label left the chart (a measured width never reached the layout); corrected in 6fe979f0. Check 60 (run 45161269978, 7a2f8dd3) passed 2 of 2, but its screenshot showed the 16 Nov label over the neighbouring point, which no assertion tests; corrected in 3b6162cc and confirmed by the check 61 screenshot. "
+                 "Home: its final-baseline check passed in check 59 on f56560fc (Home files unchanged since). Logic: 8 consistency tests pass, including label wording and placement; full suite 624 tests, 0 failures, 12 skipped (older tests that skip themselves here), run at f56560fc. "
+                 "That the label does not cover another point is tested by the placement rule's logic tests and seen in the screenshots, not asserted on the simulator. NOT exercised: dragging across the graph, larger text, other themes, VoiceOver, the redesigned main app."),
+                ("Simulator-verified", "FUNCTIONAL — first implementation (superseded by the refinements below)",
                  "Focused check 58, run 45136727856, commit 6014a9d9 (code b6c91def), 4 of 4 passed. Demonstration athlete: the dashboard states the Home ring's own count; all eight week points answer with 100, 60, 40, 80, 100, 60, 80% and the current week; "
                  "another point replaces the inspection and the same point closes it; View week opens the Weekly overview for that week and returns; Days: Thursday 50% (1 of 2, Completed + Missed), a rest day and a skipped-only day show no percentage, an unplanned ride is listed and not counted; View Thursday opens the Day page and returns; "
                  "Cycling 2 of 3, Strength 2 of 2, running and swimming 'Not tracked yet' with no percentage; a sport's sessions open and a recorded ride opens its record; Session details opens; Home ring unchanged afterwards. "
                  "No-plan athlete: no percentage in the summary, in any week or any day; running 'Not tracked yet'. Home: the final-baseline check and the Home-controls check passed; the first Home frame is pixel-identical to check 55 apart from the clock. "
                  "Logic: 6 new tests pass; full logic suite 622 tests, 0 failures, 12 skipped (older tests that skip themselves in this environment or on a Monday). NOT exercised: dragging across the graph, larger text, other themes, VoiceOver, the redesigned main app."),
                 ("Physically verified on iPhone", "NO", "Not run on a physical iPhone.")],
-        visual_verification="None — awaiting the owner's review of the check 58 screenshots.",
-        functional_verification="Lab simulator: check 58, as listed.",
-        remaining=["OWNER DECISION 1 — mobility / other planned sessions: the Home ring (and this dashboard) count only rides and strength sessions; the Weekly overview also counts planned mobility and 'other activity' sessions. The two can disagree when such a session is planned.",
+        visual_verification="Direction accepted from the check 58 screenshots (14:04). Sign-off of the refined implementation pending — check 61 screenshots sent.",
+        functional_verification="Lab simulator: check 61, as listed.",
+        remaining=["TRACKED FOR A SEPARATE PRODUCT DECISION (owner, 14:04) — the three calculation differences that follow. The dashboard's definition is unchanged meanwhile.",
+                   "OWNER DECISION 1 — mobility / other planned sessions: the Home ring (and this dashboard) count only rides and strength sessions; the Weekly overview also counts planned mobility and 'other activity' sessions. The two can disagree when such a session is planned.",
                    "OWNER DECISION 2 — a skipped ride with a ride recorded that day: the Home ring (and this dashboard) leave it out of both numbers and list the ride as outside the plan; the Weekly overview counts it as planned and done (read from the code, not exercised).",
                    "OWNER DECISION 3 — Progress › Training consistency measures something else (weeks with at least one session, last 14 weeks, participation) under a similar name. Not merged; naming and relationship to be decided.",
                    "Rescheduled sessions cannot be shown separately: the plan does not record moves.",
-                   "Visual items for review: the '—' shown when there is no percentage renders as a heavy bar; the no-plan graph is an empty grid with baseline marks; untracked sport rows wrap to three lines.",
-                   "The history check takes about 26 minutes on its own; it should be split before it is used routinely.",
+                   "Visual items for review: the no-plan graph is an empty grid with baseline marks; untracked sport rows wrap to three lines.",
+                   "The history check takes 13 to 19 minutes on its own; it should be split before it is used routinely.",
                    "Not verified: drag inspection, larger text, other themes, VoiceOver, physical iPhone, the redesigned main-app target."],
-        images=[("H02_consistency_full_b6c91def.png", "SENT FOR REVIEW — NOT APPROVED. Complete page, this week in progress, nothing inspected. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 58, 'Consistency history' demonstration athlete (synthetic data)."),
-                ("H02_consistency_weeks_inspected.png", "SENT FOR REVIEW — NOT APPROVED. Weeks, last week inspected (80%), complete page."),
-                ("H02_consistency_days_inspected.png", "SENT FOR REVIEW — NOT APPROVED. Days, Thursday inspected (two planned, one completed, 50%), complete page."),
-                ("H02_consistency_sport_selected.png", "SENT FOR REVIEW — NOT APPROVED. Cycling selected with its sessions, and the sport summary."),
-                ("H02_consistency_noplan.png", "SENT FOR REVIEW — NOT APPROVED. Athlete with goals saved and no plan: no percentage anywhere."),
+        images=[("H02_r2_consistency_1-weeks-selected.png", "REFINED — SENT FOR SIGN-OFF, NOT YET SIGNED OFF. Weeks, last week selected with its floating label (80%). Complete page. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 61 (code 3b6162cc), 'Consistency history' demonstration athlete (synthetic data)."),
+                ("H02_r2_consistency_2-days-thursday.png", "REFINED — NOT YET SIGNED OFF. Days, Thursday selected (50%), complete page."),
+                ("H02_r2_consistency_3-none-selected.png", "REFINED — NOT YET SIGNED OFF. Nothing selected: this week, in progress."),
+                ("H02_r2_consistency_4-sport-selected.png", "REFINED — NOT YET SIGNED OFF. Cycling selected with its sessions; one Coach card only."),
+                ("H02_r2_consistency_5-noplan.png", "REFINED — NOT YET SIGNED OFF. Athlete with goals saved and no plan."),
+                ("H02_consistency_full_b6c91def.png", "SUPERSEDED BY THE REFINEMENTS (direction accepted from this version, 14:04). Complete page, this week in progress, nothing inspected. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 58, 'Consistency history' demonstration athlete (synthetic data)."),
+                ("H02_consistency_weeks_inspected.png", "SUPERSEDED BY THE REFINEMENTS. Weeks, last week inspected (80%), complete page."),
+                ("H02_consistency_days_inspected.png", "SUPERSEDED BY THE REFINEMENTS. Days, Thursday inspected (two planned, one completed, 50%), complete page."),
+                ("H02_consistency_sport_selected.png", "SUPERSEDED BY THE REFINEMENTS. Cycling selected with its sessions, and the sport summary."),
+                ("H02_consistency_noplan.png", "SUPERSEDED BY THE REFINEMENTS. Athlete with goals saved and no plan: no percentage anywhere."),
                 ("H02_weekly_overview_rejected.png", "REJECTED as the Consistency destination (23 Nov 2026, 11:59): the Weekly overview, check 57. Kept as design history; the page remains a drill-down.")],
-        history=[("23 Nov 2026, 11:59", "Both Weekly overview designs rejected as the Consistency destination. NEW DESIGN DIRECTION approved: Consistency Dashboard (summary, interactive Weeks / Days graph with inspection, two summaries from the records, consistency by sport, expandable session details), one shared calculation, truthful empty states. Final UI approval pending screenshots. Home and its ring unchanged.", "IN FORCE"),
+        history=[("23 Nov 2026, 14:04", "Visual direction of check 58 (b6c91def) ACCEPTED with final corrections: remove the large header percentage; floating percentage label at the chosen point; keep the inspection card; one Coach card that follows the chosen day or week; sport rows preserved; calculation rules unchanged, with the three differences tracked for a separate product decision. Final implementation verification and visual sign-off pending.", "IN FORCE"),
+                 ("23 Nov 2026, 11:59", "Both Weekly overview designs rejected as the Consistency destination. NEW DESIGN DIRECTION approved: Consistency Dashboard (summary, interactive Weeks / Days graph with inspection, two summaries from the records, consistency by sport, expandable session details), one shared calculation, truthful empty states. Final UI approval pending screenshots. Home and its ring unchanged.", "IN FORCE"),
                  ("23 Nov 2026, 10:50", "Home interactive review begun, item 1 of 17: the Consistency circle. Comparison of the Weekly overview presented (check 57).", "NOTE")],
     ),
 ]
