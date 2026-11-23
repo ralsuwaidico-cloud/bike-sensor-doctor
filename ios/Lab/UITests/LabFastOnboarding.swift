@@ -876,6 +876,38 @@ final class LabFastOnboarding: XCTestCase {
         captureFullPage(again, "home-final", steps: 8)
     }
 
+    // MARK: Plan — full-page captures for the owner's visual review (23 Nov 2026). CAPTURE ONLY.
+
+    private func capturePlan(_ app: XCUIApplication, _ name: String) {
+        let plan = app.buttons["Plan"].firstMatch
+        XCTAssertTrue(plan.waitForExistence(timeout: 8), "required: the Plan tab"); plan.tap()
+        XCTAssertTrue(app.staticTexts["planTitle"].firstMatch.waitForExistence(timeout: 8), "required: Plan is shown")
+        captureFullPage(app, "\(name)-weekly", steps: 6)
+        for _ in 0..<6 { app.swipeDown() }
+        let recurring = app.buttons["planSection-recurring"].firstMatch
+        XCTAssertTrue(recurring.waitForExistence(timeout: 5), "required: the Recurring Plan section"); recurring.tap()
+        captureFullPage(app, "\(name)-recurring", steps: 8)
+    }
+    /// Plan of the Lab's demonstration athlete: Weekly Calendar and Recurring Plan, each from top to bottom.
+    func testCapturePlanDemoAthlete() {
+        let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launchEnvironment["LAB_FRESH_DEMO"] = "1"; app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete")
+        capturePlan(app, "plan-demo")
+    }
+    /// Plan of a runner who finished onboarding without a generated plan.
+    func testCapturePlanAthleteWithoutPlan() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["running"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        el(app, "goal-runPace").tap()
+        next.tap(); page(app, 4)
+        app.chooseWeekDay(0, ["running"]); app.chooseWeekDay(3, ["running"])
+        next.tap(); page(app, 7)
+        app.buttons["onbCreateProfile"].firstMatch.tap(); app.openHomeFromBlueprint()
+        XCTAssertTrue(el(app, "homeGreeting").waitForExistence(timeout: 20), "required: Home after Create my profile")
+        capturePlan(app, "plan-noplan")
+    }
+
     /// Home of a new cycling and strength athlete straight after approving a plan.
     func testCaptureHomeNewAthleteWithPlan() {
         let app = launch()
