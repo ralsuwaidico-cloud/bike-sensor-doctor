@@ -936,6 +936,47 @@ final class LabFastOnboarding: XCTestCase {
         captureFullPage(app, "home-noplan")
     }
 
+    // Capture only (owner, 23 Nov 2026, 10:50): the page the Consistency ring opens, complete from top to bottom, with
+    // the pages reached from it. Nothing is changed; every control used is required to exist.
+    private func toTop(_ app: XCUIApplication) {
+        for _ in 0..<5 {
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.015, dy: 0.35))
+            from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: 420)))
+        }
+        Thread.sleep(forTimeInterval: 0.6)
+    }
+    func testCaptureConsistencyDemoAthlete() {
+        let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launchEnvironment["LAB_FRESH_DEMO"] = "1"; app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete")
+        let ring = el(app, "indicatorConsistency")
+        XCTAssertTrue(ring.waitForExistence(timeout: 8), "required: the Consistency ring"); ring.tap()
+        XCTAssertTrue(el(app, "weekOverviewTitle").waitForExistence(timeout: 8), "required: the page the Consistency ring opens")
+        captureFullPage(app, "consist-demo-this", steps: 9)
+        toTop(app)
+        let prev = el(app, "weekOverviewPrev"); XCTAssertTrue(prev.isHittable, "required: Previous week"); prev.tap()
+        captureFullPage(app, "consist-demo-prev", steps: 9)
+        toTop(app)
+        let next = el(app, "weekOverviewNext"); XCTAssertTrue(next.isHittable, "required: Next week"); next.tap()
+        let day = el(app, "weekOverviewDay-0"); XCTAssertTrue(day.waitForExistence(timeout: 5), "required: the day link of the first day"); day.tap()
+        XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 8), "required: the day page")
+        captureFullPage(app, "consist-demo-day", steps: 3)
+    }
+    func testCaptureConsistencyAthleteWithoutPlan() {
+        let app = launch()
+        reachGoalsPage(app, roster: ["running"])
+        let next = app.buttons["onboardingNext"].firstMatch
+        el(app, "goal-runPace").tap()
+        next.tap(); page(app, 4)
+        app.chooseWeekDay(0, ["running"]); app.chooseWeekDay(3, ["running"])
+        next.tap(); page(app, 7)
+        app.buttons["onbCreateProfile"].firstMatch.tap(); app.openHomeFromBlueprint()
+        XCTAssertTrue(el(app, "homeGreeting").waitForExistence(timeout: 20), "required: Home after Create my profile")
+        let ring = el(app, "indicatorConsistency")
+        XCTAssertTrue(ring.waitForExistence(timeout: 8), "required: the Consistency ring"); ring.tap()
+        XCTAssertTrue(el(app, "weekOverviewTitle").waitForExistence(timeout: 8), "required: the page the Consistency ring opens")
+        captureFullPage(app, "consist-noplan", steps: 6)
+    }
+
     /// Athletic Blueprint (owner's combined decision, 22 Nov 2026, 22:51), for a multisport athlete — cycling and gym
     /// planned, running not yet: every chosen activity is in "Your training week", two sessions on one
     /// day included, with the right totals; the Coach section guides only what it plans and says truthfully that the
