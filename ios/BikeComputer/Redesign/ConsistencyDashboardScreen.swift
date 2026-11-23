@@ -16,7 +16,6 @@ struct ConsistencyDashboardView: View {
     @State private var sport: String? = nil
     @State private var detailsOpen = false
     @State private var prescription: Workout? = nil
-    @State private var tipSize = CGSize(width: 96, height: 26)      // measured size of the floating label
 
     var body: some View {
         let d = store.consistencyDashboard(selectedWeek: selectedWeek)
@@ -205,9 +204,16 @@ struct ConsistencyDashboardView: View {
                 .padding(.leading, left)
                 if let i = inspected, let p = ps.first(where: { $0.id == i }) {
                     let others: [(Double, Double)] = ps.filter { $0.id != i }.map { (Double(x($0.id)), Double(py($0))) }
-                    let place = ConsistencyTooltip.place(px: Double(x(i)), py: Double(py(p)), w: Double(tipSize.width), h: Double(tipSize.height),
+                    // The label's width is only ESTIMATED for choosing its side (check 59: a measured width did not reach this
+                    // layout, and a long label left the chart). Staying inside the chart does not depend on the estimate: the
+                    // label is laid out in a box that ends at the chart's edges and shrinks its text before it would leave it.
+                    let est = Double(p.tooltip.count) * 6.9 + (p.kind == .evaluated ? 32 : 20)
+                    let place = ConsistencyTooltip.place(px: Double(x(i)), py: Double(py(p)), w: est, h: Double(Self.tipHeight),
                                                          width: Double(g.size.width), height: Double(h), others: others)
-                    tooltip(p).position(x: CGFloat(place.box.x), y: CGFloat(place.box.y))
+                    let slot = tipSlot(side: place.side, px: x(i), width: g.size.width)
+                    tooltip(p)
+                        .frame(width: slot.width, height: Self.tipHeight, alignment: slot.alignment)
+                        .offset(x: slot.x, y: CGFloat(place.box.y) - Self.tipHeight / 2)
                         .allowsHitTesting(false)
                 }
             }
@@ -218,20 +224,32 @@ struct ConsistencyDashboardView: View {
                 if inspected != i { select(ps[i]) }
             })
         }
-        .onPreferenceChange(CyTipSizeKey.self) { tipSize = $0 }
+    }
+    private static let tipHeight: CGFloat = 26
+    /// The horizontal box the floating label is laid out in: it starts or ends beside the point near an edge, is centred
+    /// on the point elsewhere, and never reaches past the chart.
+    private func tipSlot(side: ConsistencyTooltip.Side, px: CGFloat, width W: CGFloat) -> (x: CGFloat, width: CGFloat, alignment: Alignment) {
+        let gap = CGFloat(ConsistencyTooltip.gap)
+        switch side {
+        case .right: return (px + gap, max(40, W - px - gap), .leading)
+        case .left: return (0, max(40, px - gap), .trailing)
+        case .above, .below, .top:
+            if px < W / 3 { let x0 = max(0, px - 24); return (x0, W - x0, .leading) }
+            if px > W * 2 / 3 { let x1 = min(W, px + 24); return (0, x1, .trailing) }
+            let half = min(px, W - px)
+            return (px - half, half * 2, .center)
+        }
     }
     /// The floating label of the chosen point: its figure and period, or the truthful status where there is no figure.
     private func tooltip(_ p: ConsistencyPoint) -> some View {
         HStack(spacing: 5) {
             if p.kind == .evaluated { mark(p.band, size: 8) }
-            Text(p.tooltip).font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(theme.textPrimary).lineLimit(1)
+            Text(p.tooltip).font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.7)
                 .accessibilityIdentifier("consistencyTooltip")
         }
         .padding(.horizontal, 9).padding(.vertical, 5)
         .background(theme.surface2, in: Capsule())
         .overlay(Capsule().strokeBorder(theme.textPrimary.opacity(0.35), lineWidth: 1))
-        .fixedSize()
-        .background(GeometryReader { t in Color.clear.preference(key: CyTipSizeKey.self, value: t.size) })
     }
     @ViewBuilder private func pointMark(_ p: ConsistencyPoint) -> some View {
         let on = inspected == p.id
@@ -491,8 +509,4 @@ private struct CyTriangle: Shape {
         p.move(to: CGPoint(x: r.midX, y: r.minY)); p.addLine(to: CGPoint(x: r.maxX, y: r.maxY)); p.addLine(to: CGPoint(x: r.minX, y: r.maxY)); p.closeSubpath()
         return p
     }
-}
-private struct CyTipSizeKey: PreferenceKey {
-    static var defaultValue = CGSize(width: 96, height: 26)
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { let n = nextValue(); if n.width > 0 { value = n } }
 }

@@ -1110,7 +1110,8 @@ final class LabFastOnboarding: XCTestCase {
         choose(app, 5)
         let tip = tooltip(app, at: 5, "a week without a plan")
         XCTAssertTrue(tip.hasPrefix("No plan") && !tip.contains("%"), "required: the label says No plan, never a figure (\(tip))")
-        choose(app, 5)
+        choose(app, 7); _ = tooltip(app, at: 7, "the current week without a plan (the last column)")
+        choose(app, 7)
         XCTAssertTrue(el(app, "consistencyInsightOverall").label.contains("no training plan yet"), "required: the summary from the records says so")
         XCTAssertFalse(el(app, "consistencyInsightSports").exists, "required: one summary only")
         let run = el(app, "consistencySport-running").label
