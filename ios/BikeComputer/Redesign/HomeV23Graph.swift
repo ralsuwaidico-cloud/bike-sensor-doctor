@@ -52,7 +52,7 @@ struct CyTrendsGraph: View {
     var body: some View {
         VStack(alignment: .leading, spacing: CySpace.m) {
             HStack(spacing: CySpace.s) {
-                Text("Trends").font(CyFont.title).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+                Text("Trends").font(HomeType.f(.heading, CyFont.title)).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
                 if isSample {
                     Text("SAMPLE").font(.system(size: 9, weight: .bold)).tracking(0.6).foregroundStyle(theme.warning)
                         .padding(.horizontal, 5).padding(.vertical, 1.5)
@@ -119,7 +119,7 @@ struct CyTrendsGraph: View {
             ForEach(Array(modes.enumerated()), id: \.element.id) { i, m in
                 let on = i == modeIndex
                 Button(action: { modeIndex = i; selected = nil }) {
-                    Text(m.title).font(CyFont.caption).foregroundStyle(on ? theme.textOnAccent : theme.textSecondary)
+                    Text(m.title).font(HomeType.f(.segment, CyFont.caption)).foregroundStyle(on ? theme.textOnAccent : theme.textSecondary)
                         .lineLimit(1).minimumScaleFactor(0.75)
                         .padding(.horizontal, CySpace.s)
                         .frame(maxWidth: .infinity, minHeight: 34)
@@ -140,7 +140,7 @@ struct CyTrendsGraph: View {
             ForEach(Array(ranges.enumerated()), id: \.element.id) { i, r in
                 let on = i == rangeIndex
                 Button(action: { rangeIndex = i; selected = nil }) {
-                    Text(r.title).font(CyFont.caption).foregroundStyle(on ? theme.textPrimary : theme.textSecondary)
+                    Text(r.title).font(HomeType.f(.segment, CyFont.caption)).foregroundStyle(on ? theme.textPrimary : theme.textSecondary)
                         .lineLimit(1).fixedSize()
                         .padding(.horizontal, CySpace.m).frame(minHeight: 30)
                         .background(Capsule().fill(on ? theme.selectedFill : Color.clear))
@@ -170,7 +170,7 @@ struct CyTrendsGraph: View {
                             if on { Circle().fill(s.color.color(theme)).frame(width: 6, height: 6) }
                         }
                         .frame(width: 16)
-                        Text(s.name).font(CyFont.caption).foregroundStyle(on ? theme.textPrimary : theme.textTertiary).lineLimit(1)
+                        Text(s.name).font(HomeType.f(.chartLabel, CyFont.caption)).foregroundStyle(on ? theme.textPrimary : theme.textTertiary).lineLimit(1)
                     }
                     .frame(minHeight: CyHit.min).contentShape(Rectangle())
                 }
@@ -229,9 +229,9 @@ struct CyTrendsGraph: View {
         let big = typeSize.isAccessibilitySize
         let layout = big ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
         return layout {
-            if let l = unitTitle(.leading) { Text(big ? "Left: \(l.text)" : l.text).font(.caption2.weight(.semibold)).foregroundStyle(l.color).lineLimit(big ? 2 : 1).minimumScaleFactor(0.8) }
+            if let l = unitTitle(.leading) { Text(big ? "Left: \(l.text)" : l.text).font(HomeType.f(.chartLabel, .caption2.weight(.semibold))).foregroundStyle(l.color).lineLimit(big ? 2 : 1).minimumScaleFactor(0.8) }
             if !big { Spacer(minLength: CySpace.s) }
-            if let r = unitTitle(.trailing) { Text(big ? "Right: \(r.text)" : r.text).font(.caption2.weight(.semibold)).foregroundStyle(r.color).lineLimit(big ? 2 : 1).minimumScaleFactor(0.8) }
+            if let r = unitTitle(.trailing) { Text(big ? "Right: \(r.text)" : r.text).font(HomeType.f(.chartLabel, .caption2.weight(.semibold))).foregroundStyle(r.color).lineLimit(big ? 2 : 1).minimumScaleFactor(0.8) }
         }
         .accessibilityHidden(true)
     }
@@ -281,12 +281,12 @@ struct CyTrendsGraph: View {
             AxisMarks(position: .leading, values: [0, 0.5, 1]) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(theme.chartGrid)
                 AxisValueLabel {
-                    if let t = value.as(Double.self) { Text(axisText(t, .leading)).font(.caption2).foregroundStyle(unitTitle(.leading)?.color ?? theme.chartAxis) }
+                    if let t = value.as(Double.self) { Text(axisText(t, .leading)).font(HomeType.f(.chartLabel, .caption2)).foregroundStyle(unitTitle(.leading)?.color ?? theme.chartAxis) }
                 }
             }
             AxisMarks(position: .trailing, values: [0, 0.5, 1]) { value in
                 AxisValueLabel {
-                    if hasTrailing, let t = value.as(Double.self) { Text(axisText(t, .trailing)).font(.caption2).foregroundStyle(unitTitle(.trailing)?.color ?? theme.chartAxis) }
+                    if hasTrailing, let t = value.as(Double.self) { Text(axisText(t, .trailing)).font(HomeType.f(.chartLabel, .caption2)).foregroundStyle(unitTitle(.trailing)?.color ?? theme.chartAxis) }
                 }
             }
         }
@@ -308,7 +308,7 @@ struct CyTrendsGraph: View {
                     ForEach(dates) { d in
                         if let px = proxy.position(forX: Double(d.id)), let text = (big && count <= 7 ? Optional(d.short) : d.axisLabel) {
                             Text(text)
-                                .font(.caption2.weight(selected == d.id ? .bold : .regular))
+                                .font(HomeType.f(selected == d.id ? .chartLabelStrong : .chartLabel, .caption2.weight(selected == d.id ? .bold : .regular)))
                                 .foregroundStyle(selected == d.id ? theme.textPrimary : theme.chartAxis)
                                 .lineLimit(1).fixedSize()
                                 .position(x: plot.origin.x + px, y: plot.maxY + (big ? 16 : 11))
@@ -384,7 +384,7 @@ struct CyTrendsGraph: View {
             .background(RoundedRectangle(cornerRadius: CyRadius.s, style: .continuous).fill(theme.surface))
             .overlay(RoundedRectangle(cornerRadius: CyRadius.s, style: .continuous).strokeBorder(theme.id == .highContrast ? theme.border : Color.clear, lineWidth: theme.borderWidth))
         } else {
-            Text("Touch or drag to inspect a day.").font(.caption2).foregroundStyle(theme.textTertiary)
+            Text("Touch or drag to inspect a day.").font(HomeType.f(.meta, .caption2)).foregroundStyle(theme.textTertiary)
                 .accessibilityIdentifier("trendsHint")
         }
     }

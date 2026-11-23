@@ -155,7 +155,7 @@ struct CyCradleDock: View {
         } label: {
             VStack(spacing: 4) {
                 if big && !on { Image(systemName: t.icon).font(.system(size: 19, weight: .medium)) }
-                else { Text(t.title).font(.system(size: big ? 20 : 13.5, weight: on ? .semibold : .medium)).lineLimit(1).minimumScaleFactor(0.85) }
+                else { Text(t.title).font(big ? .system(size: 20, weight: on ? .semibold : .medium) : HomeType.f(on ? .dockSelected : .dock, .system(size: 13.5, weight: on ? .semibold : .medium))).lineLimit(1).minimumScaleFactor(0.85) }
                 Capsule().fill(on ? CyTheme.ink : Color.clear).frame(width: 14, height: 2.5)       // the one selection indicator
             }
             .foregroundStyle(on ? CyTheme.ink : CyTheme.ink2)

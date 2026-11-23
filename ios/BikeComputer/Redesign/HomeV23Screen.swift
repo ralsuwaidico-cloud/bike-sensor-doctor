@@ -68,7 +68,7 @@ struct Home21Content: View {
                     if let open = actions.onCoachPage {
                         Button(action: open) {
                             HStack(spacing: 4) { Text("Coach page"); Image(systemName: "chevron.right").font(.caption2.weight(.semibold)) }
-                                .font(CyFont.caption).foregroundStyle(theme.accent)
+                                .font(HomeType.f(.link, CyFont.caption)).foregroundStyle(theme.accent)
                                 .frame(minHeight: CyHit.min).contentShape(Rectangle())
                         }
                         .buttonStyle(CyRingButtonStyle())
@@ -122,7 +122,7 @@ struct Home21Header: View {
         HStack(alignment: .center, spacing: CySpace.m) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(overline.uppercased()).font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
+                    Text(overline.uppercased()).font(HomeType.f(.overline, CyFont.overline)).tracking(0.8).foregroundStyle(theme.textSecondary)
                         .lineLimit(typeSize.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.8)
                         .accessibilityIdentifier("homeDate")
                     if showSampleTag {
@@ -134,7 +134,7 @@ struct Home21Header: View {
                 }
                 if isLoading { CySkeleton(height: 22, width: 140) }
                 else {
-                    Text(data.name.isEmpty ? "Home" : data.name).font(CyFont.name).foregroundStyle(theme.textPrimary)
+                    Text(data.name.isEmpty ? "Home" : data.name).font(HomeType.f(.name, CyFont.name)).foregroundStyle(theme.textPrimary)
                         .lineLimit(typeSize.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.75).truncationMode(.tail)
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("homeGreeting")

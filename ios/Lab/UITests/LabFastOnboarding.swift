@@ -822,6 +822,19 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete")
         captureFullPage(app, "home-demo")
     }
+    /// Home typography review (owner, 23 Nov 2026): the same demonstration athlete, date and theme three times — as it
+    /// is today, option A (Refined) and option B (Premium Minimal). CAPTURE ONLY; the options exist only under the
+    /// launch setting used here.
+    func testCaptureHomeTypographyOptions() {
+        for (setting, name) in [("", "home-type-current"), ("A", "home-type-a"), ("B", "home-type-b")] {
+            let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
+            if !setting.isEmpty { app.launchEnvironment["CY_HOME_TYPE_REVIEW"] = setting }
+            app.launch()
+            XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete (\(name))")
+            captureFullPage(app, name, steps: 8)
+            app.terminate()
+        }
+    }
     /// Home of a new cycling and strength athlete straight after approving a plan.
     func testCaptureHomeNewAthleteWithPlan() {
         let app = launch()
