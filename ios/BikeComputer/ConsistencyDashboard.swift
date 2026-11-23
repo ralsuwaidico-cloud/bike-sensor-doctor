@@ -96,6 +96,42 @@ struct ConsistencyPoint: Equatable, Identifiable {
         }
     }
     var spoken: String { percent.map { "\(title), \($0) percent, \(count.ratio) planned sessions completed, \(status)" } ?? "\(title), \(status)" }
+    /// The floating label at a chosen point: the figure and its period — or, where there is no figure, the truthful
+    /// status. A period in progress shows its figure so far and says so.
+    var tooltip: String {
+        switch kind {
+        case .evaluated: return "\(percent ?? 0)% · \(axis)"
+        case .inProgress: return "In progress · \(percent ?? 0)%"
+        case .noPlanned: return "No plan · \(axis)"
+        default: return "\(status) · \(axis)"
+        }
+    }
+}
+
+/// Where the floating label of a chosen point goes (owner, 23 Nov 2026, 14:04): immediately above the point; when that
+/// would leave the chart or cover another point, below it, then beside it; always wholly inside the chart, never over the
+/// chosen point. Plain numbers so the rule is tested without a screen.
+enum ConsistencyTooltip {
+    struct Box: Equatable {
+        var x: Double, y: Double, w: Double, h: Double     // centre and size
+        var minX: Double { x - w / 2 }; var maxX: Double { x + w / 2 }; var minY: Double { y - h / 2 }; var maxY: Double { y + h / 2 }
+        func covers(_ px: Double, _ py: Double, margin: Double) -> Bool { px > minX - margin && px < maxX + margin && py > minY - margin && py < maxY + margin }
+    }
+    enum Side: String, Equatable { case above, below, right, left, top }
+    static let gap = 12.0
+    static func place(px: Double, py: Double, w: Double, h: Double, width: Double, height: Double, others: [(Double, Double)]) -> (box: Box, side: Side) {
+        func clampX(_ x: Double) -> Double { min(max(x, w / 2 + 2), max(w / 2 + 2, width - w / 2 - 2)) }
+        func inside(_ b: Box) -> Bool { b.minX >= 0 && b.maxX <= width && b.minY >= 0 && b.maxY <= height }
+        func clear(_ b: Box) -> Bool { !b.covers(px, py, margin: 6) && !others.contains { b.covers($0.0, $0.1, margin: 5) } }
+        let candidates: [(Box, Side)] = [
+            (Box(x: clampX(px), y: py - gap - h / 2, w: w, h: h), .above),
+            (Box(x: clampX(px), y: py + gap + h / 2, w: w, h: h), .below),
+            (Box(x: px + gap + w / 2, y: min(max(py, h / 2), height - h / 2), w: w, h: h), .right),
+            (Box(x: px - gap - w / 2, y: min(max(py, h / 2), height - h / 2), w: w, h: h), .left)]
+        for c in candidates where inside(c.0) && clear(c.0) { return c }
+        // nothing free beside the point: the strip kept clear along the top of the chart, above the 100 % line
+        return (Box(x: clampX(px), y: h / 2 + 1, w: w, h: h), .top)
+    }
 }
 
 struct ConsistencySportRow: Equatable, Identifiable {
@@ -292,6 +328,34 @@ enum ConsistencyModel {
             s.append("Missed: \(parts.joined(separator: " and ")).")
         }
         if c.skipped > 0 { s.append("\(n(c.skipped, "skipped session is", "skipped sessions are")) left out of the figure.") }
+        return s.joined(separator: " ")
+    }
+
+    /// The summary for one chosen day — the same fixed-sentence rule as the week's.
+    static func dayInsight(day p: ConsistencyPoint, hasPlan: Bool, calendar cal: Calendar = .current) -> String {
+        guard hasPlan else { return "You have no training plan yet. Consistency compares completed sessions with planned ones, so there is nothing to measure." }
+        let f = DateFormatter(); f.calendar = cal; f.dateFormat = "EEEE"
+        let name = f.string(from: p.start), c = p.count
+        let outside = p.sessions.filter { $0.state == .recorded }.count
+        var s: [String] = []
+        switch p.kind {
+        case .evaluated:
+            s.append(c.done == c.planned ? "You completed \(c.planned == 1 ? "the planned session" : "all \(c.planned) planned sessions") on \(name)." : "You completed \(c.ratio) planned sessions on \(name).")
+            let missed = p.sessions.filter { $0.state == .missed }.map(\.title)
+            if !missed.isEmpty { s.append("Missed: \(missed.joined(separator: ", ")).") }
+        case .inProgress:
+            s.append("\(c.ratio) planned sessions are done so far today.")
+        case .upcoming:
+            s.append("\(n(c.planned, "session is", "sessions are")) planned for \(name). Not due yet, so nothing is counted.")
+        case .rest:
+            s.append(c.skipped > 0 ? "The session planned for \(name) was skipped, so the day is not counted." : "Nothing was planned on \(name), so it is not counted.")
+        case .noPlanned:
+            s.append("No sessions were planned on \(name).")
+        case .beforePlan:
+            s.append("\(name) was before your plan started, so it is not counted.")
+        }
+        if c.skipped > 0 && p.kind != .rest { s.append("\(n(c.skipped, "skipped session is", "skipped sessions are")) left out of the figure.") }
+        if outside > 0 { s.append("\(n(outside, "recording", "recordings")) outside the plan \(outside == 1 ? "is" : "are") listed and not counted.") }
         return s.joined(separator: " ")
     }
 

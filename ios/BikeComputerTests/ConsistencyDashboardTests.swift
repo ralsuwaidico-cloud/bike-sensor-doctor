@@ -100,4 +100,45 @@ final class ConsistencyDashboardTests: XCTestCase {
         XCTAssertEqual(ConsistencyBand.of(percent: 80), .high); XCTAssertEqual(ConsistencyBand.of(percent: 79), .moderate)
         XCTAssertEqual(ConsistencyBand.of(percent: 50), .moderate); XCTAssertEqual(ConsistencyBand.of(percent: 49), .low)
     }
+
+    func testTooltipSaysTheFigureOrTheTruthfulStatusAndTheSummaryFollowsTheChosenDay() {
+        var skipped = Workout(date: at(1), kind: .tempo, minutes: 60); skipped.skipped = true
+        let plan = [Workout(date: at(0, 7), kind: .endurance, minutes: 60), Workout(date: at(0, 17), kind: .endurance, minutes: 45, sequence: 1), skipped,
+                    Workout(date: at(3), kind: .endurance, minutes: 60), Workout(date: at(5), kind: .long, minutes: 120)]
+        let d = build(plan, rides: [ride(0), ride(2)])
+        XCTAssertEqual(d.days[0].tooltip, "50% · Mon")
+        XCTAssertEqual(d.days[1].tooltip, "Skipped · Tue"); XCTAssertEqual(d.days[2].tooltip, "Nothing planned · Wed")
+        XCTAssertEqual(d.days[3].tooltip, "In progress · 0%"); XCTAssertEqual(d.days[4].tooltip, "Rest day · Fri"); XCTAssertEqual(d.days[5].tooltip, "Upcoming · Sat")
+        XCTAssertTrue(d.week.tooltip.hasPrefix("In progress · "))
+        XCTAssertFalse(d.days.filter { $0.percent == nil }.contains { $0.tooltip.contains("%") }, "no figure is shown where none exists")
+        let mon = ConsistencyModel.dayInsight(day: d.days[0], hasPlan: true, calendar: cal)
+        XCTAssertTrue(mon.contains("1 of 2") && mon.contains("Monday") && mon.contains("Missed: Endurance."), mon)
+        XCTAssertTrue(ConsistencyModel.dayInsight(day: d.days[2], hasPlan: true, calendar: cal).contains("outside the plan"))
+        XCTAssertTrue(ConsistencyModel.dayInsight(day: d.days[5], hasPlan: true, calendar: cal).contains("Not due yet"))
+        XCTAssertEqual(build([], roster: ["running"]).week.tooltip.prefix(7), "No plan")
+    }
+
+    func testTooltipStaysInsideTheChartAndNeverCoversAPoint() {
+        let W = 300.0, H = 176.0, w = 96.0, h = 26.0
+        // above when there is room
+        var r = ConsistencyTooltip.place(px: 150, py: 100, w: w, h: h, width: W, height: H, others: [])
+        XCTAssertEqual(r.side, .above); XCTAssertEqual(r.box.maxY, 100 - ConsistencyTooltip.gap, accuracy: 0.01)
+        // at the left and right edges it stays inside
+        for px in [10.0, 290.0] {
+            r = ConsistencyTooltip.place(px: px, py: 100, w: w, h: h, width: W, height: H, others: [])
+            XCTAssertGreaterThanOrEqual(r.box.minX, 0); XCTAssertLessThanOrEqual(r.box.maxX, W)
+        }
+        // a neighbour just above the label's place: it goes below instead
+        r = ConsistencyTooltip.place(px: 150, py: 100, w: w, h: h, width: W, height: H, others: [(185, 76)])
+        XCTAssertEqual(r.side, .below); XCTAssertFalse(r.box.covers(185, 76, margin: 5))
+        // no room above (a point at the very top) and a neighbour below: beside, or the top strip — never outside, never on a point
+        for py in stride(from: 4.0, through: 172.0, by: 12.0) {
+            for px in stride(from: 18.0, through: 282.0, by: 37.0) {
+                let others = [(px - 37, py + 20), (px + 37, py - 20), (px + 37, py + 30), (px - 37, py - 30)]
+                let t = ConsistencyTooltip.place(px: px, py: py, w: w, h: h, width: W, height: H, others: others)
+                XCTAssertTrue(t.box.minX >= 0 && t.box.maxX <= W && t.box.minY >= 0 && t.box.maxY <= H, "inside the chart at \(px), \(py): \(t)")
+                if t.side != .top { XCTAssertFalse(t.box.covers(px, py, margin: 0), "never over the chosen point at \(px), \(py)") }
+            }
+        }
+    }
 }

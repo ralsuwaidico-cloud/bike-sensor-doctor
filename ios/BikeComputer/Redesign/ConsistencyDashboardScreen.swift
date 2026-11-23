@@ -16,19 +16,18 @@ struct ConsistencyDashboardView: View {
     @State private var sport: String? = nil
     @State private var detailsOpen = false
     @State private var prescription: Workout? = nil
+    @State private var tipSize = CGSize(width: 96, height: 26)      // measured size of the floating label
 
     var body: some View {
         let d = store.consistencyDashboard(selectedWeek: selectedWeek)
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text(d.periodTitle).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                    .accessibilityIdentifier("consistencyPeriod")
                 summary(d)
                 graphCard(d)
                 if let i = inspected, let p = points(d).first(where: { $0.id == i }) { inspection(p, d) }
-                insight("consistencyInsightOverall", d.overallInsight)
+                // ONE summary from the records (owner, 23 Nov 2026, 14:04): it follows the chosen day, otherwise the chosen week
+                insight("consistencyInsightOverall", coachText(d))
                 sportsSection(d)
-                insight("consistencyInsightSports", d.sportInsight)
                 details(d)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -42,6 +41,10 @@ struct ConsistencyDashboardView: View {
     }
 
     private func points(_ d: ConsistencyDashboard) -> [ConsistencyPoint] { mode == 0 ? d.weeks : d.days }
+    private func coachText(_ d: ConsistencyDashboard) -> String {
+        if mode == 1, let i = inspected, let day = d.days.first(where: { $0.id == i }) { return ConsistencyModel.dayInsight(day: day, hasPlan: d.hasPlan) }
+        return d.overallInsight
+    }
 
     // MARK: colours and marks — a band is always a colour, a shape and its range in words
 
@@ -65,31 +68,22 @@ struct ConsistencyDashboardView: View {
     // MARK: B · compact summary
 
     private func summary(_ d: ConsistencyDashboard) -> some View {
+        // No headline percentage (owner, 23 Nov 2026, 14:04): the graph is the page's main element. The period, the count
+        // and the summary counts stay, compactly.
         let w = d.week, c = w.count
-        return HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(w.percent.map { "\($0)%" } ?? "—")
-                    .font(.system(size: 46, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(theme.textPrimary)
-                    .lineLimit(1).minimumScaleFactor(0.6)
-                    .accessibilityIdentifier("consistencyPercent")
-                HStack(spacing: 6) {
-                    mark(w.band, size: 9).opacity(w.percent == nil ? 0 : 1)
-                    Text(w.status).font(CyFont.caption).foregroundStyle(theme.textSecondary)
-                }
-                .accessibilityIdentifier("consistencyStatus")
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(d.periodTitle + (w.kind == .inProgress ? " · In progress" : "")).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                .accessibilityIdentifier("consistencyPeriod")
+            Text(c.planned > 0 ? "\(c.ratio) planned sessions completed" : d.hasPlan ? "No planned sessions" : "No training plan yet")
+                .font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("consistencySummaryLine")
+            if c.planned > 0 || c.skipped > 0 {
+                Text("Missed \(c.missed)" + (c.skipped > 0 ? " · Skipped \(c.skipped)" : "") + (c.open > 0 ? " · To come \(c.open)" : ""))
+                    .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("consistencyMissed")
             }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(c.planned > 0 ? "\(c.ratio) planned sessions completed" : d.hasPlan ? "No planned sessions" : "No training plan yet")
-                    .font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("consistencySummaryLine")
-                if c.planned > 0 || c.skipped > 0 {
-                    Text("Missed \(c.missed)" + (c.skipped > 0 ? " · Skipped \(c.skipped)" : "") + (c.open > 0 ? " · To come \(c.open)" : ""))
-                        .font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("consistencyMissed")
-                }
-            }
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("consistencySummary")
     }
@@ -106,27 +100,19 @@ struct ConsistencyDashboardView: View {
                 .padding(3).background(theme.surface2, in: Capsule())
                 Text(mode == 0 ? "Last \(ConsistencyDashboard.weekCount) weeks" : d.week.title).font(CyFont.caption).foregroundStyle(theme.textSecondary)
                     .accessibilityIdentifier("consistencyGraphCaption")
-                HStack(alignment: .top, spacing: 6) {
-                    VStack(alignment: .trailing) {
-                        Text("100").frame(maxHeight: .infinity, alignment: .top)
-                        Text("50")
-                        Text("0").frame(maxHeight: .infinity, alignment: .bottom)
-                    }
-                    .font(.system(size: 10, weight: .medium)).foregroundStyle(theme.textTertiary).frame(width: 22, height: 150)
-                    .accessibilityHidden(true)
-                    VStack(spacing: 4) {
-                        plot(ps).frame(height: 150)
-                        HStack(spacing: 0) {
-                            ForEach(ps) { p in
-                                VStack(spacing: 0) {
-                                    Text(axisTop(p)).font(.system(size: 11, weight: inspected == p.id ? .bold : .medium)).foregroundStyle(inspected == p.id ? theme.textPrimary : theme.textSecondary)
-                                    Text(axisBottom(p)).font(.system(size: 9, weight: .medium)).foregroundStyle(theme.textTertiary)
-                                }
-                                .lineLimit(1).minimumScaleFactor(0.7).frame(maxWidth: .infinity)
+                VStack(spacing: 4) {
+                    plot(ps).frame(height: Self.plotHeight)
+                    HStack(spacing: 0) {
+                        ForEach(ps) { p in
+                            VStack(spacing: 0) {
+                                Text(axisTop(p)).font(.system(size: 11, weight: inspected == p.id ? .bold : .medium)).foregroundStyle(inspected == p.id ? theme.textPrimary : theme.textSecondary)
+                                Text(axisBottom(p)).font(.system(size: 9, weight: .medium)).foregroundStyle(theme.textTertiary)
                             }
+                            .lineLimit(1).minimumScaleFactor(0.7).frame(maxWidth: .infinity)
                         }
-                        .accessibilityHidden(true)
                     }
+                    .padding(.leading, Self.axisWidth)
+                    .accessibilityHidden(true)
                 }
                 legend
             }
@@ -164,20 +150,29 @@ struct ConsistencyDashboardView: View {
         .accessibilityIdentifier("consistencyLegend")
     }
 
+    private static let plotHeight: CGFloat = 178
+    private static let axisWidth: CGFloat = 26
+    /// The top of the chart is kept clear above the 100 % line, so the floating label of even the highest point has room.
+    private static let topInset: CGFloat = 40
+    private static let bottomInset: CGFloat = 10
+
     private func plot(_ ps: [ConsistencyPoint]) -> some View {
         GeometryReader { g in
-            let n = max(ps.count, 1), cw = g.size.width / CGFloat(n), h = g.size.height
-            let inset: CGFloat = 10
-            let y: (Int) -> CGFloat = { p in inset + (h - 2 * inset) * (1 - CGFloat(p) / 100) }
-            let x: (Int) -> CGFloat = { i in cw * (CGFloat(i) + 0.5) }
+            let n = max(ps.count, 1), left = Self.axisWidth, cw = (g.size.width - left) / CGFloat(n), h = g.size.height
+            let y: (Int) -> CGFloat = { p in Self.topInset + (h - Self.topInset - Self.bottomInset) * (1 - CGFloat(p) / 100) }
+            let x: (Int) -> CGFloat = { i in left + cw * (CGFloat(i) + 0.5) }
+            let py: (ConsistencyPoint) -> CGFloat = { p in p.percent.map(y) ?? y(0) - 2 }
             ZStack(alignment: .topLeading) {
                 ForEach([0, 50, 100], id: \.self) { v in
-                    Path { p in p.move(to: CGPoint(x: 0, y: y(v))); p.addLine(to: CGPoint(x: g.size.width, y: y(v))) }
+                    Path { p in p.move(to: CGPoint(x: left, y: y(v))); p.addLine(to: CGPoint(x: g.size.width, y: y(v))) }
                         .stroke(theme.chartGrid, style: StrokeStyle(lineWidth: 1, dash: v == 50 ? [3, 4] : []))
+                    Text("\(v)").font(.system(size: 10, weight: .medium)).foregroundStyle(theme.textTertiary)
+                        .frame(width: left - 6, alignment: .trailing).position(x: (left - 6) / 2, y: y(v))
+                        .accessibilityHidden(true)
                 }
                 if let i = inspected, i < ps.count {
                     RoundedRectangle(cornerRadius: 8, style: .continuous).fill(theme.selectedFill)
-                        .frame(width: cw - 4, height: h).offset(x: cw * CGFloat(i) + 2)
+                        .frame(width: cw - 4, height: h - Self.topInset + 14).offset(x: left + cw * CGFloat(i) + 2, y: Self.topInset - 14)
                 }
                 // the line joins neighbouring periods that both have a figure; a period without one leaves a gap
                 Path { p in
@@ -195,7 +190,7 @@ struct ConsistencyDashboardView: View {
                 }
                 .stroke(theme.textSecondary.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [2, 4]))
                 ForEach(ps) { p in
-                    pointMark(p).position(x: x(p.id), y: p.percent.map(y) ?? y(0) - 2)
+                    pointMark(p).position(x: x(p.id), y: py(p))
                 }
                 HStack(spacing: 0) {
                     ForEach(ps) { p in
@@ -207,14 +202,36 @@ struct ConsistencyDashboardView: View {
                             .accessibilityIdentifier("consistencyPoint-\(p.id)")
                     }
                 }
+                .padding(.leading, left)
+                if let i = inspected, let p = ps.first(where: { $0.id == i }) {
+                    let others: [(Double, Double)] = ps.filter { $0.id != i }.map { (Double(x($0.id)), Double(py($0))) }
+                    let place = ConsistencyTooltip.place(px: Double(x(i)), py: Double(py(p)), w: Double(tipSize.width), h: Double(tipSize.height),
+                                                         width: Double(g.size.width), height: Double(h), others: others)
+                    tooltip(p).position(x: CGFloat(place.box.x), y: CGFloat(place.box.y))
+                        .allowsHitTesting(false)
+                }
             }
             .contentShape(Rectangle())
             .simultaneousGesture(DragGesture(minimumDistance: 14).onChanged { v in
                 guard abs(v.translation.width) > abs(v.translation.height) else { return }
-                let i = min(max(Int(v.location.x / cw), 0), ps.count - 1)
+                let i = min(max(Int((v.location.x - left) / cw), 0), ps.count - 1)
                 if inspected != i { select(ps[i]) }
             })
         }
+        .onPreferenceChange(CyTipSizeKey.self) { tipSize = $0 }
+    }
+    /// The floating label of the chosen point: its figure and period, or the truthful status where there is no figure.
+    private func tooltip(_ p: ConsistencyPoint) -> some View {
+        HStack(spacing: 5) {
+            if p.kind == .evaluated { mark(p.band, size: 8) }
+            Text(p.tooltip).font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(theme.textPrimary).lineLimit(1)
+                .accessibilityIdentifier("consistencyTooltip")
+        }
+        .padding(.horizontal, 9).padding(.vertical, 5)
+        .background(theme.surface2, in: Capsule())
+        .overlay(Capsule().strokeBorder(theme.textPrimary.opacity(0.35), lineWidth: 1))
+        .fixedSize()
+        .background(GeometryReader { t in Color.clear.preference(key: CyTipSizeKey.self, value: t.size) })
     }
     @ViewBuilder private func pointMark(_ p: ConsistencyPoint) -> some View {
         let on = inspected == p.id
@@ -474,4 +491,8 @@ private struct CyTriangle: Shape {
         p.move(to: CGPoint(x: r.midX, y: r.minY)); p.addLine(to: CGPoint(x: r.maxX, y: r.maxY)); p.addLine(to: CGPoint(x: r.minX, y: r.maxY)); p.closeSubpath()
         return p
     }
+}
+private struct CyTipSizeKey: PreferenceKey {
+    static var defaultValue = CGSize(width: 96, height: 26)
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { let n = nextValue(); if n.width > 0 { value = n } }
 }

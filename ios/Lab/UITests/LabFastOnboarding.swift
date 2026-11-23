@@ -967,46 +967,70 @@ final class LabFastOnboarding: XCTestCase {
         return value
     }
 
-    /// The dashboard for Lab's "Consistency history" demonstration athlete: seven earlier planned weeks whose records the
-    /// app's own ledger counts as 100, 60, 40, 80, 100, 60 and 80 %, a Thursday with two sessions and one recorded, a
-    /// skipped ride, a ride outside the plan, and running and swimming in the roster with nothing tracked.
+    private func text(_ app: XCUIApplication, _ id: String) -> String {
+        let e = app.staticTexts[id].firstMatch
+        XCTAssertTrue(e.waitForExistence(timeout: 6), "required: \(id)")
+        return e.exists ? e.label : ""
+    }
+    private func point(_ app: XCUIApplication, _ i: Int) -> XCUIElement { app.buttons["consistencyPoint-\(i)"].firstMatch }
+    private func choose(_ app: XCUIApplication, _ i: Int) { point(app, i).tap(); Thread.sleep(forTimeInterval: 0.35) }
+    /// The floating label is on screen, wholly inside the graph card, close to the chosen point's column, and clear of
+    /// the Weeks / Days control and the legend. Returns what it says.
+    private func tooltip(_ app: XCUIApplication, at i: Int, _ what: String) -> String {
+        let t = app.staticTexts["consistencyTooltip"].firstMatch
+        XCTAssertTrue(t.waitForExistence(timeout: 5), "required: a floating label at \(what)")
+        guard t.exists else { return "" }
+        let graph = el(app, "consistencyGraph").frame, col = point(app, i).frame, f = t.frame
+        XCTAssertTrue(graph.contains(f), "required: the label stays inside the chart at \(what) (label \(f), chart \(graph))")
+        XCTAssertLessThanOrEqual(abs(f.midX - col.midX), col.width + f.width / 2 + 14, "required: the label is at the chosen point at \(what)")
+        XCTAssertTrue(f.minY >= col.minY - 1 && f.maxY <= col.maxY + 1, "required: the label is inside the plotted area, clear of the selector above and the legend below, at \(what)")
+        return t.label
+    }
+
+    /// Consistency Dashboard, final refinements (owner, 23 Nov 2026, 14:04), for Lab's "Consistency history" athlete: no
+    /// headline percentage; a floating label at the chosen point with the figure or the truthful status; the inspection
+    /// card kept; ONE summary from the records that follows the chosen week or day; sport rows and navigation preserved.
     func testConsistencyDashboardHistory() {
         let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
         app.launchEnvironment["LAB_DEMO_CONSISTENCY"] = "1"; app.launch()
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete")
-        XCTAssertTrue(app.staticTexts["CYCLIFT LAB · DEMO DATA"].firstMatch.exists || el(app, "labBanner").exists, "required: the page is marked as Lab demo data")
+        XCTAssertTrue(app.staticTexts["CYCLIFT LAB · DEMO DATA"].firstMatch.exists, "required: the page is marked as Lab demo data")
         let ring = openConsistency(app)
-        // the same numbers as the Home ring, for the same week
-        let summary = label(app, "consistencySummaryLine")
+        let summary = text(app, "consistencySummaryLine")
         if let m = ring.range(of: #"\d+ of \d+"#, options: .regularExpression) {
             XCTAssertTrue(summary.contains(String(ring[m])), "required: the dashboard states the Home ring's own count (ring: \(ring) · dashboard: \(summary))")
         } else { XCTFail("required: the Home ring states a count for this athlete (\(ring))") }
-        XCTAssertTrue(label(app, "consistencyStatus").contains("In progress"), "required: the current week is marked In progress")
-        XCTAssertFalse(el(app, "consistencyInspection").exists, "nothing is inspected until a point is chosen")
-        captureFullPage(app, "cons-1-full", steps: 6); toTop(app)
+        XCTAssertTrue(text(app, "consistencyPeriod").contains("In progress"), "required: the current week is marked In progress")
+        XCTAssertFalse(app.staticTexts["consistencyPercent"].exists, "required: no headline percentage")
+        XCTAssertFalse(summary.contains("%") || text(app, "consistencyPeriod").contains("%"), "required: no percentage in the header")
+        XCTAssertFalse(app.staticTexts["consistencyTooltip"].exists || el(app, "consistencyInspection").exists, "nothing is chosen until a point is pressed")
+        XCTAssertFalse(el(app, "consistencyInsightSports").exists, "required: one summary from the records only")
+        let first = el(app, "consistencyInsightOverall").label
+        captureFullPage(app, "cons-3-none-selected", steps: 5); toTop(app)
 
-        // Weeks: every point answers, with the figure the records give
+        // Weeks: every point answers with its floating label, its card and the summary for that week
         let expected: [(Int, String, String)] = [(0, "100%", "5 of 5"), (1, "60%", "3 of 5"), (2, "40%", "2 of 5"), (3, "80%", "4 of 5"), (4, "100%", "5 of 5"), (5, "60%", "3 of 5"), (6, "80%", "4 of 5")]
         for (i, pct, ratio) in expected {
-            press(app, "consistencyPoint-\(i)")
-            let t = label(app, "consistencyInspectionTitle"), l = label(app, "consistencyInspectionLine")
-            XCTAssertTrue(t.contains("Week of") && t.contains(pct), "required: week \(i) shows \(pct) (\(t))")
-            XCTAssertTrue(l.contains(ratio), "required: week \(i) shows \(ratio) (\(l))")
-            XCTAssertTrue(label(app, "consistencySummaryLine").contains(ratio), "required: the summary follows the chosen week")
-            if i == 2 { XCTAssertTrue(label(app, "consistencyInspectionCounts").contains("Missed 3"), "required: the missed sessions of that week are counted"); app.settleForScreenshot(1); shot("cons-2-weeks-missed-40") }
-            if i == 1 { app.settleForScreenshot(1); shot("cons-2-weeks-moderate-60") }
-            if i == 4 { app.settleForScreenshot(1); shot("cons-2-weeks-high-100") }
+            choose(app, i)
+            let tip = tooltip(app, at: i, "week \(i)")
+            XCTAssertTrue(tip.hasPrefix(pct), "required: the label at week \(i) says \(pct) (\(tip))")
+            XCTAssertTrue(text(app, "consistencyInspectionLine").contains(ratio), "required: the card for week \(i) says \(ratio)")
+            if i == 2 || i == 6 {
+                XCTAssertTrue(text(app, "consistencySummaryLine").contains(ratio), "required: the header follows the chosen week")
+                let coach = el(app, "consistencyInsightOverall").label
+                XCTAssertTrue(coach.contains(ratio) && coach != first, "required: the summary from the records follows the chosen week (\(coach))")
+            }
+            if i == 2 { XCTAssertTrue(text(app, "consistencyInspectionCounts").contains("Missed 3"), "required: that week's missed sessions are counted") }
         }
-        press(app, "consistencyPoint-7")
-        XCTAssertTrue(label(app, "consistencyInspectionTitle").contains("In progress") || label(app, "consistencyInspectionTitle").contains("%"), "required: the current week answers")
-        // another point without dismissing; the same point again closes the card
-        press(app, "consistencyPoint-6")
-        XCTAssertTrue(label(app, "consistencyInspectionTitle").contains("80%"), "required: choosing another point replaces the inspection in place")
-        XCTAssertTrue(label(app, "consistencyInspectionCounts").contains("Skipped 1"), "required: last week's skipped ride is counted as skipped, outside the figure")
-        captureFullPage(app, "cons-3-weeks-inspected", steps: 6); toTop(app)
-        press(app, "consistencyPoint-6")
-        XCTAssertFalse(el(app, "consistencyInspection").exists, "required: pressing the chosen point again closes the inspection")
-        press(app, "consistencyPoint-6")
+        choose(app, 7)
+        XCTAssertTrue(tooltip(app, at: 7, "the current week").contains("In progress"), "required: the current week's label says In progress")
+        choose(app, 6)
+        XCTAssertTrue(text(app, "consistencyInspectionTitle").contains("80%"), "required: choosing another point replaces the label and the card in place")
+        XCTAssertTrue(text(app, "consistencyInspectionCounts").contains("Skipped 1"), "required: last week's skipped ride is counted as skipped, outside the figure")
+        captureFullPage(app, "cons-1-weeks-selected", steps: 6); toTop(app)
+        choose(app, 6)
+        XCTAssertFalse(app.staticTexts["consistencyTooltip"].exists || el(app, "consistencyInspection").exists, "required: pressing the chosen point again clears the selection")
+        choose(app, 6)
         press(app, "consistencyViewDetails")
         XCTAssertTrue(el(app, "weekOverviewTitle").waitForExistence(timeout: 8), "required: View week opens the existing weekly overview")
         XCTAssertTrue(el(app, "weekOverviewTitle").label.contains("Week of"), "required: for the chosen week, not this one")
@@ -1014,68 +1038,61 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(el(app, "consistencyDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
 
         // Days of that week: Thursday holds two planned sessions, one recorded
-        toTop(app); press(app, "consistencyMode-days")
-        XCTAssertFalse(el(app, "consistencyInspection").exists, "switching the view clears the inspection")
-        for i in 0..<7 { XCTAssertTrue(el(app, "consistencyPoint-\(i)").exists, "required: day \(i) is on the graph") }
-        press(app, "consistencyPoint-3")
-        let thu = label(app, "consistencyInspectionTitle")
+        toTop(app); app.buttons["consistencyMode-days"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        XCTAssertFalse(app.staticTexts["consistencyTooltip"].exists, "switching the view clears the selection")
+        let wants: [(Int, String)] = [(0, "100%"), (1, "100%"), (2, "Skipped"), (3, "50%"), (4, "Rest day"), (5, "100%"), (6, "Nothing planned")]
+        for (i, want) in wants {
+            choose(app, i)
+            let tip = tooltip(app, at: i, "day \(i)")
+            XCTAssertTrue(tip.hasPrefix(want), "required: the label at day \(i) says \(want) (\(tip))")
+            if !want.contains("%") { XCTAssertFalse(tip.contains("%"), "required: no figure where there is none (day \(i): \(tip))") }
+        }
+        XCTAssertTrue(label(app, "consistencyInspectionSession-0").contains("not in the plan"), "required: Sunday's ride outside the plan is listed and not counted")
+        choose(app, 3)
+        let thu = text(app, "consistencyInspectionTitle")
         XCTAssertTrue(thu.contains("Thursday") && thu.contains("50%"), "required: Thursday shows 50% (\(thu))")
-        XCTAssertTrue(label(app, "consistencyInspectionLine").contains("1 of 2"), "required: 1 of 2 planned sessions")
+        XCTAssertTrue(text(app, "consistencyInspectionLine").contains("1 of 2"), "required: 1 of 2 planned sessions")
         XCTAssertTrue(label(app, "consistencyInspectionSession-0").contains("Completed") && label(app, "consistencyInspectionSession-1").contains("Missed"), "required: each session with its real state")
-        captureFullPage(app, "cons-4-days-inspected", steps: 6); toTop(app)
-        press(app, "consistencyPoint-4")
-        let fri = label(app, "consistencyInspectionTitle")
-        XCTAssertTrue(fri.contains("Rest day") && !fri.contains("%"), "required: a rest day has no percentage and is not called missed (\(fri))")
-        press(app, "consistencyPoint-2")
-        XCTAssertFalse(label(app, "consistencyInspectionTitle").contains("%"), "required: a day whose only session was skipped has no percentage")
-        press(app, "consistencyPoint-6")
-        XCTAssertTrue(label(app, "consistencyInspectionSession-0").contains("not in the plan"), "required: a ride outside the plan is listed and not counted")
-        XCTAssertFalse(label(app, "consistencyInspectionTitle").contains("%"), "required: an unplanned ride creates no percentage")
-        press(app, "consistencyPoint-3"); app.settleForScreenshot(1); shot("cons-4-days-thursday")
+        let day = el(app, "consistencyInsightOverall").label
+        XCTAssertTrue(day.contains("1 of 2") && day.contains("Thursday") && day.contains("Missed"), "required: the summary from the records follows the chosen day (\(day))")
+        XCTAssertFalse(day.lowercased().contains("fatigue") || day.lowercased().contains("motivation"), "no cause is guessed")
+        captureFullPage(app, "cons-2-days-thursday", steps: 6); toTop(app)
         press(app, "consistencyViewDetails")
         XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 8), "required: View Thursday opens the existing day page")
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(el(app, "consistencyDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
 
-        // by sport, for the same week
-        XCTAssertTrue(el(app, "consistencySport-cycling").label.contains("2 of 3"), "required: cycling 2 of 3 (\(el(app, "consistencySport-cycling").label))")
+        // by sport, for the same week — rows and drill-downs as before, and no second summary
+        XCTAssertTrue(el(app, "consistencySport-cycling").label.contains("2 of 3"), "required: cycling 2 of 3")
         XCTAssertTrue(el(app, "consistencySport-strength").label.contains("2 of 2"), "required: strength 2 of 2")
         for id in ["running", "swimming"] {
-            let l = label(app, "consistencySport-\(id)")
+            let l = el(app, "consistencySport-\(id)").label
             XCTAssertTrue(l.contains("not tracked yet") && !l.contains("percent"), "required: \(id) says Not tracked yet and shows no percentage (\(l))")
         }
-        let both = label(app, "consistencyInsightSports")
-        XCTAssertTrue(both.contains("Strength (100%) was more consistent than cycling (67%)"), "required: the sport summary states the two figures (\(both))")
-        XCTAssertTrue(both.contains("does not plan or record them yet"), "required: and says the other sports cannot be assessed")
-        XCTAssertFalse(both.lowercased().contains("fatigue") || both.lowercased().contains("motivation"), "no cause is guessed")
         press(app, "consistencySport-cycling")
-        XCTAssertTrue(label(app, "consistencySportDetailLine").contains("2 of 3"), "required: the chosen sport shows its own count")
+        XCTAssertTrue(text(app, "consistencySportDetailLine").contains("2 of 3"), "required: the chosen sport shows its own count")
         XCTAssertTrue(el(app, "consistencySportSession-0").waitForExistence(timeout: 4), "required: and the sessions behind it")
-        app.reveal(el(app, "consistencySport-cycling"), top: 190, bottomMargin: 420)
-        captureFullPage(app, "cons-5-sport-selected", steps: 4)
+        XCTAssertFalse(el(app, "consistencyInsightSports").exists, "required: choosing a sport adds no second summary")
+        toTop(app); captureFullPage(app, "cons-4-sport-selected", steps: 7)
         press(app, "consistencySportSession-0")
         XCTAssertTrue(el(app, "homeRideDetail").waitForExistence(timeout: 8), "required: a recorded session opens its existing record")
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(el(app, "consistencyDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
         press(app, "consistencySport-running")
-        XCTAssertTrue(label(app, "consistencySportDetailLine").contains("does not plan or record"), "required: an untracked sport explains itself")
-
-        // session details: closed until asked for
+        XCTAssertTrue(text(app, "consistencySportDetailLine").contains("does not plan or record"), "required: an untracked sport explains itself")
         XCTAssertFalse(el(app, "consistencyDetail-0").exists, "session details start closed")
         press(app, "consistencyDetailsToggle")
         XCTAssertTrue(el(app, "consistencyDetail-0").waitForExistence(timeout: 4), "required: Session details opens the sessions")
         XCTAssertTrue(el(app, "consistencyOpenOverview").exists, "required: with the way to the existing pages")
-        app.settleForScreenshot(1); shot("cons-6-session-details")
 
-        // back on Home nothing has changed
         app.navigationBars.buttons.firstMatch.tap()
         let again = el(app, "indicatorConsistency")
         XCTAssertTrue(again.waitForExistence(timeout: 8), "required: back returns to Home")
         XCTAssertEqual(again.value as? String ?? "", ring, "required: the Home ring says what it said before")
     }
 
-    /// An athlete with goals saved and no generated plan: no percentage anywhere, nothing shown as 0 %, the sport said
-    /// truthfully to be untracked.
+    /// An athlete with goals saved and no generated plan: no percentage anywhere, the floating label says "No plan", and
+    /// the sport is said truthfully to be untracked.
     func testConsistencyDashboardWithoutPlan() {
         let app = launch()
         reachGoalsPage(app, roster: ["running"])
@@ -1087,19 +1104,21 @@ final class LabFastOnboarding: XCTestCase {
         app.buttons["onbCreateProfile"].firstMatch.tap(); app.openHomeFromBlueprint()
         XCTAssertTrue(el(app, "homeGreeting").waitForExistence(timeout: 20), "required: Home after Create my profile")
         _ = openConsistency(app)
-        XCTAssertEqual(label(app, "consistencyPercent"), "—", "required: no percentage without a plan")
-        XCTAssertTrue(label(app, "consistencySummaryLine").contains("No training plan yet"), "required: the summary says there is no plan")
-        for i in 0..<8 {
-            let l = label(app, "consistencyPoint-\(i)")
-            XCTAssertFalse(l.contains("percent"), "required: week \(i) shows no percentage (\(l))")
-        }
-        XCTAssertTrue(label(app, "consistencyInsightOverall").contains("no training plan yet"), "required: the summary from the records says so")
-        let run = label(app, "consistencySport-running")
+        XCTAssertTrue(text(app, "consistencySummaryLine").contains("No training plan yet"), "required: the header says there is no plan")
+        XCTAssertFalse(app.staticTexts["consistencyPercent"].exists, "required: no headline percentage")
+        for i in 0..<8 { XCTAssertFalse(point(app, i).label.contains("percent"), "required: week \(i) shows no percentage") }
+        choose(app, 5)
+        let tip = tooltip(app, at: 5, "a week without a plan")
+        XCTAssertTrue(tip.hasPrefix("No plan") && !tip.contains("%"), "required: the label says No plan, never a figure (\(tip))")
+        choose(app, 5)
+        XCTAssertTrue(el(app, "consistencyInsightOverall").label.contains("no training plan yet"), "required: the summary from the records says so")
+        XCTAssertFalse(el(app, "consistencyInsightSports").exists, "required: one summary only")
+        let run = el(app, "consistencySport-running").label
         XCTAssertTrue(run.contains("not tracked yet") && !run.contains("percent"), "required: running is Not tracked yet, never 0 % (\(run))")
-        press(app, "consistencyMode-days")
-        for i in 0..<7 { XCTAssertFalse(label(app, "consistencyPoint-\(i)").contains("percent"), "required: day \(i) shows no percentage") }
-        press(app, "consistencyMode-weeks")
-        toTop(app); captureFullPage(app, "cons-7-noplan", steps: 4)
+        app.buttons["consistencyMode-days"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        for i in 0..<7 { XCTAssertFalse(point(app, i).label.contains("percent"), "required: day \(i) shows no percentage") }
+        app.buttons["consistencyMode-weeks"].firstMatch.tap()
+        toTop(app); captureFullPage(app, "cons-5-noplan", steps: 4)
     }
 
     /// Athletic Blueprint (owner's combined decision, 22 Nov 2026, 22:51), for a multisport athlete — cycling and gym
