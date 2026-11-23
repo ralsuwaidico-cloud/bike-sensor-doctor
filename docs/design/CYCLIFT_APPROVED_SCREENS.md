@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 23 Nov 2026, 00:45 (Dubai) · Screens recorded: 8
+Last updated: 23 Nov 2026, 09:45 (Dubai) · Screens recorded: 9
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -112,6 +112,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only (later rounds: see the screen's status table) | NO |
 | 7 | ONB-07 | Athlete Evolution | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); final state: check 48 (later rounds: see the screen's status table) | NO |
 | 8 | ONB-08 | Athletic Blueprint | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | NO |
+| 9 | APP-01 | Main App — Home | DIRECTION ONLY | YES — awaiting verification | PENDING | PENDING | NO |
 
 ---
 
@@ -807,3 +808,73 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 |---|---|---|
 | 23 Nov 2026, 00:12 | Combined layout and workflow LOCKED with the close of the onboarding UI/UX design phase. The corrected implementation to be marked visually verified on the final result of check 50 (obtained: 4 of 4 passed). | IN FORCE |
 | 22 Nov 2026, 22:51 | Combined design decision: Y5 / B1 as the visual foundation with the current implementation's working functionality; the athlete's week ('Your training week') separated from the 'Coach's training proposal'; FTP and Plan changes removed; one screen; Y5 / B3 confirmation only after a confirmed save; profile-only path kept with truthful wording. | IN FORCE — direction only |
+
+---
+
+## Screen 9 — Main App — Home (APP-01)
+
+- **Navigation location:** Main app · the Home tab of the dock (first screen after onboarding). The avatar opens Profile; the Coach card opens the Coach page.
+- **Approval date:** 23 Nov 2026, 08:57 — Option A typography and six visual hierarchy directions. Not final visual approval.
+- **Approval status:** OPTION A TYPOGRAPHY AND SIX VISUAL HIERARCHY DIRECTIONS APPROVED — implementation and final visual verification PENDING. Not locked; not visually approved.
+- **Original design reference and source:** No earlier approved Home design exists (Home v2.3 was 'ready for owner sign-off' on 12 Nov 2026 and never approved). The owner accepted the current Home v2.3 CONTENT as the baseline on 23 Nov 2026 (07:41) and set the visual direction in his implementation brief of 23 Nov 2026 (08:57). Standing decisions of 12 Nov 2026 still apply (three indicators, no recovery score, text-only Coach preview, key metrics as rows).
+- **Implementation commit:** Typography review (options A and B, capture only): 8805acb5. Refinement: 2e4fe538 (branch ios/lab). Not in any TestFlight build.
+
+### Exact approved wording
+
+- **Content:** Unchanged. Every existing section, label, value and status is preserved; nothing is removed, hidden, renamed or replaced.
+- **Typography targets (SF Pro, system font):** Athlete name 28 semibold · date / athlete type 11 medium · ring values 23 semibold · ring labels 12 medium · ring supporting text 10–11 regular · activity card titles 15 medium · activity totals 23 semibold · Coach and Sleep titles 15 medium · Coach body 13 regular · section headings 19 semibold · metric labels 12 medium · metric values 19 semibold · secondary information 11–12 regular. Targets, not fixed sizes that override Dynamic Type. Tabular figures where appropriate.
+
+### Approved layout, visual elements and interactions
+
+- 1 · TYPOGRAPHY — Option A (Refined). The approved dock typography and dimensions are preserved; the smaller dock-label experiment is not adopted.
+- 2 · HEADER — Minimal: date, athlete classification, name, avatar; small quiet date and type, prominent name, avatar right, consistent margins and baselines, no dividers or decoration, no taller than necessary.
+- 3 · RINGS — Unified: Consistency, Training Mix, Recovery with unchanged meaning, sources, calculations and empty states; equal sizes and alignment, consistent number typography, identical label positions and supporting-text spacing, balanced weight, quiet colour. Values such as 100:0 fit without illegible scaling. No invented recovery score.
+- 4 · WEEK — Connected tiles: seven equal-width tiles as one component; weekday label, activity icons, completed / planned / missed / rest marks, a clear but subtle today highlight, restrained background or outline, no minutes, two icons for two sessions, activity-specific icons following the roster; every day action and status meaning kept.
+- 5 · ACTIVITY CARDS — Balanced: equal height, radius, heading alignment, padding, number hierarchy and progress-bar position. Sports and icons adapt to the roster where the existing data model supports it; otherwise recorded as a separate integration item.
+- 6 · SLEEP AND COACH — Quiet Sleep: compact row, quiet type, minimal decoration, recorded data told apart from unavailable, indicator and navigation kept. Coach: same card and position, clear heading, the proposal or finding fully readable, visible status when a decision is needed, calm accent, clear way to the Coach page.
+- 7 · TRENDS AND KEY METRICS — Unified and compact: one coherent analytics area, still two functional sections; all controls, chart values, legends, inspection and rows preserved; hierarchy, spacing, margins and dividers refined.
+- OVERALL: a common spacing scale, headings on one margin, consistent radii, surfaces and dividers, clear primary / secondary / supporting text, Obsidian palette and sport colours kept; no decorative gradients, new charts, animations or components.
+
+### Mandatory functionality and dependencies
+
+- Strict functional preservation: athlete data, training records, metric calculations, weekly training logic, Coach rules and approvals, chart values and interactions, navigation destinations, the Train ball and approved dock, persistence and data models, Lab isolation, and onboarding Screens 1–8 are not changed. All current Home components keep their order.
+- Coach recommendations are not truncated; Coach decisions, approval requirements, rule execution and storage are not altered.
+- Do not lock Home or label it visually approved until the owner has reviewed the actual screenshots.
+- No production merge or TestFlight upload is authorized by this instruction.
+
+### Explicitly rejected alternatives
+
+- Option B (Premium Minimal) typography.
+- The 11-pt dock-label experiment of the typography review — not to be propagated to any screen.
+- A recovery percentage on Home while no validated score exists (standing since 12 Nov 2026).
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | DIRECTION ONLY | Owner, 23 Nov 2026 08:57. Final visual approval pending. |
+| Implemented in code | YES — awaiting verification | Commit 2e4fe538, presentation only. The Home as it was stays in the code under a capture-only setting until the refinement is approved. |
+| Compiled | PENDING | Focused check 54 (run 45115115038) requested. |
+| Simulator-verified | PENDING | Focused check 54. |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** NOT YET PRESENTED.
+- **Functional verification:** Pending focused check 54: identical contents before and after, dock unchanged, graph interaction, Home navigation.
+
+### Remaining work or limitations
+
+- PENDING — before / after full-page screenshots and the owner's visual decision.
+- INT-01 (open): activity cards and week icons are drawn per category (endurance = bicycle, strength = dumbbell); making them follow the roster needs model and builder changes, so it is NOT part of this visual refinement.
+- Not verified: redesigned main app, other themes, VoiceOver, physical iPhone, full Lab regression.
+
+### Images
+
+- `assets/H01_home_three_versions_full_1d6d2a07.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Complete pages before the refinement. Left: Home v2.2 UI Lab prototype (reference, never approved). Middle: the earlier Home (Lab run 19, a4de9d30). Right: Home v2.3 as it was (check 52, 1d6d2a07).
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 23 Nov 2026, 08:57 | Implementation brief: Option A typography and six visual hierarchy directions, strict functional preservation, before / after full-page screenshots, focused verification. Not locked. | IN FORCE — direction only |
+| 23 Nov 2026, 07:41 | Home content accepted as the current baseline; typography review requested (options A and B, capture only). | NOTE |
+| 12 Nov 2026 | Standing decisions for Home v2.1–v2.3: three indicators (Consistency, Training Mix, Recovery without a percentage); compact header; compact Endurance and Strength cards; sleep bar; text-only Coach preview; one trends chart; key metrics as rows. v2.3 never formally approved. | IN FORCE |
