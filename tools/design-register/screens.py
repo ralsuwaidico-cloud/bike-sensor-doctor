@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "23 Nov 2026, 11:10 (Dubai)"
+UPDATED = "23 Nov 2026, 11:50 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -898,7 +898,7 @@ SCREENS = [
         number=9, id="APP-01", name="Main App — Home",
         location="Main app · the Home tab of the dock (first screen after onboarding). The avatar opens Profile; the Coach card opens the Coach page.",
         approved_on="23 Nov 2026, 09:40 — FINAL DESIGN DECISION: the original (BEFORE) Home, with one approved interaction change.",
-        status="ORIGINAL (BEFORE) DESIGN SELECTED AS THE FINAL VISUAL BASELINE (23 Nov 2026, 09:40), with one approved interaction change: the entire Coach card opens Coach and the separate 'Coach page' link is removed. IMPLEMENTATION VERIFICATION PENDING until the focused check passes. No further visual refinement without the owner's approval.",
+        status="ORIGINAL (BEFORE) DESIGN SELECTED AS THE FINAL VISUAL BASELINE (23 Nov 2026, 09:40), with one approved interaction change: the entire Coach card opens Coach and the separate 'Coach page' link is removed. Implementation SIMULATOR-VERIFIED in Cyclift Lab (check 55, 2 of 2). No further visual refinement without the owner's approval.",
         reference="Canonical design: Home_BEFORE_FULL.png — the complete Home as captured in check 54 (commit ef0dd8bc, iPhone 15 Pro simulator, Obsidian, Cyclift "
                   "Lab, demonstration athlete), i.e. Home v2.3 as it was before the refinement, chosen by the owner on 23 Nov 2026 at 09:40 after reviewing the "
                   "before / after screenshots. One change to it: the Coach card (see below).",
@@ -920,21 +920,32 @@ SCREENS = [
                   "A recovery percentage on Home while no validated score exists (standing since 12 Nov 2026)."],
         commits="Final baseline with the Coach card change: a181a59f (branch ios/lab) — the Home files are as at 1d6d2a07 plus that one change; the review switch is deleted. Superseded: typography review 8805acb5, refinement 2e4fe538. Not in any TestFlight build.",
         stages=[("Approved design", "YES", "Owner, 23 Nov 2026 09:40: the original (BEFORE) design as the final visual baseline, with the Coach card change."),
-                ("Implemented in code", "YES — awaiting verification", "Commit a181a59f: refinement reverted in full; the Coach card opens the Coach page for every kind "
+                ("Implemented in code", "YES", "Commit a181a59f: refinement reverted in full; the Coach card opens the Coach page for every kind "
                  "of item; no separate link; the finding is no longer cut to two lines."),
-                ("Compiled", "PENDING", "Focused check 55 (run 45119432121) requested."),
-                ("Simulator-verified", "PENDING", "Focused check 55. (The unchanged original was captured and its contents compared in check 54, commit ef0dd8bc.)"),
+                ("Compiled", "YES", "Lab app built in focused check 55 (run 45119432121). Main-app build not run."),
+                ("Simulator-verified", "YES — visual baseline and functional, Cyclift Lab (Obsidian, iPhone 15 Pro)", "Focused check 55, run 45119432121, commit 7fb2bc51 "
+                 "(code a181a59f), 2 of 2 passed. Every Home section and control present; no 'Coach page' link or text; the Coach card is announced as Coach with "
+                 "'Needs your decision' and its full finding, 353 × 104 pt; tapping it on its text, on its background and on its chevron each opens the Coach page, "
+                 "closing returns to Home each time and the card says the same afterwards; the second Trends view can be chosen and touching the graph inspects a "
+                 "day; the first day, Consistency, Recovery, Endurance, Strength, Sleep and a Key metrics row each present their page at the first tap and return; "
+                 "the avatar opens Profile. Picture comparison with Home_BEFORE_FULL.png (check 54, same athlete and date): from the header to the Sleep row the two "
+                 "are pixel-identical; below the Coach card the pages match except small differences in 35 pixel rows whose cause was not identified (the joined "
+                 "captures carry scroll-indicator marks)."),
                 ("Physically verified on iPhone", "NO", "")],
-        visual_verification="Baseline chosen by the owner from Home_BEFORE_FULL.png (check 54). The restored implementation with the Coach change: PENDING check 55.",
-        functional_verification="Pending focused check 55.",
-        remaining=["PENDING — focused check 55 and the full-length screenshot with the Coach card close-up.",
-                   "CONSEQUENCE OF THE COACH CHANGE, for the record: before, some Coach items opened their own destination straight from the card (a hybrid-coach "
+        visual_verification="Baseline chosen by the owner from Home_BEFORE_FULL.png (check 54). The restored implementation matches it (check 55, as listed); the Coach card with its change is shown in the close-up.",
+        functional_verification="Lab simulator: check 55, as listed.",
+        remaining=[                   "CONSEQUENCE OF THE COACH CHANGE, for the record: before, some Coach items opened their own destination straight from the card (a hybrid-coach "
                    "suggestion or the FTP suggestion opened its sheet; a gap or plan-revision finding opened Plan; an insight started the strength session; the "
                    "rating prompt opened the rating sheet). Now every item opens the Coach page. Hybrid and FTP suggestions can still be reviewed and decided "
                    "there; findings, insights and the rating prompt appear there as notes without a direct action.",
                    "INT-01 (open): activity cards and week icons are drawn per category, not per roster activity.",
                    "Not verified: redesigned main app, larger text, other themes, VoiceOver, physical iPhone, full Lab regression."],
-        images=[("H01_home_refinement_before_after_ef0dd8bc.png",
+        images=[("H01_home_final_full_a181a59f.png",
+                 "APPROVED DESIGN — as implemented. The complete Home, header to dock: iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 55 (code a181a59f), "
+                 "demonstration athlete. The yellow badge and Theme / Scenario / Restore controls are Cyclift Lab controls."),
+                ("H01_home_final_coach_closeup_a181a59f.png",
+                 "APPROVED INTERACTION CHANGE. Left: before (text cut off, separate link). Right: now — the whole card opens Coach, the finding in full, no link."),
+                ("H01_home_refinement_before_after_ef0dd8bc.png",
                  "Left: APPROVED VISUAL BASELINE (BEFORE, Home_BEFORE_FULL.png) — except the 'Coach page' link shown under the Coach card, which is removed. "
                  "Right: SUPERSEDED — the refinement, not selected (design history only). Complete pages, check 54 (commit ef0dd8bc), same athlete and date."),
                 ("H01_home_three_versions_full_1d6d2a07.png",
