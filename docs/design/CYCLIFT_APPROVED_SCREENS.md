@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 23 Nov 2026, 10:40 (Dubai) · Screens recorded: 9
+Last updated: 23 Nov 2026, 11:10 (Dubai) · Screens recorded: 9
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -112,7 +112,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 6 | ONB-06 | Connect Your Devices | YES | YES | YES | YES — Cyclift Lab, visual and functional (final state: check 45, below). Main app: previous commit only (later rounds: see the screen's status table) | NO |
 | 7 | ONB-07 | Athlete Evolution | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); final state: check 48 (later rounds: see the screen's status table) | NO |
 | 8 | ONB-08 | Athletic Blueprint | YES | YES | YES | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro) | NO |
-| 9 | APP-01 | Main App — Home | DIRECTION ONLY | YES | YES | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | NO |
+| 9 | APP-01 | Main App — Home | YES | YES — awaiting verification | PENDING | PENDING | NO |
 
 ---
 
@@ -814,70 +814,64 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 ## Screen 9 — Main App — Home (APP-01)
 
 - **Navigation location:** Main app · the Home tab of the dock (first screen after onboarding). The avatar opens Profile; the Coach card opens the Coach page.
-- **Approval date:** 23 Nov 2026, 08:57 — Option A typography and six visual hierarchy directions. Not final visual approval.
-- **Approval status:** OPTION A TYPOGRAPHY AND SIX VISUAL HIERARCHY DIRECTIONS APPROVED — implementation and final visual verification PENDING. Not locked; not visually approved.
-- **Original design reference and source:** No earlier approved Home design exists (Home v2.3 was 'ready for owner sign-off' on 12 Nov 2026 and never approved). The owner accepted the current Home v2.3 CONTENT as the baseline on 23 Nov 2026 (07:41) and set the visual direction in his implementation brief of 23 Nov 2026 (08:57). Standing decisions of 12 Nov 2026 still apply (three indicators, no recovery score, text-only Coach preview, key metrics as rows).
-- **Implementation commit:** Typography review (options A and B, capture only): 8805acb5. Refinement: 2e4fe538 (branch ios/lab). Not in any TestFlight build.
+- **Approval date:** 23 Nov 2026, 09:40 — FINAL DESIGN DECISION: the original (BEFORE) Home, with one approved interaction change.
+- **Approval status:** ORIGINAL (BEFORE) DESIGN SELECTED AS THE FINAL VISUAL BASELINE (23 Nov 2026, 09:40), with one approved interaction change: the entire Coach card opens Coach and the separate 'Coach page' link is removed. IMPLEMENTATION VERIFICATION PENDING until the focused check passes. No further visual refinement without the owner's approval.
+- **Original design reference and source:** Canonical design: Home_BEFORE_FULL.png — the complete Home as captured in check 54 (commit ef0dd8bc, iPhone 15 Pro simulator, Obsidian, Cyclift Lab, demonstration athlete), i.e. Home v2.3 as it was before the refinement, chosen by the owner on 23 Nov 2026 at 09:40 after reviewing the before / after screenshots. One change to it: the Coach card (see below).
+- **Implementation commit:** Final baseline with the Coach card change: a181a59f (branch ios/lab) — the Home files are as at 1d6d2a07 plus that one change; the review switch is deleted. Superseded: typography review 8805acb5, refinement 2e4fe538. Not in any TestFlight build.
 
 ### Exact approved wording
 
-- **Content:** Unchanged. Every existing section, label, value and status is preserved; nothing is removed, hidden, renamed or replaced.
-- **Typography targets (SF Pro, system font):** Athlete name 28 semibold · date / athlete type 11 medium · ring values 23 semibold · ring labels 12 medium · ring supporting text 10–11 regular · activity card titles 15 medium · activity totals 23 semibold · Coach and Sleep titles 15 medium · Coach body 13 regular · section headings 19 semibold · metric labels 12 medium · metric values 19 semibold · secondary information 11–12 regular. Targets, not fixed sizes that override Dynamic Type. Tabular figures where appropriate.
+- **Content:** As shown in Home_BEFORE_FULL.png. No new buttons, cards or information.
+- **Removed:** The separate 'Coach page ›' link below the Coach card.
 
 ### Approved layout, visual elements and interactions
 
-- 1 · TYPOGRAPHY — Option A (Refined). The approved dock typography and dimensions are preserved; the smaller dock-label experiment is not adopted.
-- 2 · HEADER — Minimal: date, athlete classification, name, avatar; small quiet date and type, prominent name, avatar right, consistent margins and baselines, no dividers or decoration, no taller than necessary.
-- 3 · RINGS — Unified: Consistency, Training Mix, Recovery with unchanged meaning, sources, calculations and empty states; equal sizes and alignment, consistent number typography, identical label positions and supporting-text spacing, balanced weight, quiet colour. Values such as 100:0 fit without illegible scaling. No invented recovery score.
-- 4 · WEEK — Connected tiles: seven equal-width tiles as one component; weekday label, activity icons, completed / planned / missed / rest marks, a clear but subtle today highlight, restrained background or outline, no minutes, two icons for two sessions, activity-specific icons following the roster; every day action and status meaning kept.
-- 5 · ACTIVITY CARDS — Balanced: equal height, radius, heading alignment, padding, number hierarchy and progress-bar position. Sports and icons adapt to the roster where the existing data model supports it; otherwise recorded as a separate integration item.
-- 6 · SLEEP AND COACH — Quiet Sleep: compact row, quiet type, minimal decoration, recorded data told apart from unavailable, indicator and navigation kept. Coach: same card and position, clear heading, the proposal or finding fully readable, visible status when a decision is needed, calm accent, clear way to the Coach page.
-- 7 · TRENDS AND KEY METRICS — Unified and compact: one coherent analytics area, still two functional sections; all controls, chart values, legends, inspection and rows preserved; hierarchy, spacing, margins and dividers refined.
-- OVERALL: a common spacing scale, headings on one margin, consistent radii, surfaces and dividers, clear primary / secondary / supporting text, Obsidian palette and sport colours kept; no decorative gradients, new charts, animations or components.
+- The original appearance exactly as in Home_BEFORE_FULL.png: header typography and spacing; ring dimensions and styling; weekly calendar layout; Endurance and Strength card styling; Sleep row; Trends section and chart presentation; Key metrics; section spacing and overall hierarchy.
+- The approved dock and Train ball unchanged.
+- COACH CARD — the only approved modification: the separate link is removed; the ENTIRE card is tappable (background, text and chevron) and opens the existing Coach screen; the same recommendation, decision status and source information; the original card appearance, with the recommendation readable without inappropriate truncation; appropriate accessibility labelling and a complete tappable area.
 
 ### Mandatory functionality and dependencies
 
-- Strict functional preservation: athlete data, training records, metric calculations, weekly training logic, Coach rules and approvals, chart values and interactions, navigation destinations, the Train ball and approved dock, persistence and data models, Lab isolation, and onboarding Screens 1–8 are not changed. All current Home components keep their order.
-- Coach recommendations are not truncated; Coach decisions, approval requirements, rule execution and storage are not altered.
-- Do not lock Home or label it visually approved until the owner has reviewed the actual screenshots.
-- No production merge or TestFlight upload is authorized by this instruction.
+- Home content, calculations, data, chart interactions, navigation elsewhere, Coach rules, persistence and the approved dock are not altered. Onboarding and every other screen are untouched.
+- No further visual refinements without the owner's approval.
+- Standing decisions of 12 Nov 2026 still apply (three indicators, no recovery score, text-only Coach preview, key metrics as rows).
 
 ### Explicitly rejected alternatives
 
-- Option B (Premium Minimal) typography.
-- The 11-pt dock-label experiment of the typography review — not to be propagated to any screen.
+- The refinement of 23 Nov 2026 (08:57) as implemented — Option A typography and the six hierarchy directions — after the owner compared it with the original: REVERTED in full. Its screenshots are kept as superseded design history.
+- Option B (Premium Minimal) typography; the 11-pt dock-label experiment.
 - A recovery percentage on Home while no validated score exists (standing since 12 Nov 2026).
 
 ### Status
 
 | Stage | State | Evidence |
 |---|---|---|
-| Approved design | DIRECTION ONLY | Owner, 23 Nov 2026 08:57. Final visual approval pending. |
-| Implemented in code | YES | Commit 2e4fe538, presentation only. The Home as it was stays in the code under a capture-only setting until the refinement is approved. |
-| Compiled | YES | Lab app built in focused check 54 (run 45115115038). Main-app build not run. |
-| Simulator-verified | FUNCTIONAL YES (Lab, Obsidian, iPhone 15 Pro) — VISUAL PENDING | Focused check 54, run 45115115038, commit ef0dd8bc (code 2e4fe538), 2 of 2 passed. BEFORE and AFTER on the same demonstration athlete and date: 34 controls and headings compared one by one — header, avatar, three indicators, seven days, both activity cards, Sleep, Coach and its page link, Trends controls, series and chart, every Key metrics row — each present in both and saying exactly the same (label and value). The dock is at the same position and size (Train ball 72 pt; Home, Plan, Progress 91 × 48 pt). Trends: the second view and the four-week range can be chosen, and touching the graph inspects a day that can be opened. Home navigation (existing check): the first day, Consistency, Recovery, Endurance, Strength, Sleep and a Key metrics row each present their page at the first tap and return; the Coach card is tappable; the avatar opens Profile. Larger text (Accessibility Large): every section still exists and the page scrolls. Whether text is cut off is judged from the screenshots, not asserted. |
+| Approved design | YES | Owner, 23 Nov 2026 09:40: the original (BEFORE) design as the final visual baseline, with the Coach card change. |
+| Implemented in code | YES — awaiting verification | Commit a181a59f: refinement reverted in full; the Coach card opens the Coach page for every kind of item; no separate link; the finding is no longer cut to two lines. |
+| Compiled | PENDING | Focused check 55 (run 45119432121) requested. |
+| Simulator-verified | PENDING | Focused check 55. (The unchanged original was captured and its contents compared in check 54, commit ef0dd8bc.) |
 | Physically verified on iPhone | NO |  |
 
-- **Visual verification:** PRESENTED 23 Nov 2026 (before / after full pages and close-ups, check 54) — awaiting the owner's decision.
-- **Functional verification:** Lab simulator: check 54, as listed.
+- **Visual verification:** Baseline chosen by the owner from Home_BEFORE_FULL.png (check 54). The restored implementation with the Coach change: PENDING check 55.
+- **Functional verification:** Pending focused check 55.
 
 ### Remaining work or limitations
 
-- PENDING — the owner's visual decision.
-- DEVIATION: ring values are 21 pt, not the 23 pt target — '100:0' does not fit inside the Training Mix's inner ring at 23 pt, and one size is used for all three rings.
-- CONFIRMED at larger text (Accessibility Large): the Coach status 'Needs your decision' is cut off ('Needs your de…'), and the two Trends view buttons sit closer together than before. Not corrected — awaiting the owner's decision.
-- INT-01 (open): activity cards and week icons are drawn per category (endurance = bicycle, strength = dumbbell); making them follow the roster needs model and builder changes, so it is NOT part of this visual refinement.
-- Not verified: redesigned main app, other themes, VoiceOver, physical iPhone, full Lab regression.
+- PENDING — focused check 55 and the full-length screenshot with the Coach card close-up.
+- CONSEQUENCE OF THE COACH CHANGE, for the record: before, some Coach items opened their own destination straight from the card (a hybrid-coach suggestion or the FTP suggestion opened its sheet; a gap or plan-revision finding opened Plan; an insight started the strength session; the rating prompt opened the rating sheet). Now every item opens the Coach page. Hybrid and FTP suggestions can still be reviewed and decided there; findings, insights and the rating prompt appear there as notes without a direct action.
+- INT-01 (open): activity cards and week icons are drawn per category, not per roster activity.
+- Not verified: redesigned main app, larger text, other themes, VoiceOver, physical iPhone, full Lab regression.
 
 ### Images
 
-- `assets/H01_home_refinement_before_after_ef0dd8bc.png` — IMPLEMENTATION — NOT YET APPROVED. Complete pages, iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 54 (commit ef0dd8bc), same demonstration athlete and date. Left: BEFORE, unchanged. Right: AFTER, refined.
+- `assets/H01_home_refinement_before_after_ef0dd8bc.png` — Left: APPROVED VISUAL BASELINE (BEFORE, Home_BEFORE_FULL.png) — except the 'Coach page' link shown under the Coach card, which is removed. Right: SUPERSEDED — the refinement, not selected (design history only). Complete pages, check 54 (commit ef0dd8bc), same athlete and date.
 - `assets/H01_home_three_versions_full_1d6d2a07.png` — COMPARISON BOARD — NOT AN APPROVED SCREENSHOT. Complete pages before the refinement. Left: Home v2.2 UI Lab prototype (reference, never approved). Middle: the earlier Home (Lab run 19, a4de9d30). Right: Home v2.3 as it was (check 52, 1d6d2a07).
 
 ### Decision history
 
 | When | Decision | State |
 |---|---|---|
-| 23 Nov 2026, 08:57 | Implementation brief: Option A typography and six visual hierarchy directions, strict functional preservation, before / after full-page screenshots, focused verification. Not locked. | IN FORCE — direction only |
+| 23 Nov 2026, 09:40 | FINAL DESIGN DECISION after reviewing check 54: the BEFORE design is the final Home visual baseline; the refinement is reverted; one approved interaction change — the entire Coach card opens Coach and the separate Coach page link is removed. | IN FORCE |
+| 23 Nov 2026, 08:57 | Implementation brief: Option A typography and six visual hierarchy directions, strict functional preservation, before / after full-page screenshots, focused verification. Implemented (2e4fe538) and presented (check 54). | SUPERSEDED 09:40 — not selected |
 | 23 Nov 2026, 07:41 | Home content accepted as the current baseline; typography review requested (options A and B, capture only). | NOTE |
 | 12 Nov 2026 | Standing decisions for Home v2.1–v2.3: three indicators (Consistency, Training Mix, Recovery without a percentage); compact header; compact Endurance and Strength cards; sleep bar; text-only Coach preview; one trends chart; key metrics as rows. v2.3 never formally approved. | IN FORCE |
