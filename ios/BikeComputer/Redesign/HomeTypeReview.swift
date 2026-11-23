@@ -1,70 +1,65 @@
 import SwiftUI
 
-/// REVIEW ONLY — two typography options for the Home screen, prepared for the owner's selection (23 Nov 2026).
+/// Home visual hierarchy refinement — owner's implementation brief of 23 Nov 2026 (08:57): Option A typography and six
+/// hierarchy directions (minimal header, unified rings, connected day tiles, balanced activity cards, quiet Sleep and a
+/// readable Coach card, one compact analytics area). PENDING THE OWNER'S VISUAL APPROVAL — not locked.
 ///
-/// Nothing here is the permanent design. Without the launch setting `CY_HOME_TYPE_REVIEW` (set only by the capture
-/// check) every call returns the font and colour the screen already used, so Home is unchanged. With "A" or "B" the
-/// same text is drawn in SF Pro (the system font, default design) at the owner's target hierarchy:
-///   A — Refined: the target sizes and weights; colours as today.
-///   B — Premium Minimal: the same sizes for the primary values; labels lighter, supporting text at the small end of
-///       its range and in the quieter of the existing text colours.
-/// Sizes scale with Dynamic Type. No content, colour token, layout, chart or navigation is changed by either option.
+/// The refinement changes presentation only: no content, value, calculation, action, identifier or order. Until it is
+/// approved the Home that existed before stays in the code, drawn when the launch setting `CY_HOME_STYLE=before` is
+/// given, so the two can be captured side by side on identical data. That setting is used by the capture check only.
+///
+/// Typography: SF Pro through the system font (default design), sizes scaled with Dynamic Type, tabular figures for
+/// numbers. The approved dock is not part of this: its typography and dimensions are unchanged.
 enum HomeType {
-    enum Option { case current, refined, minimal }
     enum Role {
         case name, overline
         case ringValue, ringLabel, ringSupport
         case weekday, weekdayToday
         case cardTitle, cardTotal, cardPlanned
         case rowTitle, rowValue
-        case coachText
+        case coachText, status
         case heading
         case chartLabel, chartLabelStrong
         case metricLabel, metricValue
         case meta, metaLarge, metaStrong
-        case segment, link, dock, dockSelected
+        case segment, link
     }
-    static let option: Option = {
-        switch ProcessInfo.processInfo.environment["CY_HOME_TYPE_REVIEW"] {
-        case "A": return .refined
-        case "B": return .minimal
-        default: return .current
-        }
-    }()
-    static var isReview: Bool { option != .current }
+    static let isRefined: Bool = ProcessInfo.processInfo.environment["CY_HOME_STYLE"] != "before"
 
-    /// The font for a role. `current` is what the screen uses today and is returned untouched outside the review.
-    static func f(_ role: Role, _ current: Font) -> Font {
-        guard option != .current else { return current }
-        let b = option == .minimal
+    /// The font for a role. `before` is what the screen used until now and is returned untouched for the "before" capture.
+    static func f(_ role: Role, _ before: Font) -> Font {
+        guard isRefined else { return before }
         switch role {
         case .name: return CyDyn.f(28, .semibold)
         case .overline: return CyDyn.f(11, .medium)
-        case .ringValue: return CyDyn.f(23, .semibold).monospacedDigit()
+        // The target is 23 pt. All three rings share one size so their values read as one family, and "100:0" has to
+        // fit inside the Training Mix's inner ring without being scaled down on its own: 21 pt is the largest that does.
+        case .ringValue: return CyDyn.f(21, .semibold).monospacedDigit()
         case .ringLabel: return CyDyn.f(12, .medium)
-        case .ringSupport: return CyDyn.f(b ? 10 : 11, .regular)
-        case .weekday: return CyDyn.f(11, b ? .regular : .medium)
-        case .weekdayToday: return CyDyn.f(11, b ? .medium : .semibold)
-        case .cardTitle: return CyDyn.f(15, b ? .regular : .medium)
+        case .ringSupport: return CyDyn.f(11, .regular)
+        case .weekday: return CyDyn.f(11, .medium)
+        case .weekdayToday: return CyDyn.f(11, .semibold)
+        case .cardTitle: return CyDyn.f(15, .medium)
         case .cardTotal: return CyDyn.f(23, .semibold).monospacedDigit()
-        case .cardPlanned: return CyDyn.f(b ? 12 : 13, .regular).monospacedDigit()
-        case .rowTitle: return CyDyn.f(15, b ? .regular : .medium)
+        case .cardPlanned: return CyDyn.f(13, .regular).monospacedDigit()
+        case .rowTitle: return CyDyn.f(15, .medium)
         case .rowValue: return CyDyn.f(19, .semibold).monospacedDigit()
         case .coachText: return CyDyn.f(13, .regular)
+        case .status: return CyDyn.f(11, .medium)
         case .heading: return CyDyn.f(19, .semibold)
         case .chartLabel: return CyDyn.f(11, .regular).monospacedDigit()
-        case .chartLabelStrong: return CyDyn.f(11, b ? .medium : .semibold).monospacedDigit()
-        case .metricLabel: return CyDyn.f(12, b ? .regular : .medium)
+        case .chartLabelStrong: return CyDyn.f(11, .semibold).monospacedDigit()
+        case .metricLabel: return CyDyn.f(12, .medium)
         case .metricValue: return CyDyn.f(19, .semibold).monospacedDigit()
         case .meta: return CyDyn.f(11, .regular).monospacedDigit()
-        case .metaLarge: return CyDyn.f(b ? 11 : 12, .regular).monospacedDigit()
-        case .metaStrong: return CyDyn.f(b ? 11 : 12, .medium).monospacedDigit()
-        case .segment: return CyDyn.f(12, b ? .regular : .medium)
+        case .metaLarge: return CyDyn.f(12, .regular).monospacedDigit()
+        case .metaStrong: return CyDyn.f(12, .medium).monospacedDigit()
+        case .segment: return CyDyn.f(12, .medium)
         case .link: return CyDyn.f(12, .medium)
-        case .dock: return .system(size: 11, weight: .medium)
-        case .dockSelected: return .system(size: 11, weight: b ? .medium : .semibold)
         }
     }
-    /// The colour for supporting text: today's colour, or — in option B only — the quieter existing text colour.
-    static func tone(_ current: Color, quiet: Color) -> Color { option == .minimal ? quiet : current }
+    /// A measure (spacing, size) that the refinement changes.
+    static func v(_ refined: CGFloat, before: CGFloat) -> CGFloat { isRefined ? refined : before }
+    /// A colour the refinement quiets — always one of the theme's own text colours.
+    static func tone(_ before: Color, refined: Color) -> Color { isRefined ? refined : before }
 }

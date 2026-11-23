@@ -50,7 +50,9 @@ struct CyTrendsGraph: View {
     private var hasData: Bool { (mode?.series ?? []).contains { $0.values.contains { $0 != nil } } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: CySpace.m) {
+        // refined: the controls already carry their own 44-pt touch height; a second 12-pt gap between each left the
+        // section looking loose. One small step keeps heading, controls, legend and chart together.
+        VStack(alignment: .leading, spacing: HomeType.v(CySpace.xs, before: CySpace.m)) {
             HStack(spacing: CySpace.s) {
                 Text("Trends").font(HomeType.f(.heading, CyFont.title)).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
                 if isSample {

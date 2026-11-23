@@ -120,7 +120,7 @@ struct Home21Header: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: CySpace.m) {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: HomeType.v(2, before: 3)) {
                 HStack(spacing: 6) {
                     Text(overline.uppercased()).font(HomeType.f(.overline, CyFont.overline)).tracking(0.8).foregroundStyle(theme.textSecondary)
                         .lineLimit(typeSize.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.8)

@@ -822,19 +822,90 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete")
         captureFullPage(app, "home-demo")
     }
-    /// Home typography review (owner, 23 Nov 2026): the same demonstration athlete, date and theme three times — as it
-    /// is today, option A (Refined) and option B (Premium Minimal). CAPTURE ONLY; the options exist only under the
-    /// launch setting used here.
-    func testCaptureHomeTypographyOptions() {
-        for (setting, name) in [("", "home-type-current"), ("A", "home-type-a"), ("B", "home-type-b")] {
+    /// Home visual hierarchy refinement (owner's brief, 23 Nov 2026, 08:57) — presentation only. The same demonstration
+    /// athlete, date and theme twice: BEFORE (the Home as it was, drawn under the capture setting) and AFTER (refined).
+    /// Every section, value, status and control must be identical between the two; the approved dock must not move;
+    /// the graph must still respond. Then full-page captures of both, and of the refined Home at a larger text size.
+    func testHomeRefinementKeepsEverything() {
+        func open(_ style: String?, large: Bool = false) -> XCUIApplication {
             let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
-            if !setting.isEmpty { app.launchEnvironment["CY_HOME_TYPE_REVIEW"] = setting }
+            if let style { app.launchEnvironment["CY_HOME_STYLE"] = style }
+            if large { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"] }
             app.launch()
-            XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete (\(name))")
-            captureFullPage(app, name, steps: 8)
-            app.terminate()
+            XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "required: Home of the demonstration athlete")
+            return app
         }
+        /// What Home says, control by control: label and value as exposed to VoiceOver (the same text the screen draws from).
+        func contents(_ app: XCUIApplication, _ which: String) -> [String: String] {
+            var out: [String: String] = [:]
+            func add(_ id: String, required: Bool = true) {
+                let e = el(app, id)
+                if required { XCTAssertTrue(e.exists, "required (\(which)): \(id) is on Home") }
+                if e.exists { out[id] = "\(e.label) | \((e.value as? String) ?? "")" }
+            }
+            for id in ["homeDate", "homeGreeting", "homeAvatar", "indicatorConsistency", "indicatorMix", "indicatorRecovery"] { add(id) }
+            for d in 0..<7 { add("scheduleDay-\(d)") }
+            for id in ["sportCard-endurance", "sportCard-strength", "sleepBar"] { add(id) }
+            add("homeCoachAction", required: false); add("homeCoachQuiet", required: false)
+            XCTAssertTrue(out["homeCoachAction"] != nil || out["homeCoachQuiet"] != nil, "required (\(which)): the Coach card is on Home")
+            add("homeCoachOpen")
+            for id in ["trendsInfo", "trendsChart", "trendsHint"] { add(id) }
+            for kind in ["trendsMode-", "trendsRange-", "trendsSeries-", "metricRow-"] {
+                let all = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", kind)).allElementsBoundByIndex
+                XCTAssertFalse(all.isEmpty, "required (\(which)): \(kind) controls are on Home")
+                for e in all { out[e.identifier] = "\(e.label) | \((e.value as? String) ?? "")" }
+            }
+            for h in ["Trends", "Key metrics"] { XCTAssertTrue(app.staticTexts[h].firstMatch.exists, "required (\(which)): the \(h) heading"); out["heading-" + h] = h }
+            return out
+        }
+        func dock(_ app: XCUIApplication) -> [String] {
+            ["centreButton", "Home", "Plan", "Progress"].map { id in
+                let f = app.buttons[id].firstMatch.frame
+                return "\(id): \(Int(f.minX.rounded())),\(Int(f.minY.rounded())) \(Int(f.width.rounded()))x\(Int(f.height.rounded()))"
+            }
+        }
+
+        let before = open("before")
+        let was = contents(before, "before"), wasDock = dock(before)
+        for _ in 0..<6 { before.swipeDown() }; before.settleForScreenshot(1)
+        captureFullPage(before, "home-before", steps: 8)
+        before.terminate()
+
+        let app = open(nil)
+        let now = contents(app, "refined"), nowDock = dock(app)
+        XCTAssertEqual(Set(now.keys), Set(was.keys), "required: the refined Home has exactly the sections and controls it had (missing: \(Set(was.keys).subtracting(now.keys).sorted()); new: \(Set(now.keys).subtracting(was.keys).sorted()))")
+        for k in was.keys.sorted() { XCTAssertEqual(now[k], was[k], "required: \(k) says the same as before") }
+        XCTAssertEqual(nowDock, wasDock, "required: the approved dock is where and as large as it was")
+        print("LAB-NOTE Home refinement: \(was.count) controls and headings compared; dock \(nowDock)")
+
+        // the graph still answers: another view, another range, and a touch that inspects a day
+        let modes = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'trendsMode-'")).allElementsBoundByIndex
+        if modes.count > 1 {
+            _ = app.reveal(modes[1], top: 170, bottomMargin: 140); modes[1].tap()
+            XCTAssertTrue(modes[1].isSelected, "required: the second Trends view can be chosen"); modes[0].tap()
+            XCTAssertTrue(modes[0].isSelected, "required: and the first chosen again")
+        }
+        let ranges = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'trendsRange-'")).allElementsBoundByIndex
+        if ranges.count > 1 { ranges[1].tap(); XCTAssertTrue(ranges[1].isSelected, "required: the four-week range can be chosen"); ranges[0].tap() }
+        let chart = el(app, "trendsChart"); _ = app.reveal(chart, top: 170, bottomMargin: 140)
+        chart.coordinate(withNormalizedOffset: CGVector(dx: 0.55, dy: 0.5)).press(forDuration: 0.4)
+        XCTAssertTrue(el(app, "trendsPanelDate").waitForExistence(timeout: 4), "required: touching the graph inspects a day")
+        XCTAssertTrue(el(app, "trendsOpenDay").exists, "required: the inspected day can be opened")
+        app.settleForScreenshot(1); shot("home-refined-graph-inspected")
+        app.terminate()
+
+        let after = open(nil)
+        captureFullPage(after, "home-after", steps: 8)
+        after.terminate()
+
+        // larger text: every section still exists and the page scrolls (layout check; pictures for review)
+        let large = open(nil, large: true)
+        _ = contents(large, "refined, larger text")
+        for _ in 0..<8 { large.swipeDown() }; large.settleForScreenshot(1)
+        captureFullPage(large, "home-after-large", steps: 14)
+        large.terminate()
     }
+
     /// Home of a new cycling and strength athlete straight after approving a plan.
     func testCaptureHomeNewAthleteWithPlan() {
         let app = launch()
