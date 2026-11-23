@@ -33,7 +33,10 @@ final class LabChecks: XCTestCase {
         let day = app.buttons["scheduleDay-0"].firstMatch
         let steps: [(String, XCUIElement, String)] = [
             ("the first schedule day", day, "homeDayDetail"),
-            ("the Consistency ring", el("indicatorConsistency"), "homeWeekOverview"),
+            // Changed 23 Nov 2026: this row expected "homeWeekOverview". The owner replaced the ring's destination with the
+            // Consistency Dashboard that day (11:59), so the earlier expectation no longer describes the product. The
+            // requirement is unchanged: the ring presents its page at the first tap and back returns to Home.
+            ("the Consistency ring", el("indicatorConsistency"), "consistencyDashboard"),
             ("the Recovery indicator", el("indicatorRecovery"), "homeRecoveryPage"),
             ("the Endurance card", el("sportCard-endurance"), "homeCyclingSummary"),
             ("the Strength card", el("sportCard-strength"), "homeStrengthSummary"),

@@ -8,6 +8,7 @@ import SwiftUI
 /// The pages reachable from Home, pushed on Home's own NavigationStack (back returns to the dashboard's scroll position).
 enum HomeRoute: Hashable {
     case weekOverview(Date)
+    case consistency                      // the Consistency Dashboard (23 Nov 2026) — the Home Consistency ring
     case cycling
     case strength
     case day(Date)

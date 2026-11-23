@@ -110,7 +110,7 @@ struct HomeView: View {
                                 hint: "Opens the Coach page")
         }
         actions.onAvatar = { tab = 4 }                                   // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
-        actions.onConsistency = { path.append(.weekOverview(now)) }
+        actions.onConsistency = { path.append(.consistency) }      // owner 23 Nov 2026: the Consistency Dashboard; Weekly overview stays its drill-down
         actions.onMix = { path.append(.weekOverview(now)) }
         actions.onRecovery = { path.append(.recovery) }
         actions.onSleep = { path.append(.recovery) }
@@ -205,6 +205,7 @@ struct HomeView: View {
         case .menu(.settings): SettingsPage().accessibilityIdentifier("menuPageSettings")
         case .menu(.help): HelpSupportPage()
         case .weekOverview(let d): HomeWeekOverviewView(weekOf: d, perform: perform, open: { path.append($0) })
+        case .consistency: ConsistencyDashboardView(open: { path.append($0) })
         case .cycling: HomeCyclingSummaryView(perform: perform, open: { path.append($0) })
         case .strength: HomeStrengthSummaryView(perform: perform, open: { path.append($0) })
         case .day(let d): HomeDayDetailView(date: d, perform: perform, open: { path.append($0) })

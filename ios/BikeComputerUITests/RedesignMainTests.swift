@@ -147,10 +147,12 @@ final class RedesignMainTests: XCTestCase {
         XCTAssertTrue(dayOK, "required: in the redesigned main app the first tap on a schedule day presents that day's page")
         XCTAssertTrue(again.backReveals(day), "required: back from the day page returns to Home")
         let ring = el(again, "indicatorConsistency")
-        let weekOK = again.tapPresents(ring, page: "homeWeekOverview")
-        print("REDESIGN-NOTE main app, redesign on: Consistency presented the week page at the first tap: \(weekOK)")
-        XCTAssertTrue(weekOK, "required: in the redesigned main app the Consistency ring presents the week page")
-        XCTAssertTrue(again.backReveals(ring), "required: back from the week page returns to Home")
+        // Changed 23 Nov 2026: this expected "homeWeekOverview". The owner replaced the ring's destination with the
+        // Consistency Dashboard that day (11:59); the requirement itself — first tap presents the page, back returns — stays.
+        let weekOK = again.tapPresents(ring, page: "consistencyDashboard")
+        print("REDESIGN-NOTE main app, redesign on: Consistency presented its dashboard at the first tap: \(weekOK)")
+        XCTAssertTrue(weekOK, "required: in the redesigned main app the Consistency ring presents the Consistency Dashboard")
+        XCTAssertTrue(again.backReveals(ring), "required: back from the Consistency Dashboard returns to Home")
     }
 
     /// With the setting absent the same build shows the existing interface: the redesign is not on by default.

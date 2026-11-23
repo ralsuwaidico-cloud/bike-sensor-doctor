@@ -112,7 +112,7 @@ struct LabChrome: ViewModifier {
 /// records; the app's own planner, session builder and Coach rules produce what is shown. Nothing is drawn by hand,
 /// nothing is real, and choosing one only rewrites Lab's own folder at the next launch.
 enum LabScenario: String, CaseIterable, Identifiable {
-    case normal, supersets, proposal, cycling, newAthlete
+    case normal, supersets, proposal, cycling, consistency, newAthlete
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -120,6 +120,7 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .supersets: return "Strength with supersets"
         case .proposal: return "Coach suggestion waiting"
         case .cycling: return "Cycling day"
+        case .consistency: return "Consistency history"
         case .newAthlete: return "New athlete"
         }
     }
@@ -129,6 +130,7 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .supersets: return "The same athlete prefers supersets, so today's session pairs exercises."
         case .proposal: return "The same athlete has a routine today that the Coach's rules suggest increasing. It waits for a decision."
         case .cycling: return "Today's planned session is a ride. The ride screen is a simulation: no sensor, no GPS, nothing saved."
+        case .consistency: return "A multisport athlete with seven earlier planned weeks: some complete, some with missed sessions. Running and swimming are in the roster but not tracked."
         case .newAthlete: return "No athlete at all. Lab opens at onboarding."
         }
     }
@@ -189,6 +191,7 @@ enum LabDemoData {
         if env["LAB_NEW_ATHLETE"] == "1" { return .newAthlete }
         if env["LAB_DEMO_PROPOSAL"] == "1" { return .proposal }
         if env["LAB_DEMO_SUPERSETS"] == "1" { return .supersets }
+        if env["LAB_DEMO_CONSISTENCY"] == "1" { return .consistency }
         if env["LAB_FRESH_DEMO"] == "1" { return .normal }       // screen tests that name nothing start from the plain athlete
         if let d = recordDir, let raw = try? String(contentsOf: note("scenario", d), encoding: .utf8),
            let s = LabScenario(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines)) { return s }
@@ -252,7 +255,10 @@ enum LabDemoData {
         }
         let tomorrowId = plan.first { ($0["done"] as? Bool) == true }?["id"] as? String ?? ""
         var rides: [[String: Any]] = []
-        for k in 0..<16 {
+        // "Consistency history": the seven weeks before this one carry a plan of their own (below), so the generic riding
+        // and lifting history starts before them
+        let history = scenario == .consistency ? 7 : 0
+        for k in history..<16 {
             let m = cal.date(byAdding: .day, value: -7 * (k + 1), to: monday)!
             let pattern: [[Int]] = [[50, 75], [45, 60, 110], [60, 90], [40, 70, 95]]
             let lens: [Int] = pattern[k % 4]
@@ -273,7 +279,7 @@ enum LabDemoData {
             ["id": UUID().uuidString, "exerciseId": id, "name": name, "pattern": pat, "sets": [set(reps, kg), set(reps, kg), set(reps, kg)], "notes": ""]
         }
         var strength: [[String: Any]] = []
-        for k in 1...16 {      /* RC2 audit: a realistic 16-week lifting history, like the riding one */
+        for k in (history + 1)...16 {      /* RC2 audit: a realistic 16-week lifting history, like the riding one */
             for day in [1, 4] {
                 let date = cal.date(byAdding: .day, value: -7 * k + day, to: monday)!
                 strength.append(["id": UUID().uuidString, "date": d(date, 18), "minutes": 40 + k, "focus": "fullBody", "customName": "", "rpe": 7, "notes": "", "source": "manual",
@@ -283,10 +289,51 @@ enum LabDemoData {
         // the 1-minute record saved from workout mode with no set ticked, linked to tomorrow's session
         strength.append(["id": UUID().uuidString, "date": d(today, 9), "minutes": 1, "focus": "fullBody", "customName": "", "notes": "", "source": "manual",
                          "workoutId": tomorrowId, "startedAt": d(today, 8.98), "finishedAt": d(today, 9)])
-        let profile: [String: Any] = ["name": "Demo", "goal": "fitness", "hoursPerWeek": 5, "level": "intermediate", "weightKg": 75, "age": 40, "ftpW": 225, "ftpHow": "tested", "birthYear": 1986, "provenance": ["weight": ["source": "entered"], "ftp": ["source": "legacyUnverified"]],   /* S2-0: deliberate demo values, not the old sample defaults */
+        if scenario == .consistency {
+            // Seven earlier weeks, each with five planned sessions (Mon ride, Tue strength, Wed tempo, Fri strength, Sat long
+            // ride) and a recording only for the ones marked done — so the app's own ledger reports 100, 60, 40, 80, 100
+            // and 60 %. Last week differs: Thursday holds two sessions with only the first recorded, Wednesday's ride was
+            // skipped, and Sunday has a ride outside the plan. Nothing is counted here; the app counts it.
+            func lift(_ date: Date) -> [String: Any] {
+                ["id": UUID().uuidString, "date": d(date, 18), "minutes": 42, "focus": "fullBody", "customName": "", "rpe": 7, "notes": "", "source": "manual",
+                 "exercises": [entry("ex-003", "Goblet squat", "squat", 10, 20), entry("ex-088", "Dumbbell row", "pull", 10, 16), entry("ex-059", "Dumbbell bench press", "push", 8, 18)]]
+            }
+            func rideRec(_ date: Date, _ len: Int) -> [String: Any] {
+                ["id": UUID().uuidString, "start": d(date, 6.5), "durationS": len * 60, "distanceM": len * 470, "avgHR": 136, "maxHR": 160,
+                 "zoneSeconds": [len * 6, len * 42, len * 12, 0, 0, 0, 0], "recorder": "phone", "sources": ["Demo data"], "demo": false, "samples": [] as [Any]]
+            }
+            func planned(_ date: Date, _ kind: String, _ mins: Int, hour: Double = 7, sequence: Int = 0, skipped: Bool = false) -> [String: Any] {
+                var w: [String: Any] = ["id": UUID().uuidString, "date": d(date, hour), "kind": kind, "minutes": mins, "done": false, "skipped": skipped, "note": "", "edited": false, "sequence": sequence]
+                if kind == "strength" { w["strengthFocus"] = "fullBody" }
+                return w
+            }
+            let template: [(Int, String, Int)] = [(0, "endurance", 60), (1, "strength", 40), (2, "tempo", 60), (4, "strength", 40), (5, "long", 120)]
+            let done: [Int: [Bool]] = [7: [true, true, true, true, true], 6: [true, true, false, true, false], 5: [true, false, false, true, false],
+                                       4: [true, true, true, false, true], 3: [true, true, true, true, true], 2: [true, false, true, true, false]]
+            for (weeksAgo, marks) in done {
+                let m = cal.date(byAdding: .day, value: -7 * weeksAgo, to: monday)!
+                for (j, t) in template.enumerated() {
+                    let day = cal.date(byAdding: .day, value: t.0, to: m)!
+                    plan.append(planned(day, t.1, t.2))
+                    if marks[j] { if t.1 == "strength" { strength.append(lift(day)) } else { rides.append(rideRec(day, t.2 - 5)) } }
+                }
+            }
+            let last = cal.date(byAdding: .day, value: -7, to: monday)!
+            func day(_ i: Int) -> Date { cal.date(byAdding: .day, value: i, to: last)! }
+            plan.append(planned(day(0), "endurance", 60)); rides.append(rideRec(day(0), 58))
+            plan.append(planned(day(1), "strength", 40)); strength.append(lift(day(1)))
+            plan.append(planned(day(2), "tempo", 60, skipped: true))
+            plan.append(planned(day(3), "strength", 40)); strength.append(lift(day(3)))
+            plan.append(planned(day(3), "endurance", 45, hour: 17, sequence: 1))            // the second session of the day: not recorded
+            plan.append(planned(day(5), "long", 120)); rides.append(rideRec(day(5), 115))
+            rides.append(rideRec(day(6), 35))                                               // outside the plan
+            plan.sort { ($0["date"] as? String ?? "") < ($1["date"] as? String ?? "") }
+        }
+        var profile: [String: Any] = ["name": "Demo", "goal": "fitness", "hoursPerWeek": 5, "level": "intermediate", "weightKg": 75, "age": 40, "ftpW": 225, "ftpHow": "tested", "birthYear": 1986, "provenance": ["weight": ["source": "entered"], "ftp": ["source": "legacyUnverified"]],   /* S2-0: deliberate demo values, not the old sample defaults */
                                       "sports": ["roadCycling", "strength"], "version": 3, "updatedAt": "2026-10-25T20:00:00Z", "wheelMm": 2096, "cadenceLow": 85, "cadenceHigh": 95, "hrZoneMethod": "maxHR",
                                       "trainingMode": "hybrid", "priority": "balanced", "cyclingDaysPerWeek": 3, "liftDaysPerWeek": 3, "liftingHoursPerWeek": 1, "preferredDays": [0, 2, 4, 5],
                                       "hybridGoal": "balanced", "strengthSplit": "fullBody"]
+        if scenario == .consistency { profile["activities"] = ["roadCycling", "strength", "running", "swimming"]; profile["sports"] = ["roadCycling", "strength", "running", "swimming"] }
         let settings: [String: Any] = ["units": "metric", "phoneOnlyMode": true, "hrPref": "strap", "keepScreenOn": true, "autoConnectBoard": false, "enabledConnections": [] as [Any], "appearance": "system",
                                        "backgroundNotice": true, "coachTalk": "normal", "coachEnabled": true, "appleHealthImportWorkouts": false]
         let file: [String: Any] = ["schema": 1, "profile": profile, "settings": settings, "plan": plan, "rides": rides, "tiles": ["power", "cadence", "hr", "speed", "time", "dist"],
