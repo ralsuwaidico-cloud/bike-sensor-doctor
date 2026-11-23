@@ -43,7 +43,9 @@ struct DashChart<Marks: View>: View {
     @ViewBuilder var marks: (DashGeo) -> Marks
 
     static var plotHeight: CGFloat { 192 }
-    private static var topInset: CGFloat { 54 }
+    /// Room kept clear above the scale's top line for the floating label: two lines in the strip, or one label above the
+    /// highest point.
+    private var topInset: CGFloat { placement == .topStrip ? 54 : 46 }
     private static var bottomInset: CGFloat { 10 }
 
     var body: some View {

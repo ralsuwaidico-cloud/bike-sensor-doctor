@@ -1268,7 +1268,11 @@ final class LabFastOnboarding: XCTestCase {
             else { readings += 1; chosen = i; XCTAssertTrue(t.0.contains(" h") && t.1.hasPrefix("Demo data · "), "required: day \(i) shows the value, its source and time (\(t))") }
         }
         XCTAssertGreaterThanOrEqual(readings, 5, "the demo week holds at least five sleep readings")
-        pick(app, "rec", chosen)
+        // Corrected after check 62: when the last day pressed in the loop was itself a day with a reading, pressing it
+        // again here cleared the selection (the approved behaviour), and the assertions below then read the week's text.
+        // The app was right; the check now presses the day only when it is not already the chosen one.
+        if !app.staticTexts["recTooltip"].exists || !tip(app, "rec", at: chosen, "the chosen day").1.hasPrefix("Demo data") { pick(app, "rec", chosen) }
+        if !app.staticTexts["recTooltip"].exists { pick(app, "rec", chosen) }
         XCTAssertTrue(el(app, "recInsight").label.contains("your recorded sleep was"), "required: the summary follows the chosen day")
         XCTAssertTrue(el(app, "recInspection-sleep").label.contains("Demo data"), "required: the card names the source")
         captureFullPage(app, "rec-2-days-selected", steps: 6); toTop(app)

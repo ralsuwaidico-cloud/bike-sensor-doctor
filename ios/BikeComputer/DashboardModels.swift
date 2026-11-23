@@ -358,10 +358,13 @@ struct RecoveryDashboard: Equatable {
     static func scale(_ ps: [RecoveryPoint]) -> (low: Double, high: Double)? {
         let vs = ps.compactMap { $0.kind == .value ? $0.reading.value : nil }
         guard let lo = vs.min(), let hi = vs.max(), let k = ps.first?.reading.kind else { return nil }
-        let step: Double = k == .sleep ? 1 : 5
+        let step: Double = k == .sleep ? 0.5 : 5
         var a = (lo / step).rounded(.down) * step, b = (hi / step).rounded(.up) * step
         if b - a < step * 2 { a -= step; b += step }
-        return (max(0, a), b)
+        a = max(0, a)
+        // an even number of steps, so the middle label of the scale is a round value too
+        if Int(((b - a) / step).rounded()) % 2 != 0 { b += step }
+        return (a, b)
     }
     static func axis(_ k: HealthSample.Kind, _ v: Double) -> String {
         switch k {
