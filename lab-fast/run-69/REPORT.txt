@@ -1,0 +1,24 @@
+FAST focused Lab check — selected: LabFastOnboarding/testCaptureHomeCalendarDays
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 413b7490 · files changed since then: 1
+TIME setup: 9s
+  timing: CompileAssetCatalogVariant (1 task) | 63.589 seconds
+  timing: Ld (18 tasks) | 10.669 seconds
+  timing: SwiftCompile (3 tasks) | 9.198 seconds
+  timing: SwiftEmitModule (2 tasks) | 5.432 seconds
+  timing: SwiftDriver (2 tasks) | 4.256 seconds
+  timing: CopySwiftLibs (2 tasks) | 3.212 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.779 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.539 seconds
+  stages: packages at 122s · packages prepared at 227s · dependency graph at 227s · inputs at 228s · build description at 229s · first link at 242s · asset catalogue at 243s · first Swift step at 307s · finished at 316s
+  compiled in this run: 7 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 318s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 20s
+Test Case '-[CycliftLabUITests.LabFastOnboarding testCaptureHomeCalendarDays]' passed (412.336 seconds).
+RESULT selected screen checks: ok
+TIME tests: 563s
+TIME total on the Mac: 915s
+commit ef394963d366c2fc63e1d4b8c65399d9df6ca5ae  branch ios/lab
