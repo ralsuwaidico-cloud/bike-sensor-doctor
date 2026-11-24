@@ -210,7 +210,10 @@ struct HomeView: View {
         case .recoveryDashboard: RecoveryDashboardView(open: { path.append($0) })
         case .cycling: HomeCyclingSummaryView(perform: perform, open: { path.append($0) })
         case .strength: HomeStrengthSummaryView(perform: perform, open: { path.append($0) })
-        case .day(let d): HomeDayDetailView(date: d, perform: perform, open: { path.append($0) })
+        case .day(let d):
+            // the proposed Daily Training Overview (owner, 24 Nov 2026) exists only in the redesigned app; production keeps its page
+            if CyProduct.redesign { DayOverviewView(date: d, perform: perform, open: { path.append($0) }) }
+            else { HomeDayDetailView(date: d, perform: perform, open: { path.append($0) }) }
         case .ride(let id):
             if let ride = store.rides.first(where: { $0.id == id }) { RideDetailView(ride: ride).accessibilityIdentifier("homeRideDetail") }
             else { CyEmptyState(systemImage: "bicycle", title: "Ride not found", line: "This ride is no longer on the phone.").padding(CyTheme.margin) }

@@ -1316,6 +1316,124 @@ final class LabFastOnboarding: XCTestCase {
         }
     }
 
+    /// PROPOSED Daily Training Overview (owner, 24 Nov 2026, 22:42 — not approved). Each session is set beside the most
+    /// relevant earlier recorded session; the working controls of the earlier Day page are exercised again.
+    func testDayOverviewProposal() {
+        func back(_ app: XCUIApplication) { app.navigationBars.buttons.element(boundBy: 0).tap(); Thread.sleep(forTimeInterval: 0.6) }
+        func openDay(_ app: XCUIApplication, _ i: Int) {
+            toTop(app)
+            let day = app.buttons["scheduleDay-\(i)"].firstMatch
+            XCTAssertTrue(day.waitForExistence(timeout: 8), "required: calendar day \(i) on Home"); day.tap()
+            XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 8), "required: calendar day \(i) opens its Day page")
+        }
+        var app = launchHistory("LAB_DEMO_DAY")
+
+        // Monday: a completed planned ride beside the previous recorded endurance session, and an unplanned ride
+        openDay(app, 0)
+        XCTAssertTrue(el(app, "daySession-0-planned").label.hasPrefix("Planned: 1 h"), "required: the prescription is shown as planned (\(el(app, "daySession-0-planned").label))")
+        XCTAssertTrue(el(app, "daySession-0-actual").label.contains("1 h 3 min"), "required: the recording is shown separately as recorded")
+        XCTAssertTrue(el(app, "daySession-0-previous").label.contains("Endurance"), "required: the previous comparable ride, with its date (\(el(app, "daySession-0-previous").label))")
+        let power = el(app, "daySession-0-metric-r-power"), hr = el(app, "daySession-0-metric-r-hr"), cadence = el(app, "daySession-0-metric-r-cadence"), duration = el(app, "daySession-0-metric-r-duration")
+        XCTAssertTrue(power.label.contains("Previous") && power.label.contains("W"), "required: power shows previous and current (\(power.label))")
+        XCTAssertEqual(power.value as? String, "better", "required: more power at no more heart rate is the favourable direction")
+        XCTAssertEqual(hr.value as? String, "same", "required: heart rate within two beats is unchanged")
+        XCTAssertTrue(["notComparable", "same"].contains(cadence.value as? String ?? ""), "required: cadence is shown and never judged better or worse")
+        XCTAssertEqual(duration.value as? String, "notComparable", "required: a longer ride is not called an improvement")
+        XCTAssertTrue(el(app, "daySession-0-analysis").label.hasPrefix("Compared with"), "required: the note is built from the comparison")
+        XCTAssertFalse(el(app, "daySession-0-metric-r-zone2").exists, "required: zones stay behind their disclosure")
+        press(app, "daySession-0-zonesToggle")
+        XCTAssertTrue(el(app, "daySession-0-metric-r-zone2").waitForExistence(timeout: 4), "required: time in zones opens on request")
+        press(app, "daySession-0-historyToggle")
+        let point = app.buttons["dayHistory0Point-0"].firstMatch
+        XCTAssertTrue(point.waitForExistence(timeout: 4), "required: the history graph has selectable points"); point.tap()
+        XCTAssertTrue(app.staticTexts["dayHistory0Tooltip"].waitForExistence(timeout: 4) && text(app, "dayHistory0Tooltip").contains("W"), "required: a point shows its date and measurement")
+        XCTAssertTrue(el(app, "daySession-0-historyOpen").exists, "required: and leads to its session")
+        toTop(app); captureFullPage(app, "day-3-cycling", steps: 9)
+        // the working controls: Results opens the recorded ride and returns
+        toTop(app); app.buttons["dayItem-0-action"].firstMatch.tap(); Thread.sleep(forTimeInterval: 1.2)
+        shot("day-9a-results")
+        if app.buttons["Done"].firstMatch.exists { app.buttons["Done"].firstMatch.tap() } else if app.buttons["Close"].firstMatch.exists { app.buttons["Close"].firstMatch.tap() } else { app.swipeDown(velocity: .fast) }
+        Thread.sleep(forTimeInterval: 0.8)
+        if !el(app, "homeDayDetail").exists { back(app) }
+        XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 6), "required: and returns to the Day page")
+        back(app)
+
+        // Wednesday: a planned strength session before it is done — prescription and previous, no verdict
+        openDay(app, 2)
+        XCTAssertTrue(el(app, "daySession-0-actual").label.contains("Not done yet"), "required: nothing is shown as recorded before the session is done")
+        XCTAssertTrue(el(app, "daySession-0-analysis").label.contains("Not done yet") , "required: the note says there is nothing to compare yet (\(el(app, "daySession-0-analysis").label))")
+        XCTAssertFalse(el(app, "daySession-0-tally").exists, "required: no result is counted for a session that is not done")
+        if el(app, "daySession-0-exercisesToggle").exists { press(app, "daySession-0-exercisesToggle") }
+        toTop(app); captureFullPage(app, "day-2-planned-strength", steps: 7)
+        back(app)
+
+        // Thursday: a free day, not a rest day; Sunday: a rest day
+        openDay(app, 3)
+        XCTAssertEqual(text(app, "dayEmptyTitle"), "Free day", "required: an unscheduled day is not called a rest day")
+        captureFullPage(app, "day-8-free-day", steps: 2); back(app)
+        openDay(app, 6)
+        XCTAssertEqual(text(app, "dayEmptyTitle"), "Rest day", "required: a rest day of the recurring week is a rest day")
+        back(app)
+
+        // last week, through the Consistency dashboard
+        _ = openConsistency(app)
+        pick(app, "consistency", 6)
+        app.buttons["consistencyMode-days"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.5)
+        func lastWeek(_ i: Int) {
+            toTop(app); pick(app, "consistency", i); press(app, "consistencyViewDetails")
+            XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 8), "required: the Day page of last week's day \(i)")
+        }
+        // Tuesday: a completed strength session with a favourable, an unfavourable and an unchanged exercise
+        lastWeek(1)
+        let tally = el(app, "daySession-0-tally").label
+        XCTAssertTrue(tally.contains("1 up") && tally.contains("1 down") && tally.contains("1 unchanged"), "required: the three results are counted separately (\(tally))")
+        XCTAssertFalse(el(app, "daySession-0-exercise-0").exists, "required: exercises stay behind their disclosure")
+        press(app, "daySession-0-exercisesToggle")
+        XCTAssertEqual(el(app, "daySession-0-exercise-0").value as? String, "better", "required: squat — heavier at the same reps")
+        XCTAssertEqual(el(app, "daySession-0-exercise-1").value as? String, "same", "required: row — unchanged")
+        XCTAssertEqual(el(app, "daySession-0-exercise-2").value as? String, "worse", "required: bench press — lighter")
+        press(app, "daySession-0-exercise-0")
+        XCTAssertTrue(el(app, "daySession-0-exercise-0-Volume").waitForExistence(timeout: 4) && el(app, "daySession-0-exercise-0-Topload").exists, "required: an exercise opens to sets, reps, load and volume")
+        toTop(app); captureFullPage(app, "day-1-strength-done", steps: 10)
+        back(app)
+        // Thursday: two different activities — strength done, the ride missed with Move
+        lastWeek(3)
+        XCTAssertTrue(el(app, "daySession-0").exists && el(app, "daySession-1").exists, "required: each activity has its own card")
+        XCTAssertEqual(text(app, "dayItem-1-status"), "Missed", "required: the missed ride is still marked missed")
+        XCTAssertTrue(el(app, "daySession-1-actual").label.contains("missed"), "required: and shows nothing as recorded")
+        captureFullPage(app, "day-4-two-activities", steps: 10)
+        back(app)
+        // Friday: a rest day with the health readings that exist
+        lastWeek(4)
+        XCTAssertTrue(el(app, "dayHealth-restingHR").label.contains("bpm") && el(app, "dayHealth-hrv").label.contains("ms"), "required: the day's stored readings, with units")
+        XCTAssertTrue(text(app, "dayHealthUncollected").contains("Steps, Water and Energy are not collected"), "required: measures that are not collected are named, never shown as zero")
+        captureFullPage(app, "day-6-rest-health", steps: 3)
+        back(app)
+
+        // Start on a session of a LATER day: what it does today, recorded as found
+        back(app)
+        openDay(app, 2)
+        app.buttons["dayItem-0-action"].firstMatch.tap(); Thread.sleep(forTimeInterval: 2)
+        shot("day-9b-start-future")
+        app.terminate()
+
+        // every session a first: no earlier record to compare
+        app = launchHistory("LAB_DEMO_DAY_FIRST")
+        openDay(app, 0)
+        XCTAssertTrue(el(app, "daySession-0-noPrevious").exists, "required: a first session says there is no previous record")
+        XCTAssertTrue(el(app, "daySession-0-analysis").label.hasPrefix("No earlier comparable ride is recorded"), "required: and the note compares nothing")
+        XCTAssertFalse(el(app, "daySession-0-historyToggle").exists, "required: no history graph without enough records")
+        captureFullPage(app, "day-5-first-ever", steps: 6)
+        app.terminate()
+
+        // the plain demo athlete has no health readings at all
+        app = launchHistory("LAB_NO_SCENARIO")
+        openDay(app, 1)
+        XCTAssertTrue(el(app, "dayHealthEmpty").waitForExistence(timeout: 6), "required: a day without readings says so")
+        XCTAssertFalse(el(app, "dayHealth-sleep").label.contains(" h"), "required: and shows no value")
+        captureFullPage(app, "day-7-no-health", steps: 6)
+    }
+
     /// Training Mix for three different athletes (owner, 24 Nov 2026): the page follows the roster. Each is the history
     /// athlete with a different roster; last week is chosen in each.
     func testTrainingMixAthletes() {

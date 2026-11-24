@@ -112,7 +112,7 @@ struct LabChrome: ViewModifier {
 /// records; the app's own planner, session builder and Coach rules produce what is shown. Nothing is drawn by hand,
 /// nothing is real, and choosing one only rewrites Lab's own folder at the next launch.
 enum LabScenario: String, CaseIterable, Identifiable {
-    case normal, supersets, proposal, cycling, consistency, recoveryPartial, mixHybrid, mixRunStrength, mixEnduranceOnly, newAthlete
+    case normal, supersets, proposal, cycling, consistency, recoveryPartial, mixHybrid, mixRunStrength, mixEnduranceOnly, dayReview, dayFirst, newAthlete
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -125,6 +125,8 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .mixHybrid: return "Mix · cycling and strength"
         case .mixRunStrength: return "Mix · running and strength"
         case .mixEnduranceOnly: return "Mix · endurance only"
+        case .dayReview: return "Day · comparisons"
+        case .dayFirst: return "Day · first sessions"
         case .newAthlete: return "New athlete"
         }
     }
@@ -139,6 +141,8 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .mixHybrid: return "The history athlete with road cycling and gym training only, and an endurance-led priority. Everything in the roster is recorded."
         case .mixRunStrength: return "The history athlete as a runner who lifts: strength sessions are recorded, running is in the roster but cannot be recorded yet."
         case .mixEnduranceOnly: return "The history athlete with road and gravel cycling only: no strength in the roster, plan or records."
+        case .dayReview: return "The history athlete with loads that change from session to session and rides that carry power and cadence, so the Day page has something to compare."
+        case .dayFirst: return "The same athlete with nothing recorded before this week: every session is a first, with no earlier record to compare."
         case .newAthlete: return "No athlete at all. Lab opens at onboarding."
         }
     }
@@ -201,6 +205,8 @@ enum LabDemoData {
         if env["LAB_DEMO_SUPERSETS"] == "1" { return .supersets }
         if env["LAB_DEMO_CONSISTENCY"] == "1" { return .consistency }
         if env["LAB_DEMO_RECOVERY_PARTIAL"] == "1" { return .recoveryPartial }
+        if env["LAB_DEMO_DAY"] == "1" { return .dayReview }
+        if env["LAB_DEMO_DAY_FIRST"] == "1" { return .dayFirst }
         if env["LAB_DEMO_MIX_HYBRID"] == "1" { return .mixHybrid }
         if env["LAB_DEMO_MIX_RUN_STRENGTH"] == "1" { return .mixRunStrength }
         if env["LAB_DEMO_MIX_ENDURANCE"] == "1" { return .mixEnduranceOnly }
@@ -270,7 +276,8 @@ enum LabDemoData {
         // "Consistency history": the seven weeks before this one carry a plan of their own (below), so the generic riding
         // and lifting history starts before them
         let mixOnly = scenario == .mixHybrid || scenario == .mixRunStrength || scenario == .mixEnduranceOnly
-        let rich = scenario == .consistency || scenario == .recoveryPartial || mixOnly
+        let dayOnly = scenario == .dayReview || scenario == .dayFirst
+        let rich = scenario == .consistency || scenario == .recoveryPartial || mixOnly || dayOnly
         let history = rich ? 7 : 0
         for k in history..<16 {
             let m = cal.date(byAdding: .day, value: -7 * (k + 1), to: monday)!
@@ -358,6 +365,28 @@ enum LabDemoData {
         if scenario == .mixRunStrength {
             roster(["running", "strength"]); profile["trainingMode"] = "strength"
             rides = []; plan = plan.filter { kind($0) == "strength" || kind($0) == "rest" }
+        }
+        // Day page athletes (owner, 24 Nov 2026, 22:42). SYNTHETIC Lab data only. The stored sessions are given figures that
+        // differ from one session to the next, so that a comparison has something to show: every lift's loads are set by its
+        // place in the history (squat a little heavier each time, row unchanged, bench press in a repeating pattern), and
+        // every ride gets an average power and cadence. Nothing is computed here — the app compares what is stored.
+        if dayOnly {
+            roster(["roadCycling", "strength"])
+            let order = strength.indices.filter { strength[$0]["exercises"] != nil }.sorted { (strength[$0]["date"] as? String ?? "") < (strength[$1]["date"] as? String ?? "") }
+            let bench: [Double] = [16, 18, 20]
+            for (i, k) in order.enumerated() {
+                let r = order.count - 1 - i                                 // 0 = the latest
+                strength[k]["exercises"] = [entry("ex-003", "Goblet squat", "squat", 10, max(10, 26 - Double(r))), entry("ex-088", "Dumbbell row", "pull", 10, 16),
+                                            entry("ex-059", "Dumbbell bench press", "push", 8, bench[r % 3])]
+            }
+            let rorder = rides.indices.sorted { (rides[$0]["start"] as? String ?? "") < (rides[$1]["start"] as? String ?? "") }
+            for (i, k) in rorder.enumerated() { rides[k]["avgPower"] = 150 + 2 * i; rides[k]["avgCadence"] = 85 + i % 4 }
+        }
+        if scenario == .dayFirst {
+            let cut = d(monday, 0)
+            rides = rides.filter { ($0["start"] as? String ?? "") >= cut }
+            strength = strength.filter { ($0["date"] as? String ?? "") >= cut }
+            plan = plan.filter { ($0["date"] as? String ?? "") >= cut }
         }
         if scenario == .mixEnduranceOnly {
             roster(["roadCycling", "gravel"]); profile["trainingMode"] = "cycling"

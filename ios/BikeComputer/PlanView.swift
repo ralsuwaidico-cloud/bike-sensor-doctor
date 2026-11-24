@@ -62,7 +62,10 @@ struct PlanView: View {
     @ViewBuilder private func planDestination(_ r: HomeRoute) -> some View {
         switch r {
         case .weekOverview(let d): HomeWeekOverviewView(weekOf: d, perform: perform, open: { path.append($0) })
-        case .day(let d): HomeDayDetailView(date: d, perform: perform, open: { path.append($0) })
+        case .day(let d):
+            // the proposed Daily Training Overview (owner, 24 Nov 2026) exists only in the redesigned app; production keeps its page
+            if CyProduct.redesign { DayOverviewView(date: d, perform: perform, open: { path.append($0) }) }
+            else { HomeDayDetailView(date: d, perform: perform, open: { path.append($0) }) }
         case .ride(let id): if let ride = store.rides.first(where: { $0.id == id }) { RideDetailView(ride: ride) }
         case .log(let id): if let st = store.strength.first(where: { $0.id == id }) { StrengthSessionDetail(session: st) }
         case .cycling: HomeCyclingSummaryView(perform: perform, open: { path.append($0) })
