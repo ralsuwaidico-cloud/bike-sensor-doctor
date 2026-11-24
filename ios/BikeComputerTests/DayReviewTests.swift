@@ -126,7 +126,7 @@ final class DayReviewTests: XCTestCase {
         XCTAssertEqual(short(ride(0, power: 175, hr: 146), ride(-7, power: 160, hr: 136)), "Power and heart rate moved the same way since Mon 26 Oct — not comparable.")
         XCTAssertEqual(short(ride(0, power: 230), ride(-7, power: 226)), "Heart rate was not measured in both rides — not comparable with Mon 26 Oct.")
         let barrier = DayReviewModel.rideBarrier(current: ride(0), previous: ride(-7), sameType: false, effortDelta: nil)
-        XCTAssertEqual(short(ride(0, power: 168, hr: 134), ride(-7, power: 160, hr: 136), barrier: barrier), "Not comparable with Mon 26 Oct: it was a different kind of ride.")
+        XCTAssertEqual(short(ride(0, power: 168, hr: 134), ride(-7, power: 160, hr: 136), barrier: barrier), "Not comparable with Mon 26 Oct: they were not the same planned session.")
         XCTAssertEqual(DayReviewModel.rideShort(current: ride(0), previous: nil, metrics: [], barrier: nil, calendar: cal), "First recorded ride of this kind — nothing to compare yet.")
     }
 

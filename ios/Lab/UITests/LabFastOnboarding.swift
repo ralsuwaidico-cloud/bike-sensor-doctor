@@ -1341,7 +1341,9 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(hr.value as? String, "same", "required: heart rate within two beats is unchanged")
         XCTAssertTrue(hr.label.contains("Similar"), "required: a small raw difference is called similar, not a change (\(hr.label))")
         XCTAssertTrue(el(app, "daySession-0-analysis").label.hasPrefix("More power at a similar or lower heart rate than"), "required: one short sentence built from the comparison (\(el(app, "daySession-0-analysis").label))")
-        XCTAssertTrue(el(app, "daySession-1-analysis").label.contains("eart rate was not measured in both rides"), "required: the second ride's note says what was not measured (\(el(app, "daySession-1-analysis").label))")
+        // Corrected after check 74: an unplanned ride is first of all not the same planned session as the ride beside it, and
+        // the card says that; the earlier expectation looked for the heart-rate sentence, which is the second reason.
+        XCTAssertTrue(el(app, "daySession-1-analysis").label.hasPrefix("Not comparable with") && el(app, "daySession-1-analysis").label.contains("not the same planned session"), "required: the second ride's note says why it is not compared (\(el(app, "daySession-1-analysis").label))")
         XCTAssertEqual(el(app, "daySession-1-metric-r-power").value as? String, "notComparable", "required: an unplanned ride set beside another ride is never coloured")
         XCTAssertTrue(el(app, "daySession-1-metric-r-power").label.contains("Not comparable"), "required: and its raw difference is not presented as a change (\(el(app, "daySession-1-metric-r-power").label))")
         XCTAssertEqual(app.buttons["dayItem-0-action"].firstMatch.label, "View results", "required: a recorded session keeps Results")
@@ -1423,7 +1425,7 @@ final class LabFastOnboarding: XCTestCase {
         // Friday: a rest day with the health readings that exist
         lastWeek(4)
         XCTAssertTrue(el(app, "dayHealth-restingHR").label.contains("bpm") && el(app, "dayHealth-hrv").label.contains("ms"), "required: the day's stored readings, with units")
-        XCTAssertTrue(text(app, "dayHealthUncollected").contains("Steps, Water and Energy: not collected yet"), "required: measures that are not collected are named, never shown as zero")
+        XCTAssertTrue(text(app, "dayHealthUncollected").contains("steps, water and energy: not collected yet"), "required: measures that are not collected are named, never shown as zero")
         captureFullPage(app, "day-6-rest-health", steps: 3)
         back(app)
 

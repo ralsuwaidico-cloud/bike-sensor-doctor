@@ -370,7 +370,7 @@ struct DayOverviewView: View {
                 HStack(alignment: .top, spacing: 8) {
                     ForEach(tiles) { r in healthTile(r) }
                 }
-                Text("Soreness: \(sore?.value ?? "not answered") · \(DayReviewModel.list(o.uncollected)): not collected yet")
+                Text("Soreness: \(sore?.value ?? "not answered") · \(DayReviewModel.list(o.uncollected).lowercased()): not collected yet")
                     .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("dayHealthUncollected")
             }

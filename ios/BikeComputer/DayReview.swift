@@ -288,7 +288,7 @@ enum DayReviewModel {
         let when = dateText(p.date, calendar: cal)
         guard c != nil else { return "Not done yet. Last comparable ride: \(when)." }
         if let b = barrier {
-            let why = b.contains("session type") ? "it was a different kind of ride" : b.contains("length") ? "the two rides differ too much in length" : "your reported effort was clearly different"
+            let why = b.contains("session type") ? "they were not the same planned session" : b.contains("length") ? "the two rides differ too much in length" : "your reported effort was clearly different"
             return "Not comparable with \(when): \(why)."
         }
         let pw = metrics.first { $0.id == "r-power" }, h = metrics.first { $0.id == "r-hr" }
