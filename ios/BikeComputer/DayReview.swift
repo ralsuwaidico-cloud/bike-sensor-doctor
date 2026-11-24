@@ -98,8 +98,10 @@ struct DaySessionReview: Equatable, Identifiable {
     /// 3 — session-level figures, then (strength) exercise by exercise.
     var metrics: [DayMetric]
     var exercises: [DayExercise]
-    /// 4 — fixed sentences built from the figures above.
+    /// 4 — fixed sentences built from the figures above (the full reasoning, shown under Details).
     var analysis: String
+    /// 4 — the one short sentence the card shows (owner, 25 Nov 2026: shorter explanation, no technical wording).
+    var short: String = ""
     var history: DayHistory?
     var completed: Bool { actualLine != nil }
 }
@@ -229,7 +231,7 @@ enum DayReviewModel {
                 // judged only when every shared exercise was itself comparable and none moved the other way
                 let vs = both.map(\.verdict)
                 let like = !vs.contains(.notComparable) && !(vs.contains(.better) && vs.contains(.worse))
-                m.append(DayMetric(id: "s-volume", name: "Volume, shared exercises", previous: WeightFmt.text(pv, u), current: WeightFmt.text(cv, u), change: signedKg(d, u),
+                m.append(DayMetric(id: "s-volume", name: "Volume", previous: WeightFmt.text(pv, u), current: WeightFmt.text(cv, u), change: signedKg(d, u),
                                    verdict: abs(d) <= volTol ? .same : !like ? .notComparable : d > 0 ? .better : .worse))
             }
         }
@@ -267,6 +269,41 @@ enum DayReviewModel {
             s.append(v.verdict == .same ? "Volume over the shared exercises was the same (\(b))." : "Volume over the shared exercises went from \(a) to \(b).")
         }
         return s.joined(separator: " ")
+    }
+
+    /// One short sentence for the card. Names what changed; states no figure the comparison rows do not show.
+    static func strengthShort(completed: Bool, previous: DayPrevious?, exercises: [DayExercise], calendar cal: Calendar) -> String {
+        guard let p = previous else { return completed ? "First recorded session with these exercises — nothing to compare yet." : "Not done yet. No earlier session to compare." }
+        guard completed else { return "Not done yet. Last comparable session: \(dateText(p.date, calendar: cal))." }
+        func names(_ v: DayVerdict) -> [String] { exercises.filter { $0.verdict == v && $0.current != nil && $0.previous != nil }.map { $0.name.lowercased() } }
+        var parts: [String] = []
+        if !names(.better).isEmpty { parts.append("\(list(names(.better))) up") }
+        if !names(.worse).isEmpty { parts.append("\(list(names(.worse))) down") }
+        if !names(.same).isEmpty { parts.append("\(list(names(.same))) unchanged") }
+        if !names(.notComparable).isEmpty { parts.append("\(list(names(.notComparable))) not comparable") }
+        return parts.isEmpty ? "None of these exercises was recorded on \(dateText(p.date, calendar: cal))." : "Since \(dateText(p.date, calendar: cal)): \(parts.joined(separator: ", "))."
+    }
+    static func rideShort(current c: RideRecord?, previous p: DayPrevious?, metrics: [DayMetric], barrier: String?, calendar cal: Calendar) -> String {
+        guard let p else { return c == nil ? "Not done yet. No earlier ride to compare." : "First recorded ride of this kind — nothing to compare yet." }
+        let when = dateText(p.date, calendar: cal)
+        guard c != nil else { return "Not done yet. Last comparable ride: \(when)." }
+        if let b = barrier {
+            let why = b.contains("session type") ? "it was a different kind of ride" : b.contains("length") ? "the two rides differ too much in length" : "your reported effort was clearly different"
+            return "Not comparable with \(when): \(why)."
+        }
+        let pw = metrics.first { $0.id == "r-power" }, h = metrics.first { $0.id == "r-hr" }
+        let hasP = pw?.previous != nil && pw?.current != nil, hasH = h?.previous != nil && h?.current != nil
+        guard hasP || hasH else { return "Only time and distance were recorded in both rides." }
+        guard hasP else { return "Power was not measured in both rides — not comparable with \(when)." }
+        guard hasH else { return "Heart rate was not measured in both rides — not comparable with \(when)." }
+        switch (pw!.verdict, h!.verdict) {
+        case (.better, _): return "More power at a similar or lower heart rate than \(when)."
+        case (_, .better): return "A lower heart rate at the same or more power than \(when)."
+        case (.worse, _): return "Less power at a similar or higher heart rate than \(when)."
+        case (_, .worse): return "A higher heart rate at the same or less power than \(when)."
+        case (.same, .same): return "Power and heart rate were about the same as \(when)."
+        default: return "Power and heart rate moved the same way since \(when) — not comparable."
+        }
     }
 
     // MARK: cycling
@@ -412,6 +449,7 @@ extension Store {
                     plannedLine: w.map { "\(Fmt.duration(minutes: $0.minutes)) · \($0.kind.subtitle)" }, actualLine: cur.map { HomeSummariesModel.rideLine($0, units: u) },
                     previous: dp, previousEmpty: "No earlier comparable ride is recorded.", metrics: metrics, exercises: [],
                     analysis: DayReviewModel.rideAnalysis(current: cur, previous: dp, metrics: metrics, barrier: barrier, calendar: cal), history: hist))
+                sessions[sessions.count - 1].short = DayReviewModel.rideShort(current: cur, previous: dp, metrics: metrics, barrier: barrier, calendar: cal)
             } else {
                 var cur: StrengthSession? = nil
                 if case .strength(let id) = item.record { cur = strength.first { $0.id == id } }
@@ -451,6 +489,7 @@ extension Store {
                     metrics: metrics, exercises: exercises,
                     analysis: ids.isEmpty ? "This session was recorded without exercise details, so sets, reps and load cannot be compared." : DayReviewModel.strengthAnalysis(completed: completed, previous: dp, exercises: exercises, metrics: metrics, calendar: cal),
                     history: hist))
+                sessions[sessions.count - 1].short = ids.isEmpty ? "Recorded without exercise details — nothing to compare." : DayReviewModel.strengthShort(completed: completed, previous: dp, exercises: exercises, calendar: cal)
             }
         }
         // a missed or skipped session was not "not done yet": it has no recording, and says so
@@ -462,6 +501,7 @@ extension Store {
                 if sessions[k].exercises[e].change == "Not done yet" { sessions[k].exercises[e].change = "Not recorded" }
                 for m in sessions[k].exercises[e].metrics.indices where sessions[k].exercises[e].metrics[m].change == "Not done yet" { sessions[k].exercises[e].metrics[m].change = "Not recorded" }
             }
+            sessions[k].short = "\(st) — nothing was recorded."
             sessions[k].analysis = "This session was \(st.lowercased()), so nothing was recorded to compare." + (sessions[k].previous.map { " The figures under Previous are from \(DayReviewModel.dateText($0.date, calendar: cal))." } ?? "")
         }
         // the recurring week beside this day — said only where the two differ, today and later

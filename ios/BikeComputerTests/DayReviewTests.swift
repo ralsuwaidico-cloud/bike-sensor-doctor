@@ -112,6 +112,24 @@ final class DayReviewTests: XCTestCase {
         XCTAssertTrue(said.contains("heart rate was not measured in both rides") && said.contains("+4 W") && !said.contains("neither"), said)
     }
 
+    func testTheCardsOneSentenceNamesWhatChangedAndClaimsNothingUnestablished() {
+        let prev = DayPrevious(date: at(-7), title: "", line: "", basis: "", record: .none)
+        func ex(_ name: String, _ kg: Double, _ before: Double, reps: Int = 10, was: Int = 10) -> DayExercise { DayReviewModel.exercise(planned: nil, current: entry(name, name, reps: reps, kg: kg), previous: entry(name, name, reps: was, kg: before), units: .metric) }
+        XCTAssertEqual(DayReviewModel.strengthShort(completed: true, previous: prev, exercises: [ex("Squat", 25, 24), ex("Press", 18, 20), ex("Row", 16, 16), ex("Curl", 12, 10, reps: 6)], calendar: cal),
+                       "Since Mon 26 Oct: squat up, press down, row unchanged, curl not comparable.")
+        XCTAssertEqual(DayReviewModel.strengthShort(completed: false, previous: prev, exercises: [], calendar: cal), "Not done yet. Last comparable session: Mon 26 Oct.")
+        XCTAssertEqual(DayReviewModel.strengthShort(completed: true, previous: nil, exercises: [], calendar: cal), "First recorded session with these exercises — nothing to compare yet.")
+        func short(_ c: RideRecord, _ p: RideRecord, barrier: String? = nil) -> String {
+            DayReviewModel.rideShort(current: c, previous: prev, metrics: DayReviewModel.rideMetrics(current: c, planned: nil, previous: p, comparable: barrier == nil, units: .metric), barrier: barrier, calendar: cal)
+        }
+        XCTAssertEqual(short(ride(0, power: 168, hr: 134), ride(-7, power: 160, hr: 136)), "More power at a similar or lower heart rate than Mon 26 Oct.")
+        XCTAssertEqual(short(ride(0, power: 175, hr: 146), ride(-7, power: 160, hr: 136)), "Power and heart rate moved the same way since Mon 26 Oct — not comparable.")
+        XCTAssertEqual(short(ride(0, power: 230), ride(-7, power: 226)), "Heart rate was not measured in both rides — not comparable with Mon 26 Oct.")
+        let barrier = DayReviewModel.rideBarrier(current: ride(0), previous: ride(-7), sameType: false, effortDelta: nil)
+        XCTAssertEqual(short(ride(0, power: 168, hr: 134), ride(-7, power: 160, hr: 136), barrier: barrier), "Not comparable with Mon 26 Oct: it was a different kind of ride.")
+        XCTAssertEqual(DayReviewModel.rideShort(current: ride(0), previous: nil, metrics: [], barrier: nil, calendar: cal), "First recorded ride of this kind — nothing to compare yet.")
+    }
+
     func testHealthRowsShowOnlyStoredReadingsAndNeverZero() {
         var l = RecoveryLog()
         l.entries = [RecoveryEntry(kind: .sleep, value: 7.4, date: at(0, 6), source: "Watch"), RecoveryEntry(kind: .hrv, value: 48, date: at(1, 6), source: "Watch")]

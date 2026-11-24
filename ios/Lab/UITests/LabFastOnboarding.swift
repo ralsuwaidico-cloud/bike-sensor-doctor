@@ -1328,32 +1328,37 @@ final class LabFastOnboarding: XCTestCase {
         }
         var app = launchHistory("LAB_DEMO_DAY")
 
-        // Monday: a completed planned ride beside the previous recorded endurance session, and an unplanned ride
+        // Monday: a completed planned ride beside the previous recorded endurance session, and an unplanned ride.
+        // Expectations follow the presentation refined on 25 Nov 2026 (owner, 01:41): the card shows the key results and one
+        // short sentence; every other figure, the zones and the reasoning are under Details, closed by default.
         openDay(app, 0)
         XCTAssertTrue(el(app, "daySession-0-planned").label.hasPrefix("Planned: 1 h"), "required: the prescription is shown as planned (\(el(app, "daySession-0-planned").label))")
         XCTAssertTrue(el(app, "daySession-0-actual").label.contains("1 h 3 min"), "required: the recording is shown separately as recorded")
         XCTAssertTrue(el(app, "daySession-0-previous").label.contains("Endurance"), "required: the previous comparable ride, with its date (\(el(app, "daySession-0-previous").label))")
-        let power = el(app, "daySession-0-metric-r-power"), hr = el(app, "daySession-0-metric-r-hr"), cadence = el(app, "daySession-0-metric-r-cadence"), duration = el(app, "daySession-0-metric-r-duration")
-        XCTAssertTrue(power.label.contains("Previous") && power.label.contains("W"), "required: power shows previous and current (\(power.label))")
+        let power = el(app, "daySession-0-metric-r-power"), hr = el(app, "daySession-0-metric-r-hr")
+        XCTAssertTrue(power.label.contains("→") && power.label.contains("W"), "required: power shows previous and current (\(power.label))")
         XCTAssertEqual(power.value as? String, "better", "required: more power at no more heart rate is the favourable direction")
         XCTAssertEqual(hr.value as? String, "same", "required: heart rate within two beats is unchanged")
-        XCTAssertTrue(["notComparable", "same"].contains(cadence.value as? String ?? ""), "required: cadence is shown and never judged better or worse")
-        XCTAssertEqual(duration.value as? String, "notComparable", "required: a longer ride is not called an improvement")
-        XCTAssertTrue(el(app, "daySession-0-analysis").label.hasPrefix("Compared with"), "required: the note is built from the comparison")
-        XCTAssertFalse(el(app, "daySession-0-metric-r-zone2").exists, "required: zones stay behind their disclosure")
-        press(app, "daySession-0-zonesToggle")
+        XCTAssertTrue(hr.label.contains("Similar"), "required: a small raw difference is called similar, not a change (\(hr.label))")
+        XCTAssertTrue(el(app, "daySession-0-analysis").label.hasPrefix("More power at a similar or lower heart rate than"), "required: one short sentence built from the comparison (\(el(app, "daySession-0-analysis").label))")
+        XCTAssertTrue(el(app, "daySession-1-analysis").label.contains("eart rate was not measured in both rides"), "required: the second ride's note says what was not measured (\(el(app, "daySession-1-analysis").label))")
+        XCTAssertEqual(el(app, "daySession-1-metric-r-power").value as? String, "notComparable", "required: an unplanned ride set beside another ride is never coloured")
+        XCTAssertTrue(el(app, "daySession-1-metric-r-power").label.contains("Not comparable"), "required: and its raw difference is not presented as a change (\(el(app, "daySession-1-metric-r-power").label))")
+        XCTAssertEqual(app.buttons["dayItem-0-action"].firstMatch.label, "View results", "required: a recorded session keeps Results")
+        XCTAssertFalse(el(app, "daySession-0-metric-r-zone2").exists || el(app, "daySession-0-metric-r-duration").exists || app.buttons["dayHistory0Point-0"].exists, "required: details and history are closed by default")
+        toTop(app); captureFullPage(app, "day-3-cycling", steps: 6)
+        // the drill-downs are all still there
+        toTop(app); press(app, "daySession-0-detailsToggle")
         XCTAssertTrue(el(app, "daySession-0-metric-r-zone2").waitForExistence(timeout: 4), "required: time in zones opens on request")
+        XCTAssertEqual(el(app, "daySession-0-metric-r-duration").value as? String, "notComparable", "required: a longer ride is not called an improvement")
+        XCTAssertTrue(["notComparable", "same"].contains(el(app, "daySession-0-metric-r-cadence").value as? String ?? ""), "required: cadence is shown and never judged better or worse")
+        XCTAssertTrue(el(app, "daySession-0-reasoning").label.hasPrefix("Compared with"), "required: the full reasoning is under Details")
         press(app, "daySession-0-historyToggle")
         let point = app.buttons["dayHistory0Point-0"].firstMatch
         XCTAssertTrue(point.waitForExistence(timeout: 4), "required: the history graph has selectable points"); point.tap()
         XCTAssertTrue(app.staticTexts["dayHistory0Tooltip"].waitForExistence(timeout: 4) && text(app, "dayHistory0Tooltip").contains("W"), "required: a point shows its date and measurement")
         XCTAssertTrue(el(app, "daySession-0-historyOpen").exists, "required: and leads to its session")
-        XCTAssertTrue(el(app, "daySession-1-analysis").label.contains("heart rate was not measured in both rides"), "required: the second ride's note says what was not measured (\(el(app, "daySession-1-analysis").label))")
-        XCTAssertEqual(el(app, "daySession-1-metric-r-power").value as? String, "notComparable", "required: an unplanned ride set beside another ride is never coloured")
-        // Corrected after check 72: the button SHOWS "Results" (seen in its screenshot) and is SPOKEN as "View results" —
-        // the label this reads. The first expectation compared the spoken label with the visible word.
-        XCTAssertEqual(app.buttons["dayItem-0-action"].firstMatch.label, "View results", "required: a recorded session keeps Results")
-        toTop(app); captureFullPage(app, "day-3-cycling", steps: 9)
+        toTop(app); captureFullPage(app, "day-3b-cycling-opened", steps: 9)
         // the working controls: Results opens the recorded ride and returns
         toTop(app); app.buttons["dayItem-0-action"].firstMatch.tap(); Thread.sleep(forTimeInterval: 1.2)
         shot("day-9a-results")
@@ -1367,10 +1372,10 @@ final class LabFastOnboarding: XCTestCase {
         openDay(app, 2)
         XCTAssertTrue(el(app, "daySession-0-actual").label.contains("Not done yet"), "required: nothing is shown as recorded before the session is done")
         XCTAssertTrue(el(app, "daySession-0-analysis").label.contains("Not done yet") , "required: the note says there is nothing to compare yet (\(el(app, "daySession-0-analysis").label))")
-        XCTAssertFalse(el(app, "daySession-0-tally").exists, "required: no result is counted for a session that is not done")
+        XCTAssertFalse(el(app, "daySession-0-result-0").exists, "required: no result is shown for a session that is not done")
+        XCTAssertTrue(el(app, "daySession-0-noChanges").exists, "required: the changes say they come once the session is recorded")
         XCTAssertEqual(app.buttons["dayItem-0-action"].firstMatch.label, "View workout", "required: a session of a later day is not offered as Start")
-        if el(app, "daySession-0-exercisesToggle").exists { press(app, "daySession-0-exercisesToggle") }
-        toTop(app); captureFullPage(app, "day-2-planned-strength", steps: 7)
+        toTop(app); captureFullPage(app, "day-2-planned-strength", steps: 5)
         back(app)
 
         // Thursday: a free day, not a rest day; Sunday: a rest day
@@ -1391,29 +1396,34 @@ final class LabFastOnboarding: XCTestCase {
         }
         // Tuesday: a completed strength session with a favourable, an unfavourable and an unchanged exercise
         lastWeek(1)
-        let tally = el(app, "daySession-0-tally").label
-        XCTAssertTrue(tally.contains("1 up") && tally.contains("1 down") && tally.contains("1 unchanged"), "required: the three results are counted separately (\(tally))")
-        XCTAssertFalse(el(app, "daySession-0-exercise-0").exists, "required: exercises stay behind their disclosure")
-        press(app, "daySession-0-exercisesToggle")
-        XCTAssertEqual(el(app, "daySession-0-exercise-0").value as? String, "better", "required: squat — heavier at the same reps")
-        XCTAssertEqual(el(app, "daySession-0-exercise-1").value as? String, "same", "required: row — unchanged")
-        XCTAssertEqual(el(app, "daySession-0-exercise-2").value as? String, "worse", "required: bench press — lighter")
+        XCTAssertEqual(el(app, "daySession-0-result-0").value as? String, "better", "required: squat — heavier at the same reps and sets")
+        XCTAssertEqual(el(app, "daySession-0-result-1").value as? String, "same", "required: row — unchanged")
+        XCTAssertEqual(el(app, "daySession-0-result-2").value as? String, "worse", "required: bench press — lighter at the same reps and sets")
+        XCTAssertTrue(el(app, "daySession-0-analysis").label.hasPrefix("Since "), "required: one short sentence (\(el(app, "daySession-0-analysis").label))")
+        XCTAssertFalse(el(app, "daySession-0-exercise-0").exists, "required: the exercise comparison is closed by default")
+        toTop(app); captureFullPage(app, "day-1-strength-done", steps: 6)
+        toTop(app); press(app, "daySession-0-detailsToggle")
+        XCTAssertEqual(el(app, "daySession-0-exercise-0").value as? String, "better"); XCTAssertEqual(el(app, "daySession-0-exercise-2").value as? String, "worse")
         press(app, "daySession-0-exercise-0")
         XCTAssertTrue(el(app, "daySession-0-exercise-0-Volume").waitForExistence(timeout: 4) && el(app, "daySession-0-exercise-0-Topload").exists, "required: an exercise opens to sets, reps, load and volume")
-        toTop(app); captureFullPage(app, "day-1-strength-done", steps: 10)
+        toTop(app); el(app, "daySession-0-previous").tap(); Thread.sleep(forTimeInterval: 1.2)
+        XCTAssertFalse(el(app, "homeDayDetail").exists, "required: the previous session opens its record")
+        back(app)
+        XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 6), "required: and returns to the day")
+        toTop(app); captureFullPage(app, "day-1b-strength-opened", steps: 9)
         back(app)
         // Thursday: two different activities — strength done, the ride missed with Move
         lastWeek(3)
         XCTAssertTrue(el(app, "daySession-0").exists && el(app, "daySession-1").exists, "required: each activity has its own card")
         XCTAssertEqual(text(app, "dayItem-1-status"), "Missed", "required: the missed ride is still marked missed")
         XCTAssertTrue(el(app, "daySession-1-actual").label.contains("missed"), "required: and shows nothing as recorded")
-        XCTAssertTrue(el(app, "daySession-1-analysis").label.hasPrefix("This session was missed"), "required: a missed session is not described as still to do (\(el(app, "daySession-1-analysis").label))")
+        XCTAssertTrue(el(app, "daySession-1-analysis").label.hasPrefix("Missed"), "required: a missed session is not described as still to do (\(el(app, "daySession-1-analysis").label))")
         captureFullPage(app, "day-4-two-activities", steps: 10)
         back(app)
         // Friday: a rest day with the health readings that exist
         lastWeek(4)
         XCTAssertTrue(el(app, "dayHealth-restingHR").label.contains("bpm") && el(app, "dayHealth-hrv").label.contains("ms"), "required: the day's stored readings, with units")
-        XCTAssertTrue(text(app, "dayHealthUncollected").contains("Steps, Water and Energy are not collected"), "required: measures that are not collected are named, never shown as zero")
+        XCTAssertTrue(text(app, "dayHealthUncollected").contains("Steps, Water and Energy: not collected yet"), "required: measures that are not collected are named, never shown as zero")
         captureFullPage(app, "day-6-rest-health", steps: 3)
         back(app)
 
@@ -1434,7 +1444,7 @@ final class LabFastOnboarding: XCTestCase {
         app = launchHistory("LAB_DEMO_DAY_FIRST")
         openDay(app, 0)
         XCTAssertTrue(el(app, "daySession-0-noPrevious").exists, "required: a first session says there is no previous record")
-        XCTAssertTrue(el(app, "daySession-0-analysis").label.hasPrefix("No earlier comparable ride is recorded"), "required: and the note compares nothing")
+        XCTAssertTrue(el(app, "daySession-0-analysis").label.hasPrefix("First recorded ride of this kind"), "required: and the note compares nothing")
         XCTAssertFalse(el(app, "daySession-0-historyToggle").exists, "required: no history graph without enough records")
         captureFullPage(app, "day-5-first-ever", steps: 6)
         app.terminate()

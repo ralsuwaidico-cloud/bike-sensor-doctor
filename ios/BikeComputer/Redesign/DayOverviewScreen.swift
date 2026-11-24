@@ -4,6 +4,9 @@ import SwiftUI
 // One calm card per session, in the owner's order: current workout · previous comparable workout · performance
 // comparison · Coach's note from the records · and, below all sessions, the day's health readings.
 // Detail is behind disclosures: exercises, time in zones and the history graph open on request.
+// PRESENTATION REFINED 25 Nov 2026 (owner, 01:41 — workflow approved, visual design pending): the card leads with the
+// few results that matter (one line per exercise, or power and heart rate), everything else is under one "Details"
+// disclosure that is closed by default, the Coach's explanation is one sentence, and health is one compact row.
 // Start, Results, Move and the session's own page work exactly as on the earlier Day page (same buttons, same actions,
 // same identifiers). This page reads records only — opening it never changes the plan.
 // Every figure comes from `DayOverview`; this file only draws it. Shown only in the redesigned app.
@@ -43,8 +46,6 @@ struct DayOverviewView: View {
                         .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true).padding(.horizontal, 2)
                         .accessibilityIdentifier("dayUnsupported")
                 }
-                Text("Opening this page never changes your plan. Move, skip or swap a session on the session itself.")
-                    .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true).padding(.horizontal, 2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 130)
@@ -98,7 +99,6 @@ struct DayOverviewView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("\(DayReviewModel.dateText(p.date)) · \(p.title)").font(CyFont.label).foregroundStyle(theme.textPrimary)
                                     Text(p.line).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                                    Text(p.basis).font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                                 }
                                 Spacer(minLength: 4)
                                 Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(theme.textTertiary).padding(.top, 3)
@@ -107,7 +107,7 @@ struct DayOverviewView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityElement(children: .combine)
-                        .accessibilityHint("Opens that recorded session")
+                        .accessibilityHint("\(p.basis). Opens that recorded session")
                         .accessibilityIdentifier("daySession-\(j)-previous")
                     } else {
                         Text(s.previousEmpty).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
@@ -115,12 +115,9 @@ struct DayOverviewView: View {
                     }
                 }
                 step("3", "Performance changes") { comparison(s, index: j) }
-                step("4", "Coach's explanation") {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("FROM YOUR RECORDS · NOT WRITTEN BY AN AI MODEL").font(CyFont.overline).foregroundStyle(theme.textTertiary)
-                        Text(s.analysis).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("daySession-\(j)-analysis")
-                    }
+                step("4", "Coach's explanation · from your records") {
+                    Text(s.short).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("daySession-\(j)-analysis")
                 }
                 if let h = s.history { history(h, s, index: j) }
             }
@@ -187,19 +184,15 @@ struct DayOverviewView: View {
         }
     }
 
-    /// A numbered step of the page's fixed order: 1 current · 2 previous · 3 changes · 4 explanation · 5 health.
+    /// A section of the card's fixed order: current · previous · changes · explanation. Plain labels, as on Home.
     private func stepTitle(_ n: String, _ title: String) -> some View {
-        HStack(spacing: 8) {
-            Text(n).font(.caption2.weight(.bold)).foregroundStyle(theme.background).frame(width: 18, height: 18).background(theme.textSecondary, in: Circle()).accessibilityHidden(true)
-            Text(title.uppercased()).font(CyFont.overline).foregroundStyle(theme.textSecondary)
-        }
-        .accessibilityElement(children: .ignore).accessibilityLabel("\(n). \(title)").accessibilityAddTraits(.isHeader)
+        Text(title.uppercased()).font(CyFont.overline).foregroundStyle(theme.textTertiary).accessibilityAddTraits(.isHeader)
     }
     private func step<C: View>(_ n: String, _ title: String, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Rectangle().fill(theme.cardStroke).frame(height: 1).accessibilityHidden(true)
             stepTitle(n, title)
-            content().padding(.leading, 26)
+            content()
         }
     }
     private func pair(_ name: String, _ value: String, id: String) -> some View {
@@ -213,41 +206,52 @@ struct DayOverviewView: View {
 
     // MARK: 3 — comparison
 
+    /// The few results that matter first; every other figure under one disclosure, closed by default.
     @ViewBuilder private func comparison(_ s: DaySessionReview, index j: Int) -> some View {
-        let main = s.metrics.filter { !$0.id.hasPrefix("r-zone") }, zones = s.metrics.filter { $0.id.hasPrefix("r-zone") }
+        let keyIds: Set<String> = ["s-volume", "r-power", "r-hr"]
+        let comparable = s.completed && s.previous != nil
+        let key = s.metrics.filter { keyIds.contains($0.id) && $0.previous != nil && $0.current != nil }
+        let rest = s.metrics.filter { m in !key.contains { $0.id == m.id } }
+        let results = comparable ? s.exercises.filter { $0.current != nil } : []
         VStack(alignment: .leading, spacing: 8) {
-            if s.sport == .strength && s.completed && s.previous != nil { tally(s, index: j) }
-            if s.metrics.isEmpty && s.exercises.isEmpty {
-                Text("No measurements to set side by side.").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+            if results.isEmpty && key.isEmpty {
+                Text(s.completed ? "Nothing to compare yet." : "Shown once this session is recorded.").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                    .accessibilityIdentifier("daySession-\(j)-noChanges")
             }
-            ForEach(main) { m in metricRow(m, id: "daySession-\(j)-metric-\(m.id)") }
-            if !s.exercises.isEmpty {
-                let key = "\(s.id)-exercises", isOpen = detailOpen.contains(key)
-                toggle("Exercise by exercise", "\(s.exercises.count) exercise\(s.exercises.count == 1 ? "" : "s") · sets, reps, load and volume", isOpen, id: "daySession-\(j)-exercisesToggle") { flip(key) }
-                if isOpen { ForEach(Array(s.exercises.enumerated()), id: \.element.id) { k, e in exerciseRow(e, session: s, id: "daySession-\(j)-exercise-\(k)") } }
-            }
-            if !zones.isEmpty {
-                let key = "\(s.id)-zones", isOpen = detailOpen.contains(key)
-                toggle("Time in zones", "Shown as recorded; not judged", isOpen, id: "daySession-\(j)-zonesToggle") { flip(key) }
-                if isOpen { ForEach(zones) { m in metricRow(m, id: "daySession-\(j)-metric-\(m.id)") } }
+            ForEach(Array(results.enumerated()), id: \.element.id) { k, e in resultRow(e.name, shortChange(e.change, e.verdict), e.verdict, id: "daySession-\(j)-result-\(k)") }
+            ForEach(key) { m in resultRow(m.name, keyText(m), m.verdict, id: "daySession-\(j)-metric-\(m.id)") }
+            if !rest.isEmpty || !s.exercises.isEmpty {
+                let dk = "\(s.id)-details", isOpen = detailOpen.contains(dk)
+                toggle("Details", s.exercises.isEmpty ? "All figures and time in zones" : "Exercise by exercise and all figures", isOpen, id: "daySession-\(j)-detailsToggle") { flip(dk) }
+                if isOpen {
+                    ForEach(Array(s.exercises.enumerated()), id: \.element.id) { k, e in exerciseRow(e, session: s, id: "daySession-\(j)-exercise-\(k)") }
+                    ForEach(rest) { m in metricRow(m, id: "daySession-\(j)-metric-\(m.id)") }
+                    Text(s.analysis).font(CyFont.caption).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("daySession-\(j)-reasoning")
+                }
             }
         }
     }
-    /// "1 up · 1 down · 1 unchanged" — colour, a symbol and a word each.
-    private func tally(_ s: DaySessionReview, index j: Int) -> some View {
-        let up = s.exercises.filter { $0.verdict == .better }.count, down = s.exercises.filter { $0.verdict == .worse }.count
-        let same = s.exercises.filter { $0.verdict == .same }.count, na = s.exercises.count - up - down - same
-        return HStack(spacing: 12) {
-            if up > 0 { chip("\(up) up", .better) }
-            if down > 0 { chip("\(down) down", .worse) }
-            if same > 0 { chip("\(same) unchanged", .same) }
-            if na > 0 { chip("\(na) not comparable", .notComparable) }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("daySession-\(j)-tally")
+    /// What the card shows for a change: a judged result keeps its figure; anything else is said plainly.
+    private func shortChange(_ change: String, _ v: DayVerdict) -> String {
+        if v == .same { return change == "No change" || change == "Unchanged" ? "Unchanged" : "Similar (\(change))" }
+        if v == .notComparable { return change.contains("not compar") ? "Not comparable" : change }
+        return change
     }
-    private func chip(_ text: String, _ v: DayVerdict) -> some View {
-        HStack(spacing: 4) { Image(systemName: symbol(v)).font(.caption2.weight(.bold)); Text(text).font(CyFont.caption) }.foregroundStyle(color(v))
+    /// A key figure: both values, then the change — or "Not comparable" where the difference proves nothing.
+    private func keyText(_ m: DayMetric) -> String { "\(m.previous ?? "—") → \(m.current ?? "—") · \(m.verdict == .notComparable ? "Not comparable" : shortChange(m.change, m.verdict))" }
+    /// One result on one line: a symbol and colour only where the change is established, then the name and the change.
+    private func resultRow(_ name: String, _ change: String, _ v: DayVerdict, id: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: symbol(v)).font(.caption.weight(.bold)).foregroundStyle(color(v)).frame(width: 16).accessibilityHidden(true)
+            Text(name).font(CyFont.label).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.85)
+            Spacer(minLength: 6)
+            Text(change).font(CyFont.footnote).foregroundStyle(v == .better || v == .worse ? color(v) : theme.textSecondary).multilineTextAlignment(.trailing).lineLimit(2).minimumScaleFactor(0.85)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(name): \(change)")
+        .accessibilityValue(v.rawValue)
+        .accessibilityIdentifier(id)
     }
     private func metricRow(_ m: DayMetric, id: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -313,7 +317,7 @@ struct DayOverviewView: View {
         let key = "\(s.id)-history", isOpen = detailOpen.contains(key), sel = historyPoint[s.id]
         VStack(alignment: .leading, spacing: 8) {
             Rectangle().fill(theme.cardStroke).frame(height: 1).accessibilityHidden(true)
-            toggle("Performance history", "\(h.title) · \(h.points.count) sessions", isOpen, id: "daySession-\(j)-historyToggle") { flip(key) }
+            toggle("History", h.title, isOpen, id: "daySession-\(j)-historyToggle") { flip(key) }
             if isOpen {
                 let f = DateFormatter(); let _ = f.dateFormat = "d"; let g = DateFormatter(); let _ = g.dateFormat = "MMM"
                 DashChart(prefix: "dayHistory\(j)", columns: h.points.map { p in
@@ -356,33 +360,34 @@ struct DayOverviewView: View {
     // MARK: health — below the workouts; only what is stored
 
     private func healthCard(_ o: DayOverview) -> some View {
-        DashCard {
+        let tiles = o.health.filter { $0.id != "soreness" }, sore = o.health.first { $0.id == "soreness" }
+        return DashCard {
             VStack(alignment: .leading, spacing: 10) {
                 stepTitle("5", "Daily health metrics")
                 if !o.hasHealth {
                     Text("No health readings for this day.").font(CyFont.footnote).foregroundStyle(theme.textSecondary).accessibilityIdentifier("dayHealthEmpty")
                 }
-                ForEach(o.health) { r in
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Image(systemName: r.icon).font(.footnote).foregroundStyle(theme.textSecondary).frame(width: 20).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(r.name).font(CyFont.label).foregroundStyle(theme.textPrimary)
-                            Text(r.detail).font(CyFont.caption).foregroundStyle(theme.textSecondary)
-                        }
-                        Spacer(minLength: 6)
-                        Text(r.value ?? "—").font(r.value == nil ? CyFont.footnote : CyFont.metricSmall).foregroundStyle(r.value == nil ? theme.textTertiary : theme.textPrimary)
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(r.name): \(r.value ?? "no reading"). \(r.detail)")
-                    .accessibilityIdentifier("dayHealth-\(r.id)")
+                HStack(alignment: .top, spacing: 8) {
+                    ForEach(tiles) { r in healthTile(r) }
                 }
-                Text("\(DayReviewModel.list(o.uncollected)) are not collected by Cyclift yet. No health score is calculated.")
+                Text("Soreness: \(sore?.value ?? "not answered") · \(DayReviewModel.list(o.uncollected)): not collected yet")
                     .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("dayHealthUncollected")
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("dayHealth")
+    }
+    private func healthTile(_ r: DayHealthRow) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(r.value ?? "—").font(CyFont.metricSmall).foregroundStyle(r.value == nil ? theme.textTertiary : theme.textPrimary).lineLimit(1).minimumScaleFactor(0.7)
+            Text(r.id == "restingHR" ? "Resting HR" : r.name).font(CyFont.caption).foregroundStyle(theme.textSecondary).lineLimit(1)
+            if r.value == nil { Text(r.detail).font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(r.name): \(r.value ?? "no reading"). \(r.detail)")
+        .accessibilityIdentifier("dayHealth-\(r.id)")
     }
 
     private func openRecord(_ r: HomeDayItem.Record) {
