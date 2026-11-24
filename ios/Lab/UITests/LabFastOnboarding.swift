@@ -1348,6 +1348,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(point.waitForExistence(timeout: 4), "required: the history graph has selectable points"); point.tap()
         XCTAssertTrue(app.staticTexts["dayHistory0Tooltip"].waitForExistence(timeout: 4) && text(app, "dayHistory0Tooltip").contains("W"), "required: a point shows its date and measurement")
         XCTAssertTrue(el(app, "daySession-0-historyOpen").exists, "required: and leads to its session")
+        XCTAssertTrue(el(app, "daySession-1-analysis").label.contains("heart rate was not measured in both rides"), "required: the second ride's note says what was not measured (\(el(app, "daySession-1-analysis").label))")
         toTop(app); captureFullPage(app, "day-3-cycling", steps: 9)
         // the working controls: Results opens the recorded ride and returns
         toTop(app); app.buttons["dayItem-0-action"].firstMatch.tap(); Thread.sleep(forTimeInterval: 1.2)
@@ -1401,6 +1402,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(el(app, "daySession-0").exists && el(app, "daySession-1").exists, "required: each activity has its own card")
         XCTAssertEqual(text(app, "dayItem-1-status"), "Missed", "required: the missed ride is still marked missed")
         XCTAssertTrue(el(app, "daySession-1-actual").label.contains("missed"), "required: and shows nothing as recorded")
+        XCTAssertTrue(el(app, "daySession-1-analysis").label.hasPrefix("This session was missed"), "required: a missed session is not described as still to do (\(el(app, "daySession-1-analysis").label))")
         captureFullPage(app, "day-4-two-activities", steps: 10)
         back(app)
         // Friday: a rest day with the health readings that exist

@@ -81,6 +81,11 @@ final class DayReviewTests: XCTestCase {
         let prev = DayPrevious(date: at(-7), title: "Endurance", line: "", basis: "", record: .none)
         XCTAssertTrue(DayReviewModel.rideAnalysis(current: ride(0, hr: 130), previous: prev, metrics: noPower, calendar: cal).contains("Heart rate alone does not show whether the ride went better"))
         XCTAssertTrue(DayReviewModel.rideAnalysis(current: ride(0), previous: nil, metrics: [], calendar: cal).hasPrefix("No earlier comparable ride is recorded"))
+        // power in both rides but no heart rate (found in check 70, where the note wrongly said neither was measured)
+        let noHR = m(ride(0, power: 230), ride(-7, power: 226))
+        XCTAssertEqual(verdict(noHR, "r-power"), .notComparable)
+        let said = DayReviewModel.rideAnalysis(current: ride(0, power: 230), previous: prev, metrics: noHR, calendar: cal)
+        XCTAssertTrue(said.contains("heart rate was not measured in both rides") && said.contains("+4 W") && !said.contains("neither"), said)
     }
 
     func testHealthRowsShowOnlyStoredReadingsAndNeverZero() {

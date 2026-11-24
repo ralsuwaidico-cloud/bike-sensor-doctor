@@ -313,6 +313,8 @@ enum DayReviewModel {
             }
         } else if let h = hr, h.previous != nil, h.current != nil {
             s += "power was not measured in both rides, so only time, distance and heart rate can be set side by side. Heart rate alone does not show whether the ride went better."
+        } else if let pw = power, pw.previous != nil, pw.current != nil {
+            s += "heart rate was not measured in both rides, so the change in average power (\(pw.change)) cannot be called better or worse."
         } else {
             s += "neither power nor heart rate was measured in both rides, so only time and distance can be set side by side."
         }
@@ -419,6 +421,17 @@ extension Store {
                     analysis: ids.isEmpty ? "This session was recorded without exercise details, so sets, reps and load cannot be compared." : DayReviewModel.strengthAnalysis(completed: completed, previous: dp, exercises: exercises, metrics: metrics, calendar: cal),
                     history: hist))
             }
+        }
+        // a missed or skipped session was not "not done yet": it has no recording, and says so
+        for k in sessions.indices {
+            let st = sessions[k].item.statusText
+            guard st == "Missed" || st == "Skipped" else { continue }
+            for m in sessions[k].metrics.indices where sessions[k].metrics[m].change == "Not done yet" { sessions[k].metrics[m].change = "Not recorded" }
+            for e in sessions[k].exercises.indices {
+                if sessions[k].exercises[e].change == "Not done yet" { sessions[k].exercises[e].change = "Not recorded" }
+                for m in sessions[k].exercises[e].metrics.indices where sessions[k].exercises[e].metrics[m].change == "Not done yet" { sessions[k].exercises[e].metrics[m].change = "Not recorded" }
+            }
+            sessions[k].analysis = "This session was \(st.lowercased()), so nothing was recorded to compare." + (sessions[k].previous.map { " The figures under Previous are from \(DayReviewModel.dateText($0.date, calendar: cal))." } ?? "")
         }
         // the recurring week beside this day — said only where the two differ, today and later
         let isPast = day < today
