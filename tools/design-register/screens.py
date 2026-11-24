@@ -104,9 +104,9 @@ WORKFLOW_RULES = [
 # (item, state, where it is tracked) — tracked separately; none of these blocks the design register, and none is implied to work by an approved screen
 OUTSTANDING = [
     ("Planning and recording for additional sports", "NOT BUILT. Running, swimming, walking and hiking, mobility and recovery, bodyweight and calisthenics are selectable, schedulable and saved only. "
+     "Discipline-specific cycling is planned as general cycling.", "Approved product direction table above; Screen 3."),
     ("Multisport recording for Training Mix", "NOT BUILT — tracked separately from the approved Training Mix design (owner, 24 Nov 2026, 18:29), which it must not delay or reverse. Needed before a type can show time for these activities: a recorder or import, and planned sessions, for running, swimming, bodyweight and calisthenics, mobility, walking and hiking; a colour and graph segment for each further training type; a classification decision for walking and hiking.", "Screen 11 (APP-03)."),
     ("Training-load method", "NOT DEFINED — tracked separately. Training Mix shows recorded time and completed sessions only. No training load is shown and none is compared across sports. An approved load method per sport, and a separately approved way to compare sports, are required before any load figure appears. No formula has been invented.", "Screen 11 (APP-03)."),
-     "Discipline-specific cycling is planned as general cycling.", "Approved product direction table above; Screen 3."),
     ("WHOOP and Garmin integrations", "NOT BUILT. Shown as 'Coming soon' with no action.", "Screen 6."),
     ("Cyclift Watch and BikeComputer", "IN DEVELOPMENT, separately gated. Not shown in onboarding. Hardware and firmware unverified.", "Hardware workstream."),
     ("Athlete Evolution assessment and verification policy", "NOT ACTIVATED. Proposed policy specification with six items awaiting approval; verification thresholds and any lowering policy separately gated.",
