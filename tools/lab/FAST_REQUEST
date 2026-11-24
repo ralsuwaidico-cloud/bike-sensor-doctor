@@ -1,2 +1,2 @@
-LabFastOnboarding/testTrainingMixDashboard LabFastOnboarding/testTrainingMixAthletes LabFastOnboarding/testDashboardsWithNoData
-Check 68: Training Mix by training type, graph key corrected (code fea2b8c7)
+LabFastOnboarding/testCaptureHomeCalendarDays
+Check 69: capture only — Day pages opened from the Home weekly calendar (code fa92903c; app code unchanged since fea2b8c7)
