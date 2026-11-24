@@ -1,2 +1,2 @@
-LabFastOnboarding/testRecoveryDashboard LabFastOnboarding/testRecoveryDashboardPartialData LabFastOnboarding/testDashboardsWithNoData
-Check 64: Recovery dashboard and the no-data states (check 63 was cancelled before it started: its commit could not compile)
+LabFastOnboarding/testRecoveryDashboard LabFastOnboarding/testTrainingMixDashboard LabFastOnboarding/testRecoveryDashboardPartialData LabFastOnboarding/testDashboardsWithNoData
+Check 65: Training Mix and Recovery targeted refinements
