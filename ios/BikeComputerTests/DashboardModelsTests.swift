@@ -17,8 +17,9 @@ final class DashboardModelsTests: XCTestCase {
 
     func testTrainingMixIsRecordedTimeBySportAndAgreesWithTheHomeRing() {
         var marked = Workout(date: at(-5), kind: .endurance, minutes: 60); marked.completion = .marked; marked.manualMinutes = 50
+        var skipped = Workout(date: at(-3), kind: .tempo, minutes: 60); skipped.skipped = true
         let plan = [Workout(date: at(-7), kind: .endurance, minutes: 60), Workout(date: at(-6), kind: .strength, minutes: 40, strengthFocus: .fullBody), marked,
-                    Workout(date: at(-4, 7), kind: .strength, minutes: 40, strengthFocus: .fullBody), Workout(date: at(-4, 17), kind: .endurance, minutes: 45, sequence: 1)]
+                    Workout(date: at(-4, 7), kind: .strength, minutes: 40, strengthFocus: .fullBody), Workout(date: at(-4, 17), kind: .endurance, minutes: 45, sequence: 1), skipped]
         let rides = [ride(-7, minutes: 58), ride(-1, minutes: 35)]
         let logs = [StrengthSession(date: at(-6, 18), minutes: 42, focus: .fullBody), StrengthSession(date: at(-4, 18), minutes: 38, focus: .fullBody)]
         let i = input(plan, rides: rides, logs: logs, roster: ["roadCycling", "indoorCycling", "strength", "running"])
@@ -34,12 +35,19 @@ final class DashboardModelsTests: XCTestCase {
         XCTAssertEqual(d.days[3].strength, 38); XCTAssertEqual(d.days[3].cycling, 0); XCTAssertEqual(d.days[3].plannedCycling, 45)
         XCTAssertEqual(d.days[4].kind, .empty); XCTAssertEqual(d.days[4].tooltip, ["No recorded training · Fri"])
         XCTAssertTrue(TrainingMixModel.dayInsight(day: d.days[3], calendar: cal).contains("Planned and not recorded"))
+        // the planned-time line of each period is that period's own planned, not skipped, sessions (owner, 24 Nov 2026)
+        XCTAssertEqual(d.days.map(\.planned), [60, 40, 60, 85, 0, 0, 0], "Friday's skipped ride plans nothing; Thursday's two sessions add up")
+        XCTAssertEqual(d.days.map(\.planned).reduce(0, +), w.planned, "the days add up to the week")
+        XCTAssertTrue(d.days[3].spoken.hasSuffix("1 h 25 min planned") && d.days[4].spoken.hasSuffix("nothing planned"))
+        XCTAssertEqual(d.weeks[7].planned, 0); XCTAssertEqual(d.weeks[5].planned, 0, "a week without a plan has no planned line")
         // sports: two cycling activities share one row; running is never 0 %
         XCTAssertEqual(d.sports.map(\.id), ["cycling", "strength", "running"])
         XCTAssertEqual(d.sports[0].share, 64); XCTAssertEqual(d.sports[1].share, 36)
         XCTAssertFalse(d.sports[2].tracked); XCTAssertNil(d.sports[2].share); XCTAssertEqual(d.sports[2].value, "Not recorded yet")
-        XCTAssertTrue(d.weekInsight.contains("Cycling accounted for most of your recorded training in this week (64%)"), d.weekInsight)
-        XCTAssertTrue(d.weekInsight.contains("does not record it yet"), d.weekInsight)
+        // Changed 24 Nov 2026 on the owner's instruction: the Coach note is a short interpretation and no longer repeats the
+        // graph's figures or the roster note (the sport rows say which sports are not recorded).
+        XCTAssertEqual(d.weekInsight, "Cycling made up most of your recorded training in this week. That is less than was planned.")
+        XCTAssertNil(d.weekInsight.rangeOfCharacter(from: .decimalDigits), "no figure of the graph is repeated")
         XCTAssertFalse(d.weekInsight.lowercased().contains("balance") || d.weekInsight.lowercased().contains("overtrain"), "no balance is judged")
         // the unplanned Sunday ride is listed with its duration, outside the plan
         XCTAssertEqual(w.sessions.last?.detail, "35 min · not in the plan")
@@ -51,7 +59,7 @@ final class DashboardModelsTests: XCTestCase {
         XCTAssertFalse(d.hasRecords)
         XCTAssertTrue(d.weeks.allSatisfy { $0.kind == .empty && $0.total == 0 })
         XCTAssertEqual(d.sports.map(\.tracked), [false], "a runner sees no cycling or strength row")
-        XCTAssertTrue(d.weekInsight.hasPrefix("No training is recorded yet this week."), d.weekInsight)
+        XCTAssertEqual(d.weekInsight, "Nothing is recorded yet this week.")
         XCTAssertEqual(d.days.map(\.kind), [.empty, .empty, .empty, .empty, .upcoming, .upcoming, .upcoming])
     }
 
@@ -69,9 +77,9 @@ final class DashboardModelsTests: XCTestCase {
         let l = log(rows)
         let sleep = RecoveryDashModel.build(log: l, enabled: [.sleep, .restingHR, .hrv], metric: .sleep, selectedWeek: 6, now: now, calendar: cal)
         XCTAssertEqual(sleep.week.reading.count, 5); XCTAssertEqual(sleep.week.reading.value ?? 0, 7.24, accuracy: 0.001)
-        XCTAssertEqual(sleep.week.tooltip.last, "5 of 7 nights")
+        XCTAssertEqual(sleep.week.tooltip.count, 1, "one line, placed like the Consistency label"); XCTAssertTrue(sleep.week.tooltip[0].hasPrefix("Avg 7 h 14 min · "), sleep.week.tooltip[0])
         XCTAssertEqual(sleep.days.map(\.kind), [.value, .value, .value, .noReading, .value, .value, .noReading])
-        XCTAssertEqual(sleep.days[0].tooltip.first, "7 h · Mon"); XCTAssertTrue(sleep.days[0].tooltip.last?.hasPrefix("Watch · ") ?? false, "the source and the time of the reading")
+        XCTAssertEqual(sleep.days[0].tooltip, ["7 h · Mon"]); XCTAssertEqual(sleep.days[0].reading.source, "Watch", "the source stays with the reading, for the card")
         XCTAssertNil(sleep.days[3].reading.value, "a day without a reading has none, never a zero")
         XCTAssertEqual(sleep.days[0].all.map { $0.value != nil }, [true, true, false], "the card lists all three, HRV as no reading")
         let scale = RecoveryDashboard.scale(sleep.days)!
@@ -82,6 +90,12 @@ final class DashboardModelsTests: XCTestCase {
         // rows: sleep has a latest value and a source; HRV says no reading; nothing is a score
         XCTAssertEqual(sleep.rows.map { $0.latest != nil }, [true, true, false])
         XCTAssertTrue(sleep.rows[0].source.contains("Watch")); XCTAssertEqual(sleep.rows[2].status, "No reading yet")
+        // "your usual range" only with the real personal baseline: at least 7 earlier readings in the 28 days before the latest
+        XCTAssertTrue(sleep.rows[0].trend.contains("your usual range · ") && sleep.rows[0].trend.hasSuffix("from 7 nights"), sleep.rows[0].trend)
+        XCTAssertEqual(sleep.rows[1].trend, "No usual range yet · 2 of the 7 earlier readings needed")
+        XCTAssertFalse(sleep.rows[1].trend.contains("your usual range"), "no range is invented for two earlier readings")
+        XCTAssertEqual(sleep.rows[2].trend, "No reading")
+        XCTAssertEqual(sleep.rows.map { $0.latestDate != nil }, [true, true, false], "the header can date each latest reading")
         XCTAssertFalse(sleep.rows.contains { ($0.latest ?? "").contains("%") }, "no recovery percentage")
         // summaries
         XCTAssertTrue(sleep.weekInsight.contains("averaged") && sleep.weekInsight.contains("5 nights"), sleep.weekInsight)

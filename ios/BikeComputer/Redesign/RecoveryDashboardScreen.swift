@@ -50,9 +50,10 @@ struct RecoveryDashboardView: View {
     // MARK: compact summary — the latest reading of each indicator that exists; no score
 
     private func summary(_ d: RecoveryDashboard) -> some View {
+        // The header holds the LATEST reading of each indicator, each with the day it was taken (owner, 24 Nov 2026). It
+        // does not follow the chosen week: averages and the chosen period are in the graph and the inspection card, so a
+        // current value and a historical one are never shown together unnamed.
         VStack(alignment: .leading, spacing: 6) {
-            Text(d.periodTitle).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
-                .accessibilityIdentifier("recPeriod")
             Text(d.hasAny ? "Latest readings" : "No recovery measurements")
                 .font(CyFont.title).foregroundStyle(theme.textPrimary)
                 .accessibilityIdentifier("recSummaryLine")
@@ -63,6 +64,9 @@ struct RecoveryDashboardView: View {
                             Text(r.name).font(CyFont.caption).foregroundStyle(theme.textSecondary)
                             Text(r.latest ?? "No reading").font(r.latest != nil ? CyFont.metricSmall : CyFont.caption)
                                 .foregroundStyle(r.latest != nil ? theme.textPrimary : theme.textTertiary).lineLimit(1).minimumScaleFactor(0.7)
+                            if r.latest != nil {
+                                Text(r.latestDay).font(CyFont.caption).foregroundStyle(theme.textTertiary).lineLimit(1).minimumScaleFactor(0.7)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityElement(children: .combine)

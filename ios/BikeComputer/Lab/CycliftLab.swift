@@ -132,7 +132,7 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .proposal: return "The same athlete has a routine today that the Coach's rules suggest increasing. It waits for a decision."
         case .cycling: return "Today's planned session is a ride. The ride screen is a simulation: no sensor, no GPS, nothing saved."
         case .consistency: return "A multisport athlete with seven earlier planned weeks: some complete, some with missed sessions. Running and swimming are in the roster but not tracked. Eight weeks of sleep, resting heart rate and HRV demo readings."
-        case .recoveryPartial: return "The same athlete with sleep readings only, for the last ten days, and no resting heart rate or HRV."
+        case .recoveryPartial: return "The same athlete with sleep readings only, for the last week, and no resting heart rate or HRV."
         case .newAthlete: return "No athlete at all. Lab opens at onboarding."
         }
     }
@@ -346,14 +346,14 @@ enum LabDemoData {
         var out = file
         // Recovery demo readings (synthetic, source "Demo data"): one value a day from fixed tables, with regular gaps so a
         // day without a reading can be seen. "Consistency history" has eight weeks of sleep, resting heart rate and HRV;
-        // "Recovery · one source" has ten days of sleep only. The other scenarios have none. Lab reads nothing from Health.
+        // "Recovery · one source" has one week of sleep only (six readings — too few for a usual range). The other scenarios have none. Lab reads nothing from Health.
         if rich {
             let sleep: [Double] = [7.4, 6.9, 7.8, 7.1, 6.5, 8.0, 7.3, 7.6, 6.8, 7.2, 7.9, 6.6, 7.0, 7.5]
             let rhr: [Double] = [52, 51, 53, 50, 54, 52, 55, 51, 53, 52]
             let hrv: [Double] = [61, 58, 66, 63, 55, 70, 60, 64, 57, 62, 68]
             var entries: [[String: Any]] = []
             let full = scenario == .consistency
-            for back in stride(from: full ? 55 : 9, through: 0, by: -1) {
+            for back in stride(from: full ? 55 : 6, through: 0, by: -1) {
                 let day = cal.date(byAdding: .day, value: -back, to: today)!
                 if back % 9 != 4 { entries.append(["kind": "sleep", "value": sleep[back % sleep.count], "date": d(day, 6.6), "source": "Demo data"]) }
                 if full, back % 6 != 3 { entries.append(["kind": "restingHR", "value": rhr[back % rhr.count], "date": d(day, 7.1), "source": "Demo data"]) }

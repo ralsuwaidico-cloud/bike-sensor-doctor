@@ -76,11 +76,13 @@ struct MixPoint: Equatable, Identifiable {
         case .upcoming: return "\(title) — upcoming"
         }
     }
+    /// What the planned-time line of this period stands at, in words.
+    var plannedText: String { planned > 0 ? "\(Fmt.duration(minutes: planned)) planned" : "nothing planned" }
     var spoken: String {
         switch kind {
-        case .recorded: return "\(title), \(Fmt.duration(minutes: total)) recorded, \(distribution)"
-        case .empty: return "\(title), no recorded training"
-        case .upcoming: return "\(title), upcoming"
+        case .recorded: return "\(title), \(Fmt.duration(minutes: total)) recorded, \(distribution), \(plannedText)"
+        case .empty: return "\(title), no recorded training, \(plannedText)"
+        case .upcoming: return "\(title), upcoming, \(plannedText)"
         }
     }
 }
@@ -211,30 +213,27 @@ enum TrainingMixModel {
         return "\(list) \(names.count == 1 ? "is" : "are") in your roster, but Cyclift does not record \(names.count == 1 ? "it" : "them") yet, so \(names.count == 1 ? "it is" : "they are") not part of this mix."
     }
 
+    /// Short on purpose (owner, 24 Nov 2026): what the distribution amounts to and how it stands against the plan, in
+    /// words — the figures themselves are on the graph, the label and the card beside it.
     static func weekInsight(week w: MixPoint, previous: MixPoint?, current: Bool, rows: [MixSportRow]) -> String {
-        var s: [String] = []
         let when = current ? "so far this week" : "in this week"
-        if w.total == 0 {
-            s.append(current ? "No training is recorded yet this week." : "No training is recorded in this week.")
-            if w.planned > 0 { s.append("\(Fmt.duration(minutes: w.planned)) \(current ? "is" : "was") planned.") }
-        } else {
-            if w.cycling > 0 && w.strength > 0 {
-                if w.cycling == w.strength { s.append("Cycling and strength took equal recorded time \(when).") }
-                else {
-                    let lead = w.cycling > w.strength ? ("Cycling", w.cycling) : ("Strength", w.strength)
-                    s.append("\(lead.0) accounted for most of your recorded training \(when) (\(MixPoint.percent(lead.1, of: w.total))%).")
-                }
-            } else {
-                s.append("All of your recorded training \(when) was \(w.cycling > 0 ? "cycling" : "strength").")
-            }
-            if w.planned > 0 { s.append("You recorded \(Fmt.duration(minutes: w.total)) against \(Fmt.duration(minutes: w.planned)) planned\(current ? " for the whole week" : "").") }
-            if !current, let p = previous, p.total > 0 {
-                s.append(w.total > p.total ? "That is more recorded time than the week before (\(Fmt.duration(minutes: p.total)))."
-                         : w.total < p.total ? "That is less recorded time than the week before (\(Fmt.duration(minutes: p.total)))."
-                         : "That is the same recorded time as the week before.")
-            }
+        guard w.total > 0 else {
+            if current { return w.planned > 0 ? "Nothing is recorded yet this week; your planned sessions are still to come." : "Nothing is recorded yet this week." }
+            return w.planned > 0 ? "Nothing was recorded in this week, although sessions were planned." : "Nothing was recorded or planned in this week."
         }
-        if let u = untracked(rows) { s.append(u) }
+        var s: [String] = []
+        if w.cycling > 0 && w.strength > 0 {
+            s.append(w.cycling == w.strength ? "Cycling and strength took equal recorded time \(when)."
+                     : "\(w.cycling > w.strength ? "Cycling" : "Strength") made up most of your recorded training \(when).")
+        } else {
+            s.append("All of your recorded training \(when) was \(w.cycling > 0 ? "cycling" : "strength").")
+        }
+        if current { if w.planned > 0 { s.append("The week is still in progress.") } }
+        else if w.planned > 0 {
+            // "about" when within five minutes of the plan: small differences in a recording are not a shortfall
+            let diff = w.total - w.planned
+            s.append(abs(diff) <= 5 ? "That is about what was planned." : diff < 0 ? "That is less than was planned." : "That is more than was planned.")
+        } else { s.append("None of it was planned.") }
         return s.joined(separator: " ")
     }
 
@@ -243,17 +242,14 @@ enum TrainingMixModel {
         var s: [String] = []
         switch p.kind {
         case .recorded:
-            var parts: [String] = []
-            if p.cycling > 0 { parts.append("cycling \(Fmt.duration(minutes: p.cycling))") }
-            if p.strength > 0 { parts.append("strength \(Fmt.duration(minutes: p.strength))") }
-            s.append("On \(name) you recorded \(Fmt.duration(minutes: p.total)): \(parts.joined(separator: " and ")).")
+            s.append(p.cycling > 0 && p.strength > 0 ? "On \(name) you recorded both cycling and strength." : "On \(name) you recorded \(p.cycling > 0 ? "cycling" : "strength") only.")
         case .empty:
             s.append(p.inProgress ? "Nothing is recorded yet today." : "Nothing is recorded on \(name).")
         case .upcoming:
-            s.append(p.planned > 0 ? "\(Fmt.duration(minutes: p.planned)) is planned for \(name). Nothing is recorded yet." : "Nothing is planned or recorded for \(name).")
+            s.append(p.planned > 0 ? "\(name)'s planned training is still to come." : "Nothing is planned or recorded for \(name).")
         }
-        let open = p.sessions.filter { $0.base.state == .missed }
-        if !open.isEmpty { s.append("Planned and not recorded: \(open.map { "\($0.base.title) (\(Fmt.duration(minutes: $0.planned ?? 0)))" }.joined(separator: ", ")).") }
+        let open = p.sessions.filter { $0.base.state == .missed }.map(\.base.title)
+        if !open.isEmpty { s.append("Planned and not recorded: \(open.joined(separator: ", ")).") }
         return s.joined(separator: " ")
     }
 }
@@ -291,12 +287,13 @@ struct RecoveryPoint: Equatable, Identifiable {
     var all: [RecoveryReading]
     static func unit(_ k: HealthSample.Kind, _ n: Int) -> String { k == .sleep ? (n == 1 ? "night" : "nights") : (n == 1 ? "day" : "days") }
     static func time(_ d: Date?) -> String { guard let d else { return "" }; let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: d) }
-    /// "7 h 20 min · Thu" then "Demo data · 06:40"; a week: "Avg 7 h 10 min · 16 Nov" then "5 of 7 nights".
+    /// One line, the size of the Consistency Dashboard's label, so that it is placed by the same rule and stays beside its
+    /// point (owner, 24 Nov 2026): "7 h 20 min · Thu"; a week: "Avg 7 h 10 min · 16 Nov". The source, the time and the
+    /// number of readings are in the inspection card directly below the graph.
     var tooltip: [String] {
         switch kind {
         case .value:
-            if isWeek { return ["Avg \(reading.text) · \(short)", "\(reading.count) of 7 \(RecoveryPoint.unit(reading.kind, 7))"] }
-            return ["\(reading.text) · \(short)", [reading.source ?? "Apple Health", RecoveryPoint.time(reading.date)].filter { !$0.isEmpty }.joined(separator: " · ")]
+            return [isWeek ? "Avg \(reading.text) · \(short)" : "\(reading.text) · \(short)"]
         case .noReading: return ["No reading · \(short)"]
         case .upcoming: return ["Upcoming · \(short)"]
         }
@@ -322,7 +319,11 @@ struct RecoveryRow: Equatable, Identifiable {
     var name: String
     var icon: String
     var latest: String?
-    /// "Inside your usual range (7.1–8.2 h)" / "No usual range yet" / "No reading"
+    /// When the latest reading was taken; nil when there is none.
+    var latestDate: Date?
+    /// "Inside your usual range · 7.1–8.2 h from 24 nights" / "No usual range yet · 3 of the 7 readings needed" / "No reading".
+    /// The words "your usual range" appear ONLY when the existing personal baseline exists: at least 7 of the athlete's
+    /// own readings in the 28 days before the latest one.
     var trend: String
     /// "Apple Watch · Sat 7 Nov, 07:12 · fresh" / "No reading"
     var source: String
@@ -333,6 +334,8 @@ struct RecoveryRow: Equatable, Identifiable {
     var enabled: Bool
     var id: String { kind.rawValue }
     var status: String { latest ?? (enabled ? "No reading yet" : "Not connected") }
+    /// "Mon 23 Nov" — the day of the latest reading, for the header.
+    var latestDay: String { guard let d = latestDate else { return "" }; let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f.string(from: d) }
     var spoken: String { latest.map { "\(name), latest \($0), \(trend), \(source)" } ?? "\(name), \(status)" }
 }
 
@@ -408,18 +411,23 @@ enum RecoveryDashModel {
         let rows: [RecoveryRow] = RecoveryDashboard.kinds.map { k in
             let m = RecoveryAnalysis.metric(k, log: log, now: now, calendar: cal)
             let trend: String
-            if m.latest == nil { trend = "No reading" }
-            else if let b = m.baseline {
-                let r = RecoveryAnalysis.rangeText(k, b)
-                switch m.standing {
-                case .typical: trend = "Inside your usual range (\(r))"
-                case .lower: trend = "Below your usual range (\(r))"
-                case .higher: trend = "Above your usual range (\(r))"
-                case .noBaseline: trend = "No usual range yet"
+            if let l = m.latest {
+                if let b = m.baseline, m.standing != .noBaseline {
+                    let basis = "\(RecoveryAnalysis.rangeText(k, b)) from \(b.records) \(RecoveryPoint.unit(k, b.records))"
+                    switch m.standing {
+                    case .lower: trend = "Below your usual range · \(basis)"
+                    case .higher: trend = "Above your usual range · \(basis)"
+                    default: trend = "Inside your usual range · \(basis)"
+                    }
+                } else {
+                    // no baseline: say so, with how many of the athlete's own readings exist — never a made-up range
+                    let from = cal.date(byAdding: .day, value: -RecoveryAnalysis.baselineDays, to: cal.startOfDay(for: l.date)) ?? l.date
+                    let have = log.entries(k).filter { $0.date >= from && $0.id != l.id }.count
+                    trend = "No usual range yet · \(have) of the \(RecoveryAnalysis.minBaselineRecords) earlier readings needed"
                 }
-            } else { trend = "No usual range yet" }
+            } else { trend = "No reading" }
             return RecoveryRow(kind: k, name: RecoveryDashboard.name(k), icon: RecoveryDashboard.icon(k), latest: m.latest.map { RecoveryAnalysis.valueText(k, $0.value) },
-                               trend: trend, source: m.sourceLine, availability: m.series.map { $0 != nil },
+                               latestDate: m.latest?.date, trend: trend, source: m.sourceLine, availability: m.series.map { $0 != nil },
                                recent: Array(log.entries(k).sorted { $0.date > $1.date }.prefix(7)), enabled: enabled.contains(k))
         }
         return RecoveryDashboard(metric: metric, weeks: weeks, selectedWeek: sel, days: days, rows: rows,

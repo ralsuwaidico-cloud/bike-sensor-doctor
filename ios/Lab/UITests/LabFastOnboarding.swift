@@ -1139,6 +1139,11 @@ final class LabFastOnboarding: XCTestCase {
         }
         return (t.label, d.exists ? d.label : "")
     }
+    /// The floating label sits beside its point — above, below, or to a side — never sent to the top of the chart.
+    private func anchored(_ app: XCUIApplication, _ prefix: String, _ what: String) {
+        let side = app.staticTexts["\(prefix)Tooltip"].firstMatch.value as? String ?? ""
+        XCTAssertTrue(["above", "below", "left", "right"].contains(side), "required: the label is anchored to its point at \(what) (placed: \(side))")
+    }
     private func pick(_ app: XCUIApplication, _ prefix: String, _ i: Int) { app.buttons["\(prefix)Point-\(i)"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.35) }
     private func launchHistory(_ extra: String? = nil) -> XCUIApplication {
         let app = XCUIApplication(); app.launchEnvironment["LAB_THEME"] = "obsidian"; app.launchEnvironment["LAB_FRESH_DEMO"] = "1"
@@ -1171,6 +1176,9 @@ final class LabFastOnboarding: XCTestCase {
             let t = tip(app, "mix", at: i, "week \(i)")
             XCTAssertTrue(t.0.contains(" · "), "required: the label names its period (\(t.0))")
             if i < 7 { XCTAssertTrue(t.0.contains("h") && t.1.contains("Cycling") && t.1.contains("Strength"), "required: week \(i) shows its recorded time and distribution (\(t))") }
+            // the planned-time line of each week is that week's own plan: five sessions (5 h 20 min), and last week 5 h 5 min
+            // because its Wednesday ride was skipped and Thursday held a 45-minute ride (owner, 24 Nov 2026)
+            if i < 7 { let l = app.buttons["mixPoint-\(i)"].firstMatch.label; XCTAssertTrue(l.hasSuffix(i == 6 ? "5 h 5 min planned" : "5 h 20 min planned"), "required: week \(i)'s planned time (\(l))") }
         }
         pick(app, "mix", 6)
         let t = tip(app, "mix", at: 6, "last week")
@@ -1181,8 +1189,11 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(text(app, "mixInspectionCycling").contains("3 h 28 min recorded") && text(app, "mixInspectionCycling").contains("3 h 45 min planned"), "required: cycling recorded and planned")
         XCTAssertTrue(text(app, "mixInspectionStrength").contains("1 h 24 min recorded") && text(app, "mixInspectionStrength").contains("1 h 20 min planned"), "required: strength recorded and planned")
         let coach = el(app, "mixInsight").label
-        XCTAssertTrue(coach.contains("Cycling accounted for most of your recorded training in this week (71%)") && coach != first, "required: the one summary follows the chosen week (\(coach))")
-        XCTAssertTrue(coach.contains("does not record them yet"), "required: and says the other roster sports are not recorded")
+        // Changed 24 Nov 2026 on the owner's instruction: the Coach note is now a short interpretation. It no longer repeats
+        // the graph's figures ("71%", the recorded and planned times) or the roster note — the rows below say which sports
+        // are not recorded, and that is still asserted there.
+        XCTAssertTrue(coach.hasSuffix("Cycling made up most of your recorded training in this week. That is less than was planned.") && coach != first, "required: the one summary follows the chosen week, briefly (\(coach))")
+        XCTAssertNil(coach.rangeOfCharacter(from: .decimalDigits), "required: the note repeats no figure of the graph (\(coach))")
         XCTAssertFalse(coach.lowercased().contains("overtrain") || coach.lowercased().contains("ideal"), "no balance is judged")
         captureFullPage(app, "mix-1-weeks-selected", steps: 6); toTop(app)
         pick(app, "mix", 6)
@@ -1200,13 +1211,16 @@ final class LabFastOnboarding: XCTestCase {
             pick(app, "mix", i)
             let d = tip(app, "mix", at: i, "day \(i)")
             XCTAssertTrue(d.0.hasPrefix(a) && d.1 == b, "required: day \(i) says \(a) / \(b) (\(d))")
+            let planned = ["1 h planned", "40 min planned", "nothing planned", "1 h 25 min planned", "nothing planned", "2 h planned", "nothing planned"][i]
+            let l = app.buttons["mixPoint-\(i)"].firstMatch.label
+            XCTAssertTrue(l.hasSuffix(planned), "required: day \(i)'s planned-time line stands at its own planned sessions: \(planned) (\(l))")
         }
         pick(app, "mix", 3)
         XCTAssertTrue(text(app, "mixInspectionTitle").contains("Thursday"), "required: the card is Thursday's")
         XCTAssertTrue(text(app, "mixInspectionStrength").contains("42 min recorded"), "required: Thursday's strength time")
         XCTAssertTrue(text(app, "mixInspectionCycling").contains("nothing recorded") && text(app, "mixInspectionCycling").contains("45 min planned"), "required: Thursday's planned ride has nothing recorded")
         let day = el(app, "mixInsight").label
-        XCTAssertTrue(day.contains("On Thursday you recorded 42 min") && day.contains("Planned and not recorded"), "required: the summary follows the chosen day (\(day))")
+        XCTAssertTrue(day.hasSuffix("On Thursday you recorded strength only. Planned and not recorded: Endurance."), "required: the summary follows the chosen day, briefly (\(day))")
         captureFullPage(app, "mix-2-days-selected", steps: 6); toTop(app)
         press(app, "mixViewDetails")
         XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 8), "required: View Thursday opens the existing day page")
@@ -1241,15 +1255,24 @@ final class LabFastOnboarding: XCTestCase {
         let app = launchHistory()
         let ring = openCircle(app, "indicatorRecovery", page: "recoveryDashboard", title: "Recovery")
         XCTAssertEqual(text(app, "recSummaryLine"), "Latest readings")
-        for k in ["sleep", "restingHR", "hrv"] { XCTAssertFalse(el(app, "recSummary-\(k)").label.contains("%"), "required: no percentage in the header (\(k))") }
+        XCTAssertFalse(app.staticTexts["recPeriod"].exists, "required: the header of latest readings names no chosen week")
+        for k in ["sleep", "restingHR", "hrv"] {
+            let l = el(app, "recSummary-\(k)").label
+            XCTAssertFalse(l.contains("%"), "required: no percentage in the header (\(k))")
+            XCTAssertNotNil(l.range(of: #"[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}"#, options: .regularExpression), "required: the latest \(k) reading is dated in the header (\(l))")
+        }
+        let header = el(app, "recSummary-sleep").label
         XCTAssertTrue(el(app, "recSummary-restingHR").label.contains("bpm") && el(app, "recSummary-hrv").label.contains("ms"), "required: each latest reading with its unit")
         let first = el(app, "recInsight").label
         XCTAssertTrue(first.contains("sleep"), "required: the summary is about the chosen metric (\(first))")
         for i in 0..<8 {
             pick(app, "rec", i)
             let t = tip(app, "rec", at: i, "week \(i)")
-            XCTAssertTrue(t.0.hasPrefix("Avg ") && t.0.contains(" h") && t.1.contains("of 7 nights") && !t.0.contains("%"), "required: week \(i) shows the average of its readings and how many (\(t))")
+            XCTAssertTrue(t.0.hasPrefix("Avg ") && t.0.contains(" h") && t.1.isEmpty && !t.0.contains("%"), "required: week \(i) shows the average on one line (\(t))")
+            anchored(app, "rec", "sleep, week \(i)")
         }
+        XCTAssertEqual(el(app, "recSummary-sleep").label, header, "required: choosing a week does not change the header of latest readings")
+        XCTAssertTrue(el(app, "recInspection-sleep").label.contains("of 7 nights"), "required: how many readings the average rests on is in the card")
         pick(app, "rec", 6)
         let week = el(app, "recInsight").label
         XCTAssertTrue(week.contains("averaged") && week != first, "required: the one summary follows the chosen week (\(week))")
@@ -1264,27 +1287,31 @@ final class LabFastOnboarding: XCTestCase {
         for i in 0..<7 {
             pick(app, "rec", i)
             let t = tip(app, "rec", at: i, "day \(i)")
-            if t.0.hasPrefix("No reading") { XCTAssertEqual(t.1, "", "a day without a reading shows no value") }
-            else { readings += 1; chosen = i; XCTAssertTrue(t.0.contains(" h") && t.1.hasPrefix("Demo data · "), "required: day \(i) shows the value, its source and time (\(t))") }
+            anchored(app, "rec", "sleep, day \(i)")
+            if t.0.hasPrefix("No reading") { XCTAssertFalse(t.0.contains(" h "), "a day without a reading shows no value") }
+            else { readings += 1; chosen = i; XCTAssertTrue(t.0.contains(" h") && t.1.isEmpty, "required: day \(i) shows the value and the day on one line (\(t))") }
         }
         XCTAssertGreaterThanOrEqual(readings, 5, "the demo week holds at least five sleep readings")
         // Corrected after check 62: when the last day pressed in the loop was itself a day with a reading, pressing it
         // again here cleared the selection (the approved behaviour), and the assertions below then read the week's text.
         // The app was right; the check now presses the day only when it is not already the chosen one.
-        if !app.staticTexts["recTooltip"].exists || !tip(app, "rec", at: chosen, "the chosen day").1.hasPrefix("Demo data") { pick(app, "rec", chosen) }
-        if !app.staticTexts["recTooltip"].exists { pick(app, "rec", chosen) }
+        if chosen != 6 { pick(app, "rec", chosen) }
         XCTAssertTrue(el(app, "recInsight").label.contains("your recorded sleep was"), "required: the summary follows the chosen day")
-        XCTAssertTrue(el(app, "recInspection-sleep").label.contains("Demo data"), "required: the card names the source")
+        XCTAssertNotNil(el(app, "recInspection-sleep").label.range(of: #"Demo data · \d\d:\d\d"#, options: .regularExpression), "required: the card names the source and the time of the reading")
         captureFullPage(app, "rec-2-days-selected", steps: 6); toTop(app)
         // each metric on its own scale and unit
         app.buttons["recMetric-restingHR"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
         XCTAssertTrue(text(app, "recGraphCaption").contains("bpm"), "required: resting heart rate is drawn in bpm")
         app.buttons["recMode-weeks"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        for i in 0..<8 { pick(app, "rec", i); _ = tip(app, "rec", at: i, "resting HR, week \(i)"); anchored(app, "rec", "resting HR, week \(i)") }
         pick(app, "rec", 5)
         XCTAssertTrue(tip(app, "rec", at: 5, "resting HR, week 5").0.contains("bpm"), "required: the label is in bpm")
         XCTAssertTrue(el(app, "recInsight").label.contains("resting heart rate"), "required: the summary follows the chosen metric")
         app.buttons["recMetric-hrv"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
         XCTAssertTrue(tip(app, "rec", at: 5, "HRV, week 5").0.contains("ms"), "required: HRV is in ms")
+        anchored(app, "rec", "HRV, week 5")
+        for i in [0, 3, 7] { pick(app, "rec", i); _ = tip(app, "rec", at: i, "HRV, week \(i)"); anchored(app, "rec", "HRV, week \(i)") }
+        pick(app, "rec", 5)
         app.buttons["recMetric-sleep"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
         press(app, "recViewDetails")
         XCTAssertTrue(el(app, "homeRecoveryPage").waitForExistence(timeout: 8), "required: View recovery details opens the existing Recovery page")
@@ -1294,6 +1321,7 @@ final class LabFastOnboarding: XCTestCase {
         for k in ["sleep", "restingHR", "hrv"] {
             let l = el(app, "recRow-\(k)").label
             XCTAssertTrue(l.contains("latest") && l.contains("Demo data") && !l.contains("%"), "required: the \(k) row shows its latest reading and source, no score (\(l))")
+            XCTAssertNotNil(l.range(of: #"your usual range · .+ from \d+ (nights|days)"#, options: .regularExpression), "required: the usual range is stated with the readings it rests on (\(l))")
         }
         press(app, "recRow-sleep")
         XCTAssertTrue(text(app, "recRowReading-0").contains("Demo data"), "required: the expanded row lists real readings with their source")
@@ -1328,7 +1356,9 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(text(app, "recEmpty").contains("No HRV readings yet"), "required: a metric without data shows a truthful empty state")
         XCTAssertTrue(el(app, "recInsight").label.contains("There are no HRV readings yet"), "required: and the summary says so")
         XCTAssertTrue(el(app, "recRow-hrv").label.contains("Not connected"), "required: HRV is not claimed to be connected")
-        XCTAssertTrue(el(app, "recRow-sleep").label.contains("Demo data"), "required: sleep names its one source")
+        let sleepRow = el(app, "recRow-sleep").label
+        XCTAssertTrue(sleepRow.contains("Demo data"), "required: sleep names its one source")
+        XCTAssertTrue(sleepRow.contains("No usual range yet") && !sleepRow.contains("your usual range"), "required: with too few readings no usual range is stated (\(sleepRow))")
     }
 
     /// An athlete with nothing recorded and no readings (a runner with goals saved and no plan): both dashboards say so,
@@ -1353,7 +1383,7 @@ final class LabFastOnboarding: XCTestCase {
         let t = tip(app, "mix", at: 7, "this week, nothing recorded")
         XCTAssertTrue(t.0.hasPrefix("Nothing recorded yet") && t.1.isEmpty, "required: the label says nothing is recorded, no figure (\(t))")
         pick(app, "mix", 7)
-        XCTAssertTrue(el(app, "mixInsight").label.contains("No training is recorded yet this week"), "required: the summary says so")
+        XCTAssertTrue(el(app, "mixInsight").label.hasSuffix("Nothing is recorded yet this week."), "required: the summary says so")
         captureFullPage(app, "mix-5-no-records", steps: 4); toTop(app)
         app.navigationBars.buttons.firstMatch.tap()
         _ = openCircle(app, "indicatorRecovery", page: "recoveryDashboard", title: "Recovery")

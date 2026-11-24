@@ -42,17 +42,19 @@ struct DashChart<Marks: View>: View {
     var onDrag: (Int) -> Void
     @ViewBuilder var marks: (DashGeo) -> Marks
 
-    static var plotHeight: CGFloat { 192 }
-    /// Room kept clear above the scale's top line for the floating label: two lines in the strip, or one label above the
-    /// highest point.
-    private var topInset: CGFloat { placement == .topStrip ? 54 : 46 }
-    private static var bottomInset: CGFloat { 10 }
+    /// Room kept clear for the floating label. A bar chart keeps a strip above its tallest bar for a two-line label.
+    /// A line chart (`.rule`, the approved Consistency placement) keeps one label's height clear above the scale's top
+    /// AND below its bottom, so that "above the point, otherwise below it" always has somewhere to go and the label
+    /// stays beside its point (owner, 24 Nov 2026).
+    private var plotHeight: CGFloat { placement == .topStrip ? 192 : 212 }
+    private var topInset: CGFloat { placement == .topStrip ? 54 : 40 }
+    private var bottomInset: CGFloat { placement == .topStrip ? 10 : 40 }
 
     var body: some View {
         VStack(spacing: 4) {
             GeometryReader { g in
                 let n = max(columns.count, 1)
-                let geo = DashGeo(left: left, cw: (g.size.width - left) / CGFloat(n), width: g.size.width, height: g.size.height, top: topInset, bottom: Self.bottomInset)
+                let geo = DashGeo(left: left, cw: (g.size.width - left) / CGFloat(n), width: g.size.width, height: g.size.height, top: topInset, bottom: bottomInset)
                 ZStack(alignment: .topLeading) {
                     ForEach(0..<3, id: \.self) { k in
                         let f = 1 - Double(k) / 2
@@ -85,9 +87,10 @@ struct DashChart<Marks: View>: View {
                     }
                     .padding(.leading, left)
                     if let i = selected, let c = columns.first(where: { $0.id == i }) {
-                        let box = tipBox(c, geo)
+                        let placed = tipBox(c, geo)
+                        let box = placed.box
                         let half = max(20, min(CGFloat(box.x), geo.width - CGFloat(box.x)))
-                        tooltip(c)
+                        tooltip(c, side: placed.side)
                             .frame(width: half * 2, height: CGFloat(box.h), alignment: .center)
                             .offset(x: CGFloat(box.x) - half, y: CGFloat(box.y - box.h / 2))
                             .allowsHitTesting(false)
@@ -100,7 +103,7 @@ struct DashChart<Marks: View>: View {
                     if selected != columns[i].id { onDrag(columns[i].id) }
                 })
             }
-            .frame(height: Self.plotHeight)
+            .frame(height: plotHeight)
             HStack(spacing: 0) {
                 ForEach(columns) { c in
                     VStack(spacing: 0) {
@@ -117,7 +120,7 @@ struct DashChart<Marks: View>: View {
 
     /// Where the floating label goes. Its width is estimated only to choose the place; it is then laid out in a box that
     /// cannot leave the chart (the Consistency Dashboard's rule, checks 59–61).
-    private func tipBox(_ c: DashColumn, _ geo: DashGeo) -> ConsistencyTooltip.Box {
+    private func tipBox(_ c: DashColumn, _ geo: DashGeo) -> (box: ConsistencyTooltip.Box, side: String) {
         let lines = c.tip.filter { !$0.isEmpty }
         let h: Double = lines.count > 1 ? 42 : 26
         let w = Double(lines.map(\.count).max() ?? 8) * 6.9 + 22
@@ -125,16 +128,20 @@ struct DashChart<Marks: View>: View {
         func py(_ col: DashColumn) -> Double { Double(col.anchor.map(geo.y) ?? geo.base - 2) }
         switch placement {
         case .topStrip:
-            return .init(x: min(max(px, w / 2 + 2), max(w / 2 + 2, W - w / 2 - 2)), y: h / 2 + 1, w: w, h: h)
+            return (ConsistencyTooltip.Box(x: min(max(px, w / 2 + 2), max(w / 2 + 2, W - w / 2 - 2)), y: h / 2 + 1, w: w, h: h), "strip")
         case .rule:
             let others = columns.filter { $0.id != c.id }.map { (Double(geo.x($0.id)), py($0)) }
-            return ConsistencyTooltip.place(px: px, py: py(c), w: w, h: h, width: W, height: Double(geo.height), others: others).box
+            let p = ConsistencyTooltip.place(px: px, py: py(c), w: w, h: h, width: W, height: Double(geo.height), others: others)
+            return (p.box, p.side.rawValue)
         }
     }
-    private func tooltip(_ c: DashColumn) -> some View {
+    /// `side` — where the label sits relative to its point ("above", "below", "right", "left", "top", or "strip") — is
+    /// given as the label's accessibility value, so a check can tell an anchored label from one sent to the top.
+    private func tooltip(_ c: DashColumn, side: String) -> some View {
         let lines = c.tip.filter { !$0.isEmpty }
         return VStack(spacing: 1) {
             Text(lines.first ?? "").font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(theme.textPrimary)
+                .accessibilityValue(side)
                 .accessibilityIdentifier("\(prefix)Tooltip")
             if lines.count > 1 {
                 Text(lines[1]).font(.system(size: 10.5, weight: .medium)).foregroundStyle(theme.textSecondary)
