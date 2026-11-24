@@ -1187,7 +1187,9 @@ final class LabFastOnboarding: XCTestCase {
             pick(app, "mix", i)
             let t = tip(app, "mix", at: i, "week \(i)")
             XCTAssertTrue(t.0.contains(" · "), "required: the label names its period (\(t.0))")
-            if i < 7 { XCTAssertTrue(t.0.contains("h") && t.1.contains("Cycling") && t.1.contains("Strength"), "required: week \(i) shows its recorded time and distribution (\(t))") }
+            // Changed 24 Nov 2026 (15:18) on the owner's instruction: the page opens by TRAINING TYPE, so the distribution
+            // names Endurance and Strength; "Cycling" is the wording of the Individual sports view, asserted further down.
+            if i < 7 { XCTAssertTrue(t.0.contains("h") && t.1.contains("Endurance") && t.1.contains("Strength"), "required: week \(i) shows its recorded time and distribution (\(t))") }
             // the planned-time line of each week is that week's own plan: five sessions (5 h 20 min), and last week 5 h 5 min
             // because its Wednesday ride was skipped and Thursday held a 45-minute ride (owner, 24 Nov 2026)
             if i < 7 { let l = app.buttons["mixPoint-\(i)"].firstMatch.label; XCTAssertTrue(l.hasSuffix(i == 6 ? "5 h 5 min planned" : "5 h 20 min planned"), "required: week \(i)'s planned time (\(l))") }
@@ -1195,7 +1197,7 @@ final class LabFastOnboarding: XCTestCase {
         pick(app, "mix", 6)
         let t = tip(app, "mix", at: 6, "last week")
         XCTAssertTrue(t.0.hasPrefix("4 h 52 min"), "required: last week's recorded time (\(t.0))")
-        XCTAssertEqual(t.1, "Cycling 71% · Strength 29%", "required: last week's distribution")
+        XCTAssertEqual(t.1, "Endurance 71% · Strength 29%", "required: last week's distribution, by training type")
         XCTAssertTrue(text(app, "mixSummaryLine").hasPrefix("4 h 52 min"), "required: the header follows the chosen week")
         XCTAssertTrue(text(app, "mixPlanned").contains("5 h 5 min"), "required: the planned time of that week")
         XCTAssertTrue(text(app, "mixInspectionCycling").contains("3 h 28 min recorded") && text(app, "mixInspectionCycling").contains("3 h 45 min planned"), "required: cycling recorded and planned")
@@ -1204,10 +1206,28 @@ final class LabFastOnboarding: XCTestCase {
         // Changed 24 Nov 2026 on the owner's instruction: the Coach note is now a short interpretation. It no longer repeats
         // the graph's figures ("71%", the recorded and planned times) or the roster note — the rows below say which sports
         // are not recorded, and that is still asserted there.
-        XCTAssertTrue(coach.hasSuffix("Cycling made up most of your recorded training in this week. That is less than was planned.") && coach != first, "required: the one summary follows the chosen week, briefly (\(coach))")
+        // Changed again 24 Nov 2026 (15:18) on the owner's instruction: the note now sets the recorded mix beside the athlete's
+        // stated priorities. This athlete's running and swimming cannot be recorded, so it says the comparison cannot be made.
+        XCTAssertTrue(coach.hasSuffix("Endurance made up most of your recorded training in this week. Road running and Pool swimming are not recorded, so this cannot be compared with your priorities.") && coach != first, "required: the one summary follows the chosen week, briefly (\(coach))")
+        // Training balance: time and completed sessions side by side, the stated priority, what is not recorded, and the caveat
+        XCTAssertEqual(el(app, "mixBalanceTime").label, "By time: Endurance 71% · Strength 29%", "required: the balance by recorded time")
+        XCTAssertEqual(el(app, "mixBalanceSessions").label, "Sessions completed: Endurance 3 · Strength 2", "required: completed sessions, kept apart from time")
+        XCTAssertEqual(el(app, "mixBalancePriority").label, "Your stated priority: Balanced", "required: the priority the athlete stated")
+        XCTAssertEqual(el(app, "mixBalanceUnrecorded").label, "Not recorded yet: Road running, Pool swimming", "required: what the figures leave out")
+        XCTAssertTrue(text(app, "mixBalanceCaveat").contains("not training load"), "required: time is not presented as load")
+        // by training type: running and swimming belong to Endurance, which therefore says its figure is incomplete
+        let endurance = el(app, "mixType-endurance").label
+        XCTAssertTrue(endurance.contains("3 h 28 min") && endurance.contains("71%") && endurance.contains("3 sessions"), "required: the Endurance row (\(endurance))")
+        XCTAssertTrue(el(app, "mixType-strength").label.contains("1 h 24 min"), "required: the Strength row")
+        XCTAssertFalse(el(app, "mixSport-cycling").exists, "required: sport rows belong to the Individual sports view")
         XCTAssertNil(coach.rangeOfCharacter(from: .decimalDigits), "required: the note repeats no figure of the graph (\(coach))")
         XCTAssertFalse(coach.lowercased().contains("overtrain") || coach.lowercased().contains("ideal"), "no balance is judged")
-        captureFullPage(app, "mix-1-weeks-selected", steps: 6); toTop(app)
+        captureFullPage(app, "mix-1-weeks-selected", steps: 7); toTop(app)
+        press(app, "mixType-endurance")
+        XCTAssertTrue(text(app, "mixTypeDetailLine").contains("Road cycling, Road running and Pool swimming"), "required: the type names its activities")
+        XCTAssertTrue(text(app, "mixTypeGap").contains("Road running and Pool swimming are not recorded yet"), "required: and says what its figure leaves out")
+        XCTAssertTrue(el(app, "mixTypeSession-0").waitForExistence(timeout: 4), "required: and lists its sessions")
+        press(app, "mixType-endurance"); toTop(app)
         pick(app, "mix", 6)
         XCTAssertFalse(app.staticTexts["mixTooltip"].exists || el(app, "mixInspection").exists, "required: pressing the chosen column again clears the selection")
         pick(app, "mix", 6); press(app, "mixViewDetails")
@@ -1217,8 +1237,8 @@ final class LabFastOnboarding: XCTestCase {
 
         toTop(app); app.buttons["mixMode-days"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
         XCTAssertFalse(app.staticTexts["mixTooltip"].exists, "switching the view clears the selection")
-        let wants: [(Int, String, String)] = [(0, "58 min", "Cycling 100%"), (1, "42 min", "Strength 100%"), (2, "No recorded training", ""), (3, "42 min", "Strength 100%"),
-                                              (4, "No recorded training", ""), (5, "1 h 55 min", "Cycling 100%"), (6, "35 min", "Cycling 100%")]
+        let wants: [(Int, String, String)] = [(0, "58 min", "Endurance 100%"), (1, "42 min", "Strength 100%"), (2, "No recorded training", ""), (3, "42 min", "Strength 100%"),
+                                              (4, "No recorded training", ""), (5, "1 h 55 min", "Endurance 100%"), (6, "35 min", "Endurance 100%")]   // by type since 24 Nov 2026 (owner)
         for (i, a, b) in wants {
             pick(app, "mix", i)
             let d = tip(app, "mix", at: i, "day \(i)")
@@ -1239,6 +1259,13 @@ final class LabFastOnboarding: XCTestCase {
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(el(app, "trainingMixDashboard").waitForExistence(timeout: 6), "required: back returns to the dashboard")
 
+        // Individual sports: the same graph and figures, named by sport (owner, 24 Nov 2026)
+        toTop(app); app.buttons["mixMode-weeks"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        app.buttons["mixView-sports"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        pick(app, "mix", 6)
+        XCTAssertEqual(tip(app, "mix", at: 6, "last week by sport").1, "Cycling 71% · Strength 29%", "required: the label names the sports in this view")
+        XCTAssertTrue(text(app, "mixInspectionCycling").hasPrefix("Cycling ·"), "required: the card names the sport")
+        XCTAssertFalse(el(app, "mixType-endurance").exists, "required: type rows give way to sport rows")
         XCTAssertTrue(el(app, "mixSport-cycling").label.contains("3 h 28 min"), "required: cycling row (\(el(app, "mixSport-cycling").label))")
         XCTAssertTrue(el(app, "mixSport-strength").label.contains("1 h 24 min"), "required: strength row")
         for id in ["running", "swimming"] {
@@ -1248,7 +1275,7 @@ final class LabFastOnboarding: XCTestCase {
         press(app, "mixSport-cycling")
         XCTAssertTrue(text(app, "mixSportDetailLine").contains("3 h 28 min recorded"), "required: the chosen sport shows its own time")
         XCTAssertTrue(el(app, "mixSportSession-0").waitForExistence(timeout: 4), "required: and its sessions")
-        toTop(app); captureFullPage(app, "mix-3-sport-expanded", steps: 7)
+        toTop(app); captureFullPage(app, "mix-3-sport-expanded", steps: 8)
         press(app, "mixSportSession-0")
         XCTAssertTrue(el(app, "homeRideDetail").waitForExistence(timeout: 8), "required: a recorded session opens its existing record")
         app.navigationBars.buttons.firstMatch.tap()
@@ -1259,6 +1286,54 @@ final class LabFastOnboarding: XCTestCase {
         let again = el(app, "indicatorMix")
         XCTAssertTrue(again.waitForExistence(timeout: 8), "required: back returns to Home")
         XCTAssertEqual(again.value as? String ?? "", ring, "required: the Home circle says what it said before")
+    }
+
+    /// Training Mix for three different athletes (owner, 24 Nov 2026): the page follows the roster. Each is the history
+    /// athlete with a different roster; last week is chosen in each.
+    func testTrainingMixAthletes() {
+        // 1 — cycling and strength, endurance-led, everything recorded: the comparison with the stated priority is made
+        var app = launchHistory("LAB_DEMO_MIX_HYBRID")
+        _ = openCircle(app, "indicatorMix", page: "trainingMixDashboard", title: "Training Mix")
+        pick(app, "mix", 6)
+        XCTAssertEqual(tip(app, "mix", at: 6, "hybrid, last week").1, "Endurance 71% · Strength 29%")
+        XCTAssertEqual(el(app, "mixBalancePriority").label, "Your stated priority: Endurance-led", "required: the stated priority")
+        XCTAssertFalse(el(app, "mixBalanceUnrecorded").exists, "required: nothing is called unrecorded when the whole roster is recorded")
+        XCTAssertTrue(el(app, "mixInsight").label.hasSuffix("Endurance made up most of your recorded training in this week. By time, that is in line with the endurance-led priority you stated."), "required: the note compares with the stated priority (\(el(app, "mixInsight").label))")
+        XCTAssertEqual(el(app, "mixType-endurance").exists && el(app, "mixType-strength").exists && !el(app, "mixType-mobility").exists, true, "required: only the roster's types")
+        captureFullPage(app, "mix-6-hybrid", steps: 7)
+        app.terminate()
+
+        // 2 — a runner who lifts: strength is recorded, running cannot be; no cycling anywhere; no comparison is claimed
+        app = launchHistory("LAB_DEMO_MIX_RUN_STRENGTH")
+        _ = openCircle(app, "indicatorMix", page: "trainingMixDashboard", title: "Training Mix")
+        pick(app, "mix", 6)
+        let run = tip(app, "mix", at: 6, "runner, last week")
+        XCTAssertTrue(run.0.hasPrefix("1 h 24 min") && run.1 == "Strength 100%", "required: only the recorded strength time (\(run))")
+        XCTAssertEqual(el(app, "mixBalanceMain").label, "Your main sport: Road running", "required: the main sport, since no lead was asked of this athlete")
+        XCTAssertEqual(el(app, "mixBalanceUnrecorded").label, "Not recorded yet: Road running")
+        let e = el(app, "mixType-endurance").label
+        XCTAssertTrue(e.contains("not recorded yet") && !e.contains("%") && !e.contains("min"), "required: Endurance shows no figure for a runner (\(e))")
+        XCTAssertFalse(app.staticTexts["mixInspectionCycling"].exists, "required: no endurance line in the card when none is recorded or planned")
+        XCTAssertTrue(el(app, "mixInsight").label.hasSuffix("All of your recorded training in this week was strength. Road running is not recorded, so this cannot be compared with your priorities."), "required: the note says what cannot be compared (\(el(app, "mixInsight").label))")
+        app.buttons["mixView-sports"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        XCTAssertFalse(el(app, "mixSport-cycling").exists, "required: a runner sees no cycling row")
+        XCTAssertTrue(el(app, "mixSport-running").label.contains("not recorded yet"), "required: running says Not recorded yet")
+        app.buttons["mixView-types"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
+        pick(app, "mix", 6)
+        captureFullPage(app, "mix-7-run-strength", steps: 7)
+        app.terminate()
+
+        // 3 — endurance only: one type, no strength anywhere, no lead to compare with
+        app = launchHistory("LAB_DEMO_MIX_ENDURANCE")
+        _ = openCircle(app, "indicatorMix", page: "trainingMixDashboard", title: "Training Mix")
+        pick(app, "mix", 6)
+        let only = tip(app, "mix", at: 6, "endurance only, last week")
+        XCTAssertTrue(only.0.hasPrefix("3 h 28 min") && only.1 == "Endurance 100%", "required: all recorded time is endurance (\(only))")
+        XCTAssertFalse(el(app, "mixType-strength").exists || app.staticTexts["mixInspectionStrength"].exists, "required: no strength for an athlete without it")
+        XCTAssertEqual(el(app, "mixBalanceMain").label, "Your main sport: Road cycling")
+        XCTAssertFalse(el(app, "mixBalancePriority").exists || el(app, "mixBalanceUnrecorded").exists, "required: no lead and nothing unrecorded")
+        XCTAssertTrue(el(app, "mixInsight").label.contains("All of your recorded training in this week was endurance."), "required: the note (\(el(app, "mixInsight").label))")
+        captureFullPage(app, "mix-8-endurance-only", steps: 6)
     }
 
     /// Recovery for the "Consistency history" athlete: eight weeks of demo readings of sleep, resting heart rate and HRV
@@ -1388,9 +1463,17 @@ final class LabFastOnboarding: XCTestCase {
         _ = openCircle(app, "indicatorMix", page: "trainingMixDashboard", title: "Training Mix")
         XCTAssertEqual(text(app, "mixSummaryLine"), "No recorded training")
         XCTAssertFalse(app.staticTexts["mixDistribution"].exists || app.staticTexts["mixPlanned"].exists, "required: no distribution or plan line without records")
+        // Changed 24 Nov 2026 (15:18) on the owner's instruction: the page opens by training type, so the runner's row is the
+        // Endurance type (still without a figure); the sport row is checked in the Individual sports view.
+        XCTAssertFalse(el(app, "mixType-strength").exists, "required: a runner sees no strength type")
+        let type = el(app, "mixType-endurance").label
+        XCTAssertTrue(type.contains("not recorded yet") && !type.contains("%"), "required: Endurance says Not recorded yet (\(type))")
+        XCTAssertTrue(el(app, "mixBalanceEmpty").exists && el(app, "mixBalanceUnrecorded").label.contains("Road running"), "required: the balance card shows no figure and names what is not recorded")
+        app.buttons["mixView-sports"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
         XCTAssertFalse(el(app, "mixSport-cycling").exists || el(app, "mixSport-strength").exists, "required: a runner sees no cycling or strength row")
         let run = el(app, "mixSport-running").label
         XCTAssertTrue(run.contains("not recorded yet") && !run.contains("%"), "required: running says Not recorded yet (\(run))")
+        app.buttons["mixView-types"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
         pick(app, "mix", 7)
         let t = tip(app, "mix", at: 7, "this week, nothing recorded")
         XCTAssertTrue(t.0.hasPrefix("Nothing recorded yet") && t.1.isEmpty, "required: the label says nothing is recorded, no figure (\(t))")

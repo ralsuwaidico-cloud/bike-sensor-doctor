@@ -61,6 +61,10 @@ struct MixPoint: Equatable, Identifiable {
         if strength > 0 { parts.append("Strength \(MixPoint.percent(strength, of: total))%") }
         return parts.joined(separator: " · ")
     }
+    /// The same distribution named by training type: "Endurance 71% · Strength 29%".
+    var typeDistribution: String { distribution.replacingOccurrences(of: "Cycling", with: "Endurance") }
+    func tooltip(byType: Bool) -> [String] { byType ? tooltip.map { $0.replacingOccurrences(of: "Cycling ", with: "Endurance ") } : tooltip }
+    func spoken(byType: Bool) -> String { byType ? spoken.replacingOccurrences(of: "Cycling ", with: "Endurance ") : spoken }
     /// The floating label: the period and its recorded time, then the distribution where there is one.
     var tooltip: [String] {
         switch kind {
@@ -108,11 +112,92 @@ struct MixSportRow: Equatable, Identifiable {
     var spoken: String { tracked ? "\(name), \(Fmt.duration(minutes: minutes)) recorded, \(detail)" : "\(name), not recorded yet" }
 }
 
+// MARK: training types (owner, 24 Nov 2026)
+//
+// The athlete's roster grouped by what the training is FOR. An activity is placed only where its purpose is plain:
+//   • Endurance  every cycling, running and swimming discipline
+//   • Strength   gym training, free weights, machines, bodyweight, calisthenics
+//   • Mobility   stretching & mobility
+//   • Not placed walking and hiking — either can be endurance training or easy movement, and the roster does not say which
+// Breathing and sauna & cold are recovery practices, not training: they are named apart and never counted in the mix.
+// Recovery MEASUREMENTS (sleep, resting heart rate, HRV) belong to the Recovery dashboard and play no part here.
+// WHAT CAN BE MEASURED TODAY: only rides (all cycling disciplines) and strength sessions (gym training, free weights,
+// machines) are recorded, so Endurance holds cycling time only and Strength holds gym time only. Every other activity is
+// named in its type as "not recorded yet"; a type none of whose activities can be recorded shows no figure at all.
+// Three different things are kept apart: recorded TIME, completed SESSIONS, and training LOAD. Load is not compared
+// across sports here — the app has no formula that makes an hour of riding and an hour of lifting comparable, and none is
+// invented — so a share of time is never called "balanced" or "optimal".
+enum TrainingType: String, CaseIterable, Equatable {
+    case endurance, strength, mobility, other
+    var title: String { switch self { case .endurance: return "Endurance"; case .strength: return "Strength"; case .mobility: return "Mobility"; case .other: return "Not placed in a type" } }
+    /// nil = not training at all (a recovery practice).
+    static func of(_ a: RosterActivity) -> TrainingType? {
+        switch a.id {
+        case "walking", "hiking": return .other
+        case "mobility": return .mobility
+        case "breathing", "sauna": return nil
+        default:
+            switch a.family {
+            case .cycling, .running, .swimming: return .endurance
+            case .strength: return .strength
+            case .walking: return .other
+            case .recovery: return nil
+            }
+        }
+    }
+}
+
+struct MixTypeRow: Equatable, Identifiable {
+    var type: TrainingType
+    var icon: String
+    /// The roster's activities of this type, in roster order.
+    var members: [String]
+    /// Those Cyclift cannot record yet.
+    var unrecorded: [String]
+    var minutes = 0, planned = 0
+    /// Completed sessions with a recording (or marked done) in the period.
+    var completed = 0
+    /// Share of the period's recorded time; nil when nothing is recorded or the type cannot be recorded.
+    var share: Int?
+    var sessions: [MixSession] = []
+    var id: String { type.rawValue }
+    var name: String { type.title }
+    /// False when none of its activities can be recorded: the type then has no figure.
+    var measurable: Bool { unrecorded.count < members.count || minutes > 0 || planned > 0 }
+    var value: String { measurable ? Fmt.duration(minutes: minutes) : "Not recorded yet" }
+    var detail: String {
+        guard measurable else { return "\(members.joined(separator: ", ")) · recording coming soon" }
+        var parts: [String] = []
+        if let s = share { parts.append("\(s)% of recorded time") }
+        parts.append("\(completed) session\(completed == 1 ? "" : "s")")
+        parts.append(planned > 0 ? "\(Fmt.duration(minutes: planned)) planned" : "nothing planned")
+        return parts.joined(separator: " · ")
+    }
+    /// "Road running is not recorded yet" — what this type's figure leaves out.
+    var gap: String? { measurable && !unrecorded.isEmpty ? "\(TrainingMixModel.list(unrecorded)) \(unrecorded.count == 1 ? "is" : "are") not recorded yet, so this is not all of your \(name.lowercased()) training." : nil }
+    var spoken: String { measurable ? "\(name), \(Fmt.duration(minutes: minutes)) recorded, \(detail)" : "\(name), not recorded yet" }
+}
+
+/// What the athlete has stated, to set recorded training beside: the lead of a cycling-and-strength plan where one was
+/// chosen, and the main sport. Nothing here is a target ratio.
+struct MixDeclared: Equatable {
+    var priority: TrainingPriority? = nil
+    var mainSport: String? = nil
+    var priorityWords: String? { priority.map { $0 == .cycling ? "Endurance-led" : $0 == .strength ? "Strength-led" : "Balanced" } }
+}
+
 struct TrainingMixDashboard: Equatable {
     var weeks: [MixPoint]
     var selectedWeek: Int
     var days: [MixPoint]
     var sports: [MixSportRow]
+    /// The roster by training type, for the chosen week.
+    var types: [MixTypeRow] = []
+    var declared = MixDeclared()
+    /// Roster activities that are recovery practices, named apart from training.
+    var practices: [String] = []
+    /// Training activities of the roster that cannot be recorded yet.
+    var unrecorded: [String] { types.flatMap(\.unrecorded) }
     var weekInsight: String
     var week: MixPoint { weeks[selectedWeek] }
     var isCurrentWeek: Bool { selectedWeek == weeks.count - 1 }
@@ -154,7 +239,38 @@ enum TrainingMixModel {
 
     private static func fmt(_ pattern: String, _ d: Date, _ cal: Calendar) -> String { let f = DateFormatter(); f.calendar = cal; f.dateFormat = pattern; return f.string(from: d) }
 
-    static func build(_ i: ConsistencyModel.Input, selectedWeek asked: Int? = nil) -> TrainingMixDashboard {
+    static func list(_ names: [String]) -> String { names.count <= 1 ? (names.first ?? "") : names.dropLast().joined(separator: ", ") + " and " + names.last! }
+
+    /// The roster by training type, with the recorded time each type holds in the week.
+    static func types(roster: [String], week: MixPoint) -> (rows: [MixTypeRow], practices: [String]) {
+        var rows: [MixTypeRow] = [], practices: [String] = []
+        func row(_ t: TrainingType, icon: String) -> Int {
+            if let k = rows.firstIndex(where: { $0.type == t }) { return k }
+            rows.append(MixTypeRow(type: t, icon: icon, members: [], unrecorded: [])); return rows.count - 1
+        }
+        for id in AthleticRoster.unique(roster) {
+            guard let a = AthleticRoster.activity(id) else { continue }
+            guard let t = TrainingType.of(a) else { practices.append(a.title); continue }
+            let k = row(t, icon: a.symbol)
+            rows[k].members.append(a.title)
+            if a.recording == nil { rows[k].unrecorded.append(a.title) }
+        }
+        // recorded or planned training of a type the roster does not name is still shown
+        if week.cycling > 0 || week.plannedCycling > 0 { _ = row(.endurance, icon: "bicycle") }
+        if week.strength > 0 || week.plannedStrength > 0 { _ = row(.strength, icon: "dumbbell") }
+        for k in rows.indices {
+            let sport = rows[k].type == .endurance ? "cycling" : rows[k].type == .strength ? "strength" : ""
+            guard !sport.isEmpty else { continue }
+            rows[k].minutes = sport == "cycling" ? week.cycling : week.strength
+            rows[k].planned = sport == "cycling" ? week.plannedCycling : week.plannedStrength
+            rows[k].sessions = week.sessions.filter { $0.base.sport == sport }
+            rows[k].completed = rows[k].sessions.filter { $0.base.state == .completed || $0.base.state == .recorded }.count
+            rows[k].share = week.total > 0 && rows[k].measurable ? MixPoint.percent(rows[k].minutes, of: week.total) : nil
+        }
+        return (rows, practices)
+    }
+
+    static func build(_ i: ConsistencyModel.Input, selectedWeek asked: Int? = nil, declared: MixDeclared = MixDeclared()) -> TrainingMixDashboard {
         let cal = i.calendar, today = cal.startOfDay(for: i.now)
         let thisMonday = TrainingLedger.monday(of: i.now, calendar: cal)
         let n = ConsistencyDashboard.weekCount
@@ -178,8 +294,9 @@ enum TrainingMixModel {
             days.append(point(k, d, cal.date(byAdding: .day, value: 1, to: d)!, short: fmt("EEE", d, cal), title: fmt("EEEE d MMM", d, cal), week: false))
         }
         let rows = sports(roster: i.roster, week: week)
-        return TrainingMixDashboard(weeks: weeks, selectedWeek: sel, days: days, sports: rows,
-                                    weekInsight: weekInsight(week: week, previous: sel > 0 ? weeks[sel - 1] : nil, current: sel == n - 1, rows: rows))
+        let t = types(roster: i.roster, week: week)
+        return TrainingMixDashboard(weeks: weeks, selectedWeek: sel, days: days, sports: rows, types: t.rows, declared: declared, practices: t.practices,
+                                    weekInsight: weekInsight(week: week, current: sel == n - 1, unrecorded: t.rows.flatMap(\.unrecorded), declared: declared))
     }
 
     /// One row per sport of the roster, on the catalogue's own mapping (every cycling activity is recorded as a ride,
@@ -213,24 +330,39 @@ enum TrainingMixModel {
         return "\(list) \(names.count == 1 ? "is" : "are") in your roster, but Cyclift does not record \(names.count == 1 ? "it" : "them") yet, so \(names.count == 1 ? "it is" : "they are") not part of this mix."
     }
 
-    /// Short on purpose (owner, 24 Nov 2026): what the distribution amounts to and how it stands against the plan, in
-    /// words — the figures themselves are on the graph, the label and the card beside it.
-    static func weekInsight(week w: MixPoint, previous: MixPoint?, current: Bool, rows: [MixSportRow]) -> String {
+    /// Short on purpose (owner, 24 Nov 2026): what the distribution amounts to, set beside what the athlete has stated —
+    /// the lead of their plan where they chose one. It names no ideal ratio, changes no plan, and says so when part of the
+    /// roster cannot be recorded and the comparison therefore cannot be made. The figures are on the graph and the card.
+    static func weekInsight(week w: MixPoint, current: Bool, unrecorded: [String], declared: MixDeclared) -> String {
         let when = current ? "so far this week" : "in this week"
         guard w.total > 0 else {
             if current { return w.planned > 0 ? "Nothing is recorded yet this week; your planned sessions are still to come." : "Nothing is recorded yet this week." }
             return w.planned > 0 ? "Nothing was recorded in this week, although sessions were planned." : "Nothing was recorded or planned in this week."
         }
         var s: [String] = []
+        let lead = w.cycling > w.strength ? "endurance" : "strength"
         if w.cycling > 0 && w.strength > 0 {
-            s.append(w.cycling == w.strength ? "Cycling and strength took equal recorded time \(when)."
-                     : "\(w.cycling > w.strength ? "Cycling" : "Strength") made up most of your recorded training \(when).")
+            s.append(w.cycling == w.strength ? "Endurance and strength took equal recorded time \(when)." : "\(lead.capitalized) made up most of your recorded training \(when).")
         } else {
-            s.append("All of your recorded training \(when) was \(w.cycling > 0 ? "cycling" : "strength").")
+            s.append("All of your recorded training \(when) was \(lead).")
         }
-        if current { if w.planned > 0 { s.append("The week is still in progress.") } }
+        if !unrecorded.isEmpty {
+            s.append("\(list(unrecorded)) \(unrecorded.count == 1 ? "is" : "are") not recorded, so this cannot be compared with your priorities.")
+        } else if let p = declared.priority {
+            // by recorded time only; "close to" a balanced priority = the two shares within ten points of each other, a
+            // wording rule for this sentence, not a target
+            let gap = abs(MixPoint.percent(w.cycling, of: w.total) - MixPoint.percent(w.strength, of: w.total))
+            switch p {
+            case .balanced:
+                s.append(gap <= 10 ? "By time, that is close to the balanced priority you stated." : "You stated a balanced priority; by time, the week leaned to \(lead).")
+            case .cycling, .strength:
+                let stated = p == .cycling ? "endurance" : "strength"
+                s.append(w.cycling == w.strength ? "You stated a \(stated)-led priority; by time, the two were even."
+                         : lead == stated ? "By time, that is in line with the \(stated)-led priority you stated."
+                         : "You stated a \(stated)-led priority; by time, the week leaned to \(lead).")
+            }
+        } else if current { if w.planned > 0 { s.append("The week is still in progress.") } }
         else if w.planned > 0 {
-            // "about" when within five minutes of the plan: small differences in a recording are not a shortfall
             let diff = w.total - w.planned
             s.append(abs(diff) <= 5 ? "That is about what was planned." : diff < 0 ? "That is less than was planned." : "That is more than was planned.")
         } else { s.append("None of it was planned.") }
@@ -242,7 +374,7 @@ enum TrainingMixModel {
         var s: [String] = []
         switch p.kind {
         case .recorded:
-            s.append(p.cycling > 0 && p.strength > 0 ? "On \(name) you recorded both cycling and strength." : "On \(name) you recorded \(p.cycling > 0 ? "cycling" : "strength") only.")
+            s.append(p.cycling > 0 && p.strength > 0 ? "On \(name) you recorded both endurance and strength." : "On \(name) you recorded \(p.cycling > 0 ? "endurance" : "strength") only.")
         case .empty:
             s.append(p.inProgress ? "Nothing is recorded yet today." : "Nothing is recorded on \(name).")
         case .upcoming:
@@ -498,7 +630,11 @@ extension Store {
     }
     /// The Training Mix dashboard for this athlete's own records. Reads only.
     func trainingMixDashboard(selectedWeek: Int? = nil, now: Date = Date(), calendar cal: Calendar = .current) -> TrainingMixDashboard {
-        TrainingMixModel.build(dashboardInput(now: now, calendar: cal), selectedWeek: selectedWeek)
+        let roster = AthleticRoster.roster(of: profile)
+        // a lead exists only for a cycling-and-strength plan — the one case in which the athlete was asked for it
+        let declared = MixDeclared(priority: AthleticRoster.view(roster).mode == .hybrid ? profile.priority : nil,
+                                   mainSport: roster.first.flatMap { AthleticRoster.activity($0)?.title })
+        return TrainingMixModel.build(dashboardInput(now: now, calendar: cal), selectedWeek: selectedWeek, declared: declared)
     }
     /// The Recovery dashboard for this athlete's own readings. Reads only.
     func recoveryDashboard(metric: HealthSample.Kind, selectedWeek: Int? = nil, now: Date = Date(), calendar cal: Calendar = .current) -> RecoveryDashboard {

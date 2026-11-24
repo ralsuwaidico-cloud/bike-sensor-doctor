@@ -3,6 +3,10 @@ import SwiftUI
 // Training Mix dashboard — the page the second Home circle opens (owner's shared design direction, 23 Nov 2026, 19:55;
 // final visual sign-off pending). A DISTRIBUTION of recorded training time between the athlete's sports, beside what was
 // planned: sport colours tell the sports apart; nothing here is an adherence band or a judgement of balance.
+// Since 24 Nov 2026 (owner) the page reads by TRAINING TYPE first (Endurance, Strength, Mobility …) with a switch to the
+// individual sports, and carries a compact Training balance card that sets recorded time and completed sessions beside the
+// priority the athlete stated. Time, sessions and load are kept apart; no ideal ratio is shown. The graph, its interaction
+// and the visual language are unchanged.
 // Every figure comes from `TrainingMixDashboard` (the Home ring's own minutes); this file only draws it.
 
 struct TrainingMixDashboardView: View {
@@ -10,6 +14,7 @@ struct TrainingMixDashboardView: View {
     @Environment(\.cyTheme) private var theme
     var open: (HomeRoute) -> Void
     @State private var mode = 0                     // 0 = Weeks, 1 = Days
+    @State private var view = 0                     // 0 = Training types, 1 = Individual sports
     @State private var selectedWeek: Int? = nil
     @State private var inspected: Int? = nil
     @State private var sport: String? = nil
@@ -21,10 +26,11 @@ struct TrainingMixDashboardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 summary(d)
+                balance(d)
                 graphCard(d)
                 if let i = inspected, let p = points(d).first(where: { $0.id == i }) { inspection(p) }
                 DashInsight(id: "mixInsight", text: coachText(d))
-                sportsSection(d)
+                if byType { typesSection(d) } else { sportsSection(d) }
                 details(d)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -42,6 +48,10 @@ struct TrainingMixDashboardView: View {
         if mode == 1, let i = inspected, let day = d.days.first(where: { $0.id == i }) { return TrainingMixModel.dayInsight(day: day) }
         return d.weekInsight
     }
+    private var byType: Bool { view == 0 }
+    /// The recorded-time name of the two measured groups in the chosen view.
+    private var enduranceName: String { byType ? "Endurance" : "Cycling" }
+    private func color(_ t: TrainingType) -> Color { t == .endurance ? theme.endurance : t == .strength ? theme.strength : theme.textTertiary }
     private func color(_ sport: String) -> Color { sport == "cycling" ? theme.endurance : sport == "strength" ? theme.strength : theme.textTertiary }
 
     // MARK: compact summary — no standalone ratio
@@ -49,7 +59,7 @@ struct TrainingMixDashboardView: View {
     private func summary(_ d: TrainingMixDashboard) -> some View {
         let w = d.week
         var parts: [String] = []
-        if w.cycling > 0 { parts.append("Cycling \(Fmt.duration(minutes: w.cycling)) (\(MixPoint.percent(w.cycling, of: w.total))%)") }
+        if w.cycling > 0 { parts.append("\(enduranceName) \(Fmt.duration(minutes: w.cycling)) (\(MixPoint.percent(w.cycling, of: w.total))%)") }
         if w.strength > 0 { parts.append("Strength \(Fmt.duration(minutes: w.strength)) (\(MixPoint.percent(w.strength, of: w.total))%)") }
         return VStack(alignment: .leading, spacing: 3) {
             Text(d.periodTitle + (w.inProgress ? " · In progress" : "")).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
@@ -71,6 +81,56 @@ struct TrainingMixDashboardView: View {
         .accessibilityIdentifier("mixSummary")
     }
 
+    // MARK: training balance — recorded time and completed sessions beside the stated priority; never a verdict
+
+    private func balance(_ d: TrainingMixDashboard) -> some View {
+        let w = d.week
+        let measured = d.types.filter { $0.measurable }
+        let sessions = measured.map { "\($0.name) \($0.completed)" }.joined(separator: " · ")
+        return DashCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Training balance").font(CyFont.headline).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("mixBalanceTitle")
+                if w.total > 0 {
+                    GeometryReader { g in
+                        HStack(spacing: 2) {
+                            ForEach(measured.filter { $0.minutes > 0 }) { r in
+                                Capsule().fill(color(r.type)).frame(width: max(6, (g.size.width - 2) * CGFloat(r.minutes) / CGFloat(w.total)))
+                            }
+                        }
+                    }
+                    .frame(height: 8).accessibilityHidden(true)
+                    balanceLine("By time", w.typeDistribution, id: "mixBalanceTime")
+                    balanceLine("Sessions completed", sessions, id: "mixBalanceSessions")
+                } else {
+                    Text(w.inProgress ? "No recorded training yet this week." : "No recorded training in this week.")
+                        .font(CyFont.footnote).foregroundStyle(theme.textSecondary).accessibilityIdentifier("mixBalanceEmpty")
+                }
+                if let p = d.declared.priorityWords { balanceLine("Your stated priority", p, id: "mixBalancePriority") }
+                else if let m = d.declared.mainSport { balanceLine("Your main sport", m, id: "mixBalanceMain") }
+                if !d.unrecorded.isEmpty {
+                    balanceLine("Not recorded yet", d.unrecorded.joined(separator: ", "), id: "mixBalanceUnrecorded")
+                }
+                Text("Time and sessions are not training load. Load is not compared across sports.")
+                    .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("mixBalanceCaveat")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("mixBalance")
+    }
+    private func balanceLine(_ title: String, _ value: String, id: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(title).foregroundStyle(theme.textSecondary)
+            Spacer(minLength: 6)
+            Text(value).foregroundStyle(theme.textPrimary).multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+        }
+        .font(CyFont.footnote)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title): \(value)")
+        .accessibilityIdentifier(id)
+    }
+
     // MARK: stacked duration graph
 
     private func hours(_ minutes: Int) -> String {
@@ -81,13 +141,14 @@ struct TrainingMixDashboardView: View {
         let f = DateFormatter()
         f.dateFormat = mode == 0 ? "d" : "EEE"; let top = f.string(from: p.start)
         f.dateFormat = mode == 0 ? "MMM" : "d"; let bottom = mode == 0 && p.inProgress ? "now" : f.string(from: p.start)
-        return DashColumn(id: p.id, top: top, bottom: bottom, spoken: p.spoken, tip: p.tooltip, anchor: p.total > 0 ? Double(p.total) / Double(scale) : nil)
+        return DashColumn(id: p.id, top: top, bottom: bottom, spoken: p.spoken(byType: byType), tip: p.tooltip(byType: byType), anchor: p.total > 0 ? Double(p.total) / Double(scale) : nil)
     }
     private func graphCard(_ d: TrainingMixDashboard) -> some View {
         let ps = points(d), scale = TrainingMixDashboard.scale(ps)
         return DashCard {
             VStack(alignment: .leading, spacing: 10) {
                 DashSegments(prefix: "mixMode", titles: ["Weeks", "Days"], ids: ["weeks", "days"], selected: mode) { m in mode = m; inspected = nil }
+                DashSegments(prefix: "mixView", titles: ["Training types", "Individual sports"], ids: ["types", "sports"], selected: view) { v in view = v; sport = nil }
                 Text(mode == 0 ? "Recorded time · last \(ConsistencyDashboard.weekCount) weeks" : "Recorded time · \(d.week.title)").font(CyFont.caption).foregroundStyle(theme.textSecondary)
                     .accessibilityIdentifier("mixGraphCaption")
                 DashChart(prefix: "mix", columns: ps.map { column($0, scale: scale) }, axis: [hours(scale), hours(scale / 2), "0"], left: 34,
@@ -123,7 +184,7 @@ struct TrainingMixDashboardView: View {
     }
     private var legend: some View {
         HStack(spacing: 12) {
-            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(theme.endurance).frame(width: 9, height: 9); Text("Cycling") }
+            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(theme.endurance).frame(width: 9, height: 9); Text(enduranceName) }
             HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(theme.strength).frame(width: 9, height: 9); Text("Strength") }
             HStack(spacing: 4) { Capsule().fill(theme.textPrimary.opacity(0.75)).frame(width: 12, height: 2); Text("Planned") }
         }
@@ -149,7 +210,7 @@ struct TrainingMixDashboardView: View {
                     .accessibilityIdentifier("mixInspectionTitle")
                 VStack(alignment: .leading, spacing: 3) {
                     if p.cycling > 0 || p.plannedCycling > 0 {
-                        Text(sportLine("Cycling", p.cycling, p.plannedCycling)).accessibilityIdentifier("mixInspectionCycling")
+                        Text(sportLine(enduranceName, p.cycling, p.plannedCycling)).accessibilityIdentifier("mixInspectionCycling")
                     }
                     if p.strength > 0 || p.plannedStrength > 0 {
                         Text(sportLine("Strength", p.strength, p.plannedStrength)).accessibilityIdentifier("mixInspectionStrength")
@@ -221,6 +282,85 @@ struct TrainingMixDashboardView: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("mixSports")
     }
+    // MARK: breakdown by training type
+
+    private func typesSection(_ d: TrainingMixDashboard) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Training by type").font(CyFont.headline).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("mixTypesTitle")
+            if d.types.isEmpty { Text("No training activity is in your roster yet.").font(CyFont.footnote).foregroundStyle(theme.textSecondary) }
+            ForEach(d.types) { r in
+                VStack(alignment: .leading, spacing: 0) {
+                    typeRow(r)
+                    if sport == r.id { typeDetail(r, d) }
+                }
+                .background(sport == r.id ? theme.selectedFill : theme.surface, in: RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous))
+            }
+            if !d.practices.isEmpty {
+                Text("\(TrainingMixModel.list(d.practices)) \(d.practices.count == 1 ? "is a recovery practice" : "are recovery practices") and \(d.practices.count == 1 ? "is" : "are") not counted as training.")
+                    .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("mixPractices")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("mixTypes")
+    }
+    private func typeRow(_ r: MixTypeRow) -> some View {
+        Button { sport = sport == r.id ? nil : r.id } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    Image(systemName: r.icon).font(.body).foregroundStyle(theme.textPrimary).frame(width: 26)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(r.name).font(CyFont.label).foregroundStyle(theme.textPrimary)
+                        Text(r.detail).font(CyFont.caption).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 6)
+                    Text(r.value).font(r.measurable ? CyFont.metricSmall : CyFont.caption).foregroundStyle(r.measurable ? theme.textPrimary : theme.textSecondary)
+                    Image(systemName: sport == r.id ? "chevron.up" : "chevron.down").font(.caption2.weight(.semibold)).foregroundStyle(theme.textTertiary)
+                }
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        if !r.measurable {
+                            Capsule().strokeBorder(theme.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                        } else {
+                            Capsule().fill(theme.ringTrack)
+                            Capsule().fill(color(r.type)).frame(width: max(6, g.size.width * CGFloat(r.share ?? 0) / 100)).opacity((r.share ?? 0) > 0 ? 1 : 0)
+                        }
+                    }
+                }
+                .frame(height: 6)
+            }
+            .padding(12).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(r.spoken)
+        .accessibilityHint("Shows the activities and sessions of this training type")
+        .accessibilityAddTraits(sport == r.id ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityIdentifier("mixType-\(r.id)")
+    }
+    private func typeDetail(_ r: MixTypeRow, _ d: TrainingMixDashboard) -> some View {
+        let line: String
+        if r.type == .other { line = "\(TrainingMixModel.list(r.members)) can be endurance training or easy movement, so \(r.members.count == 1 ? "it is" : "they are") not placed in a training type. Not recorded yet." }
+        else if !r.measurable { line = "In your roster: \(TrainingMixModel.list(r.members)). Cyclift does not record \(r.members.count == 1 ? "it" : "them") yet, so no time is shown." }
+        else {
+            let what = r.sessions.isEmpty ? "nothing was planned or recorded." : "\(Fmt.duration(minutes: r.minutes)) recorded" + (r.planned > 0 ? ", \(Fmt.duration(minutes: r.planned)) planned." : ".")
+            line = (r.members.isEmpty ? "" : "In your roster: \(TrainingMixModel.list(r.members)). ") + "\(d.week.title): \(what)"
+        }
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(line).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("mixTypeDetailLine")
+            if let g = r.gap {
+                Text(g).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("mixTypeGap")
+            }
+            ForEach(Array(r.sessions.enumerated()), id: \.element.id) { k, s in sessionButton(s, id: "mixTypeSession-\(k)") }
+        }
+        .padding(.horizontal, 12).padding(.bottom, 12)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("mixTypeDetail")
+    }
+
     private func sportRow(_ r: MixSportRow) -> some View {
         Button { sport = sport == r.id ? nil : r.id } label: {
             VStack(alignment: .leading, spacing: 8) {

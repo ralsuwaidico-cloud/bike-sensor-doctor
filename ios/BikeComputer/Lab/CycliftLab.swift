@@ -112,7 +112,7 @@ struct LabChrome: ViewModifier {
 /// records; the app's own planner, session builder and Coach rules produce what is shown. Nothing is drawn by hand,
 /// nothing is real, and choosing one only rewrites Lab's own folder at the next launch.
 enum LabScenario: String, CaseIterable, Identifiable {
-    case normal, supersets, proposal, cycling, consistency, recoveryPartial, newAthlete
+    case normal, supersets, proposal, cycling, consistency, recoveryPartial, mixHybrid, mixRunStrength, mixEnduranceOnly, newAthlete
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -122,6 +122,9 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .cycling: return "Cycling day"
         case .consistency: return "Consistency history"
         case .recoveryPartial: return "Recovery · one source"
+        case .mixHybrid: return "Mix · cycling and strength"
+        case .mixRunStrength: return "Mix · running and strength"
+        case .mixEnduranceOnly: return "Mix · endurance only"
         case .newAthlete: return "New athlete"
         }
     }
@@ -133,6 +136,9 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .cycling: return "Today's planned session is a ride. The ride screen is a simulation: no sensor, no GPS, nothing saved."
         case .consistency: return "A multisport athlete with seven earlier planned weeks: some complete, some with missed sessions. Running and swimming are in the roster but not tracked. Eight weeks of sleep, resting heart rate and HRV demo readings."
         case .recoveryPartial: return "The same athlete with sleep readings only, for the last week, and no resting heart rate or HRV."
+        case .mixHybrid: return "The history athlete with road cycling and gym training only, and an endurance-led priority. Everything in the roster is recorded."
+        case .mixRunStrength: return "The history athlete as a runner who lifts: strength sessions are recorded, running is in the roster but cannot be recorded yet."
+        case .mixEnduranceOnly: return "The history athlete with road and gravel cycling only: no strength in the roster, plan or records."
         case .newAthlete: return "No athlete at all. Lab opens at onboarding."
         }
     }
@@ -195,6 +201,9 @@ enum LabDemoData {
         if env["LAB_DEMO_SUPERSETS"] == "1" { return .supersets }
         if env["LAB_DEMO_CONSISTENCY"] == "1" { return .consistency }
         if env["LAB_DEMO_RECOVERY_PARTIAL"] == "1" { return .recoveryPartial }
+        if env["LAB_DEMO_MIX_HYBRID"] == "1" { return .mixHybrid }
+        if env["LAB_DEMO_MIX_RUN_STRENGTH"] == "1" { return .mixRunStrength }
+        if env["LAB_DEMO_MIX_ENDURANCE"] == "1" { return .mixEnduranceOnly }
         if env["LAB_FRESH_DEMO"] == "1" { return .normal }       // screen tests that name nothing start from the plain athlete
         if let d = recordDir, let raw = try? String(contentsOf: note("scenario", d), encoding: .utf8),
            let s = LabScenario(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines)) { return s }
@@ -260,7 +269,8 @@ enum LabDemoData {
         var rides: [[String: Any]] = []
         // "Consistency history": the seven weeks before this one carry a plan of their own (below), so the generic riding
         // and lifting history starts before them
-        let rich = scenario == .consistency || scenario == .recoveryPartial
+        let mixOnly = scenario == .mixHybrid || scenario == .mixRunStrength || scenario == .mixEnduranceOnly
+        let rich = scenario == .consistency || scenario == .recoveryPartial || mixOnly
         let history = rich ? 7 : 0
         for k in history..<16 {
             let m = cal.date(byAdding: .day, value: -7 * (k + 1), to: monday)!
@@ -338,6 +348,21 @@ enum LabDemoData {
                                       "trainingMode": "hybrid", "priority": "balanced", "cyclingDaysPerWeek": 3, "liftDaysPerWeek": 3, "liftingHoursPerWeek": 1, "preferredDays": [0, 2, 4, 5],
                                       "hybridGoal": "balanced", "strengthSplit": "fullBody"]
         if rich { profile["activities"] = ["roadCycling", "strength", "running", "swimming"]; profile["sports"] = ["roadCycling", "strength", "running", "swimming"] }
+        // Training Mix athletes (owner, 24 Nov 2026): the same history with a different roster. Records and planned
+        // sessions of a sport the athlete does not have are removed; nothing is added or re-labelled — a runner's
+        // running is NOT invented, because the app cannot record it.
+        // "sports" is the older stored list and holds only the names it knows (no gravel)
+        func roster(_ ids: [String]) { profile["activities"] = ids; profile["sports"] = ids.filter { $0 != "gravel" } }
+        func kind(_ w: [String: Any]) -> String { w["kind"] as? String ?? "" }
+        if scenario == .mixHybrid { roster(["roadCycling", "strength"]); profile["priority"] = "cycling" }
+        if scenario == .mixRunStrength {
+            roster(["running", "strength"]); profile["trainingMode"] = "strength"
+            rides = []; plan = plan.filter { kind($0) == "strength" || kind($0) == "rest" }
+        }
+        if scenario == .mixEnduranceOnly {
+            roster(["roadCycling", "gravel"]); profile["trainingMode"] = "cycling"
+            strength = []; plan = plan.filter { kind($0) != "strength" }
+        }
         var settings: [String: Any] = ["units": "metric", "phoneOnlyMode": true, "hrPref": "strap", "keepScreenOn": true, "autoConnectBoard": false, "enabledConnections": [] as [Any], "appearance": "system",
                                        "backgroundNotice": true, "coachTalk": "normal", "coachEnabled": true, "appleHealthImportWorkouts": false]
         let file: [String: Any] = ["schema": 1, "profile": profile, "settings": settings, "plan": plan, "rides": rides, "tiles": ["power", "cadence", "hr", "speed", "time", "dist"],
@@ -352,7 +377,7 @@ enum LabDemoData {
             let rhr: [Double] = [52, 51, 53, 50, 54, 52, 55, 51, 53, 52]
             let hrv: [Double] = [61, 58, 66, 63, 55, 70, 60, 64, 57, 62, 68]
             var entries: [[String: Any]] = []
-            let full = scenario == .consistency
+            let full = scenario != .recoveryPartial
             for back in stride(from: full ? 55 : 6, through: 0, by: -1) {
                 let day = cal.date(byAdding: .day, value: -back, to: today)!
                 if back % 9 != 4 { entries.append(["kind": "sleep", "value": sleep[back % sleep.count], "date": d(day, 6.6), "source": "Demo data"]) }

@@ -46,7 +46,15 @@ final class DashboardModelsTests: XCTestCase {
         XCTAssertFalse(d.sports[2].tracked); XCTAssertNil(d.sports[2].share); XCTAssertEqual(d.sports[2].value, "Not recorded yet")
         // Changed 24 Nov 2026 on the owner's instruction: the Coach note is a short interpretation and no longer repeats the
         // graph's figures or the roster note (the sport rows say which sports are not recorded).
-        XCTAssertEqual(d.weekInsight, "Cycling made up most of your recorded training in this week. That is less than was planned.")
+        // Changed again 24 Nov 2026 (15:18) on the owner's instruction: the note speaks of training types and sets them
+        // beside the athlete's stated priorities; here running cannot be recorded, so it says the comparison cannot be made.
+        XCTAssertEqual(d.weekInsight, "Endurance made up most of your recorded training in this week. Road running is not recorded, so this cannot be compared with your priorities.")
+        // training types: both cycling activities and running are Endurance; only running is unrecorded
+        XCTAssertEqual(d.types.map(\.type), [.endurance, .strength])
+        XCTAssertEqual(d.types[0].members, ["Road cycling", "Indoor cycling", "Road running"]); XCTAssertEqual(d.types[0].unrecorded, ["Road running"])
+        XCTAssertEqual(d.types[0].share, 64); XCTAssertEqual(d.types[0].completed, 3); XCTAssertEqual(d.types[1].completed, 2)
+        XCTAssertNotNil(d.types[0].gap); XCTAssertNil(d.types[1].gap)
+        XCTAssertEqual(w.tooltip(byType: true), ["3 h 43 min · 26 Oct", "Endurance 64% · Strength 36%"])
         XCTAssertNil(d.weekInsight.rangeOfCharacter(from: .decimalDigits), "no figure of the graph is repeated")
         XCTAssertFalse(d.weekInsight.lowercased().contains("balance") || d.weekInsight.lowercased().contains("overtrain"), "no balance is judged")
         // the unplanned Sunday ride is listed with its duration, outside the plan
@@ -61,6 +69,39 @@ final class DashboardModelsTests: XCTestCase {
         XCTAssertEqual(d.sports.map(\.tracked), [false], "a runner sees no cycling or strength row")
         XCTAssertEqual(d.weekInsight, "Nothing is recorded yet this week.")
         XCTAssertEqual(d.days.map(\.kind), [.empty, .empty, .empty, .empty, .upcoming, .upcoming, .upcoming])
+    }
+
+    func testTrainingTypesPlaceOnlyWhatIsPlainAndKeepRecoveryPracticesApart() {
+        func t(_ id: String) -> TrainingType? { AthleticRoster.activity(id).flatMap { TrainingType.of($0) } }
+        for id in ["roadCycling", "indoorCycling", "mountainBike", "gravel", "commuting", "running", "treadmill", "trailRunning", "swimming", "openWater"] { XCTAssertEqual(t(id), .endurance, id) }
+        for id in ["strength", "freeWeights", "machines", "bodyweight", "calisthenics"] { XCTAssertEqual(t(id), .strength, id) }
+        XCTAssertEqual(t("mobility"), .mobility)
+        XCTAssertEqual(t("walking"), .other); XCTAssertEqual(t("hiking"), .other, "ambiguous purpose: not placed")
+        XCTAssertNil(t("breathing")); XCTAssertNil(t("sauna"), "recovery practices are not training")
+        let d = TrainingMixModel.build(input([], roster: ["running", "strength", "mobility", "walking", "sauna"]))
+        XCTAssertEqual(d.types.map(\.type), [.endurance, .strength, .mobility, .other])
+        XCTAssertEqual(d.types.map(\.measurable), [false, true, false, false], "only gym training can be recorded in this roster")
+        XCTAssertEqual(d.types[0].value, "Not recorded yet"); XCTAssertNil(d.types[0].share)
+        XCTAssertEqual(d.practices.count, 1); XCTAssertEqual(d.unrecorded.count, 3)
+    }
+
+    func testCoachNoteSetsRecordedTimeBesideTheStatedPriorityWithoutAnIdealRatio() {
+        func p(_ c: Int, _ s: Int, planned: Int = 0) -> MixPoint {
+            var m = TrainingMixModel.build(input([], roster: ["roadCycling", "strength"])).weeks[6]
+            m.cycling = c; m.strength = s; m.plannedCycling = planned; m.kind = .recorded; return m
+        }
+        func note(_ c: Int, _ s: Int, _ pr: TrainingPriority?, unrecorded: [String] = []) -> String {
+            TrainingMixModel.weekInsight(week: p(c, s), current: false, unrecorded: unrecorded, declared: MixDeclared(priority: pr))
+        }
+        XCTAssertEqual(note(200, 80, .cycling), "Endurance made up most of your recorded training in this week. By time, that is in line with the endurance-led priority you stated.")
+        XCTAssertEqual(note(200, 80, .strength), "Endurance made up most of your recorded training in this week. You stated a strength-led priority; by time, the week leaned to endurance.")
+        XCTAssertEqual(note(200, 80, .balanced), "Endurance made up most of your recorded training in this week. You stated a balanced priority; by time, the week leaned to endurance.")
+        XCTAssertEqual(note(110, 100, .balanced), "Endurance made up most of your recorded training in this week. By time, that is close to the balanced priority you stated.")
+        XCTAssertEqual(note(0, 80, nil, unrecorded: ["Road running"]), "All of your recorded training in this week was strength. Road running is not recorded, so this cannot be compared with your priorities.")
+        XCTAssertEqual(note(200, 0, nil), "All of your recorded training in this week was endurance. None of it was planned.")
+        for n in [note(200, 80, .cycling), note(200, 80, .strength), note(110, 100, .balanced)] {
+            XCTAssertNil(n.rangeOfCharacter(from: .decimalDigits), "no ratio or figure"); XCTAssertFalse(n.lowercased().contains("optimal") || n.lowercased().contains("should"), "no prescription")
+        }
     }
 
     private func log(_ rows: [(HealthSample.Kind, Int, Double, String)]) -> RecoveryLog {
