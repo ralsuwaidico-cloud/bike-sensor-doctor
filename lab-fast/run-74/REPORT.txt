@@ -1,0 +1,25 @@
+FAST focused Lab check — selected: LabFastOnboarding/testDayOverviewProposal
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from a24410f8 · files changed since then: 4
+TIME setup: 55s
+  timing: CompileAssetCatalogVariant (1 task) | 112.960 seconds
+  timing: SwiftCompile (7 tasks) | 35.178 seconds
+  timing: Ld (18 tasks) | 12.943 seconds
+  timing: SwiftEmitModule (2 tasks) | 9.086 seconds
+  timing: SwiftDriver (2 tasks) | 6.679 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 4.442 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.785 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.463 seconds
+  stages: packages at 216s · packages prepared at 249s · dependency graph at 249s · inputs at 250s · build description at 250s · first link at 265s · asset catalogue at 266s · first Swift step at 379s · finished at 389s
+  compiled in this run: 15 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 392s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 21s
+Lab/UITests/LabFastOnboarding.swift:1344: error: -[CycliftLabUITests.LabFastOnboarding testDayOverviewProposal] : XCTAssertTrue failed - required: the second ride's note says what was not measured (Not comparable with Sun 22 Nov: it was a different kind of ride.)
+Test Case '-[CycliftLabUITests.LabFastOnboarding testDayOverviewProposal]' failed (1298.030 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 1495s
+TIME total on the Mac: 1975s
+commit 702f09c8af24084af04eeb1afbdf7e48e472e3a3  branch ios/lab
