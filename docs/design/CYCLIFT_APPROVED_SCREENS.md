@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 25 Nov 2026, 01:45 (Dubai) · Screens recorded: 13
+Last updated: 25 Nov 2026, 02:35 (Dubai) · Screens recorded: 13
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -118,7 +118,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 10 | APP-02 | Home › Consistency Dashboard | YES | YES | YES — Cyclift Lab | FUNCTIONAL — first implementation (superseded by the refinements below) (later rounds: see the screen's status table) | NO |
 | 11 | APP-03 | Home › Training Mix Dashboard | YES | YES | YES — Cyclift Lab | — (later rounds: see the screen's status table) | NO |
 | 12 | APP-04 | Home › Recovery Dashboard | DIRECTION ONLY — final visual sign-off pending | YES — awaiting review | YES — Cyclift Lab | — (later rounds: see the screen's status table) | NO |
-| 13 | APP-05 | Home › Daily Training Overview (Day page) — PROPOSED REVISION | NO — proposed, awaiting the owner's visual review | YES — proposed revision, redesigned app only | YES — Cyclift Lab | YES — functional, Cyclift Lab (Obsidian, iPhone 15 Pro); visual review pending | NO |
+| 13 | APP-05 | Home › Daily Training Overview (Day page) | WORKFLOW: YES (25 Nov 2026, 01:41). VISUAL DESIGN: NO — refinement pending | YES — proposed revision, redesigned app only | YES — Cyclift Lab | YES — functional, Cyclift Lab (Obsidian, iPhone 15 Pro); visual review pending | NO |
 
 ---
 
@@ -1191,11 +1191,11 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ---
 
-## Screen 13 — Home › Daily Training Overview (Day page) — PROPOSED REVISION (APP-05)
+## Screen 13 — Home › Daily Training Overview (Day page) (APP-05)
 
 - **Navigation location:** Main app · Home › any day of the weekly calendar (item 4 of the Home review). The same page is opened by the Trends graph, the Weekly overview, and 'View <weekday>' in the Consistency and Training Mix dashboards.
-- **Approval date:** NOT APPROVED. Proposed revision requested by the owner on 24 Nov 2026 (22:42), with three corrections on 24 Nov (23:51). Awaiting the owner's visual review.
-- **Approval status:** PROPOSED — NOT APPROVED. Implemented in the redesigned app only and simulator-verified in Cyclift Lab (check 73); the screenshots are presented for the owner's review. The production Day page is unchanged. The approved Home, Consistency, Training Mix and Recovery are not changed.
+- **Approval date:** 25 Nov 2026, 01:41 — WORKFLOW AND FUNCTIONALITY APPROVED (the five sections in their order, and what they do). FINAL VISUAL DESIGN NOT APPROVED: a presentation-only refinement is pending. Requested 24 Nov 2026 (22:42), corrected 23:51.
+- **Approval status:** WORKFLOW APPROVED (owner, 25 Nov 2026, 01:41): Current workout → Previous comparable workout → Performance changes → Coach's explanation → Daily health metrics, with the underlying functionality as verified in check 73. VISUAL REFINEMENT PENDING — the final visual design is NOT approved; a presentation-only refinement is implemented and awaiting its focused check (check 74) and the owner's review. Earlier: implemented in the redesigned app only and simulator-verified in Cyclift Lab (check 73); the screenshots are presented for the owner's review. The production Day page is unchanged. The approved Home, Consistency, Training Mix and Recovery are not changed.
 - **Original design reference and source:** No approved drawing of a Day page exists. Basis: the owner's written requirements of 24 Nov 2026 (22:42 and 23:51) and the visual language of the approved Home-circle dashboards. The earlier Day page (check 69) is kept as the 'before'.
 - **Implementation commit:** Proposed revision: 04496774, d7b94de8, 6f563bb9 (app code); check corrections d69f723e. Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.
 
@@ -1238,18 +1238,18 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | Stage | State | Evidence |
 |---|---|---|
-| Approved design | NO — proposed, awaiting the owner's visual review | Owner's written requirements of 24 Nov 2026, 22:42 and 23:51. No screenshot is approved. |
+| Approved design | WORKFLOW: YES (25 Nov 2026, 01:41). VISUAL DESIGN: NO — refinement pending | The five-section workflow and its functionality are approved. No screenshot is approved as the final visual design. |
 | Implemented in code | YES — proposed revision, redesigned app only | Code 6f563bb9. |
 | Compiled | YES — Cyclift Lab | Checks 70 and 72. The redesigned main-app target has not been built at this commit. |
 | Simulator-verified | YES — functional, Cyclift Lab (Obsidian, iPhone 15 Pro); visual review pending | Focused check 73, run 45483471654, commit a24410f8 (app code 6f563bb9, unchanged since check 72), 1 of 1 PASSED — every requirement listed below, including Results, and View workout opening the session page with Move to today and Skip and no migration text. The screenshots presented to the owner are those of check 72, taken from the same app code. Focused check 72, run 45475407197, commit f56124d2 (code 6f563bb9): the check FAILED on two of its own expectations while the app behaved as intended in its screenshots — it compared the Results button's spoken label ('View results') with the visible word, and looked for 'Move to today' by an exact button name it does not carry. Both expectations were corrected with their reasons (d69f723e); check 73 re-ran the same app code and passed. Every other requirement of check 72 passed: planned and recorded kept apart; the previous comparable session named with its date; completed strength counted '1 up · 1 down · 1 unchanged' with squat favourable, row unchanged and bench press unfavourable, each exercise opening to sets, reps, load and volume; planned strength with nothing recorded, no result counted and the button 'View workout'; the completed ride with average power favourable, heart rate unchanged, cadence and duration never judged, zones and the history graph behind disclosures, a history point showing its date and measurement and leading to its session; the unplanned ride never coloured, its note saying heart rate was not measured; two activities on one day as two cards, the missed ride described as missed; the first-ever session with no previous record and no history graph; a rest day with its stored readings; a day without readings saying so; Free day and Rest day told apart; no migration text on the session page. Earlier: check 70 (run 45464421192, commit b5957e28, code 04496774) passed 1 of 1 before the corrections; its screenshots showed two wrong statements (a note saying neither power nor heart rate was measured when power was; a missed ride described as 'not done yet'), both corrected. Check 71 was cancelled by the workflow when check 72 was queued — not evidence. Logic: 5 Day-page tests pass on 6f563bb9, including the like-for-like rules. NOT run: the full logic suite, the full Lab regression, the dashboards' own checks on this commit, the redesigned main app. NOT exercised: larger text, other themes, VoiceOver, drag on the history graph, the Weekly overview's 'View workout' button, a session in progress, the no-plan and before-plan days. |
 | Physically verified on iPhone | NO | Not run on a physical iPhone, and not seen with a real athlete's records. |
 
-- **Visual verification:** NOT APPROVED. Screenshots of check 72 presented for the owner's review.
+- **Visual verification:** NOT APPROVED. The check 72 screenshots were reviewed on 25 Nov 2026 (01:41): workflow approved, visual design to be refined. The refined presentation awaits check 74 and the owner's review.
 - **Functional verification:** Lab simulator: check 73 passed 1 of 1 on app code 6f563bb9, as listed.
 
 ### Remaining work or limitations
 
-- Owner's visual review and decision.
+- VISUAL REFINEMENT PENDING (owner, 25 Nov 2026, 01:41), presentation only: the five sections kept in order; the important results first; exercise comparisons and history collapsed by default; green and red only where established, neutral otherwise; a shorter Coach explanation without technical wording; compact health metrics with missing data identified; every drill-down, history, previous-session link, Results and session action preserved; the visual simplicity of the approved Home. Implemented in code ea69eb24; check 74 (run 45494403118) in progress; before / after screenshots for a completed strength day, a completed cycling day and an upcoming workout to follow.
 - Owner's confirmation of the comparison margins (effort, ride length, tolerances).
 - The 'Start' wording for later days is changed only in the redesigned app's Day page and Weekly overview rows; Plan and the production app keep theirs.
 - Sport-specific comparison components for running, swimming and other activities: not built — they need recording or import first.
@@ -1273,6 +1273,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | When | Decision | State |
 |---|---|---|
+| 25 Nov 2026, 01:41 | WORKFLOW AND UNDERLYING FUNCTIONALITY APPROVED: the Day page's five sections in their order. FINAL VISUAL DESIGN NOT YET APPROVED. Presentation-only refinement requested: prioritise the important results; collapse detailed exercise comparisons and history by default; evidence-based green and red with neutral where unreliable; a shorter Coach explanation with no internal technical wording; compact health metrics with missing data clearly identified; all drill-downs, interactive history, previous-session links, Results and session actions preserved; the visual simplicity of the approved Home. Before / after full-page screenshots for a completed strength day, a completed cycling day and an upcoming workout. No change to approved screens or production. | IN FORCE — workflow approved; visual refinement pending |
 | 24 Nov 2026, 23:51 | Three points before presentation: 'View workout' instead of Start wherever Start does not begin recording; no athlete-visible migration, debugging or internal technical messages (diagnostics kept internally); green and red only where improvement or decline can be established for a comparable workout type, exercise, reps, sets and available effort, otherwise neutral. Hierarchy Current workout → Previous comparable workout → Performance changes → Coach explanation → Daily health metrics to be immediately clear. No full regression, no production change. The Day page stays unapproved until the owner's visual review. | IN FORCE — implemented, awaiting review |
 | 24 Nov 2026, 22:42 | Proposed Daily Training Overview requested: performance comparison as the main feature of each session, in the order current workout, previous comparable workout, performance comparison, Coach's analysis, daily health metrics; green / red / neutral never by direction alone; strength exercise by exercise; cycling duration, power, heart rate, cadence and zones; truthful empty states for sports without recording; planned, actual and previous kept separate; an expandable history graph; existing controls preserved; the 'Your week' contradictions fixed; rest day and free day told apart; Start on a future session verified. To be recorded as a proposed revision and not marked approved. | IN FORCE — implemented, awaiting review |
 | 24 Nov 2026, 18:29 | Home review moved to item 4: the weekly calendar and day-selection interactions. Complete destination screens, previous implementation, references and a functional audit presented (check 69) before any code change. | NOTE |
