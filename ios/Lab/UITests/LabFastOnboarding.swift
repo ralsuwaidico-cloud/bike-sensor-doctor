@@ -1288,6 +1288,34 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(again.value as? String ?? "", ring, "required: the Home circle says what it said before")
     }
 
+    /// CAPTURE ONLY (Home review item 4, 24 Nov 2026): what each day of Home's weekly calendar opens, for the owner's
+    /// comparison. No app code is changed; the only requirements are that every calendar day opens its Day page and returns.
+    func testCaptureHomeCalendarDays() {
+        let app = launchHistory()
+        captureFullPage(app, "cal-home", steps: 1); toTop(app)
+        for i in 0..<7 {
+            let day = app.buttons["scheduleDay-\(i)"].firstMatch
+            XCTAssertTrue(day.waitForExistence(timeout: 6), "required: calendar day \(i) on Home")
+            day.tap()
+            XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 8), "required: calendar day \(i) opens its Day page")
+            captureFullPage(app, "cal-day-\(i)", steps: 2)
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            XCTAssertTrue(app.buttons["scheduleDay-0"].firstMatch.waitForExistence(timeout: 8), "required: Back returns to Home from day \(i)")
+        }
+        // two days of last week that the current week cannot show: a skipped session (Wed) and a missed one beside a recorded one (Thu)
+        _ = openConsistency(app)
+        pick(app, "consistency", 6)
+        app.buttons["consistencyMode-days"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.5)
+        for (i, name) in [(2, "skipped"), (3, "missed")] {
+            toTop(app); pick(app, "consistency", i)
+            press(app, "consistencyViewDetails")
+            XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 8), "required: the Day page of last week's day \(i)")
+            captureFullPage(app, "cal-lastweek-\(name)", steps: 2)
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            XCTAssertTrue(el(app, "consistencyDashboard").waitForExistence(timeout: 8), "required: Back returns to the dashboard")
+        }
+    }
+
     /// Training Mix for three different athletes (owner, 24 Nov 2026): the page follows the roster. Each is the history
     /// athlete with a different roster; last week is chosen in each.
     func testTrainingMixAthletes() {
