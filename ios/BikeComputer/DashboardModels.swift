@@ -254,6 +254,32 @@ enum TrainingMixModel {
     }
 }
 
+// MARK: - Floating label of a line chart
+//
+// The approved Consistency rule first (above the point; otherwise below; otherwise beside). Where that rule would give up
+// and send the label to the top of the chart — a closely packed, zigzag line can leave no free place — the label stays AT
+// its point instead (owner, 24 Nov 2026): above or below it, leaning left or right, in the place that covers the fewest
+// neighbouring points. It never covers its own point and never leaves the chart.
+enum DashTooltipRule {
+    static func place(px: Double, py: Double, w: Double, h: Double, width: Double, height: Double, others: [(Double, Double)]) -> (box: ConsistencyTooltip.Box, side: String) {
+        let first = ConsistencyTooltip.place(px: px, py: py, w: w, h: h, width: width, height: height, others: others)
+        if first.side != .top { return (first.box, first.side.rawValue) }
+        let gap = ConsistencyTooltip.gap
+        func clampX(_ x: Double) -> Double { min(max(x, w / 2 + 2), max(w / 2 + 2, width - w / 2 - 2)) }
+        var best: (box: ConsistencyTooltip.Box, side: String, covered: Int)? = nil
+        for (y, side) in [(py - gap - h / 2, "above"), (py + gap + h / 2, "below")] {
+            for x in [clampX(px), clampX(px - 14 + w / 2), clampX(px + 14 - w / 2)] {
+                let b = ConsistencyTooltip.Box(x: x, y: y, w: w, h: h)
+                guard b.minY >= 0, b.maxY <= height, !b.covers(px, py, margin: 6) else { continue }
+                let n = others.filter { b.covers($0.0, $0.1, margin: 5) }.count
+                if best == nil || n < best!.covered { best = (b, side, n) }
+            }
+        }
+        if let b = best { return (b.box, b.side) }
+        return (first.box, first.side.rawValue)
+    }
+}
+
 // MARK: - Recovery
 //
 // The readings the app already keeps (`RecoveryLog`: one reading per kind per day, read from Apple Health, each with the

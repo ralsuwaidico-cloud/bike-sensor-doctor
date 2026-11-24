@@ -954,7 +954,19 @@ final class LabFastOnboarding: XCTestCase {
         let e = el(app, id)
         XCTAssertTrue(e.waitForExistence(timeout: 6), "required: \(id)")
         guard e.exists else { return }
-        app.reveal(e, top: 190, bottomMargin: 190); e.tap()
+        // Scrolls from the left gutter, clear of every control. Changed after check 65: the shared `reveal` drags from the
+        // middle of the screen, and with the page at a new length that drag began on the chosen graph column, which the
+        // simulator took as a press — clearing the selection and removing the very link about to be pressed.
+        let screen = app.windows.firstMatch.frame
+        for _ in 0..<14 {
+            let f = e.frame
+            if f.minY >= 190 && f.maxY <= screen.height - 190 { break }
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.015, dy: 0.5))
+            let dy: CGFloat = f.minY < 190 ? min(300, 230 - f.minY) : -min(300, f.maxY - (screen.height - 230))
+            from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: dy)), withVelocity: .slow, thenHoldForDuration: 0.2)
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        e.tap()
         Thread.sleep(forTimeInterval: 0.4)
     }
     private func openConsistency(_ app: XCUIApplication) -> String {

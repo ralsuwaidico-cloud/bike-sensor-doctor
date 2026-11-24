@@ -116,4 +116,29 @@ final class DashboardModelsTests: XCTestCase {
         XCTAssertEqual(d.rows.map(\.status), ["Not connected", "Not connected", "Not connected"])
         XCTAssertEqual(d.days.map(\.kind), [.noReading, .noReading, .noReading, .noReading, .upcoming, .upcoming, .upcoming])
     }
+
+    func testLineChartLabelStaysAtItsPointWhenTheConsistencyRuleWouldSendItToTheTop() {
+        let W = 300.0, H = 212.0, w = 118.0, h = 26.0
+        // a zigzag: neighbours above and below on both sides, so no place is free of them
+        let px = 150.0, py = 106.0
+        let others = [(113.0, 80.0), (187.0, 80.0), (113.0, 132.0), (187.0, 132.0), (76.0, 106.0), (224.0, 106.0)]
+        XCTAssertEqual(ConsistencyTooltip.place(px: px, py: py, w: w, h: h, width: W, height: H, others: others).side, .top, "the Consistency rule alone gives up here")
+        let r = DashTooltipRule.place(px: px, py: py, w: w, h: h, width: W, height: H, others: others)
+        XCTAssertTrue(["above", "below"].contains(r.side), "the label stays at its point (\(r.side))")
+        XCTAssertFalse(r.box.covers(px, py, margin: 0), "and never covers it")
+        XCTAssertTrue(r.box.minX >= 0 && r.box.maxX <= W && r.box.minY >= 0 && r.box.maxY <= H, "inside the chart")
+        XCTAssertLessThanOrEqual(abs(r.box.y - py), ConsistencyTooltip.gap + h, "directly above or below, not at the top")
+        // where the Consistency rule finds a free place, it is used unchanged
+        let free = DashTooltipRule.place(px: px, py: py, w: w, h: h, width: W, height: H, others: [])
+        XCTAssertEqual(free.side, "above"); XCTAssertEqual(free.box, ConsistencyTooltip.place(px: px, py: py, w: w, h: h, width: W, height: H, others: []).box)
+        // every point of a dense, irregular line, at every height the scale allows
+        for k in 0..<8 {
+            let xs = (0..<8).map { 34.0 + 33.25 * (Double($0) + 0.5) }
+            let ys = (0..<8).map { 40.0 + Double(($0 * 53 + 17) % 132) }
+            let o = (0..<8).filter { $0 != k }.map { (xs[$0], ys[$0]) }
+            let t = DashTooltipRule.place(px: xs[k], py: ys[k], w: w, h: h, width: W, height: H, others: o)
+            XCTAssertNotEqual(t.side, "top", "point \(k) keeps its label beside it")
+            XCTAssertTrue(t.box.minX >= 0 && t.box.maxX <= W && t.box.minY >= 0 && t.box.maxY <= H && !t.box.covers(xs[k], ys[k], margin: 0), "point \(k): \(t)")
+        }
+    }
 }

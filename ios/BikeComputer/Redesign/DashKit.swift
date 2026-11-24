@@ -131,8 +131,7 @@ struct DashChart<Marks: View>: View {
             return (ConsistencyTooltip.Box(x: min(max(px, w / 2 + 2), max(w / 2 + 2, W - w / 2 - 2)), y: h / 2 + 1, w: w, h: h), "strip")
         case .rule:
             let others = columns.filter { $0.id != c.id }.map { (Double(geo.x($0.id)), py($0)) }
-            let p = ConsistencyTooltip.place(px: px, py: py(c), w: w, h: h, width: W, height: Double(geo.height), others: others)
-            return (p.box, p.side.rawValue)
+            return DashTooltipRule.place(px: px, py: py(c), w: w, h: h, width: W, height: Double(geo.height), others: others)
         }
     }
     /// `side` — where the label sits relative to its point ("above", "below", "right", "left", "top", or "strip") — is
