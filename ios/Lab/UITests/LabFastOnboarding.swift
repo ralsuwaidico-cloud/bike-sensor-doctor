@@ -1319,7 +1319,9 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertFalse(el(app, "mixSport-cycling").exists, "required: a runner sees no cycling row")
         XCTAssertTrue(el(app, "mixSport-running").label.contains("not recorded yet"), "required: running says Not recorded yet")
         app.buttons["mixView-types"].firstMatch.tap(); Thread.sleep(forTimeInterval: 0.4)
-        pick(app, "mix", 6)
+        XCTAssertTrue(app.staticTexts["mixTooltip"].exists, "required: changing the view keeps the chosen week")
+        let key = el(app, "mixLegend").label
+        XCTAssertTrue(key.contains("Strength") && !key.contains("Endurance"), "required: the key names only what the graph draws (\(key))")
         captureFullPage(app, "mix-7-run-strength", steps: 7)
         app.terminate()
 
@@ -1333,6 +1335,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertEqual(el(app, "mixBalanceMain").label, "Your main sport: Road cycling")
         XCTAssertFalse(el(app, "mixBalancePriority").exists || el(app, "mixBalanceUnrecorded").exists, "required: no lead and nothing unrecorded")
         XCTAssertTrue(el(app, "mixInsight").label.contains("All of your recorded training in this week was endurance."), "required: the note (\(el(app, "mixInsight").label))")
+        XCTAssertFalse(el(app, "mixLegend").label.contains("Strength"), "required: no Strength key for an athlete without strength")
         captureFullPage(app, "mix-8-endurance-only", steps: 6)
     }
 
@@ -1479,6 +1482,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(t.0.hasPrefix("Nothing recorded yet") && t.1.isEmpty, "required: the label says nothing is recorded, no figure (\(t))")
         pick(app, "mix", 7)
         XCTAssertTrue(el(app, "mixInsight").label.hasSuffix("Nothing is recorded yet this week."), "required: the summary says so")
+        XCTAssertFalse(el(app, "mixLegend").exists, "required: no key when the graph draws nothing")
         captureFullPage(app, "mix-5-no-records", steps: 4); toTop(app)
         app.navigationBars.buttons.firstMatch.tap()
         _ = openCircle(app, "indicatorRecovery", page: "recoveryDashboard", title: "Recovery")

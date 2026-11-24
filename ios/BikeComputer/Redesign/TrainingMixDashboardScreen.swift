@@ -155,7 +155,7 @@ struct TrainingMixDashboardView: View {
                           selected: inspected, placement: .topStrip, onTap: { i in tap(i) }, onDrag: { i in select(i) }) { geo in
                     ForEach(ps) { p in bar(p, geo, scale: scale) }
                 }
-                legend
+                legend(ps)
             }
         }
         .accessibilityElement(children: .contain)
@@ -182,11 +182,16 @@ struct TrainingMixDashboardView: View {
             else { Capsule().fill(theme.textTertiary).frame(width: 10, height: 2).position(x: x, y: geo.base - 2) }
         }
     }
-    private var legend: some View {
+    /// Names only what the graph actually draws: a runner with no ride sees no Endurance key, and so on.
+    @ViewBuilder private func legend(_ ps: [MixPoint]) -> some View {
+        let e = ps.contains { $0.cycling > 0 }, st = ps.contains { $0.strength > 0 }, pl = ps.contains { $0.planned > 0 }
+        if e || st || pl { legendRow(e, st, pl) }
+    }
+    private func legendRow(_ e: Bool, _ st: Bool, _ pl: Bool) -> some View {
         HStack(spacing: 12) {
-            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(theme.endurance).frame(width: 9, height: 9); Text(enduranceName) }
-            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(theme.strength).frame(width: 9, height: 9); Text("Strength") }
-            HStack(spacing: 4) { Capsule().fill(theme.textPrimary.opacity(0.75)).frame(width: 12, height: 2); Text("Planned") }
+            if e { HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(theme.endurance).frame(width: 9, height: 9); Text(enduranceName) } }
+            if st { HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(theme.strength).frame(width: 9, height: 9); Text("Strength") } }
+            if pl { HStack(spacing: 4) { Capsule().fill(theme.textPrimary.opacity(0.75)).frame(width: 12, height: 2); Text("Planned") } }
         }
         .font(.system(size: 10, weight: .medium)).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.7)
         .accessibilityElement(children: .combine)
