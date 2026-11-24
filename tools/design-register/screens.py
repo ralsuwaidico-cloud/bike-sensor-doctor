@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "24 Nov 2026, 11:20 (Dubai)"
+UPDATED = "24 Nov 2026, 12:40 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -1052,8 +1052,8 @@ SCREENS = [
         number=11, id="APP-03", name="Home › Training Mix Dashboard",
         location="Main app · Home › the Training Mix circle (the second circle). The Weekly overview and Day pages are its drill-downs.",
         approved_on="24 Nov 2026, 10:22 — VISUALLY APPROVED with minor corrections. Shared design direction 23 Nov 2026, 19:55.",
-        status="VISUALLY APPROVED WITH MINOR CORRECTIONS (24 Nov 2026, 10:22); targeted verification OUTSTANDING. "
-               "Two corrections: a shorter Coach note that interprets and does not repeat the graph's figures; verification that the planned-time line stands at each period's actual planned sessions. Not to be redesigned.",
+        status="VISUALLY APPROVED WITH MINOR CORRECTIONS (24 Nov 2026, 10:22). Both corrections are implemented and their targeted verification PASSED (check 66) — presented for final sign-off; not yet signed off. "
+               "Corrections: a shorter Coach note that interprets and does not repeat the graph's figures; verification that the planned-time line stands at each period's actual planned sessions (found correct, not changed). Not to be redesigned.",
         reference="The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. "
                   "The canonical design will be the implementation screenshots the owner approves; none is approved yet.",
         wording=[("Title", "Training Mix"),
@@ -1062,6 +1062,7 @@ SCREENS = [
                  ("Floating label", "4 h 52 min · 16 Nov / Cycling 71% · Strength 29% — or 'No recorded training · Fri', 'Nothing recorded yet · 23 Nov', 'Upcoming · Sat'"),
                  ("Inspection", "<period> — <total> recorded / Cycling · <time> recorded · <time> planned / Strength · … / sessions / View week · View <weekday>"),
                  ("Coach card label (one card only)", "COACH · FROM YOUR RECORDS"),
+                 ("Coach note (24 Nov 2026) — short, no figures", "'Cycling made up most of your recorded training in this week. That is less than was planned.' / 'about what was planned' (within five minutes) / 'more than was planned' / 'The week is still in progress.' / 'On Thursday you recorded strength only. Planned and not recorded: Endurance.'"),
                  ("Sports", "Training by sport · <n>% of recorded time · <time> planned · Not recorded yet · In your roster · recording coming soon"),
                  ("Details", "Session details · Open weekly overview / Open <weekday>")],
         design=["Same structure, margins, cards, typography, selector, floating label, inspection card, single Coach card, row style and expandable details as the approved Consistency Dashboard.",
@@ -1080,11 +1081,17 @@ SCREENS = [
                    "View week → existing Weekly overview. View <weekday> → existing Day page. Sport row → its sessions in place. Session row → the recorded ride or strength session, or the planned session's page. Session details → the period's sessions, then Open weekly overview / Open <weekday>.",
                    "The dashboard reads records only; it writes nothing."],
         rejected=["The Weekly overview as the Training Mix destination (it was the circle's destination until 23 Nov 2026; both Weekly overview designs were rejected as a dashboard on 23 Nov, 11:59)."],
-        commits="becbfdc8 (models, shared kit, screen, Lab fixtures); af9a2443 on top (Recovery-only adjustments in the shared chart frame). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.",
+        commits="Corrections: b993d9c7, ad00ea20. First implementation becbfdc8 (models, shared kit, screen, Lab fixtures); af9a2443 on top (Recovery-only adjustments in the shared chart frame). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.",
         stages=[("Approved design", "DIRECTION ONLY — final visual sign-off pending", "Owner, 23 Nov 2026 19:55: shared design direction. No screenshot is approved."),
                 ("Implemented in code", "YES — awaiting review", "Commit becbfdc8."),
                 ("Compiled", "YES — Cyclift Lab", "Checks 62 and 64. The redesigned main-app target has not been built at these commits."),
-                ("Simulator-verified", "FUNCTIONAL — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved",
+                ("Simulator-verified — corrections of 24 Nov 10:22", "YES — Cyclift Lab (Obsidian, iPhone 15 Pro); final sign-off pending",
+                 "Focused check 66, run 45345940287, commit 20356cfd (code ad00ea20), 2 of 2 passed; the whole Training Mix check re-ran on this commit. "
+                 "COACH NOTE: last week reads 'Cycling made up most of your recorded training in this week. That is less than was planned.' — it follows the chosen week and contains no digit; Thursday reads 'On Thursday you recorded strength only. Planned and not recorded: Endurance.' With nothing recorded: 'Nothing is recorded yet this week.' (check 65). "
+                 "PLANNED-TIME LINE: each column states the planned time its line is drawn at. Weeks: 5 h 20 min for each of the six five-session weeks and 5 h 5 min for last week (its Wednesday ride was skipped and Thursday held a 45-minute ride). Days of last week: 1 h, 40 min, nothing (skipped), 1 h 25 min (two sessions), nothing, 2 h, nothing. The calculation was found correct and was not changed; a logic test adds that the days add up to the week and a week without a plan has no line. "
+                 "Everything verified in check 62 passed again. Earlier: check 65 (run 45340821126, 87201f9c) FAILED on this check for a reason in the check itself — its scroll began on the chosen graph column, which the simulator took as a press and cleared the selection; the check now scrolls from the page edge. Whether a real finger can do the same is NOT established. "
+                 "Logic: 5 dashboard tests pass; full suite 628 tests, 0 failures, 5 skipped at b993d9c7 (not re-run on ad00ea20, whose own tests pass)."),
+                ("Simulator-verified — first implementation", "FUNCTIONAL — superseded by the corrections above",
                  "Focused check 62, run 45213385881 (second attempt; the first got no runner), commit 50c6af1e (code becbfdc8): the Training Mix check PASSED. 'Consistency history' athlete: no ratio in the header; all eight week bars show a floating label inside the chart at their column, each earlier week with its recorded time and distribution; last week reads 4 h 52 min, 'Cycling 71% · Strength 29%', planned 5 h 5 min, cycling 3 h 28 min recorded of 3 h 45 min planned, strength 1 h 24 min of 1 h 20 min; the Coach card follows the chosen week; the same bar clears the selection; View week opens the Weekly overview and returns. "
                  "Days: 58 min, 42 min, no recorded training, 42 min, no recorded training, 1 h 55 min, 35 min, each with its distribution; Thursday shows strength 42 min recorded and the planned 45 min ride with nothing recorded, and the Coach card says so; View Thursday opens the Day page and returns. "
                  "Sport rows: cycling 3 h 28 min, strength 1 h 24 min, running and swimming 'Not recorded yet' with no figure; cycling expands to its sessions; a recorded ride opens its record; Session details opens; the Home circle reads the same afterwards. "
@@ -1092,14 +1099,19 @@ SCREENS = [
                  "The full Training Mix check was NOT re-run on af9a2443 (that commit changed only the Recovery graph's inset and scale). Home: its final-baseline check passed in check 62. Logic: 4 dashboard tests pass, including that the week's minutes equal the Home circle's; full suite 628 tests, 0 failures, 12 skipped, at becbfdc8. "
                  "NOT exercised: drag across the graph, larger text, other themes, VoiceOver, the redesigned main app."),
                 ("Physically verified on iPhone", "NO", "Not run on a physical iPhone.")],
-        visual_verification="None — awaiting the owner's review of the screenshots.",
-        functional_verification="Lab simulator: checks 62 and 64, as listed.",
-        remaining=["Owner's visual sign-off.",
+        visual_verification="VISUALLY APPROVED with minor corrections by the owner on 24 Nov 2026, 10:22 (check 62 screenshots). The corrected Coach note is shown in the before / after board; final sign-off pending.",
+        functional_verification="Lab simulator: check 66, as listed.",
+        remaining=["Owner's final sign-off of the corrected Coach note.",
+                   "OPEN OBSERVATION (all three dashboards): in a check, a vertical scroll that began on a graph column was taken as a press and cleared the selection. Not established for a real finger; nothing changed for it.",
                    "The 'multisport athlete' screenshot is the same demonstration athlete as the others (cycling, strength, running, swimming): only cycling and strength can hold recorded time today.",
                    "Planned mobility / other-activity sessions are not part of the mix (the Home circle does not count them either) — the same open product decision as Consistency.",
                    "Day totals are whole minutes per day; a week's total can differ from the sum of its days by a minute or two of rounding.",
                    "Not verified: drag inspection, larger text, other themes, VoiceOver, physical iPhone, the redesigned main-app target."],
-        images=[("H03_mix-1-weeks-selected.png", "SENT FOR REVIEW — NOT APPROVED. Weeks, last week selected. Complete page. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 62, 'Consistency history' demonstration athlete (synthetic data; a multisport roster)."),
+        images=[("H03_r2_mix_before_after.png", "CORRECTION FOR SIGN-OFF. The Coach note before (check 62) and after (check 66), Weeks and Days; graph and planned-time line unchanged."),
+                ("H03_r2_mix-1-weeks-selected.png", "AS CORRECTED — complete page, Weeks, last week selected (check 66)."),
+                ("H03_r2_mix-2-days-selected.png", "AS CORRECTED — complete page, Days, Thursday selected (check 66)."),
+                ("H03_r2_mix-3-sport-expanded.png", "AS CORRECTED — complete page, Cycling expanded (check 66)."),
+                ("H03_mix-1-weeks-selected.png", "VISUALLY APPROVED 24 Nov 2026 with the Coach note to be shortened (check 62). Weeks, last week selected. Complete page. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 62, 'Consistency history' demonstration athlete (synthetic data; a multisport roster)."),
                 ("H03_mix-2-days-selected.png", "SENT FOR REVIEW — NOT APPROVED. Days, Thursday selected."),
                 ("H03_mix-3-sport-expanded.png", "SENT FOR REVIEW — NOT APPROVED. Cycling expanded with its sessions; running and swimming 'Not recorded yet'."),
                 ("H03_mix-5-no-records.png", "SENT FOR REVIEW — NOT APPROVED. Athlete with nothing recorded (check 64)."),
@@ -1111,16 +1123,16 @@ SCREENS = [
         number=12, id="APP-04", name="Home › Recovery Dashboard",
         location="Main app · Home › the Recovery circle (the third circle). The existing Recovery page stays as its detail view; the Sleep row and Key metrics rows on Home still open that page directly.",
         approved_on="24 Nov 2026, 10:22 — design direction ACCEPTED; final approval pending corrections. Shared design direction 23 Nov 2026, 19:55.",
-        status="AWAITING FINAL REFINEMENT APPROVAL (24 Nov 2026, 10:22): design direction accepted; three corrections required before final approval — "
-               "the latest readings dated in the header and never mixed with the chosen period; 'your usual range' shown only with a real, sufficiently supported personal baseline; floating labels anchored to their point by the approved Consistency placement rule. Not to be redesigned. No recovery score exists or is shown.",
+        status="AWAITING FINAL REFINEMENT APPROVAL (24 Nov 2026, 10:22): design direction accepted. The three corrections are implemented and simulator-verified (check 66) and presented for approval; NOT yet approved. "
+               "Corrections: the latest readings dated in the header and never mixed with the chosen period; 'your usual range' shown only with a real, sufficiently supported personal baseline; floating labels anchored to their point by the approved Consistency placement rule. Not to be redesigned. No recovery score exists or is shown.",
         reference="The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. None is approved yet.",
         wording=[("Title", "Recovery"),
-                 ("Summary", "<period> / Latest readings / Sleep · Resting HR · HRV, each with its latest value or 'No reading' — or 'No recovery measurements'"),
+                 ("Summary (24 Nov 2026)", "Latest readings / Sleep · Resting HR · HRV, each with its latest value AND the day it was taken ('Tue 24 Nov'), or 'No reading' — or 'No recovery measurements'. No chosen week is named in the header."),
                  ("Graph", "Weeks | Days · Sleep | Resting HR | HRV · '<metric> · weekly average, in <unit> · last 8 weeks' · legend: Reading · No reading"),
-                 ("Floating label", "Avg 7 h 27 min · 16 Nov / 6 of 7 nights — a day: 6 h 54 min · Sun / Demo data · 06:36 — or 'No reading · Thu', 'Upcoming · Sat'"),
+                 ("Floating label (24 Nov 2026) — one line", "Avg 7 h 26 min · 16 Nov — a day: 7 h 48 min · Sun — or 'No reading · Thu', 'Upcoming · Sat'. The source, the time and the number of readings are in the inspection card."),
                  ("Inspection", "<period> — average <value> / one line per indicator with value, count or time, and source, or '— no reading' / View recovery details"),
                  ("Coach card label (one card only)", "COACH · FROM YOUR RECORDS"),
-                 ("Rows", "Recovery measures · latest value · 'Inside / Below / Above your usual range (…)' or 'No usual range yet' · source, time and freshness · 'Not connected' · 'No reading in the last 14 days'"),
+                 ("Rows (24 Nov 2026)", "Recovery measures · latest value · 'Inside / Below / Above your usual range · 6.5–8.1 h from 25 nights' — or 'No usual range yet · 5 of the 7 earlier readings needed' · source, time and freshness · 'Not connected' · 'No reading in the last 14 days'"),
                  ("Details", "Readings and sources · '<n> readings stored · source: … · latest is fresh' · 'Cyclift estimates none of them, and it calculates no recovery score.'")],
         design=["Same structure, margins, cards, typography, selectors, floating label, inspection card, single Coach card, row style and expandable details as the approved Consistency Dashboard.",
                 "Graph: ONE metric at a time, chosen with a second selector, each on its own scale and unit (hours, bpm, ms) — never a shared axis. Points joined by a thin line; a period without a reading leaves a gap and a quiet baseline mark.",
@@ -1131,7 +1143,10 @@ SCREENS = [
                    "Indicators: sleep, resting heart rate and heart-rate variability — the three Home already uses. Weight is also read from Apple Health but is not treated as a recovery indicator here.",
                    "Data: the app's existing readings log — one reading per indicator per day, read from Apple Health, each stored with the source Apple Health names and the time of the sample, kept for 90 days. Cyclift estimates none of them.",
                    "A day's point is that day's reading. A week's point is the plain average of the readings recorded in that week, always shown with how many there were. A day or week without a reading has none — never zero.",
-                   "'Usual range' and 'fresh / older than a day / stale' are the existing Recovery page's own calculations (the 28 days before the latest reading, at least 7 records), reused unchanged.",
+                   "BASELINE AUDIT (24 Nov 2026). 'Your usual range' is the existing Recovery page's personal baseline, reused unchanged: the athlete's own readings of that indicator in the 28 days before the day of the latest reading (the latest itself excluded); it exists only with AT LEAST 7 such readings; the range is the middle half of those readings (first to third quartile) widened by half its width, with a small minimum width per indicator. The latest reading is then inside, below or above it. "
+                   "The words 'your usual range' are shown ONLY when that baseline exists, always with the range and the number of readings it rests on. Without it the row says 'No usual range yet' and how many of the 7 readings exist; no range is invented. Limits, stated not changed: seven readings is a small sample; the comparison is with the latest reading even when that reading is old (its date and freshness are shown beside it); the rule is a product rule, not a validated clinical range.",
+                   "HEADER (24 Nov 2026): the header holds only the LATEST reading of each indicator, each dated; it does not change with the chosen week. Averages and the chosen period are in the graph caption and the inspection card.",
+                   "FLOATING LABEL (24 Nov 2026): one line, placed by the approved Consistency rule (above the point; otherwise below; otherwise beside), with one label's height kept clear above and below the scale. Where that rule would give up and use the top of the chart — a closely packed zigzag line — the label stays at its point, above or below, leaning left or right, where it covers the fewest neighbouring points; it never covers its own point or leaves the chart.",
                    "The one Coach card is fixed sentences about the chosen metric for the chosen week, or the chosen day in Days view: the average and how many readings, and whether it is higher or lower than the week before when both weeks hold at least three readings; otherwise it says there is not enough data. No readiness, no diagnosis, no cause.",
                    "A source is never called connected when it is not: an indicator that is off says 'Not connected'; one that is on with nothing stored says so.",
                    "In Cyclift Lab the readings are synthetic and their source reads 'Demo data'. Lab reads nothing from Apple Health.",
@@ -1139,11 +1154,19 @@ SCREENS = [
                    "View recovery details → the existing Recovery page. Measure row → its recent readings in place, then Open recovery details → the existing Recovery page. Readings and sources → what is stored and from where.",
                    "NESTED SCREEN STILL TO REVIEW: the existing Recovery page (also opened from Home's Sleep row and Key metrics rows — items 7 and 12–14 of the Home review)."],
         rejected=["A recovery percentage or readiness score (standing since 12 Nov 2026; restated 23 Nov 2026, 19:55).", "Several metrics on one shared axis."],
-        commits="becbfdc8 (models, shared kit, screen, Lab fixtures); 441b4f01 and af9a2443 (tighter sleep scale, less empty room above the line). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.",
+        commits="Corrections: b993d9c7, ad00ea20. First implementation becbfdc8 (models, shared kit, screen, Lab fixtures); 441b4f01 and af9a2443 (tighter sleep scale, less empty room above the line). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.",
         stages=[("Approved design", "DIRECTION ONLY — final visual sign-off pending", "Owner, 23 Nov 2026 19:55: shared design direction. No screenshot is approved."),
                 ("Implemented in code", "YES — awaiting review", "Commit af9a2443."),
                 ("Compiled", "YES — Cyclift Lab", "Check 64 (run 45227865589, commit d90e2f86). The redesigned main-app target has not been built at this commit."),
-                ("Simulator-verified", "FUNCTIONAL — Cyclift Lab (Obsidian, iPhone 15 Pro); not visually approved",
+                ("Simulator-verified — corrections of 24 Nov 10:22", "FUNCTIONAL YES — Cyclift Lab (Obsidian, iPhone 15 Pro); approval pending",
+                 "Focused check 66, run 45345940287, commit 20356cfd (code ad00ea20), 2 of 2 passed; the whole Recovery check re-ran on this commit. "
+                 "HEADER: each of the three latest readings carries its day; no chosen week is named; choosing a week does not change the header; how many readings an average rests on is in the card. "
+                 "LABELS: every sleep week (8) and day (7), every resting-HR week (8) and four HRV weeks have a one-line label that is inside the chart, at its column, and placed above, below or beside its point — none at the top of the chart. The card names the source and time of a day's reading. "
+                 "USUAL RANGE: all three rows state 'your usual range' with the range and the number of readings it rests on. In check 65 (run 45340821126, code b993d9c7) the one-source athlete with six sleep readings showed 'No usual range yet' and never 'your usual range'; that check and the no-data check passed there and were not re-run on ad00ea20. "
+                 "Everything verified in check 64 passed again. Earlier: check 65 FAILED on this check — the label of one HRV week was placed at the top of the chart because the Consistency rule found no free place in a zigzag line; the shared rule now keeps the label at its point, with a logic test. "
+                 "Logic: 5 dashboard tests pass (no range is stated for two earlier readings; the label stays at its point); full suite 628 tests, 0 failures, 5 skipped at b993d9c7 (not re-run on ad00ea20, whose own tests pass). "
+                 "NOT exercised: drag across the graph, larger text, other themes, VoiceOver, the redesigned main app, real Apple Health readings."),
+                ("Simulator-verified — first implementation", "FUNCTIONAL — superseded by the corrections above",
                  "Focused check 64, run 45227865589, commit d90e2f86 (code af9a2443), 3 of 3 passed. 'Consistency history' athlete with eight weeks of demo readings: the header shows each latest reading with its unit and no percentage; every one of the eight week points shows 'Avg …' with 'n of 7 nights' in a floating label inside the chart at its point; the Coach card follows the chosen week; the same point clears the selection. "
                  "Days: each day shows its value with 'Demo data' and the time, or 'No reading' with no value; the Coach card and the inspection card follow the chosen day and name the source. Resting HR is drawn and labelled in bpm and HRV in ms, each on its own scale, and the Coach card follows the chosen metric. View recovery details opens the existing Recovery page and returns. "
                  "Rows show the latest reading, usual range and source with no score; the sleep row expands to its recent readings with their source and opens the existing Recovery page; Readings and sources names the source and states that no score is calculated; the Home circle reads the same afterwards and shows no percentage. "
@@ -1153,14 +1176,21 @@ SCREENS = [
                  "Logic: 4 dashboard tests pass (no reading is ever zero; each metric on its own scale; no percentage; truthful summaries). Full suite 628 tests, 0 failures, 12 skipped, at becbfdc8 — NOT re-run after the scale change, whose focused tests pass. "
                  "NOT exercised: drag across the graph, larger text, other themes, VoiceOver, the redesigned main app, and real Apple Health readings on a device."),
                 ("Physically verified on iPhone", "NO", "Not run on a physical iPhone. Real Apple Health readings have not been seen in this dashboard.")],
-        visual_verification="None — awaiting the owner's review of the screenshots.",
-        functional_verification="Lab simulator: check 64, as listed.",
-        remaining=["Owner's visual sign-off.",
-                   "For the owner's view: the header's 'Latest readings' are the newest readings whatever week is chosen, while the line above names the chosen week; when a point sits low near the right edge its label can be placed in the strip at the top of the chart rather than beside it.",
+        visual_verification="Design direction accepted by the owner on 24 Nov 2026, 10:22 (check 64 screenshots). The corrected page is shown before / after; approval pending.",
+        functional_verification="Lab simulator: check 66, as listed.",
+        remaining=["Owner's final approval of the refinements.",
+                   "For the owner's decision: the floating label is now one line (value and day or week); the source, the time and the number of readings moved to the inspection card directly below. In a closely packed zigzag line the label, kept at its point, can cover a neighbouring point.",
+                   "The Lab one-source athlete now has six sleep readings (was ten) so that the 'No usual range yet' state can be seen.",
                    "All data is read from Apple Health; there is no separate 'device-measured' or 'estimated' kind to distinguish. WHOOP and Garmin are not integrated.",
                    "Readings older than 90 days are not kept by the app.",
                    "Not verified: drag inspection, larger text, other themes, VoiceOver, physical iPhone, real Health data, the redesigned main-app target."],
-        images=[("H04_rec-1-weeks.png", "SENT FOR REVIEW — NOT APPROVED. Weeks, sleep, last week selected. Complete page. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 64, demonstration athlete with synthetic readings ('Demo data')."),
+        images=[("H04_r2_recovery_before_after.png", "REFINEMENTS FOR APPROVAL — NOT YET APPROVED. Complete pages before (check 64) and after (check 66), Weeks and Days. The two were captured a day apart, so the demo readings shown for a given day differ."),
+                ("H04_r2_recovery_baseline_states.png", "REFINEMENTS FOR APPROVAL. Left: 'your usual range' with the readings it rests on. Right: six sleep readings — 'No usual range yet' (check 65)."),
+                ("H04_r2_rec-1-weeks.png", "AS REFINED — complete page, Weeks (check 66)."),
+                ("H04_r2_rec-2-days-selected.png", "AS REFINED — complete page, Days (check 66)."),
+                ("H04_r2_rec-3-metric-expanded.png", "AS REFINED — complete page, sleep row expanded (check 66)."),
+                ("H04_r2_rec-4-partial.png", "AS REFINED — complete page, one source, too few readings for a usual range (check 65)."),
+                ("H04_rec-1-weeks.png", "SUPERSEDED BY THE REFINEMENTS (direction accepted from this version, 24 Nov). Weeks, sleep, last week selected. Complete page. iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 64, demonstration athlete with synthetic readings ('Demo data')."),
                 ("H04_rec-2-days-selected.png", "SENT FOR REVIEW — NOT APPROVED. Days, a day selected."),
                 ("H04_rec-3-metric-expanded.png", "SENT FOR REVIEW — NOT APPROVED. Sleep row expanded with its recent readings."),
                 ("H04_rec-4-partial.png", "SENT FOR REVIEW — NOT APPROVED. Readings from one source for one metric only."),
