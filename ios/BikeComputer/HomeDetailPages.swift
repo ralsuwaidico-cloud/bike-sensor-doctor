@@ -57,7 +57,20 @@ struct HomeItemRow: View {
         .accessibilityIdentifier(identifier)
         Group {
             if let s = item.session, s.status != .skipped {
-                let action = HomePrimaryButton(action: s.action, isRide: s.isRide, elapsed: elapsed, identifier: "\(identifier)-action", kind: .compact, perform: perform)
+                // redesigned app only (owner, 24 Nov 2026): a session of a later day cannot be started today, so its button
+                // says "View workout" and opens the session's page; production keeps its button
+                let viewOnly = CyProduct.redesign && DayOverviewView.viewOnly(s)
+                let action = Group {
+                    if viewOnly {
+                        Button { openPrescription(s.workout) } label: {
+                            Text("View workout").font(.subheadline.weight(.semibold)).lineLimit(1).padding(.horizontal, DS.l).frame(minHeight: 36).fixedSize()
+                                .foregroundStyle(Color.primary).background(CyTheme.sysFill, in: Capsule()).frame(minHeight: DS.minTap).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain).accessibilityIdentifier("\(identifier)-action")
+                    } else {
+                        HomePrimaryButton(action: s.action, isRide: s.isRide, elapsed: elapsed, identifier: "\(identifier)-action", kind: .compact, perform: perform)
+                    }
+                }
                 if dts >= .xxLarge { VStack(alignment: .leading, spacing: 8) { tap; action } }
                 else { HStack(alignment: .center, spacing: 8) { tap; action } }
             } else { tap }

@@ -114,8 +114,8 @@ struct DayOverviewView: View {
                             .accessibilityIdentifier("daySession-\(j)-noPrevious")
                     }
                 }
-                step("3", "Performance comparison") { comparison(s, index: j) }
-                step("4", "Coach's analysis") {
+                step("3", "Performance changes") { comparison(s, index: j) }
+                step("4", "Coach's explanation") {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("FROM YOUR RECORDS · NOT WRITTEN BY AN AI MODEL").font(CyFont.overline).foregroundStyle(theme.textTertiary)
                         Text(s.analysis).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
@@ -127,6 +127,12 @@ struct DayOverviewView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("daySession-\(j)")
+    }
+
+    /// True when "Start" would not begin a recording: a planned session whose day has not come.
+    static func viewOnly(_ h: HomeSession, now: Date = Date(), calendar cal: Calendar = .current) -> Bool {
+        guard h.status == .planned, cal.startOfDay(for: h.workout.date) > cal.startOfDay(for: now) else { return false }
+        switch h.action { case .startStrength, .openRideScreen: return true; default: return false }
     }
 
     private func actualText(_ s: DaySessionReview) -> String {
@@ -164,16 +170,36 @@ struct DayOverviewView: View {
             .accessibilityHint(item.record == .none ? "Opens the session's details" : "Opens the recorded workout")
             .accessibilityIdentifier("dayItem-\(j)")
             if let h = item.session, h.status != .skipped {
-                HomePrimaryButton(action: h.action, isRide: h.isRide, elapsed: recorder.elapsedS, identifier: "dayItem-\(j)-action", kind: .compact, perform: perform)
+                if DayOverviewView.viewOnly(h) {
+                    // a session of a later day cannot be started today: the button says what it does (owner, 24 Nov 2026)
+                    Button { prescription = h.workout } label: {
+                        Text("View workout").font(.subheadline.weight(.semibold)).lineLimit(1).foregroundStyle(theme.textPrimary)
+                            .padding(.horizontal, 14).frame(minHeight: 36).background(theme.selectedFill, in: Capsule())
+                            .frame(minHeight: CyHit.min).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens the session's details. It can be started on its day, or moved to today there.")
+                    .accessibilityIdentifier("dayItem-\(j)-action")
+                } else {
+                    HomePrimaryButton(action: h.action, isRide: h.isRide, elapsed: recorder.elapsedS, identifier: "dayItem-\(j)-action", kind: .compact, perform: perform)
+                }
             }
         }
     }
 
+    /// A numbered step of the page's fixed order: 1 current · 2 previous · 3 changes · 4 explanation · 5 health.
+    private func stepTitle(_ n: String, _ title: String) -> some View {
+        HStack(spacing: 8) {
+            Text(n).font(.caption2.weight(.bold)).foregroundStyle(theme.background).frame(width: 18, height: 18).background(theme.textSecondary, in: Circle()).accessibilityHidden(true)
+            Text(title.uppercased()).font(CyFont.overline).foregroundStyle(theme.textSecondary)
+        }
+        .accessibilityElement(children: .ignore).accessibilityLabel("\(n). \(title)").accessibilityAddTraits(.isHeader)
+    }
     private func step<C: View>(_ n: String, _ title: String, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Rectangle().fill(theme.cardStroke).frame(height: 1).accessibilityHidden(true)
-            Text(title.uppercased()).font(CyFont.overline).foregroundStyle(theme.textTertiary).accessibilityAddTraits(.isHeader)
-            content()
+            stepTitle(n, title)
+            content().padding(.leading, 26)
         }
     }
     private func pair(_ name: String, _ value: String, id: String) -> some View {
@@ -332,7 +358,7 @@ struct DayOverviewView: View {
     private func healthCard(_ o: DayOverview) -> some View {
         DashCard {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Health this day").font(CyFont.headline).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+                stepTitle("5", "Daily health metrics")
                 if !o.hasHealth {
                     Text("No health readings for this day.").font(CyFont.footnote).foregroundStyle(theme.textSecondary).accessibilityIdentifier("dayHealthEmpty")
                 }

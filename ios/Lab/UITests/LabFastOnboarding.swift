@@ -1349,6 +1349,8 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(app.staticTexts["dayHistory0Tooltip"].waitForExistence(timeout: 4) && text(app, "dayHistory0Tooltip").contains("W"), "required: a point shows its date and measurement")
         XCTAssertTrue(el(app, "daySession-0-historyOpen").exists, "required: and leads to its session")
         XCTAssertTrue(el(app, "daySession-1-analysis").label.contains("heart rate was not measured in both rides"), "required: the second ride's note says what was not measured (\(el(app, "daySession-1-analysis").label))")
+        XCTAssertEqual(el(app, "daySession-1-metric-r-power").value as? String, "notComparable", "required: an unplanned ride set beside another ride is never coloured")
+        XCTAssertEqual(app.buttons["dayItem-0-action"].firstMatch.label, "Results", "required: a recorded session keeps Results")
         toTop(app); captureFullPage(app, "day-3-cycling", steps: 9)
         // the working controls: Results opens the recorded ride and returns
         toTop(app); app.buttons["dayItem-0-action"].firstMatch.tap(); Thread.sleep(forTimeInterval: 1.2)
@@ -1364,6 +1366,7 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(el(app, "daySession-0-actual").label.contains("Not done yet"), "required: nothing is shown as recorded before the session is done")
         XCTAssertTrue(el(app, "daySession-0-analysis").label.contains("Not done yet") , "required: the note says there is nothing to compare yet (\(el(app, "daySession-0-analysis").label))")
         XCTAssertFalse(el(app, "daySession-0-tally").exists, "required: no result is counted for a session that is not done")
+        XCTAssertEqual(app.buttons["dayItem-0-action"].firstMatch.label, "View workout", "required: a session of a later day is not offered as Start")
         if el(app, "daySession-0-exercisesToggle").exists { press(app, "daySession-0-exercisesToggle") }
         toTop(app); captureFullPage(app, "day-2-planned-strength", steps: 7)
         back(app)
@@ -1416,7 +1419,9 @@ final class LabFastOnboarding: XCTestCase {
         back(app)
         openDay(app, 2)
         app.buttons["dayItem-0-action"].firstMatch.tap(); Thread.sleep(forTimeInterval: 2)
-        shot("day-9b-start-future")
+        XCTAssertTrue(app.buttons["Move to today"].firstMatch.waitForExistence(timeout: 6), "required: View workout opens the session's own page, with its actions")
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'migration'")).count, 0, "required: no internal migration text is shown to the athlete")
+        shot("day-9b-view-workout")
         app.terminate()
 
         // every session a first: no earlier record to compare

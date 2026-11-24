@@ -24,7 +24,7 @@ final class DayReviewTests: XCTestCase {
         XCTAssertEqual(up.verdict, .better); XCTAssertEqual(up.change, "Top load +2.5 kg")
         XCTAssertEqual(up.metrics.map(\.name), ["Sets", "Reps", "Top load", "Volume"])
         XCTAssertEqual(verdict(up.metrics, "a-volume"), .better); XCTAssertEqual(up.metrics[3].previous, "600 kg"); XCTAssertEqual(up.metrics[3].current, "675 kg")
-        XCTAssertEqual(verdict(up.metrics, "a-reps"), .notComparable, "reps are judged only at the same load")
+        XCTAssertEqual(verdict(up.metrics, "a-reps"), .same, "the same reps")
         let down = ex(entry("a", "Press", reps: 8, kg: 16), entry("a", "Press", reps: 8, kg: 18))
         XCTAssertEqual(down.verdict, .worse); XCTAssertEqual(down.change, "Top load −2 kg")
         let same = ex(entry("a", "Row", reps: 10, kg: 16), entry("a", "Row", reps: 10, kg: 16))
@@ -32,8 +32,24 @@ final class DayReviewTests: XCTestCase {
         // heavier but far fewer reps: load up, volume down — NOT called an improvement or a decline
         let mixed = ex(entry("a", "Squat", reps: 5, kg: 25), entry("a", "Squat", reps: 10, kg: 20))
         XCTAssertEqual(mixed.verdict, .notComparable); XCTAssertTrue(mixed.change.contains("not comparable"), mixed.change)
-        // more sets is never an improvement by itself
-        XCTAssertEqual(verdict(ex(entry("a", "Row", reps: 10, kg: 16, sets: 4), entry("a", "Row", reps: 10, kg: 16)).metrics, "a-sets"), .notComparable)
+        XCTAssertTrue(mixed.metrics.allSatisfy { $0.verdict != .better && $0.verdict != .worse }, "and none of its figures is coloured")
+        // AUDIT 24 Nov 2026 (owner, 23:51): like for like, or neutral.
+        // a different number of sets — more work is not an improvement, and volume up through an extra set is not green
+        let extra = ex(entry("a", "Row", reps: 10, kg: 16, sets: 4), entry("a", "Row", reps: 10, kg: 16))
+        XCTAssertEqual(extra.verdict, .notComparable); XCTAssertEqual(extra.change, "Different number of sets — not comparable")
+        XCTAssertEqual(verdict(extra.metrics, "a-sets"), .notComparable); XCTAssertEqual(verdict(extra.metrics, "a-volume"), .notComparable)
+        // the same load for more reps is favourable; fewer reps at the same load is not
+        XCTAssertEqual(ex(entry("a", "Row", reps: 12, kg: 16), entry("a", "Row", reps: 10, kg: 16)).change, "+6 reps at the same load")
+        XCTAssertEqual(ex(entry("a", "Row", reps: 8, kg: 16), entry("a", "Row", reps: 10, kg: 16)).verdict, .worse)
+        // heavier with MORE reps is favourable; lighter with more reps is not established
+        XCTAssertEqual(ex(entry("a", "Squat", reps: 12, kg: 22.5), entry("a", "Squat", reps: 10, kg: 20)).verdict, .better)
+        XCTAssertEqual(ex(entry("a", "Squat", reps: 12, kg: 18), entry("a", "Squat", reps: 10, kg: 20)).verdict, .notComparable)
+        // reported effort: heavier at a clearly higher effort is not called an improvement; one point is within the noise
+        func effort(_ d: Int) -> DayExercise { DayReviewModel.exercise(planned: nil, current: entry("a", "Squat", reps: 10, kg: 22.5), previous: entry("a", "Squat", reps: 10, kg: 20), effortDelta: d, units: .metric) }
+        XCTAssertEqual(effort(2).verdict, .notComparable); XCTAssertTrue(effort(2).change.contains("higher reported effort"), effort(2).change)
+        XCTAssertEqual(effort(1).verdict, .better); XCTAssertEqual(effort(-2).verdict, .better, "less effort for more load is still favourable")
+        let easier = DayReviewModel.exercise(planned: nil, current: entry("a", "Press", reps: 8, kg: 16), previous: entry("a", "Press", reps: 8, kg: 18), effortDelta: -3, units: .metric)
+        XCTAssertEqual(easier.verdict, .notComparable, "lighter at a clearly lower effort is not called a decline")
         // bodyweight: reps only
         let bw = ex(entry("b", "Push-up", reps: 12, kg: nil), entry("b", "Push-up", reps: 10, kg: nil))
         XCTAssertEqual(bw.verdict, .better); XCTAssertEqual(bw.change, "+6 reps"); XCTAssertNil(bw.metrics[3].current, "no volume without a load")
@@ -75,6 +91,14 @@ final class DayReviewTests: XCTestCase {
         XCTAssertEqual(verdict(m(ride(0, power: 150, hr: 136), ride(-7, power: 160, hr: 136)), "r-power"), .worse)
         // a longer ride is not an improvement
         XCTAssertEqual(verdict(m(ride(0, minutes: 75, power: 160, hr: 136), ride(-7, power: 160, hr: 136)), "r-duration"), .notComparable)
+        // AUDIT 24 Nov 2026 (owner, 23:51): rides are judged only when they are comparable
+        XCTAssertNil(DayReviewModel.rideBarrier(current: ride(0), previous: ride(-7), sameType: true, effortDelta: 1))
+        XCTAssertTrue(DayReviewModel.rideBarrier(current: ride(0), previous: ride(-7), sameType: false, effortDelta: nil)!.contains("not the same planned session type"))
+        XCTAssertTrue(DayReviewModel.rideBarrier(current: ride(0, minutes: 90), previous: ride(-7), sameType: true, effortDelta: nil)!.contains("differ in length"))
+        XCTAssertTrue(DayReviewModel.rideBarrier(current: ride(0), previous: ride(-7), sameType: true, effortDelta: 3)!.contains("higher effort"))
+        let barred = DayReviewModel.rideMetrics(current: ride(0, power: 168, hr: 134), planned: nil, previous: ride(-7, power: 160, hr: 136), comparable: false, units: .metric)
+        XCTAssertEqual(verdict(barred, "r-power"), .notComparable, "the same figures that were green are neutral when the rides are not comparable")
+        XCTAssertTrue(barred.allSatisfy { $0.verdict != .better && $0.verdict != .worse })
         // heart rate without power: shown, not judged, and the note says why
         let noPower = m(ride(0, hr: 130), ride(-7, hr: 136))
         XCTAssertEqual(verdict(noPower, "r-hr"), .notComparable); XCTAssertEqual(noPower.first { $0.id == "r-power" }?.change, "Not measured")

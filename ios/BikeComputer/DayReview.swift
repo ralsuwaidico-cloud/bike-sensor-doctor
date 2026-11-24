@@ -15,16 +15,23 @@ import Foundation
 //   NOT STORED ANYWHERE: steps, water, daily energy; and no recording at all for running, swimming or any other
 //              roster activity. Those are shown as truthful empty states, never as zero.
 //
-// WHEN A CHANGE IS CALLED FAVOURABLE (green) OR UNFAVOURABLE (red). A bigger number is not automatically better:
-//   Strength exercise   volume up with top load not lower → favourable; volume down with top load not higher →
-//                       unfavourable; top load and volume moving in opposite directions → not comparable (grey).
-//                       Without load (bodyweight): total reps up / down.
-//   Top load            higher favourable, lower unfavourable.       Reps: judged only at the same top load.
-//   Sets, duration, distance, cadence, time in zones: shown, never judged — more is not better by itself.
-//   Cycling power       higher average power with heart rate not higher → favourable; lower power with heart rate not
-//                       lower → unfavourable; otherwise, or when either is not measured, not comparable.
-//   Cycling heart rate  lower at the same or higher power → favourable; higher at the same or lower power →
-//                       unfavourable; without power in both rides, not comparable.
+// WHEN A CHANGE IS CALLED FAVOURABLE (green) OR UNFAVOURABLE (red) — audited 24 Nov 2026 (owner, 23:51).
+// A bigger number is not automatically better, and where improvement or decline cannot be established the result is
+// NEUTRAL (grey). A verdict needs like-for-like conditions:
+//   Strength exercise   the SAME exercise, the SAME number of completed sets, and then either
+//                         · a higher top load with total reps not lower            → favourable
+//                         · the same top load with more reps                       → favourable
+//                         · a lower top load with reps not higher / fewer reps at the same load → unfavourable
+//                       Anything else — a different number of sets, load and reps moving in opposite directions,
+//                       a load the coach lowered for a return after a break, or a reported effort (RPE) two or more
+//                       points higher for a "better" result / lower for a "worse" one — is NOT COMPARABLE.
+//   Session volume      judged only when every shared exercise has the same number of sets in both sessions.
+//   Cycling             judged only between two rides of the SAME planned session type, of similar length (within a
+//                       quarter), whose reported effort — where both were reviewed — is within one point. Then:
+//                         · more average power with heart rate not higher, or less heart rate at no less power → favourable
+//                         · less power with heart rate not lower, or more heart rate at no more power → unfavourable
+//                       Power or heart rate missing in either ride → not comparable.
+//   Sets, duration, distance, cadence and time in zones are shown and never judged.
 //   "Same" means within a small tolerance: 2 W, 2 bpm, 0.5 kg of volume.
 // These are display rules for this page. They are not training-load, fitness or physiological conclusions.
 
@@ -144,7 +151,7 @@ enum DayReviewModel {
     }
 
     /// One exercise, now against the same exercise in the previous session. `current` nil = not done yet.
-    static func exercise(planned: ExerciseEntry?, current: ExerciseEntry?, previous: ExerciseEntry?, units u: AppSettings.Units) -> DayExercise {
+    static func exercise(planned: ExerciseEntry?, current: ExerciseEntry?, previous: ExerciseEntry?, effortDelta: Int? = nil, units u: AppSettings.Units) -> DayExercise {
         let name = current?.name ?? planned?.name ?? previous?.name ?? ""
         let id = current?.exerciseId ?? planned?.exerciseId ?? previous?.exerciseId ?? name
         let pText = planned.map { plannedText($0, u) }
@@ -154,44 +161,48 @@ enum DayReviewModel {
         let cVol = current?.tonnageKg, pVol = previous?.tonnageKg
         let cReps = current.map(\.totalReps), pReps = previous.map(\.totalReps)
         let cSets = current.map { $0.doneSets.count }, pSets = previous.map { $0.doneSets.count }
-        func verdict(_ d: Double?, tol: Double) -> DayVerdict { guard let d else { return .notComparable }; return abs(d) <= tol ? .same : d > 0 ? .better : .worse }
 
         let done = current.map { !$0.doneSets.isEmpty } ?? false
         let had = previous.map { !$0.doneSets.isEmpty } ?? false
         func missing() -> String { !done ? "Not done yet" : "No previous record" }
 
-        // sets — shown, never judged
-        metrics.append(DayMetric(id: "\(id)-sets", name: "Sets", planned: planned.map { "\($0.sets.count)" }, previous: had ? pSets.map(String.init) : nil, current: done ? cSets.map(String.init) : nil,
-                                 change: done && had ? signed((cSets ?? 0) - (pSets ?? 0), "set" + (abs((cSets ?? 0) - (pSets ?? 0)) == 1 ? "" : "s")) : missing(),
-                                 verdict: done && had && cSets == pSets ? .same : .notComparable))
-        // reps — judged only at the same top load
-        let sameLoad = cTop != nil && pTop != nil && abs((cTop ?? 0) - (pTop ?? 0)) < 0.05 || (cTop == nil && pTop == nil)
-        metrics.append(DayMetric(id: "\(id)-reps", name: "Reps", planned: planned.map { "\($0.sets.reduce(0) { $0 + $1.reps })" }, previous: had ? pReps.map(String.init) : nil, current: done ? cReps.map(String.init) : nil,
-                                 change: done && had ? signed((cReps ?? 0) - (pReps ?? 0), "reps") : missing(),
-                                 verdict: done && had ? (sameLoad ? verdict(Double((cReps ?? 0) - (pReps ?? 0)), tol: 0) : .notComparable) : .notComparable))
-        // top load
+        // the exercise as a whole — like for like, or neutral
         let loadDelta: Double? = done && had ? (cTop != nil && pTop != nil ? cTop! - pTop! : nil) : nil
-        metrics.append(DayMetric(id: "\(id)-load", name: "Top load", planned: planned.flatMap(plannedTop).map { WeightFmt.text($0, u) }, previous: had ? pTop.map { WeightFmt.text($0, u) } : nil, current: done ? cTop.map { WeightFmt.text($0, u) } : nil,
-                                 change: done && had ? (loadDelta.map { signedKg($0, u) } ?? "No load recorded") : missing(), verdict: verdict(loadDelta, tol: 0.05)))
-        // volume
         let volDelta: Double? = done && had ? (cVol != nil && pVol != nil ? cVol! - pVol! : nil) : nil
-        metrics.append(DayMetric(id: "\(id)-volume", name: "Volume", previous: had ? pVol.map { WeightFmt.text($0, u) } : nil, current: done ? cVol.map { WeightFmt.text($0, u) } : nil,
-                                 change: done && had ? (volDelta.map { signedKg($0, u) } ?? "No load recorded") : missing(), verdict: verdict(volDelta, tol: volTol)))
-
-        // the exercise as a whole
+        let repsDelta = (cReps ?? 0) - (pReps ?? 0), setsSame = cSets == pSets
         var v: DayVerdict = .notComparable, change = missing()
         if done && had {
-            if let vd = volDelta, let ld = loadDelta {
-                let vv = verdict(vd, tol: volTol), lv = verdict(ld, tol: 0.05)
-                if vv == .same && lv == .same { v = .same; change = "Unchanged" }
-                else if vv != .worse && lv != .worse { v = .better; change = lv == .better ? "Top load \(signedKg(ld, u))" : "Volume \(signedKg(vd, u))" }
-                else if vv != .better && lv != .better { v = .worse; change = lv == .worse ? "Top load \(signedKg(ld, u))" : "Volume \(signedKg(vd, u))" }
-                else { v = .notComparable; change = "Load \(signedKg(ld, u)), volume \(signedKg(vd, u)) — not comparable" }
-            } else {
-                let d = (cReps ?? 0) - (pReps ?? 0)
-                v = d == 0 ? .same : d > 0 ? .better : .worse; change = d == 0 ? "Unchanged" : signed(d, "reps")
+            if current?.returnMark != nil { change = "Load lowered by the coach for a return — not compared" }
+            else if !setsSame { change = "Different number of sets — not comparable" }
+            else if let ld = loadDelta {
+                let up = ld > 0.05, down = ld < -0.05
+                if up && repsDelta >= 0 { v = .better; change = "Top load \(signedKg(ld, u))" }
+                else if down && repsDelta <= 0 { v = .worse; change = "Top load \(signedKg(ld, u))" }
+                else if !up && !down { v = repsDelta == 0 ? .same : repsDelta > 0 ? .better : .worse; change = repsDelta == 0 ? "Unchanged" : "\(signed(repsDelta, "reps")) at the same load" }
+                else { change = "Load \(signedKg(ld, u)), reps \(repsDelta > 0 ? "+" : "−")\(abs(repsDelta)) — not comparable" }
+            } else if cTop == nil && pTop == nil {
+                v = repsDelta == 0 ? .same : repsDelta > 0 ? .better : .worse; change = repsDelta == 0 ? "Unchanged" : signed(repsDelta, "reps")
+            } else { change = "Load recorded in only one session — not comparable" }
+            // reported effort: a result bought with clearly more effort, or lost at clearly less, is not established
+            if let e = effortDelta, (v == .better && e >= 2) || (v == .worse && e <= -2) {
+                v = .notComparable; change += e > 0 ? " · at a higher reported effort — not comparable" : " · at a lower reported effort — not comparable"
             }
         } else if done { change = "No previous record of this exercise" }
+        /// a figure's own colour follows the exercise: it is green or red only when the exercise as a whole is
+        func part(_ d: Double?, tol: Double) -> DayVerdict {
+            guard done && had, let d else { return .notComparable }
+            if abs(d) <= tol { return .same }
+            return d > 0 ? (v == .better ? .better : .notComparable) : (v == .worse ? .worse : .notComparable)
+        }
+        metrics.append(DayMetric(id: "\(id)-sets", name: "Sets", planned: planned.map { "\($0.sets.count)" }, previous: had ? pSets.map(String.init) : nil, current: done ? cSets.map(String.init) : nil,
+                                 change: done && had ? signed((cSets ?? 0) - (pSets ?? 0), "set" + (abs((cSets ?? 0) - (pSets ?? 0)) == 1 ? "" : "s")) : missing(),
+                                 verdict: done && had && setsSame ? .same : .notComparable))
+        metrics.append(DayMetric(id: "\(id)-reps", name: "Reps", planned: planned.map { "\($0.sets.reduce(0) { $0 + $1.reps })" }, previous: had ? pReps.map(String.init) : nil, current: done ? cReps.map(String.init) : nil,
+                                 change: done && had ? signed(repsDelta, "reps") : missing(), verdict: part(Double(repsDelta), tol: 0)))
+        metrics.append(DayMetric(id: "\(id)-load", name: "Top load", planned: planned.flatMap(plannedTop).map { WeightFmt.text($0, u) }, previous: had ? pTop.map { WeightFmt.text($0, u) } : nil, current: done ? cTop.map { WeightFmt.text($0, u) } : nil,
+                                 change: done && had ? (loadDelta.map { signedKg($0, u) } ?? "No load recorded") : missing(), verdict: part(loadDelta, tol: 0.05)))
+        metrics.append(DayMetric(id: "\(id)-volume", name: "Volume", previous: had ? pVol.map { WeightFmt.text($0, u) } : nil, current: done ? cVol.map { WeightFmt.text($0, u) } : nil,
+                                 change: done && had ? (volDelta.map { signedKg($0, u) } ?? "No load recorded") : missing(), verdict: part(volDelta, tol: volTol)))
         return DayExercise(id: id, name: name, planned: pText, previous: had ? text(previous) : nil, current: done ? text(current) : nil, change: change, verdict: v, metrics: metrics)
     }
 
@@ -215,8 +226,11 @@ enum DayReviewModel {
             let pv = (p.exercises ?? []).filter { ids.contains($0.exerciseId) }.compactMap(\.tonnageKg).reduce(0, +)
             if cv > 0 || pv > 0 {
                 let d = cv - pv
+                // judged only when every shared exercise was itself comparable and none moved the other way
+                let vs = both.map(\.verdict)
+                let like = !vs.contains(.notComparable) && !(vs.contains(.better) && vs.contains(.worse))
                 m.append(DayMetric(id: "s-volume", name: "Volume, shared exercises", previous: WeightFmt.text(pv, u), current: WeightFmt.text(cv, u), change: signedKg(d, u),
-                                   verdict: abs(d) <= volTol ? .same : d > 0 ? .better : .worse))
+                                   verdict: abs(d) <= volTol ? .same : !like ? .notComparable : d > 0 ? .better : .worse))
             }
         }
         func count(_ l: StrengthSession?) -> Int? { l.map { ($0.exercises ?? []).filter { !$0.doneSets.isEmpty }.count } }
@@ -247,7 +261,7 @@ enum DayReviewModel {
         if !up.isEmpty { parts.append("\(list(up)) went up") }
         if !down.isEmpty { parts.append("\(list(down)) went down") }
         if !same.isEmpty { parts.append("\(list(same)) \(same.count == 1 ? "was" : "were") unchanged") }
-        if !mixed.isEmpty { parts.append("\(list(mixed)) changed load and volume in opposite directions") }
+        if !mixed.isEmpty { parts.append("\(list(mixed)) could not be compared like for like") }
         s.append(parts.isEmpty ? "none of these exercises was recorded in both sessions." : parts.joined(separator: "; ") + ".")
         if let v = metrics.first(where: { $0.id == "s-volume" }), let a = v.previous, let b = v.current {
             s.append(v.verdict == .same ? "Volume over the shared exercises was the same (\(b))." : "Volume over the shared exercises went from \(a) to \(b).")
@@ -257,7 +271,17 @@ enum DayReviewModel {
 
     // MARK: cycling
 
-    static func rideMetrics(current c: RideRecord?, planned: Workout?, previous p: RideRecord?, units u: AppSettings.Units) -> [DayMetric] {
+    /// Why two rides cannot be judged against each other; nil = they can.
+    static func rideBarrier(current c: RideRecord?, previous p: RideRecord?, sameType: Bool, effortDelta: Int?) -> String? {
+        guard let c, let p else { return nil }
+        if !sameType { return "The two rides were not the same planned session type, so no change is called better or worse." }
+        let a = max(1, c.durationS / 60), b = max(1, p.durationS / 60)
+        if abs(a - b) * 4 > max(a, b) { return "The two rides differ in length by more than a quarter, so no change is called better or worse." }
+        if let e = effortDelta, abs(e) >= 2 { return "You reported a clearly \(e > 0 ? "higher" : "lower") effort this time, so no change is called better or worse." }
+        return nil
+    }
+
+    static func rideMetrics(current c: RideRecord?, planned: Workout?, previous p: RideRecord?, comparable: Bool = true, units u: AppSettings.Units) -> [DayMetric] {
         func miss() -> String { c == nil ? "Not done yet" : p == nil ? "No previous record" : "Not measured" }
         var m: [DayMetric] = []
         let cm = c.map { max(1, $0.durationS / 60) }, pm = p.map { max(1, $0.durationS / 60) }
@@ -273,6 +297,7 @@ enum DayReviewModel {
         if let dp, let dh {
             let pUp = dp > wTol, pDown = dp < -wTol, hUp = dh > hrTol, hDown = dh < -hrTol
             if !pUp && !pDown && !hUp && !hDown { pv = .same; hv = .same }
+            else if !comparable { pv = !pUp && !pDown ? .same : .notComparable; hv = !hUp && !hDown ? .same : .notComparable }
             else {
                 pv = pUp && !hUp ? .better : pDown && !hDown ? .worse : (!pUp && !pDown ? .same : .notComparable)
                 hv = hDown && !pDown ? .better : hUp && !pUp ? .worse : (!hUp && !hDown ? .same : .notComparable)
@@ -294,7 +319,7 @@ enum DayReviewModel {
         return m
     }
 
-    static func rideAnalysis(current c: RideRecord?, previous p: DayPrevious?, metrics: [DayMetric], calendar cal: Calendar) -> String {
+    static func rideAnalysis(current c: RideRecord?, previous p: DayPrevious?, metrics: [DayMetric], barrier: String? = nil, calendar cal: Calendar) -> String {
         guard let p else {
             return c == nil ? "Not done yet, and no earlier comparable ride is recorded. There is nothing to compare."
                             : "No earlier comparable ride is recorded, so there is nothing to compare yet. This ride becomes the reference for the next one."
@@ -305,6 +330,7 @@ enum DayReviewModel {
         if let pw = power, pw.previous != nil, pw.current != nil, let h = hr, h.previous != nil, h.current != nil {
             func word(_ m: DayMetric, _ noun: String) -> String { m.change == "No change" ? "\(noun) was the same" : "\(noun) was \(m.change.replacingOccurrences(of: "+", with: "").replacingOccurrences(of: "−", with: "")) \(m.change.hasPrefix("+") ? "higher" : "lower")" }
             s += "\(word(pw, "average power")) and \(word(h, "average heart rate"))."
+            if let b = barrier { return s + " " + b }
             switch (pw.verdict, h.verdict) {
             case (.better, _), (_, .better): s += " More power for no more heart rate, or the same power for less, is the favourable direction."
             case (.worse, _), (_, .worse): s += " Less power for no less heart rate is the unfavourable direction."
@@ -367,7 +393,10 @@ extension Store {
                     prev = r; basis = "Most recent ride of similar length (within a quarter)"; family = earlier.filter { abs($0.durationS / 60 - minutes) * 4 <= minutes }
                 }
                 let dp = prev.map { DayPrevious(date: $0.start, title: kindOf[$0.id]?.title ?? "Ride", line: HomeSummariesModel.rideLine($0, units: u), basis: basis, record: .ride($0.id)) }
-                let metrics = DayReviewModel.rideMetrics(current: cur, planned: w, previous: prev, units: u)
+                func effort(_ r: RideRecord?) -> Int? { r?.review?.effort ?? r?.checkIn?.effort }
+                let eDelta: Int? = effort(cur) != nil && effort(prev) != nil ? effort(cur)! - effort(prev)! : nil
+                let barrier = DayReviewModel.rideBarrier(current: cur, previous: prev, sameType: kind != nil && prev.map { kindOf[$0.id] == kind } == true, effortDelta: eDelta)
+                let metrics = DayReviewModel.rideMetrics(current: cur, planned: w, previous: prev, comparable: barrier == nil, units: u)
                 // history: average power when at least three comparable rides measured it, else average heart rate
                 var hist: DayHistory? = nil
                 let chain = (family.prefix(7).reversed() + (cur.map { [$0] } ?? []))
@@ -382,7 +411,7 @@ extension Store {
                 sessions.append(DaySessionReview(id: item.id, item: item, sport: .cycling,
                     plannedLine: w.map { "\(Fmt.duration(minutes: $0.minutes)) · \($0.kind.subtitle)" }, actualLine: cur.map { HomeSummariesModel.rideLine($0, units: u) },
                     previous: dp, previousEmpty: "No earlier comparable ride is recorded.", metrics: metrics, exercises: [],
-                    analysis: DayReviewModel.rideAnalysis(current: cur, previous: dp, metrics: metrics, calendar: cal), history: hist))
+                    analysis: DayReviewModel.rideAnalysis(current: cur, previous: dp, metrics: metrics, barrier: barrier, calendar: cal), history: hist))
             } else {
                 var cur: StrengthSession? = nil
                 if case .strength(let id) = item.record { cur = strength.first { $0.id == id } }
@@ -394,9 +423,11 @@ extension Store {
                 let before = cur?.date ?? w?.date ?? day
                 let pick = ids.isEmpty ? nil : DayReviewModel.previousLog(for: ids, focus: cur?.focus ?? w?.strengthFocus, before: before, excluding: cur?.id, in: strength)
                 let prev = pick?.log
+                // reported effort of the two sessions, where both state it (session RPE)
+                let eDelta: Int? = completed && cur?.rpe != nil && prev?.rpe != nil ? cur!.rpe! - prev!.rpe! : nil
                 let exercises = list.map { e in
                     DayReviewModel.exercise(planned: planEntries.first { $0.exerciseId == e.exerciseId }, current: completed ? e : nil,
-                                            previous: prev?.exercises?.first { $0.exerciseId == e.exerciseId }, units: u)
+                                            previous: prev?.exercises?.first { $0.exerciseId == e.exerciseId }, effortDelta: eDelta, units: u)
                 }
                 // a record without exercise details has nothing to set side by side
                 let metrics = ids.isEmpty ? [] : DayReviewModel.strengthMetrics(current: completed ? cur : nil, planned: w, previous: prev, exercises: exercises, units: u)

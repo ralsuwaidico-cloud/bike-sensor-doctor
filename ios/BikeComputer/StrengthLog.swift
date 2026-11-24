@@ -584,13 +584,13 @@ struct StrengthSessionDetail: View {
                 if s.awaitingReview {
                     Card {
                         Eyebrow(t: "Needs your review")
-                        Text(s.migrationNote ?? "This record was saved without any completed set.").font(.footnote).fixedSize(horizontal: false, vertical: true)
+                        Text((CyProduct.redesign ? nil : s.migrationNote) ?? "This record was saved without any completed set.").font(.footnote).fixedSize(horizontal: false, vertical: true)
                         ActionRow(actions: [
                             ActionSpec(label: "Keep it", a11y: "Keep it: it counts as a session", identifier: "confirmReviewed") { store.confirmReviewed(s.id) },
                             ActionSpec(label: "Delete", a11y: "Delete this record (Undo available)", tint: BC.warn, identifier: "deleteReviewed") { store.deleteStrength(s); dismiss() }
                         ])
                     }
-                } else if let n = s.migrationNote { Text(n).font(.caption).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
+                } else if !CyProduct.redesign, let n = s.migrationNote { Text(n).font(.caption).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
                 if let ex = s.exercises, !ex.isEmpty {
                     Card {
                         Eyebrow(t: "Exercises")

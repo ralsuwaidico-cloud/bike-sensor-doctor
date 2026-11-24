@@ -27,7 +27,8 @@ struct WorkoutStatusCard: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("sessionStatus-\(st.rawValue)")
             Text(Self.detail(st, workout: workout, log: log, future: future)).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            if let n = workout.migrationNote { Text(n).font(.caption).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
+            // the note stays stored for diagnosis; the redesigned app does not show it to the athlete (owner, 24 Nov 2026)
+            if !CyProduct.redesign, let n = workout.migrationNote { Text(n).font(.caption).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
             ActionRow(actions: actions(st, log: log, future: future))
         }
         .accessibilityElement(children: .contain)   // a container id must not replace the children's own (run 209 finding)
