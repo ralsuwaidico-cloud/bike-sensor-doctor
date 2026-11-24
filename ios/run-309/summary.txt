@@ -1,0 +1,6 @@
+BikeComputer iOS CI — run 309 — scope full — jobs: quick=skipped test=cancelled release=cancelled testflight=cancelled
+
+RESULT upload: skipped (tests failed — the release job did not run)
+
+GATE flows: ok
+commit 413b7490e241e4c66d1a5ae27cefd32cdc5ef47c  branch ios/lab  job failure
