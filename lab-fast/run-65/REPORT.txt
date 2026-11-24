@@ -1,0 +1,32 @@
+FAST focused Lab check — selected: LabFastOnboarding/testRecoveryDashboard LabFastOnboarding/testTrainingMixDashboard LabFastOnboarding/testRecoveryDashboardPartialData LabFastOnboarding/testDashboardsWithNoData
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from d90e2f86 · files changed since then: 6
+TIME setup: 12s
+  timing: CompileAssetCatalogVariant (1 task) | 90.318 seconds
+  timing: SwiftCompile (5 tasks) | 10.960 seconds
+  timing: SwiftEmitModule (2 tasks) | 5.690 seconds
+  timing: Ld (18 tasks) | 4.378 seconds
+  timing: SwiftDriver (2 tasks) | 3.333 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.989 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.293 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.249 seconds
+  stages: packages at 198s · packages prepared at 284s · dependency graph at 288s · inputs at 291s · build description at 291s · first link at 305s · asset catalogue at 305s · first Swift step at 396s · finished at 399s
+  compiled in this run: 13 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 400s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 9s
+	 Executed 4 tests, with 2 failures (0 unexpected) in 1488.377 (1488.386) seconds
+	 Executed 4 tests, with 2 failures (0 unexpected) in 1488.377 (1488.388) seconds
+	 Executed 4 tests, with 2 failures (0 unexpected) in 1488.377 (1488.389) seconds
+Lab/UITests/LabFastOnboarding.swift:1145: error: -[CycliftLabUITests.LabFastOnboarding testRecoveryDashboard] : XCTAssertTrue failed - required: the label is anchored to its point at HRV, week 5 (placed: top)
+Lab/UITests/LabFastOnboarding.swift:957: error: -[CycliftLabUITests.LabFastOnboarding testTrainingMixDashboard] : Failed to tap "mixViewDetails" Button: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"mixViewDetails" IN identifiers'`, given input App element pid: 59129
+Test Case '-[CycliftLabUITests.LabFastOnboarding testDashboardsWithNoData]' passed (250.848 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testRecoveryDashboard]' failed (679.432 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testRecoveryDashboardPartialData]' passed (113.369 seconds).
+Test Case '-[CycliftLabUITests.LabFastOnboarding testTrainingMixDashboard]' failed (444.727 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 1616s
+TIME total on the Mac: 2043s
+commit 87201f9c79ef1b99f5ee21612ed22b3924c1204d  branch ios/lab
