@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "24 Nov 2026, 12:40 (Dubai)"
+UPDATED = "24 Nov 2026, 16:55 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -1051,12 +1051,16 @@ SCREENS = [
     dict(
         number=11, id="APP-03", name="Home › Training Mix Dashboard",
         location="Main app · Home › the Training Mix circle (the second circle). The Weekly overview and Day pages are its drill-downs.",
-        approved_on="24 Nov 2026, 10:22 — VISUALLY APPROVED with minor corrections. Shared design direction 23 Nov 2026, 19:55.",
-        status="VISUALLY APPROVED WITH MINOR CORRECTIONS (24 Nov 2026, 10:22). Both corrections are implemented and their targeted verification PASSED (check 66) — presented for final sign-off; not yet signed off. "
+        approved_on="PENDING FINAL VISUAL APPROVAL. 24 Nov 2026, 15:18 — the owner asked for the page's product purpose to be improved before approving it. Earlier: 24 Nov 2026, 10:22 — visually approved with minor corrections (the two-sport version). Shared design direction 23 Nov 2026, 19:55.",
+        status="PENDING FINAL VISUAL APPROVAL (owner, 24 Nov 2026, 15:18). The page now reads as a personalised, multisport training-management dashboard: training types, a Training balance card, a Training types / Individual sports switch and a Coach note that compares with the athlete's stated priorities. Implemented and simulator-verified in Cyclift Lab (check 68); screenshots presented for the owner's decision; NOT approved. The graph, interaction model and visual language are kept. EARLIER STATE, superseded as the current version: visually approved with minor corrections (24 Nov 2026, 10:22). Both corrections are implemented and their targeted verification PASSED (check 66) — presented for final sign-off; not yet signed off. "
                "Corrections: a shorter Coach note that interprets and does not repeat the graph's figures; verification that the planned-time line stands at each period's actual planned sessions (found correct, not changed). Not to be redesigned.",
         reference="The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. "
                   "The canonical design will be the implementation screenshots the owner approves; none is approved yet.",
         wording=[("Title", "Training Mix"),
+                 ("NEW 24 Nov 15:18 — Training balance card", "Training balance / By time: Endurance 71% · Strength 29% / Sessions completed: Endurance 3 · Strength 2 / Your stated priority: Endurance-led | Balanced | Strength-led — or Your main sport: <sport> / Not recorded yet: <sports> / Time and sessions are not training load. Load is not compared across sports."),
+                 ("NEW — view switch", "Training types | Individual sports (opens on Training types). In Training types the graph key, floating label, summary and inspection card say Endurance; in Individual sports they say Cycling."),
+                 ("NEW — Training by type", "Endurance · Strength · Mobility · Not placed in a type / <n>% of recorded time · <k> sessions · <time> planned / 'Not recorded yet' / opened: 'In your roster: … ' and '<sports> are not recorded yet, so this is not all of your endurance training.'"),
+                 ("NEW — Coach note, compared with the stated priority", "'Endurance made up most of your recorded training in this week. By time, that is in line with the endurance-led priority you stated.' / 'You stated a strength-led priority; by time, the week leaned to endurance.' / 'By time, that is close to the balanced priority you stated.' / 'Road running is not recorded, so this cannot be compared with your priorities.' / 'All of your recorded training in this week was strength.'"),
                  ("Summary (no standalone ratio)", "<period> · In progress / <total> recorded / Cycling <time> (<n>%) · Strength <time> (<n>%) / Planned <time>"),
                  ("Graph", "Weeks | Days · Recorded time · legend: Cycling · Strength · Planned"),
                  ("Floating label", "4 h 52 min · 16 Nov / Cycling 71% · Strength 29% — or 'No recorded training · Fri', 'Nothing recorded yet · 23 Nov', 'Upcoming · Sat'"),
@@ -1065,12 +1069,18 @@ SCREENS = [
                  ("Coach note (24 Nov 2026) — short, no figures", "'Cycling made up most of your recorded training in this week. That is less than was planned.' / 'about what was planned' (within five minutes) / 'more than was planned' / 'The week is still in progress.' / 'On Thursday you recorded strength only. Planned and not recorded: Endurance.'"),
                  ("Sports", "Training by sport · <n>% of recorded time · <time> planned · Not recorded yet · In your roster · recording coming soon"),
                  ("Details", "Session details · Open weekly overview / Open <weekday>")],
-        design=["Same structure, margins, cards, typography, selector, floating label, inspection card, single Coach card, row style and expandable details as the approved Consistency Dashboard.",
+        design=["ADDED 24 Nov 2026, 15:18 (pending approval): a compact Training balance card under the summary — one thin bar of the recorded-time share in the type colours, then short label–value lines. A second selector, Training types | Individual sports, sits under Weeks | Days in the graph card. The graph key names only what the graph draws. Everything else is as before.",
+                "Same structure, margins, cards, typography, selector, floating label, inspection card, single Coach card, row style and expandable details as the approved Consistency Dashboard.",
                 "Graph: stacked bars of recorded time per period — cycling below, strength above — with a short line at the planned total; eight weeks, or Monday–Sunday of the chosen week; scale in hours.",
                 "Sport colours tell the sports apart (cycling blue, strength amber); unavailable data is neutral. NO adherence bands: Training Mix is a distribution, not a score.",
                 "The floating label sits in the clear strip above the chosen bar, so it never covers a bar.",
                 "Sport rows: icon, name, recorded time, share of recorded time, planned time, a bar of the share in the sport's colour; a sport that cannot be recorded shows a dashed empty bar and 'Not recorded yet'."],
-        mandatory=["ONE DEFINITION (the Home circle's own, TrainingLedger): recorded minutes by sport beside planned minutes.",
+        mandatory=["TRAINING TYPES (owner, 24 Nov 2026, 15:18). An activity is placed only where its purpose is plain. ENDURANCE: every cycling, running and swimming discipline. STRENGTH: gym training, free weights, machines, bodyweight, calisthenics. MOBILITY: stretching & mobility. NOT PLACED IN A TYPE: walking and hiking — either can be endurance training or easy movement, and the roster does not say which. NOT TRAINING: breathing, sauna & cold are recovery practices, named apart and never counted. Recovery measurements (sleep, resting heart rate, HRV) play no part in this page.",
+                   "WHAT CAN BE MEASURED TODAY: rides (road, indoor, mountain bike, gravel, commuting) and strength sessions (gym training, free weights, machines). So today Endurance holds cycling time only and Strength holds gym time only. NOT YET MEASURABLE: running, swimming, bodyweight / calisthenics as their own activity, mobility, walking, hiking — each is named 'Not recorded yet'; a type none of whose activities can be recorded shows no figure, never 0%.",
+                   "STILL REQUIRED FOR FULL MULTISPORT SUPPORT: a recorder or import and planned sessions for each of those activities; a separate colour and graph segment per additional type; a decision on how walking and hiking are classified (a per-athlete purpose); and, if load is ever to be compared, an approved training-load method per sport. None of this is built or promised here.",
+                   "TIME, SESSIONS AND LOAD ARE KEPT APART. The page shows recorded time and completed sessions side by side. It shows NO training load and compares no load across sports: the app has no formula that makes an hour of riding comparable with an hour of lifting, and none was invented. A share of time is never called balanced or optimal.",
+                   "STATED PRIORITY: the Endurance-led / Balanced / Strength-led choice is shown and compared only for an athlete with both cycling and strength (the one case where the app asks for it); every other athlete sees their main sport instead. The Coach note compares by recorded time only, names no ideal ratio and changes no plan; when part of the roster cannot be recorded it says the comparison cannot be made. 'Close to balanced' is a wording rule (the two shares within ten points), not a target.",
+                   "ONE DEFINITION (the Home circle's own, TrainingLedger): recorded minutes by sport beside planned minutes.",
                    "Cycling = durations of recorded and imported rides, plus minutes the athlete typed for a planned ride marked done. Strength = minutes of strength sessions (logged, quick-logged, imported), plus typed minutes of a planned session marked done. A session without a duration adds none; nothing is estimated.",
                    "Planned minutes = the planned, not skipped, rides and strength sessions of the period.",
                    "Overlapping recordings: each counts in full for its own sport; the app has no rule for recordings that overlap in time.",
@@ -1081,8 +1091,17 @@ SCREENS = [
                    "View week → existing Weekly overview. View <weekday> → existing Day page. Sport row → its sessions in place. Session row → the recorded ride or strength session, or the planned session's page. Session details → the period's sessions, then Open weekly overview / Open <weekday>.",
                    "The dashboard reads records only; it writes nothing."],
         rejected=["The Weekly overview as the Training Mix destination (it was the circle's destination until 23 Nov 2026; both Weekly overview designs were rejected as a dashboard on 23 Nov, 11:59)."],
-        commits="Corrections: b993d9c7, ad00ea20. First implementation becbfdc8 (models, shared kit, screen, Lab fixtures); af9a2443 on top (Recovery-only adjustments in the shared chart frame). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.",
-        stages=[("Approved design", "DIRECTION ONLY — final visual sign-off pending", "Owner, 23 Nov 2026 19:55: shared design direction. No screenshot is approved."),
+        commits="Multisport purpose (24 Nov 15:18): e001a350, fea2b8c7. Earlier corrections: b993d9c7, ad00ea20. First implementation becbfdc8 (models, shared kit, screen, Lab fixtures); af9a2443 on top (Recovery-only adjustments in the shared chart frame). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.",
+        stages=[("Approved design", "PENDING FINAL VISUAL APPROVAL", "Owner, 24 Nov 2026 15:18: written product direction for the multisport version. No screenshot of it is approved."),
+                ("Simulator-verified — multisport purpose of 24 Nov 15:18", "YES — Cyclift Lab (Obsidian, iPhone 15 Pro); awaiting the owner's decision",
+                 "Focused check 68, run 45391434970, commit 413b7490 (code fea2b8c7), 3 of 3 passed (check 67, run 45384588700, commit 48ffd02d, also 3 of 3 before the graph key was corrected). "
+                 "HISTORY ATHLETE (cycling, strength, running, swimming; balanced): balance card 'Endurance 71% · Strength 29%', 'Endurance 3 · Strength 2' sessions, 'Balanced', 'Not recorded yet: Road running, Pool swimming'; Endurance row 3 h 28 min and, opened, names its activities and says running and swimming are not recorded; Coach note says the comparison cannot be made. Switching to Individual sports renames the label and card to Cycling and shows the four sport rows; all earlier week, day, planned-line and drill-down checks passed again. "
+                 "CYCLING AND STRENGTH, endurance-led: 'Your stated priority: Endurance-led', nothing called unrecorded, Coach note 'in line with the endurance-led priority you stated'. "
+                 "RUNNING AND STRENGTH: 1 h 24 min, 'Strength 100%', main sport Road running, Endurance row 'Not recorded yet' with no figure, no cycling row or key, Coach note says running is not recorded. "
+                 "ENDURANCE ONLY: 3 h 28 min, 'Endurance 100%', no strength row, line or key, main sport Road cycling. "
+                 "NO RECORDINGS (new runner): 'No recorded training', balance card without a figure, no graph key, Endurance 'Not recorded yet'. "
+                 "Logic: 7 dashboard tests pass on e001a350; fast logic run 45391435389 on 413b7490 succeeded. A full Lab run and a main-app build that started by mistake on 413b7490 were cancelled — NOT run. "
+                 "NOT exercised: Mobility and 'Not placed in a type' rows on screen (logic-tested only), strength-led and balanced comparison sentences on screen (logic-tested only), drag across the graph, larger text, other themes, VoiceOver, the redesigned main app."),
                 ("Implemented in code", "YES — awaiting review", "Commit becbfdc8."),
                 ("Compiled", "YES — Cyclift Lab", "Checks 62 and 64. The redesigned main-app target has not been built at these commits."),
                 ("Simulator-verified — corrections of 24 Nov 10:22", "YES — Cyclift Lab (Obsidian, iPhone 15 Pro); final sign-off pending",
@@ -1099,15 +1118,23 @@ SCREENS = [
                  "The full Training Mix check was NOT re-run on af9a2443 (that commit changed only the Recovery graph's inset and scale). Home: its final-baseline check passed in check 62. Logic: 4 dashboard tests pass, including that the week's minutes equal the Home circle's; full suite 628 tests, 0 failures, 12 skipped, at becbfdc8. "
                  "NOT exercised: drag across the graph, larger text, other themes, VoiceOver, the redesigned main app."),
                 ("Physically verified on iPhone", "NO", "Not run on a physical iPhone.")],
-        visual_verification="VISUALLY APPROVED with minor corrections by the owner on 24 Nov 2026, 10:22 (check 62 screenshots). The corrected Coach note is shown in the before / after board; final sign-off pending.",
-        functional_verification="Lab simulator: check 66, as listed.",
-        remaining=["Owner's final sign-off of the corrected Coach note.",
+        visual_verification="PENDING. The multisport version (check 68 screenshots) is presented for the owner's decision and is not approved. Earlier two-sport version: visually approved with minor corrections on 24 Nov 2026, 10:22 (check 62 screenshots). The corrected Coach note is shown in the before / after board; final sign-off pending.",
+        functional_verification="Lab simulator: check 68, as listed (check 66 for the earlier version).",
+        remaining=["Owner's decision on the multisport version (check 68 screenshots).",
+                   "The demonstration runner has NO running time, because the app cannot record running; nothing was invented for the screenshot.",
+                   "A cyclist who also runs or swims sees an Endurance figure that is cycling only; the page says so in the balance card and inside the Endurance row, not on the closed row itself.",
+                   "The Home circle is unchanged and still says Cycling / Strength.",
                    "OPEN OBSERVATION (all three dashboards): in a check, a vertical scroll that began on a graph column was taken as a press and cleared the selection. Not established for a real finger; nothing changed for it.",
                    "The 'multisport athlete' screenshot is the same demonstration athlete as the others (cycling, strength, running, swimming): only cycling and strength can hold recorded time today.",
                    "Planned mobility / other-activity sessions are not part of the mix (the Home circle does not count them either) — the same open product decision as Consistency.",
                    "Day totals are whole minutes per day; a week's total can differ from the sum of its days by a minute or two of rounding.",
                    "Not verified: drag inspection, larger text, other themes, VoiceOver, physical iPhone, the redesigned main-app target."],
-        images=[("H03_r2_mix_before_after.png", "CORRECTION FOR SIGN-OFF. The Coach note before (check 62) and after (check 66), Weeks and Days; graph and planned-time line unchanged."),
+        images=[("H03_r3_mix-hybrid.png", "FOR DECISION — NOT APPROVED. Cycling-and-strength hybrid athlete, endurance-led, last week selected. Complete page, iPhone 15 Pro simulator, Obsidian, Cyclift Lab, check 68, synthetic data."),
+                ("H03_r3_mix-run-strength.png", "FOR DECISION — NOT APPROVED. Running-and-strength athlete: strength recorded, running not recordable (check 68)."),
+                ("H03_r3_mix-endurance-only.png", "FOR DECISION — NOT APPROVED. Endurance-only athlete (road and gravel cycling) (check 68)."),
+                ("H03_r3_mix-types-vs-sports.png", "FOR DECISION — NOT APPROVED. Training types beside Individual sports, same athlete and week (cycling, strength, running, swimming) (check 68)."),
+                ("H03_r3_mix-no-records.png", "FOR DECISION — NOT APPROVED. Athlete with no recordings (new runner) (check 68)."),
+                ("H03_r2_mix_before_after.png", "CORRECTION FOR SIGN-OFF. The Coach note before (check 62) and after (check 66), Weeks and Days; graph and planned-time line unchanged."),
                 ("H03_r2_mix-1-weeks-selected.png", "AS CORRECTED — complete page, Weeks, last week selected (check 66)."),
                 ("H03_r2_mix-2-days-selected.png", "AS CORRECTED — complete page, Days, Thursday selected (check 66)."),
                 ("H03_r2_mix-3-sport-expanded.png", "AS CORRECTED — complete page, Cycling expanded (check 66)."),
@@ -1116,7 +1143,8 @@ SCREENS = [
                 ("H03_mix-3-sport-expanded.png", "SENT FOR REVIEW — NOT APPROVED. Cycling expanded with its sessions; running and swimming 'Not recorded yet'."),
                 ("H03_mix-5-no-records.png", "SENT FOR REVIEW — NOT APPROVED. Athlete with nothing recorded (check 64)."),
                 ("H03_H04_three_dashboards_board.png", "COMPARISON BOARD. Consistency (approved), Training Mix and Recovery (not yet approved) side by side.")],
-        history=[("24 Nov 2026, 10:22", "VISUALLY APPROVED with minor corrections: shorten the Coach note into a concise interpretation that keeps real data and follows the chosen period; verify that the planned-duration reference changes with each day's or week's actual planned sessions, fixing it only if wrong. No redesign. Targeted verification outstanding.", "IN FORCE"),
+        history=[("24 Nov 2026, 15:18", "Before approving, the owner asked for the product purpose to be improved: a personalised, multisport training-management dashboard instead of cycling-versus-strength statistics — training categories, a compact Training balance indicator comparable with the stated preference, a Training types / Individual sports switch, duration / sessions / load kept distinct with no invented formulas, truthful missing-recording states, Coach insights compared with declared priorities. Graph, interaction model and visual language kept. Training Mix remains pending final visual approval; Consistency and Recovery not to be changed. Implemented e001a350 + fea2b8c7; verified check 68.", "IN FORCE — awaiting visual decision"),
+                 ("24 Nov 2026, 10:22", "VISUALLY APPROVED with minor corrections: shorten the Coach note into a concise interpretation that keeps real data and follows the chosen period; verify that the planned-duration reference changes with each day's or week's actual planned sessions, fixing it only if wrong. No redesign. Targeted verification outstanding.", "IN FORCE"),
                  ("23 Nov 2026, 19:55", "Shared design direction approved: Training Mix built on the approved Consistency Dashboard design system — compact summary, Weeks / Days, stacked duration graph with a floating label, inspection card, one Coach card, breakdown by sport, expandable details; a distribution measure with sport colours and no adherence bands. Implementation and final visual sign-off pending.", "IN FORCE")],
     ),
     dict(
