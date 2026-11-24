@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 23 Nov 2026, 22:40 (Dubai) · Screens recorded: 12
+Last updated: 24 Nov 2026, 11:20 (Dubai) · Screens recorded: 12
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -987,8 +987,8 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 ## Screen 11 — Home › Training Mix Dashboard (APP-03)
 
 - **Navigation location:** Main app · Home › the Training Mix circle (the second circle). The Weekly overview and Day pages are its drill-downs.
-- **Approval date:** 23 Nov 2026, 19:55 — SHARED DESIGN DIRECTION approved (built on the approved Consistency Dashboard). Final visual sign-off PENDING.
-- **Approval status:** SHARED DESIGN DIRECTION APPROVED (23 Nov 2026, 19:55); implementation and final visual sign-off PENDING. Implemented and simulator-checked in Cyclift Lab (checks 62 and 64) and sent for review. NOT visually approved.
+- **Approval date:** 24 Nov 2026, 10:22 — VISUALLY APPROVED with minor corrections. Shared design direction 23 Nov 2026, 19:55.
+- **Approval status:** VISUALLY APPROVED WITH MINOR CORRECTIONS (24 Nov 2026, 10:22); targeted verification OUTSTANDING. Two corrections: a shorter Coach note that interprets and does not repeat the graph's figures; verification that the planned-time line stands at each period's actual planned sessions. Not to be redesigned.
 - **Original design reference and source:** The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. The canonical design will be the implementation screenshots the owner approves; none is approved yet.
 - **Implementation commit:** becbfdc8 (models, shared kit, screen, Lab fixtures); af9a2443 on top (Recovery-only adjustments in the shared chart frame). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.
 
@@ -1059,6 +1059,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | When | Decision | State |
 |---|---|---|
+| 24 Nov 2026, 10:22 | VISUALLY APPROVED with minor corrections: shorten the Coach note into a concise interpretation that keeps real data and follows the chosen period; verify that the planned-duration reference changes with each day's or week's actual planned sessions, fixing it only if wrong. No redesign. Targeted verification outstanding. | IN FORCE |
 | 23 Nov 2026, 19:55 | Shared design direction approved: Training Mix built on the approved Consistency Dashboard design system — compact summary, Weeks / Days, stacked duration graph with a floating label, inspection card, one Coach card, breakdown by sport, expandable details; a distribution measure with sport colours and no adherence bands. Implementation and final visual sign-off pending. | IN FORCE |
 
 ---
@@ -1066,8 +1067,8 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 ## Screen 12 — Home › Recovery Dashboard (APP-04)
 
 - **Navigation location:** Main app · Home › the Recovery circle (the third circle). The existing Recovery page stays as its detail view; the Sleep row and Key metrics rows on Home still open that page directly.
-- **Approval date:** 23 Nov 2026, 19:55 — SHARED DESIGN DIRECTION approved (built on the approved Consistency Dashboard). Final visual sign-off PENDING.
-- **Approval status:** SHARED DESIGN DIRECTION APPROVED (23 Nov 2026, 19:55); implementation and final visual sign-off PENDING. Implemented and simulator-checked in Cyclift Lab (check 64, 3 of 3) and sent for review. NOT visually approved. No recovery score exists or is shown.
+- **Approval date:** 24 Nov 2026, 10:22 — design direction ACCEPTED; final approval pending corrections. Shared design direction 23 Nov 2026, 19:55.
+- **Approval status:** AWAITING FINAL REFINEMENT APPROVAL (24 Nov 2026, 10:22): design direction accepted; three corrections required before final approval — the latest readings dated in the header and never mixed with the chosen period; 'your usual range' shown only with a real, sufficiently supported personal baseline; floating labels anchored to their point by the approved Consistency placement rule. Not to be redesigned. No recovery score exists or is shown.
 - **Original design reference and source:** The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. None is approved yet.
 - **Implementation commit:** becbfdc8 (models, shared kit, screen, Lab fixtures); 441b4f01 and af9a2443 (tighter sleep scale, less empty room above the line). Branch ios/lab. Not in any TestFlight build. Production (build 216 interface) is not changed.
 
@@ -1141,4 +1142,5 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | When | Decision | State |
 |---|---|---|
+| 24 Nov 2026, 10:22 | Design direction ACCEPTED; final approval pending corrections: label the date of the latest readings in the header and keep averages and the chosen period in the inspection card; audit the personal baseline behind 'Inside your usual range' and show it only when a real, sufficiently supported baseline exists; anchor the floating labels to the chosen point by the approved Consistency placement rules. No redesign. | IN FORCE |
 | 23 Nov 2026, 19:55 | Shared design direction approved: Recovery built on the approved Consistency Dashboard design system — compact summary of available observations, Weeks / Days, one selectable metric on its own scale with a floating label, inspection card, one Coach card, recovery measure rows, expandable sources; no synthetic recovery score, no diagnosis. Implementation and final visual sign-off pending. | IN FORCE |

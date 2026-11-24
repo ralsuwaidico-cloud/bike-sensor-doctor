@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "23 Nov 2026, 22:40 (Dubai)"
+UPDATED = "24 Nov 2026, 11:20 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -1051,9 +1051,9 @@ SCREENS = [
     dict(
         number=11, id="APP-03", name="Home › Training Mix Dashboard",
         location="Main app · Home › the Training Mix circle (the second circle). The Weekly overview and Day pages are its drill-downs.",
-        approved_on="23 Nov 2026, 19:55 — SHARED DESIGN DIRECTION approved (built on the approved Consistency Dashboard). Final visual sign-off PENDING.",
-        status="SHARED DESIGN DIRECTION APPROVED (23 Nov 2026, 19:55); implementation and final visual sign-off PENDING. "
-               "Implemented and simulator-checked in Cyclift Lab (checks 62 and 64) and sent for review. NOT visually approved.",
+        approved_on="24 Nov 2026, 10:22 — VISUALLY APPROVED with minor corrections. Shared design direction 23 Nov 2026, 19:55.",
+        status="VISUALLY APPROVED WITH MINOR CORRECTIONS (24 Nov 2026, 10:22); targeted verification OUTSTANDING. "
+               "Two corrections: a shorter Coach note that interprets and does not repeat the graph's figures; verification that the planned-time line stands at each period's actual planned sessions. Not to be redesigned.",
         reference="The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. "
                   "The canonical design will be the implementation screenshots the owner approves; none is approved yet.",
         wording=[("Title", "Training Mix"),
@@ -1104,14 +1104,15 @@ SCREENS = [
                 ("H03_mix-3-sport-expanded.png", "SENT FOR REVIEW — NOT APPROVED. Cycling expanded with its sessions; running and swimming 'Not recorded yet'."),
                 ("H03_mix-5-no-records.png", "SENT FOR REVIEW — NOT APPROVED. Athlete with nothing recorded (check 64)."),
                 ("H03_H04_three_dashboards_board.png", "COMPARISON BOARD. Consistency (approved), Training Mix and Recovery (not yet approved) side by side.")],
-        history=[("23 Nov 2026, 19:55", "Shared design direction approved: Training Mix built on the approved Consistency Dashboard design system — compact summary, Weeks / Days, stacked duration graph with a floating label, inspection card, one Coach card, breakdown by sport, expandable details; a distribution measure with sport colours and no adherence bands. Implementation and final visual sign-off pending.", "IN FORCE")],
+        history=[("24 Nov 2026, 10:22", "VISUALLY APPROVED with minor corrections: shorten the Coach note into a concise interpretation that keeps real data and follows the chosen period; verify that the planned-duration reference changes with each day's or week's actual planned sessions, fixing it only if wrong. No redesign. Targeted verification outstanding.", "IN FORCE"),
+                 ("23 Nov 2026, 19:55", "Shared design direction approved: Training Mix built on the approved Consistency Dashboard design system — compact summary, Weeks / Days, stacked duration graph with a floating label, inspection card, one Coach card, breakdown by sport, expandable details; a distribution measure with sport colours and no adherence bands. Implementation and final visual sign-off pending.", "IN FORCE")],
     ),
     dict(
         number=12, id="APP-04", name="Home › Recovery Dashboard",
         location="Main app · Home › the Recovery circle (the third circle). The existing Recovery page stays as its detail view; the Sleep row and Key metrics rows on Home still open that page directly.",
-        approved_on="23 Nov 2026, 19:55 — SHARED DESIGN DIRECTION approved (built on the approved Consistency Dashboard). Final visual sign-off PENDING.",
-        status="SHARED DESIGN DIRECTION APPROVED (23 Nov 2026, 19:55); implementation and final visual sign-off PENDING. "
-               "Implemented and simulator-checked in Cyclift Lab (check 64, 3 of 3) and sent for review. NOT visually approved. No recovery score exists or is shown.",
+        approved_on="24 Nov 2026, 10:22 — design direction ACCEPTED; final approval pending corrections. Shared design direction 23 Nov 2026, 19:55.",
+        status="AWAITING FINAL REFINEMENT APPROVAL (24 Nov 2026, 10:22): design direction accepted; three corrections required before final approval — "
+               "the latest readings dated in the header and never mixed with the chosen period; 'your usual range' shown only with a real, sufficiently supported personal baseline; floating labels anchored to their point by the approved Consistency placement rule. Not to be redesigned. No recovery score exists or is shown.",
         reference="The approved Consistency Dashboard (APP-02, check 61) as the design system, with the owner's written direction of 23 Nov 2026, 19:55 for content. No drawing exists. None is approved yet.",
         wording=[("Title", "Recovery"),
                  ("Summary", "<period> / Latest readings / Sleep · Resting HR · HRV, each with its latest value or 'No reading' — or 'No recovery measurements'"),
@@ -1164,6 +1165,7 @@ SCREENS = [
                 ("H04_rec-3-metric-expanded.png", "SENT FOR REVIEW — NOT APPROVED. Sleep row expanded with its recent readings."),
                 ("H04_rec-4-partial.png", "SENT FOR REVIEW — NOT APPROVED. Readings from one source for one metric only."),
                 ("H04_rec-5-no-readings.png", "SENT FOR REVIEW — NOT APPROVED. No recovery measurements.")],
-        history=[("23 Nov 2026, 19:55", "Shared design direction approved: Recovery built on the approved Consistency Dashboard design system — compact summary of available observations, Weeks / Days, one selectable metric on its own scale with a floating label, inspection card, one Coach card, recovery measure rows, expandable sources; no synthetic recovery score, no diagnosis. Implementation and final visual sign-off pending.", "IN FORCE")],
+        history=[("24 Nov 2026, 10:22", "Design direction ACCEPTED; final approval pending corrections: label the date of the latest readings in the header and keep averages and the chosen period in the inspection card; audit the personal baseline behind 'Inside your usual range' and show it only when a real, sufficiently supported baseline exists; anchor the floating labels to the chosen point by the approved Consistency placement rules. No redesign.", "IN FORCE"),
+                 ("23 Nov 2026, 19:55", "Shared design direction approved: Recovery built on the approved Consistency Dashboard design system — compact summary of available observations, Weeks / Days, one selectable metric on its own scale with a floating label, inspection card, one Coach card, recovery measure rows, expandable sources; no synthetic recovery score, no diagnosis. Implementation and final visual sign-off pending.", "IN FORCE")],
     ),
 ]
