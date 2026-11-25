@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 25 Nov 2026, 21:05 (Dubai) · Screens recorded: 14
+Last updated: 25 Nov 2026, 22:15 (Dubai) · Screens recorded: 15
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -120,6 +120,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 12 | APP-04 | Home › Recovery Dashboard | DIRECTION ONLY — final visual sign-off pending | YES — awaiting review | YES — Cyclift Lab | — (later rounds: see the screen's status table) | NO |
 | 13 | APP-05 | Home › Daily Training Overview (Day page) | YES | YES — redesigned app only | YES — Cyclift Lab | YES — functional, Cyclift Lab (Obsidian, iPhone 15 Pro); visual review pending (later rounds: see the screen's status table) | NO |
 | 14 | APP-06 | Home › Sleep & Wellness | DIRECTION: YES (25 Nov 2026, 20:11). REFINED SCREENS: NO — awaiting visual approval | NO | NO | NO | NO |
+| 15 | APP-07 | Home › Key Metrics › Resting Heart Rate — UNDER REVIEW | NO — proposal awaiting the owner's visual decision | NO | NO | EXISTING PAGE CAPTURED ONLY | NO |
 
 ---
 
@@ -1369,3 +1370,65 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 |---|---|---|
 | 25 Nov 2026, 20:11 | OVERALL UI/UX DIRECTION APPROVED subject to ten refinements: structure kept; clickable Morning / Evening entries with Saved, Not started or Partially completed; at most two measures by default with filters and an expanded view; manual entries stored securely in the existing profile with edit, individual and full deletion, and backup / export where supported; manual and measured sleep both preserved with source and timestamp; at least seven days of paired observations before a tentative association, never causation or diagnosis; urgent-care guidance for concerning headache symptoms; existing Recovery and Health measurements reused; completion indicators but no wellness score; Obsidian and the dock preserved. Refined default, Morning, Evening, inspection and no-data screens to be prepared for visual approval before implementation. Other approved screens not to be modified. | IN FORCE — refined mockups presented, awaiting visual approval |
 | 25 Nov 2026, 19:21 | Next screen: Home → Sleep. Full design direction for a Sleep & Wellness dashboard given (graph, daily journal, sources, Coach insights, relationship to training, safety and privacy, visual design, workflow). Review before building: three-column comparison and mockups of five states; wait for visual approval before implementing; approved screens not to be changed; every approved decision to be recorded in this report. | IN FORCE |
+
+---
+
+## Screen 15 — Home › Key Metrics › Resting Heart Rate — UNDER REVIEW (APP-07)
+
+- **Navigation location:** Main app · Home › Key metrics › Resting HR (item 12 of the Home review). Today the Resting HR, HRV and Sleep rows all open the one shared Recovery page; the FTP row switches to the Progress tab.
+- **Approval date:** NOT APPROVED. Review requested by the owner on 25 Nov 2026 (20:21); audit, full-page comparison and a proposed layout presented; awaiting the owner's visual decision. Nothing is implemented.
+- **Approval status:** UNDER REVIEW — PROPOSAL PRESENTED, NOT APPROVED, NOT IMPLEMENTED. The proposed screens are design mockups, not simulator screenshots. Review order set by the owner: Resting HR, then HRV, then Sleep, then FTP and other sport-specific performance metrics.
+- **Original design reference and source:** No approved design of a Resting Heart Rate page exists. Visual-language reference named by the owner: the approved Consistency and Training Mix dashboards and the Recovery dashboard (whose own final approval is still separate).
+- **Implementation commit:** None for this screen. Capture-only check de922bc4 (no app code changed).
+
+### Exact approved wording
+
+- **Existing page:** Title 'Recovery'. A 'Today' card ('Train as planned' / 'Make today's session easier' / 'Train as planned — and notice how it feels' / 'Training is on hold') with 'Based on' lines; then one card each for Sleep, Resting heart rate and HRV: latest value, source · time · freshness, '52 bpm, inside your usual 49–57 bpm over 23 days.', a 14-day bar chart, 'Last 14 days · 12 with a reading'; a closing note that no recovery score is computed and readings are not medical advice.
+- **Proposed page (mockup):** Title 'Resting heart rate'. Latest reading with day, time and source, and 'Inside / Above / Below your usual range · 49–57 bpm' or 'No usual range yet · 5 of the 7 earlier readings needed'. Graph: 7 days | 30 days | 90 days; 'Resting heart rate in bpm · one reading a day · a dash marks a day without a reading'. Inspection card for the chosen day. 'COACH · FROM YOUR RECORDS'. 'Your usual range … Your own middle range, not a medical reference.' A 'Sleep & wellness — Open' row. 'Readings and sources'.
+
+### Approved layout, visual elements and interactions
+
+- PROPOSED (mockups): header with the latest reading; one graph of one measure on its own bpm scale with the athlete's usual range as a shaded band; a day without a reading is a dash on the baseline, never zero; selectable points with a label at the point; an inspection card with that day's reading, its comparison with the range, that night's sleep, the previous day's training and 'Open day'; ONE Coach note; a 'Your usual range' card; one row to Sleep & wellness; 'Readings and sources' as a disclosure.
+- PROPOSED states drawn: default 30 days; a point selected; too few readings for a usual range; no readings (not connected); the sources panel opened.
+
+### Mandatory functionality and dependencies
+
+- AUDIT OF THE EXISTING DESTINATION (code and check 77). CONTROLS: Back; 'Open Connections' only when there are no readings. Nothing on the charts can be selected and there is no period choice. NAVIGATION: Home › Key metrics › Resting HR, HRV or Sleep, and Home's Sleep row, all open this one page; the Recovery dashboard's 'View recovery details' opens it too. DATA: one reading per indicator per day read from Apple Health, with the source Apple Health names and the sample time, kept 90 days; resting heart rate cannot be entered by hand. HISTORY SHOWN: the last 14 days as bars. BASELINE: the athlete's own readings of the 28 days before the latest reading, at least 7 of them; the middle half widened; the latest reading is inside, below or above it. FRESHNESS: a reading older than a day is labelled and not used as today's.
+- EXISTING COACH LOGIC ON THIS PAGE (rules-based, not AI): the 'Today' card gives TRAINING ADVICE from the readings — two fresh readings outside the usual range: 'Make today's session easier' (shorten the session or drop one zone); one outside: 'Train as planned — and notice how it feels'; all inside: 'Train as planned'; no fresh reading: says so; training on hold from the health check: says so. It changes no plan and states that one day's readings are not a diagnosis. FOR THE OWNER'S DECISION: whether a Key metrics page keeps this advice. The proposed layout does not carry it: its one Coach note describes the readings and draws no health or training conclusion.
+- DEFECT SEEN IN THE EXISTING PAGE (check 77): the value labels above the bars are cut off ('7 h…', '50…').
+- DATA DISTINCTIONS TO PRESERVE: measured (Apple Health, with source and time) · source not recorded (older readings saved before the source was kept) · missing (no reading; never zero) · not today's (older than a day, labelled with its age). Manual entry of resting heart rate does not exist and is not proposed. No reading and no medical conclusion is fabricated.
+- INTEGRATION WITH SLEEP & WELLNESS (requirement): one set of records. This page, the Recovery pages and Sleep & wellness all read the same stored readings; none creates or edits them. This page is the single-measure view (history, usual range, sources); Sleep & wellness is the multi-measure view with the journal and associations. Each links to the other; neither repeats the other's features — no journal here, no per-measure baseline panel there.
+- OUTSTANDING INTEGRATION REQUIREMENTS: decide the fate of the shared Recovery page once Resting HR, HRV and Sleep have their own destinations (kept as an overview, or retired); where Home's Sleep row goes (Sleep & wellness, as approved in direction) versus the Key metrics Sleep row; the relationship to the Recovery dashboard, whose final visual approval is still separate; the same page pattern for HRV and Sleep; FTP and other sport-specific performance metrics as a different kind of page.
+
+### Explicitly rejected alternatives
+
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | NO — proposal awaiting the owner's visual decision | Mockups presented 25 Nov 2026. |
+| Implemented in code | NO | Not started; waits for approval. |
+| Compiled | NO |  |
+| Simulator-verified | EXISTING PAGE CAPTURED ONLY | Focused check 77, run 45653454881, commit e59b21ed: the Resting HR, HRV and Sleep rows each opened the Recovery page and its complete page was captured (Cyclift Lab, Obsidian, iPhone 15 Pro, demo readings). The check then FAILED at the FTP row through an error in the check itself — it matched a different button whose label contains 'FTP' — so the FTP destination and the no-readings state were not captured; to be corrected when FTP is reviewed. The first attempt of this run found no runner and was cancelled in the queue. |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** NOT APPROVED. Comparison and mockups presented for the owner's decision.
+- **Functional verification:** None for the proposal — not implemented.
+
+### Remaining work or limitations
+
+- Owner's visual decision on the proposed layout, and on whether training advice stays on this page.
+- The 'previous' image is the same page in the main app from an older run on a small iPhone without readings; the page's code has not changed since 10 Nov 2026, so previous and current are one design.
+- Then, in order: HRV, Sleep, FTP and other sport-specific performance metrics.
+
+### Images
+
+- `assets/H07_rhr_comparison.png` — COMPARISON BOARD. 1: the approved Home (no approved Resting HR design exists). 2: previous — the Recovery page, main-app run 241. 3: current — the complete Recovery page that Resting HR opens today (check 77, simulator). 4: DESIGN MOCKUP of the proposed page — not implemented, not approved.
+- `assets/H07_rhr_proposed_mockups.png` — DESIGN MOCKUPS — NOT SIMULATOR SCREENSHOTS, NOT IMPLEMENTED, NOT APPROVED. Default 30 days; a point selected; no usual range yet; no readings; readings and sources opened. Illustrative values.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 25 Nov 2026, 20:21 | Home → Key Metrics review begun: all four clickable rows in order — Resting HR, HRV, Sleep, FTP — starting with Resting Heart Rate only. Find the existing destination; show any approved reference beside the previous and current implementations as complete iPhone 15 Pro pages; audit controls, navigation, data sources, history and Coach logic; propose a refined screen in the language of the approved dashboards (interactive historical graph, selectable points, period inspection, one Coach note, baseline comparison, source details); keep measured, manual, missing and unverified data distinct; show the integration with Sleep & Wellness without duplication; approved Home and locked screens unchanged. No implementation before the owner's visual decision. | IN FORCE — presented, awaiting decision |
