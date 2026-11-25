@@ -1,0 +1,25 @@
+FAST focused Lab check — selected: LabFastOnboarding/testCaptureHomeKeyMetrics
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 3128c381 · files changed since then: 1
+TIME setup: 10s
+  timing: CompileAssetCatalogVariant (1 task) | 132.893 seconds
+  timing: SwiftCompile (3 tasks) | 108.928 seconds
+  timing: Ld (18 tasks) | 5.915 seconds
+  timing: SwiftEmitModule (2 tasks) | 5.460 seconds
+  timing: SwiftDriver (2 tasks) | 3.017 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.986 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.717 seconds
+  timing: Copy (6 tasks) | 0.168 seconds
+  stages: packages at 122s · packages prepared at 147s · dependency graph at 147s · inputs at 147s · build description at 147s · first link at 155s · asset catalogue at 155s · first Swift step at 288s · finished at 292s
+  compiled in this run: 7 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 293s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 11s
+Lab/UITests/LabFastOnboarding.swift:1513: error: -[CycliftLabUITests.LabFastOnboarding testCaptureHomeKeyMetrics] : Failed to not hittable: Button, {{24.0, 365.0}, {345.0, 74.0}}, label: 'Performance Settings, FTP 225 W · entered · max HR 180 estimated'
+Test Case '-[CycliftLabUITests.LabFastOnboarding testCaptureHomeKeyMetrics]' failed (307.731 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 425s
+TIME total on the Mac: 745s
+commit e59b21edab55f43ac691c9deaf8bfe013309fa63  branch ios/lab
