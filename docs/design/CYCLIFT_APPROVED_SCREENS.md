@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 25 Nov 2026, 20:30 (Dubai) · Screens recorded: 14
+Last updated: 25 Nov 2026, 21:05 (Dubai) · Screens recorded: 14
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -119,7 +119,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 11 | APP-03 | Home › Training Mix Dashboard | YES | YES | YES — Cyclift Lab | — (later rounds: see the screen's status table) | NO |
 | 12 | APP-04 | Home › Recovery Dashboard | DIRECTION ONLY — final visual sign-off pending | YES — awaiting review | YES — Cyclift Lab | — (later rounds: see the screen's status table) | NO |
 | 13 | APP-05 | Home › Daily Training Overview (Day page) | YES | YES — redesigned app only | YES — Cyclift Lab | YES — functional, Cyclift Lab (Obsidian, iPhone 15 Pro); visual review pending (later rounds: see the screen's status table) | NO |
-| 14 | APP-06 | Home › Sleep & Wellness — DESIGN PROPOSAL | NO — proposal awaiting the owner's visual approval | NO | NO | NO | NO |
+| 14 | APP-06 | Home › Sleep & Wellness | DIRECTION: YES (25 Nov 2026, 20:11). REFINED SCREENS: NO — awaiting visual approval | NO | NO | NO | NO |
 
 ---
 
@@ -1299,11 +1299,11 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ---
 
-## Screen 14 — Home › Sleep & Wellness — DESIGN PROPOSAL (APP-06)
+## Screen 14 — Home › Sleep & Wellness (APP-06)
 
 - **Navigation location:** Main app · Home › the Sleep row (item 7 of the Home review). Today that row opens the existing Recovery page.
-- **Approval date:** NOT APPROVED. Design direction given by the owner on 25 Nov 2026 (19:21); proposal presented as design mockups; awaiting the owner's visual approval before any implementation.
-- **Approval status:** DESIGN PROPOSAL — NOT APPROVED, NOT IMPLEMENTED. Nothing has been built. The images are design mockups, not simulator screenshots. The owner's requirements are recorded here in full so they cannot be lost.
+- **Approval date:** 25 Nov 2026, 20:11 — OVERALL UI/UX DIRECTION APPROVED, subject to ten refinements. The refined screens are NOT yet visually approved and nothing is implemented. Design direction given 25 Nov 2026, 19:21.
+- **Approval status:** OVERALL DIRECTION APPROVED (owner, 25 Nov 2026, 20:11) subject to ten refinements, recorded below. REFINED DESIGN MOCKUPS PRESENTED — awaiting the owner's visual approval before implementation. NOT IMPLEMENTED: nothing has been built; the images are design mockups, not simulator screenshots.
 - **Original design reference and source:** The owner's written design direction of 25 Nov 2026 (19:21). No earlier Sleep & Wellness design sheet was found. Interaction reference: the approved Consistency and Recovery dashboards.
 - **Implementation commit:** None. Nothing is implemented.
 
@@ -1328,9 +1328,11 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Mandatory functionality and dependencies
 
+- APPROVED DECISIONS, 25 Nov 2026, 20:11. (1) Structure kept: interactive graph, Today's Journal, one Coach card, Readings and Sources. (2) Morning and Evening entries clearly clickable, each showing Saved, Not started or Partially completed. (3) The graph is simple by default: no more than two measures, on properly labelled axes; more measurements through filters and an expanded view; points interactive. (4) Manual entries stored securely in the athlete's existing profile, with editing, deletion of an individual entry, deletion of the whole journal, and backup / export where supported. (5) Manual and device-measured sleep values are both preserved, each with its original source and timestamp; one never silently overwrites the other. (6) At least seven days of paired observations before an association is suggested; observations labelled tentative; correlation never presented as causation or as a medical diagnosis. (7) Appropriate urgent-care guidance when concerning headache symptoms are reported. (8) Existing Recovery and Health measurements are reused, not duplicated. (9) Morning / Evening journal completion indicators — and NO wellness score. (10) The approved Obsidian visual language and bottom dock preserved. Other approved screens are not to be modified.
+- HOW THE REFINED MOCKUPS SHOW THEM: journal rows as tappable cards with a status chip and chevron; 'Saved' = every question shown was answered, 'Partially completed' = saved with some unanswered, 'Not started' = nothing saved; two small marks under each day of the graph (morning, evening), filled when saved; caption 'Two measures at most' with 'Filters' and 'All measures' for the expanded view; the Morning entry shows the measured sleep with its source and time and a separate 'Your own entry' kept beside it; the Coach card says how many paired days exist against the seven needed, and a statement that qualifies carries a TENTATIVE mark and what it rests on; a short question follows a reported headache and, answered Yes, shows urgent-care guidance and withholds training advice; 'Delete entry' on a day, and edit, delete and export under Readings and sources.
 - EXISTING TODAY (audit): sleep duration, resting heart rate and HRV are read from Apple Health as one reading per day with source and time, kept 90 days. Recorded rides and strength sessions with their durations exist. A post-session check-in holds effort, pain level and area.
 - NOT EXISTING — needed before this can work: a journal store (morning and evening entries per day, each answer optional, each with its entry time and 'entered by you'); energy, headache, stress, soreness as daily entries; water and caffeine; bedtime, wake time and interruptions (Apple Health sleep timing is not read today); steps; the association rules for the Coach card and the minimum number of observations each needs; the wording and thresholds of the safety notice; deletion and export of journal entries.
-- TO BE DECIDED BY THE OWNER BEFORE IMPLEMENTATION: where journal entries are stored and whether they are included in backup / export; how an athlete deletes one entry or all of them; whether the sleep value in the journal may override the measured one or is kept beside it; the minimum observations for each Coach statement; the exact urgent-care wording.
+- STILL TO BE SETTLED AT VISUAL REVIEW: the exact urgent-care wording and the question that triggers it (proposed in mockup 6); which symptoms beyond headache, if any, get the same handling; the layout of the expanded 'All measures' view and the Readings and sources panel, which are described but not drawn.
 - REUSABLE: the dashboard kit of the approved Consistency, Training Mix and Recovery pages (chart with point selection and floating label, period selector, cards, inspection card, Coach card, disclosures); the readings log and its source labels; the approved Day page as the 'Open day' destination; the Lab scenario mechanism for synthetic data.
 
 ### Explicitly rejected alternatives
@@ -1340,13 +1342,13 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | Stage | State | Evidence |
 |---|---|---|
-| Approved design | NO — proposal awaiting the owner's visual approval | Design direction of 25 Nov 2026, 19:21. Mockups presented. |
+| Approved design | DIRECTION: YES (25 Nov 2026, 20:11). REFINED SCREENS: NO — awaiting visual approval | Overall UI/UX direction approved with ten refinements. Refined mockups presented. |
 | Implemented in code | NO | Not started; waits for approval. |
 | Compiled | NO |  |
 | Simulator-verified | NO | The images are design mockups. |
 | Physically verified on iPhone | NO |  |
 
-- **Visual verification:** NOT APPROVED. Design mockups presented for the owner's review.
+- **Visual verification:** Direction approved; refined mockups presented for the owner's visual approval. Not implemented.
 - **Functional verification:** None — not implemented.
 
 ### Remaining work or limitations
@@ -1357,11 +1359,13 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Images
 
+- `assets/H06_r2_sleep_refined_mockups.png` — REFINED DESIGN MOCKUPS — NOT SIMULATOR SCREENSHOTS, NOT IMPLEMENTED, AWAITING VISUAL APPROVAL. Default dashboard; Morning journal; Evening journal; graph inspection; no data; a concerning headache reported. Illustrative values.
 - `assets/H06_sleep_three_columns.png` — COMPARISON BOARD. Left: the owner's requirements. Middle: the existing destination (Recovery page; main-app run 241, older commit, small iPhone, no readings). Right: DESIGN MOCKUP of the proposed default dashboard — not implemented, not approved.
-- `assets/H06_sleep_proposed_mockups.png` — DESIGN MOCKUPS — NOT SIMULATOR SCREENSHOTS, NOT IMPLEMENTED, NOT APPROVED. Default dashboard with a week recorded; Morning journal; Evening journal; a selected point with its inspection card; nothing recorded. Illustrative values.
+- `assets/H06_sleep_proposed_mockups.png` — FIRST MOCKUPS — direction approved from these (25 Nov 20:11), superseded by the refined set. Default dashboard with a week recorded; Morning journal; Evening journal; a selected point with its inspection card; nothing recorded. Illustrative values.
 
 ### Decision history
 
 | When | Decision | State |
 |---|---|---|
-| 25 Nov 2026, 19:21 | Next screen: Home → Sleep. Full design direction for a Sleep & Wellness dashboard given (graph, daily journal, sources, Coach insights, relationship to training, safety and privacy, visual design, workflow). Review before building: three-column comparison and mockups of five states; wait for visual approval before implementing; approved screens not to be changed; every approved decision to be recorded in this report. | IN FORCE — proposal presented, awaiting approval |
+| 25 Nov 2026, 20:11 | OVERALL UI/UX DIRECTION APPROVED subject to ten refinements: structure kept; clickable Morning / Evening entries with Saved, Not started or Partially completed; at most two measures by default with filters and an expanded view; manual entries stored securely in the existing profile with edit, individual and full deletion, and backup / export where supported; manual and measured sleep both preserved with source and timestamp; at least seven days of paired observations before a tentative association, never causation or diagnosis; urgent-care guidance for concerning headache symptoms; existing Recovery and Health measurements reused; completion indicators but no wellness score; Obsidian and the dock preserved. Refined default, Morning, Evening, inspection and no-data screens to be prepared for visual approval before implementation. Other approved screens not to be modified. | IN FORCE — refined mockups presented, awaiting visual approval |
+| 25 Nov 2026, 19:21 | Next screen: Home → Sleep. Full design direction for a Sleep & Wellness dashboard given (graph, daily journal, sources, Coach insights, relationship to training, safety and privacy, visual design, workflow). Review before building: three-column comparison and mockups of five states; wait for visual approval before implementing; approved screens not to be changed; every approved decision to be recorded in this report. | IN FORCE |
