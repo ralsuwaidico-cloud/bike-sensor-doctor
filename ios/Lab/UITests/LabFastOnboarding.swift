@@ -1490,6 +1490,40 @@ final class LabFastOnboarding: XCTestCase {
         captureFullPage(app, "day-7-no-health", steps: 6)
     }
 
+    /// CAPTURE ONLY (Home review, Key Metrics, 25 Nov 2026): what each Key metrics row on Home opens today, for the owner's
+    /// comparison. No app code is changed; the only requirement is that the rows that can be found open something.
+    func testCaptureHomeKeyMetrics() {
+        func metricRow(_ app: XCUIApplication, _ name: String) -> XCUIElement {
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch
+        }
+        var app = launchHistory()
+        for (name, file) in [("RESTING HR", "km-1-resting-hr"), ("HRV", "km-2-hrv"), ("SLEEP", "km-3-sleep")] {
+            let row = metricRow(app, name)
+            XCTAssertTrue(row.waitForExistence(timeout: 8), "required: the \(name) row on Home")
+            for _ in 0..<12 where !row.isHittable { app.swipeUp(velocity: .slow) }
+            if name == "RESTING HR" { shot("km-0-home-key-metrics") }
+            row.tap()
+            XCTAssertTrue(el(app, "homeRecoveryPage").waitForExistence(timeout: 8), "required: the \(name) row opens the Recovery page")
+            captureFullPage(app, file, steps: 8)
+            app.navigationBars.buttons.element(boundBy: 0).tap(); Thread.sleep(forTimeInterval: 0.8)
+        }
+        let ftp = metricRow(app, "FTP")
+        if ftp.waitForExistence(timeout: 4) {
+            for _ in 0..<12 where !ftp.isHittable { app.swipeUp(velocity: .slow) }
+            ftp.tap(); Thread.sleep(forTimeInterval: 1.5)
+            captureFullPage(app, "km-4-ftp", steps: 6)
+        }
+        app.terminate()
+        // the plain demo athlete has no readings: the same row, the same page, empty
+        app = launchHistory("LAB_NO_SCENARIO")
+        let row = metricRow(app, "RESTING HR")
+        if row.waitForExistence(timeout: 8) {
+            for _ in 0..<12 where !row.isHittable { app.swipeUp(velocity: .slow) }
+            row.tap(); Thread.sleep(forTimeInterval: 1.2)
+            captureFullPage(app, "km-5-resting-hr-no-readings", steps: 2)
+        }
+    }
+
     /// Training Mix for three different athletes (owner, 24 Nov 2026): the page follows the roster. Each is the history
     /// athlete with a different roster; last week is chosen in each.
     func testTrainingMixAthletes() {
