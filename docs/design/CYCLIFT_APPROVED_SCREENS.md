@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 25 Nov 2026, 22:15 (Dubai) · Screens recorded: 15
+Last updated: 26 Nov 2026, 03:15 (Dubai) · Screens recorded: 16
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -121,6 +121,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 13 | APP-05 | Home › Daily Training Overview (Day page) | YES | YES — redesigned app only | YES — Cyclift Lab | YES — functional, Cyclift Lab (Obsidian, iPhone 15 Pro); visual review pending (later rounds: see the screen's status table) | NO |
 | 14 | APP-06 | Home › Sleep & Wellness | DIRECTION: YES (25 Nov 2026, 20:11). REFINED SCREENS: NO — awaiting visual approval | NO | NO | NO | NO |
 | 15 | APP-07 | Home › Key Metrics › Resting Heart Rate — UNDER REVIEW | NO — proposal awaiting the owner's visual decision | NO | NO | EXISTING PAGE CAPTURED ONLY | NO |
+| 16 | APP-08 | Key Metrics hub — four categories, sixteen metrics — PROPOSAL | NO — proposal awaiting the owner's visual decision | NO | NO | NO | NO |
 
 ---
 
@@ -1432,3 +1433,73 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | When | Decision | State |
 |---|---|---|
 | 25 Nov 2026, 20:21 | Home → Key Metrics review begun: all four clickable rows in order — Resting HR, HRV, Sleep, FTP — starting with Resting Heart Rate only. Find the existing destination; show any approved reference beside the previous and current implementations as complete iPhone 15 Pro pages; audit controls, navigation, data sources, history and Coach logic; propose a refined screen in the language of the approved dashboards (interactive historical graph, selectable points, period inspection, one Coach note, baseline comparison, source details); keep measured, manual, missing and unverified data distinct; show the integration with Sleep & Wellness without duplication; approved Home and locked screens unchanged. No implementation before the owner's visual decision. | IN FORCE — presented, awaiting decision |
+
+---
+
+## Screen 16 — Key Metrics hub — four categories, sixteen metrics — PROPOSAL (APP-08)
+
+- **Navigation location:** Main app · Home › Key metrics. A hub of 16 metrics in four categories, each tile opening its own detail screen; Home keeps four compact, customizable Key Metrics.
+- **Approval date:** NOT APPROVED. Design direction given by the owner on 26 Nov 2026 (02:33); first deliverable (hub, one detail screen per category, empty states) presented as mockups; awaiting the owner's visual decision. Nothing is implemented.
+- **Approval status:** PROPOSAL — NOT APPROVED, NOT IMPLEMENTED. Every proposed screen is a design mockup with illustrative values, not a simulator screenshot. No approved screen and no production screen has been changed.
+- **Original design reference and source:** Owner's direction of 26 Nov 2026 (02:33). Visual language: the approved Obsidian dashboards (Consistency, Training Mix) and bottom dock. The Resting Heart Rate proposal (APP-07) is the pattern for a Heart & recovery detail screen.
+- **Implementation commit:** None. No app code changed.
+
+### Exact approved wording
+
+- **The sixteen metrics:** HEART & RECOVERY: Resting Heart Rate, HRV, Blood Oxygen (SpO₂), Respiratory Rate. SLEEP & WELLNESS: Sleep Duration, Sleep Stages, Daily Energy, Stress & Soreness. ACTIVITY & PERFORMANCE: Daily Steps, Active Calories, Heart Rate Zones, Strength Progression. ADVANCED INSIGHTS: Recovery Readiness, Training Strain, Recovery vs. Strain, Personal Baselines.
+- **Hub (mockup):** Title 'Key metrics'. 'On Home · 4 of 4' with 'Edit'. Four category headings, each with 'n of 4 collected'; Advanced insights is marked 'NOT AVAILABLE YET' with 'These stay off until each has a researched definition that you have approved. Nothing is estimated in the meantime.' A tile without data shows a dash and the reason: 'Not collected yet', 'Needs the journal', 'Apple Health not connected', 'No score is calculated'.
+- **Detail screen (mockup):** 'Latest' value and unit; day, time and source; comparison line; '7 days | 30 days | 90 days'; 'Tap a point to inspect that day'; 'COACH · FROM YOUR RECORDS'; 'Compared with your usual'; expandable rows such as 'About this measure' and 'Readings and sources'.
+
+### Approved layout, visual elements and interactions
+
+- PROPOSED hub: a two-column grid of compact tiles under four separated category headings; each tile shows name, latest value and unit, and one line of source and time or the reason there is no value; the four shown on Home carry an 'ON HOME' mark.
+- PROPOSED 'Choose four for Home': the athlete picks any four metrics that have data; metrics without data and all Advanced insights cannot be picked.
+- PROPOSED detail pattern, the same on every metric: large current value and unit · source and timestamp · personal baseline or comparison · one interactive graph (7 / 30 / 90 days, selectable points, a day without a reading drawn as a dash, never zero) · ONE Coach card that only describes the records · expandable metric-specific information.
+- Drawn details: HRV (point selected); Sleep duration; Strength progression (exercise and measure choosers); Recovery readiness (explicitly unavailable — no value, no graph, what is needed before it can be switched on, and the three existing readings shown separately, not combined).
+- Drawn empty states: hub with nothing connected; HRV not connected; Blood oxygen not collected by Cyclift; Sleep duration with no nights; Strength progression with no sessions.
+- COLOUR: health readings are neutral (inside / above / below the athlete's own range, no green or red). Green or red appears only on Strength progression, under the comparison rules already approved for the Day page.
+
+### Mandatory functionality and dependencies
+
+- OWNER'S REQUIREMENTS (26 Nov 2026, 02:33): four compact, customizable Key Metrics on Home without overcrowding or redesigning the approved Home; all 16 metrics in four clearly separated categories; every tile clickable with a dedicated detail screen and no unnecessary links to unrelated features; one consistent dashboard design; colour only where a favourable or unfavourable reading is justified; missing information never shown as zero; reuse existing HealthKit readings, strength history, charts, Coach components and approved navigation; no fabricated measurements; no unvalidated scores or medical interpretations — Advanced metrics stay explicitly unavailable until researched, defined and approved; approved Resting HR, HRV, Sleep and other directions stay intact unless a specific change is approved; Obsidian visual language and bottom dock preserved.
+- WHAT CYCLIFT CAN SUPPLY TODAY (code audit, app commit e59b21ed). AVAILABLE NOW: Resting Heart Rate, HRV and Sleep Duration (one Apple Health reading a day with source and time, kept 90 days, own usual range from the previous 28 days); Strength Progression (recorded strength history and the approved Day-page comparison rules); Heart Rate Zones (time in zone is stored per recorded ride only — not for other activities and not as a daily total). PARTLY: Stress & Soreness (soreness exists only as an answer in a session review; stress is not collected). NOT COLLECTED — NEW WORK AND NEW APPLE HEALTH PERMISSIONS: Blood Oxygen, Respiratory Rate, Daily Steps, daily Active Calories (energy is read per imported workout only), Sleep Stages (only total time asleep is kept). WAITS FOR THE SLEEP & WELLNESS JOURNAL (APP-06, not built): Daily Energy, Stress. NOT DEFINED: all four Advanced insights.
+- ADVANCED INSIGHTS stay unavailable: no Recovery Readiness, Training Strain or Recovery vs. Strain figure is calculated or shown. This keeps the standing rule that no synthetic recovery percentage is created.
+- No approved screen is changed by this proposal: Home (APP-01), Consistency, Training Mix, Day page and the Sleep & Wellness direction are untouched.
+
+### Explicitly rejected alternatives
+
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | NO — proposal awaiting the owner's visual decision | Mockups presented 26 Nov 2026. |
+| Implemented in code | NO | Not started; waits for approval. |
+| Compiled | NO |  |
+| Simulator-verified | NO | Only the two 'current' images are simulator screenshots (focused check 77, run 45653454881, commit e59b21ed). |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** NOT APPROVED. Comparison and mockups presented for the owner's decision.
+- **Functional verification:** None — not implemented.
+
+### Remaining work or limitations
+
+- OPEN — FTP: the approved Home shows Resting HR, HRV, Sleep and FTP, and FTP is not one of the 16 metrics. Decide whether FTP stays selectable for Home, joins Activity & performance, or leaves the Key Metrics row.
+- OPEN — entry to the hub: the approved Home has no control that opens a hub. Any 'See all' control or a changed tap target on Home is a change to an approved screen and needs specific approval.
+- OPEN — Personal Baselines: the athlete's own usual ranges for sleep, resting heart rate and HRV already exist and are shown on each metric. Drawn as unavailable, as directed; it could be offered as a plain list of those existing ranges if the owner approves.
+- OPEN — Strength Progression is drawn per exercise. A single overall strength number would be an unvalidated score and is not proposed.
+- OPEN — Sleep & wellness: the category's metric pages are single-measure views; the approved Sleep & Wellness dashboard with its journal (APP-06) stays the multi-measure view. Sleep duration links to it; the fate of the shared Recovery page remains undecided (see APP-07).
+- CONSEQUENCE FOR APP-07: to follow 'no unnecessary links', the Resting Heart Rate proposal would drop its 'Open day' link. Not changed until the owner decides.
+- Six metrics need new data collection before their pages can show anything: Blood Oxygen, Respiratory Rate, Sleep Stages, Daily Steps, Active Calories, and Daily Energy / Stress through the journal. New Apple Health permissions need approval and a privacy review.
+
+### Images
+
+- `assets/H08_km_hub_comparison.png` — COMPARISON. 1: current approved Home (simulator, check 77). 2: the Recovery page that three Key Metrics rows open today (simulator, check 77). 3–5: DESIGN MOCKUPS — the proposed hub, the hub with no data, and 'Choose four for Home'. Not implemented, not approved.
+- `assets/H08_km_detail_screens.png` — DESIGN MOCKUPS — NOT SIMULATOR SCREENSHOTS, NOT IMPLEMENTED, NOT APPROVED. One detail screen per category: HRV, Sleep duration, Strength progression, Recovery readiness (unavailable). Illustrative values.
+- `assets/H08_km_empty_states.png` — DESIGN MOCKUPS — NOT IMPLEMENTED, NOT APPROVED. Empty states: HRV not connected; Blood oxygen not collected; Sleep duration with no nights; Strength progression with no sessions.
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 26 Nov 2026, 02:33 | Key Metrics design direction: a hub with four categories of four metrics each (Heart & Recovery, Sleep & Wellness, Activity & Performance, Advanced Insights); four compact customizable Key Metrics on Home; every tile clickable with a dedicated, consistent detail screen; colour only where justified; missing never zero; reuse existing readings and components; no unvalidated scores or medical interpretation; Advanced metrics explicitly unavailable until researched, defined and approved; approved directions kept intact. First deliverable: an iPhone 15 Pro design comparison of the hub and one detail screen per category with empty states, recorded as a proposal, with no change to approved production screens before the owner's visual decision. | IN FORCE — proposal presented, awaiting decision |
