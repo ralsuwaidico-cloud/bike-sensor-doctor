@@ -7,6 +7,10 @@ import SwiftUI
 // PRESENTATION REFINED 25 Nov 2026 (owner, 01:41 — workflow approved, visual design pending): the card leads with the
 // few results that matter (one line per exercise, or power and heart rate), everything else is under one "Details"
 // disclosure that is closed by default, the Coach's explanation is one sentence, and health is one compact row.
+// COMPARISON TABLE 25 Nov 2026 (owner, 11:26 — final visual approval pending): the performance changes are a compact
+// table. Strength: one row per exercise, columns Previous · Current · Change, with a selector for Top load · Reps · Sets ·
+// Volume. Cycling: one row per measure (power, heart rate, duration, distance, cadence), same columns. Every value
+// carries its unit. The colours come from the unchanged comparison rules; this file adds none and changes no figure.
 // Start, Results, Move and the session's own page work exactly as on the earlier Day page (same buttons, same actions,
 // same identifiers). This page reads records only — opening it never changes the plan.
 // Every figure comes from `DayOverview`; this file only draws it. Shown only in the redesigned app.
@@ -22,6 +26,7 @@ struct DayOverviewView: View {
     @State private var detailOpen: Set<String> = []      // "<session>-exercises" / "-zones" / "-history"
     @State private var exerciseOpen: String? = nil        // "<session>|<exercise>"
     @State private var historyPoint: [String: Int] = [:]
+    @State private var measure: [String: Int] = [:]       // strength table: 0 top load · 1 reps · 2 sets · 3 volume
 
     var body: some View {
         let o = store.dayOverview(date, recorderActive: recorder.isActive)
@@ -206,25 +211,74 @@ struct DayOverviewView: View {
 
     // MARK: 3 — comparison
 
-    /// The few results that matter first; every other figure under one disclosure, closed by default.
+    // MARK: 3 — the comparison table
+
+    private struct TableRow: Identifiable {
+        var id: String
+        var name: String
+        var previous: String
+        var current: String
+        var change: String
+        var verdict: DayVerdict
+    }
+    private static let measures: [(title: String, suffix: String, unit: String)] = [("Top load", "-load", ""), ("Reps", "-reps", "reps"), ("Sets", "-sets", "sets"), ("Volume", "-volume", "")]
+    /// A value with its unit: figures the model stores bare (reps, sets) get theirs here; nothing is recalculated.
+    private func unit(_ v: String?, _ u: String) -> String {
+        guard let v else { return "—" }
+        return u.isEmpty || v.rangeOfCharacter(from: .letters) != nil ? v : "\(v) \(v == "1" ? String(u.dropLast()) : u)"
+    }
+    /// The change as the table shows it: the model's own difference, or a dash where there is none to state.
+    private func changeText(_ m: DayMetric, completed: Bool) -> String {
+        if !completed || m.previous == nil || m.current == nil { return "—" }
+        if m.change == "No change" || m.change == "Unchanged" { return "Same" }
+        return m.change
+    }
+    private func strengthRows(_ s: DaySessionReview, _ k: Int) -> [TableRow] {
+        let m = DayOverviewView.measures[k]
+        var rows: [TableRow] = s.exercises.compactMap { e in
+            guard let x = e.metrics.first(where: { $0.id.hasSuffix(m.suffix) }) else { return nil }
+            // before the session is recorded the third column holds the prescription, and is headed "Planned"
+            return TableRow(id: e.id, name: e.name, previous: unit(x.previous, m.unit), current: unit(s.completed ? x.current : x.planned, m.unit),
+                            change: changeText(x, completed: s.completed), verdict: s.completed ? x.verdict : .notComparable)
+        }
+        if k == 3, s.completed, let v = s.metrics.first(where: { $0.id == "s-volume" }) {
+            rows.append(TableRow(id: "total", name: "All shared exercises", previous: v.previous ?? "—", current: v.current ?? "—", change: changeText(v, completed: true), verdict: v.verdict))
+        }
+        return rows
+    }
+    private func rideRows(_ s: DaySessionReview) -> [TableRow] {
+        let order = ["r-power", "r-hr", "r-duration", "r-distance", "r-cadence"]
+        return order.compactMap { id in s.metrics.first { $0.id == id } }.map { m in
+            TableRow(id: m.id, name: m.name.replacingOccurrences(of: "Average ", with: "").capitalized(with: nil).replacingOccurrences(of: "Heart Rate", with: "Heart rate"),
+                     previous: m.previous ?? "—", current: (s.completed ? m.current : m.planned) ?? "—", change: changeText(m, completed: s.completed), verdict: s.completed ? m.verdict : .notComparable)
+        }
+    }
+
+    /// The table first; drill-downs under one disclosure, closed by default.
     @ViewBuilder private func comparison(_ s: DaySessionReview, index j: Int) -> some View {
-        let keyIds: Set<String> = ["s-volume", "r-power", "r-hr"]
-        let comparable = s.completed && s.previous != nil
-        let key = s.metrics.filter { keyIds.contains($0.id) && $0.previous != nil && $0.current != nil }
-        let rest = s.metrics.filter { m in !key.contains { $0.id == m.id } }
-        let results = comparable ? s.exercises.filter { $0.current != nil } : []
+        let k = measure[s.id] ?? 0
+        let rows = s.sport == .strength ? strengthRows(s, k) : rideRows(s)
+        let shown: Set<String> = ["s-volume", "r-power", "r-hr", "r-duration", "r-distance", "r-cadence"]
+        let rest = s.metrics.filter { !shown.contains($0.id) }
         VStack(alignment: .leading, spacing: 8) {
-            if results.isEmpty && key.isEmpty {
-                Text(s.completed ? "Nothing to compare yet." : "Shown once this session is recorded.").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+            if rows.isEmpty {
+                Text("No measurements to set side by side.").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
                     .accessibilityIdentifier("daySession-\(j)-noChanges")
+            } else {
+                if s.sport == .strength {
+                    DashSegments(prefix: "dayMeasure\(j)", titles: DayOverviewView.measures.map(\.title), ids: ["load", "reps", "sets", "volume"], selected: k) { measure[s.id] = $0 }
+                }
+                table(rows, first: s.sport == .strength ? "Exercise" : "Measure", third: s.completed ? "Current" : "Planned", index: j, ride: s.sport == .cycling)
+                if !s.completed {
+                    Text("Changes appear once this session is recorded.").font(CyFont.caption).foregroundStyle(theme.textTertiary)
+                        .accessibilityIdentifier("daySession-\(j)-noChanges")
+                }
             }
-            ForEach(Array(results.enumerated()), id: \.element.id) { k, e in resultRow(e.name, shortChange(e.change, e.verdict), e.verdict, id: "daySession-\(j)-result-\(k)") }
-            ForEach(key) { m in resultRow(m.name, keyText(m), m.verdict, id: "daySession-\(j)-metric-\(m.id)") }
             if !rest.isEmpty || !s.exercises.isEmpty {
                 let dk = "\(s.id)-details", isOpen = detailOpen.contains(dk)
-                toggle("Details", s.exercises.isEmpty ? "All figures and time in zones" : "Exercise by exercise and all figures", isOpen, id: "daySession-\(j)-detailsToggle") { flip(dk) }
+                toggle("Details", s.exercises.isEmpty ? "Time in zones and how this was compared" : "Each exercise in full and how this was compared", isOpen, id: "daySession-\(j)-detailsToggle") { flip(dk) }
                 if isOpen {
-                    ForEach(Array(s.exercises.enumerated()), id: \.element.id) { k, e in exerciseRow(e, session: s, id: "daySession-\(j)-exercise-\(k)") }
+                    ForEach(Array(s.exercises.enumerated()), id: \.element.id) { n, e in exerciseRow(e, session: s, id: "daySession-\(j)-exercise-\(n)") }
                     ForEach(rest) { m in metricRow(m, id: "daySession-\(j)-metric-\(m.id)") }
                     Text(s.analysis).font(CyFont.caption).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("daySession-\(j)-reasoning")
@@ -232,26 +286,41 @@ struct DayOverviewView: View {
             }
         }
     }
-    /// What the card shows for a change: a judged result keeps its figure; anything else is said plainly.
-    private func shortChange(_ change: String, _ v: DayVerdict) -> String {
-        if v == .same { return change == "No change" || change == "Unchanged" ? "Unchanged" : "Similar (\(change))" }
-        if v == .notComparable { return change.contains("not compar") ? "Not comparable" : change }
-        return change
-    }
-    /// A key figure: both values, then the change — or "Not comparable" where the difference proves nothing.
-    private func keyText(_ m: DayMetric) -> String { "\(m.previous ?? "—") → \(m.current ?? "—") · \(m.verdict == .notComparable ? "Not comparable" : shortChange(m.change, m.verdict))" }
-    /// One result on one line: a symbol and colour only where the change is established, then the name and the change.
-    private func resultRow(_ name: String, _ change: String, _ v: DayVerdict, id: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: symbol(v)).font(.caption.weight(.bold)).foregroundStyle(color(v)).frame(width: 16).accessibilityHidden(true)
-            Text(name).font(CyFont.label).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.85)
-            Spacer(minLength: 6)
-            Text(change).font(CyFont.footnote).foregroundStyle(v == .better || v == .worse ? color(v) : theme.textSecondary).multilineTextAlignment(.trailing).lineLimit(2).minimumScaleFactor(0.85)
+    /// Four columns that always fit the card: the name takes what is left; the three value columns are fixed and right-aligned.
+    private func table(_ rows: [TableRow], first: String, third: String, index j: Int, ride: Bool) -> some View {
+        let w: (CGFloat, CGFloat, CGFloat) = (66, 66, 78)
+        return VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Text(first).frame(maxWidth: .infinity, alignment: .leading)
+                Text("Previous").frame(width: w.0, alignment: .trailing)
+                Text(third).frame(width: w.1, alignment: .trailing)
+                Text("Change").frame(width: w.2, alignment: .trailing)
+            }
+            .font(CyFont.caption).foregroundStyle(theme.textTertiary).padding(.bottom, 6)
+            .accessibilityHidden(true)
+            ForEach(Array(rows.enumerated()), id: \.element.id) { n, r in
+                Rectangle().fill(theme.cardStroke).frame(height: 1).accessibilityHidden(true)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(r.name).font(r.id == "total" ? CyFont.caption : CyFont.label).foregroundStyle(r.id == "total" ? theme.textSecondary : theme.textPrimary)
+                        .lineLimit(2).minimumScaleFactor(0.85).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(r.previous).foregroundStyle(theme.textSecondary).frame(width: w.0, alignment: .trailing)
+                    Text(r.current).foregroundStyle(theme.textPrimary).frame(width: w.1, alignment: .trailing)
+                    HStack(spacing: 3) {
+                        if r.change != "—" { Image(systemName: symbol(r.verdict)).font(.system(size: 9, weight: .bold)) }
+                        Text(r.change)
+                    }
+                    .foregroundStyle(r.verdict == .better || r.verdict == .worse ? color(r.verdict) : theme.textSecondary).frame(width: w.2, alignment: .trailing)
+                }
+                .font(CyFont.footnote).lineLimit(1).minimumScaleFactor(0.75)
+                .padding(.vertical, 7)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(r.name). Previous \(r.previous). \(third) \(r.current). Change \(r.change).")
+                .accessibilityValue(r.verdict.rawValue)
+                .accessibilityIdentifier(ride ? "daySession-\(j)-metric-\(r.id)" : "daySession-\(j)-row-\(n)")
+            }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(name): \(change)")
-        .accessibilityValue(v.rawValue)
-        .accessibilityIdentifier(id)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("daySession-\(j)-table")
     }
     private func metricRow(_ m: DayMetric, id: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
