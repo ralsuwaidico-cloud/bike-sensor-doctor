@@ -1,2 +1,2 @@
-LabFastOnboarding/testCaptureHomeKeyMetrics
-Check 77: capture only — Home Key metrics destinations (code de922bc4; app code unchanged since 26259d1d)
+LabFastOnboarding/testKeyMetricsHub
+Key Metrics hub: hub, metric pages, Home choice, empty states (focused check 78)
