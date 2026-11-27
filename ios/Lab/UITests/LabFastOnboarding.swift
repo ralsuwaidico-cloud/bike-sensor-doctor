@@ -1538,6 +1538,7 @@ final class LabFastOnboarding: XCTestCase {
         func back(_ app: XCUIApplication) { app.navigationBars.buttons.element(boundBy: 0).tap(); Thread.sleep(forTimeInterval: 0.8) }
         var app = launchHistory()
         XCTAssertTrue(openCard(app, "end-0"), "required: the Endurance card opens the Cycling summary")
+        Thread.sleep(forTimeInterval: 1.2)   // let the page finish sliding in, so the first capture has its title
         captureFullPage(app, "end-1-four-weeks", steps: 5)
         for (title, file) in [("This week", "end-2-this-week"), ("All", "end-3-all")] {
             toTop(app)
@@ -1554,8 +1555,11 @@ final class LabFastOnboarding: XCTestCase {
             let l = action.label.lowercased()
             if action.isHittable && !l.contains("start") && !l.contains("resume") && !l.contains("continue") {
                 action.tap(); Thread.sleep(forTimeInterval: 1.2); shot("end-5-next-ride-opened")
-                app.swipeDown(velocity: .fast); Thread.sleep(forTimeInterval: 0.8)
-                if !el(app, "homeCyclingSummary").isHittable && app.navigationBars.buttons.count > 0 { back(app) }
+                // Corrected after check 82: the session sheet is closed with its own Done button. The check had swiped
+                // down instead, which scrolled the sheet and left it open over the page, so the ride row could not be pressed.
+                let done = app.buttons["Done"].firstMatch
+                XCTAssertTrue(done.waitForExistence(timeout: 4), "required: the session sheet has a Done button")
+                done.tap(); Thread.sleep(forTimeInterval: 1.0)
             }
         }
         let ride = el(app, "cyclingRide-0")
