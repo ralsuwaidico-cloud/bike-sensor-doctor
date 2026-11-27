@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 27 Nov 2026, 20:45 (Dubai) · Screens recorded: 17
+Last updated: 27 Nov 2026, 23:10 (Dubai) · Screens recorded: 17
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -122,7 +122,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 14 | APP-06 | Home › Sleep & Wellness | DIRECTION: YES (25 Nov 2026, 20:11). REFINED SCREENS: NO — awaiting visual approval | NO | NO | NO | NO |
 | 15 | APP-07 | Home › Key Metrics › Resting Heart Rate — UNDER REVIEW | NO — proposal awaiting the owner's visual decision | NO | NO | EXISTING PAGE CAPTURED ONLY | NO |
 | 16 | APP-08 | Key Metrics hub and Choose four for Home | YES | YES — redesigned app (Cyclift Lab) | YES — Cyclift Lab | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); focused check only (later rounds: see the screen's status table) | NO |
-| 17 | APP-09 | Home › Endurance card › Cycling summary — UNDER REVIEW | NO — comparison awaiting the owner's review | EXISTING PAGE ONLY | YES — Cyclift Lab | EXISTING PAGE CAPTURED ONLY | NO |
+| 17 | APP-09 | Home › Endurance card › Endurance Performance v1.0 (today: Cycling summary) — DESIGN EXPLORATION, NOT APPROVED | NO — comparison awaiting the owner's review | EXISTING PAGE ONLY | YES — Cyclift Lab | EXISTING PAGE CAPTURED ONLY | NO |
 
 ---
 
@@ -1530,11 +1530,11 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ---
 
-## Screen 17 — Home › Endurance card › Cycling summary — UNDER REVIEW (APP-09)
+## Screen 17 — Home › Endurance card › Endurance Performance v1.0 (today: Cycling summary) — DESIGN EXPLORATION, NOT APPROVED (APP-09)
 
 - **Navigation location:** Main app · Home › the Endurance card (item 5 of the Home review). It opens the page titled 'Cycling summary'. The Strength card (item 6) opens a sister page and is reviewed next.
-- **Approval date:** NOT APPROVED. Comparison presented to the owner on 27 Nov 2026; awaiting his review. Nothing is modified.
-- **Approval status:** UNDER REVIEW — COMPARISON PRESENTED, NOTHING CHANGED. The images are simulator screenshots of the page as it exists today (capture check 83). No proposal has been drawn.
+- **Approval date:** NOT APPROVED. Comparison presented 27 Nov 2026; the owner then issued 'Endurance Performance v1.0 — UI redesign instructions' (27 Nov 2026, 22:06). Three design alternatives, a data audit and a preservation report are presented and stop at the approval gate. Nothing is modified.
+- **Approval status:** DESIGN EXPLORATION PRESENTED — AT THE APPROVAL GATE. NO OPTION IS APPROVED, LOCKED OR IMPLEMENTED. Options A (performance-first), B (Coach-first) and C (balanced; the owner's preferred starting direction) are DESIGN MOCKUPS with illustrative demo data, not simulator screenshots. The existing page images are simulator screenshots (check 83). Full material: docs/design/proposals/endurance-performance-v1/Cyclift_Endurance_Performance_v1.0_Design_Exploration.pdf.
 - **Original design reference and source:** No approved design of this page exists. The only earlier note is the unapproved Home v2 prototype screen map, which sent the Endurance card to Progress › Cycling.
 - **Implementation commit:** None for this page. Capture-only check: ef4d3a5a, corrected 67f3ca16 (no app code changed).
 
@@ -1571,11 +1571,18 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Remaining work or limitations
 
-- Owner's review of the comparison and his direction for this page.
+- Owner's choice among Options A, B and C (or a combination).
+- Decisions needed before implementation: the rule for 'comparable' efforts; FTP history storage; adding 12 weeks and 1 year; colours for further activities; whether this page repeats or links to Training Mix, Consistency and Key Metrics; how a runner reaches the page (no Endurance card on the approved Home today).
+- Not available in the app today: any non-cycling endurance recording, training load, fitness / fatigue / form, VO₂ max, FTP history. Apple Health imports carry no per-second samples.
+- Simulator screenshots of the chosen option follow its implementation in Cyclift Lab.
 - Then the Strength card (item 6).
 
 ### Images
 
+- `assets/H09_ep_1_comparison.png` — PROPOSALS — DESIGN MOCKUPS, NOT APPROVED. Previous and current Cycling summary (simulator) beside Options A, B and C for the same athlete (scenario 2).
+- `assets/H09_ep_2_optionC_scenarios.png` — DESIGN MOCKUPS, NOT APPROVED. Option C across the five scenarios: cycling complete; cycling incomplete; multisport; newly added activity; no history. Options A and B across the same scenarios are in the consolidated PDF.
+- `assets/H09_ep_3_card_states.png` — DESIGN MOCKUPS, NOT APPROVED. Activity card collapsed and expanded, with complete and with incomplete measurements.
+- `assets/H09_ep_4_graphs_states.png` — DESIGN MOCKUPS, NOT APPROVED. Graph views (Volume, Intensity, Recovery; Training load and Fitness shown as not calculated / illustrative only) and the seven measurement states.
 - `assets/H09_end_1_reference_previous_current.png` — COMPARISON. 1: no approved reference. 2: previous (Lab run 34, first screen only). 3: current — the card on the approved Home and the complete Cycling summary (check 83, simulator).
 - `assets/H09_end_2_states.png` — CURRENT, SIMULATOR, check 83. This week; All; the next planned ride row; 'View workout' opened.
 - `assets/H09_end_3_record_other_athletes.png` — CURRENT, SIMULATOR, check 83. A recent ride's record; an athlete with nothing recorded (Home and page); a running-and-strength athlete's Home, which has no Endurance card.
@@ -1584,4 +1591,5 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | When | Decision | State |
 |---|---|---|
-| 27 Nov 2026, 19:22 | Proceed to the next unreviewed Home interaction: first present the approved reference (if one exists), previous implementation and current implementation as complete iPhone 15 Pro screenshots with all relevant interaction states, and identify missing functionality. Do not modify the screen before the owner reviews its comparison; no change to approved screens, production or TestFlight. | IN FORCE — presented, awaiting review |
+| 27 Nov 2026, 19:22 | Proceed to the next unreviewed Home interaction: first present the approved reference (if one exists), previous implementation and current implementation as complete iPhone 15 Pro screenshots with all relevant interaction states, and identify missing functionality. Do not modify the screen before the owner reviews its comparison; no change to approved screens, production or TestFlight. | IN FORCE — presented |
+| 27 Nov 2026, 22:06 | 'Endurance Performance v1.0 — UI redesign instructions': rename the destination to Endurance Performance; an endurance-first, activity-second multisport dashboard answering 'Am I improving?', 'What is contributing?', 'What should I train next, and why?'; page order header and period → overall endurance performance → overall analysis → one compact Coach insight → dynamic activity cards from the roster → expandable advanced analytics → next planned activity → recent recordings; one reusable activity card; seven measurement states, missing never zero, no fictional trends, no unvalidated load or fitness scores, no FTP inferred from insufficient data, incompatible sports never compared; existing functionality preserved; three alternatives (A performance-first, B Coach-first, C balanced — preferred start, none approved) across five scenarios; a data-availability audit before any new calculation; three phases. A design exploration and feasibility audit only: no production change, no unvalidated calculation, nothing approved, locked or merged; Home, the navigation bar, Training Hub, Plan, Progress and onboarding untouched. Stop at the approval gate. | IN FORCE — exploration presented; awaiting the owner's decision |
