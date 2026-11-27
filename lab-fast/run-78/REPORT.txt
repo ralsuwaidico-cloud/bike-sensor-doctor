@@ -1,0 +1,27 @@
+FAST focused Lab check — selected: LabFastOnboarding/testKeyMetricsHub
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from e59b21ed · files changed since then: 10
+TIME setup: 12s
+  timing: SwiftCompile (53 tasks) | 662.258 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 105.415 seconds
+  timing: SwiftDriver (16 tasks) | 51.423 seconds
+  timing: SwiftEmitModule (16 tasks) | 35.469 seconds
+  timing: Ld (18 tasks) | 13.152 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 4.106 seconds
+  timing: Copy (31 tasks) | 0.776 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.392 seconds
+  stages: packages at 261s · packages prepared at 332s · dependency graph at 333s · inputs at 334s · build description at 334s · first Swift step at 358s · first link at 388s · asset catalogue at 423s · finished at 877s
+  compiled in this run: 424 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 879s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 6s
+Lab/UITests/LabFastOnboarding.swift:1641: error: -[CycliftLabUITests.LabFastOnboarding testKeyMetricsHub] : XCTAssertFalse failed - required: a metric without a value cannot be chosen
+Lab/UITests/LabFastOnboarding.swift:1642: error: -[CycliftLabUITests.LabFastOnboarding testKeyMetricsHub] : XCTAssertFalse failed - required: a score that is not calculated cannot be chosen
+Lab/UITests/LabFastOnboarding.swift:1678: error: -[CycliftLabUITests.LabFastOnboarding testKeyMetricsHub] : XCTAssertFalse failed - required: nothing without a value can be chosen
+Test Case '-[CycliftLabUITests.LabFastOnboarding testKeyMetricsHub]' failed (1328.259 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 1499s
+TIME total on the Mac: 2419s
+commit f40ea47c07c945036dae4895d5446fbf05afb614  branch ios/lab
