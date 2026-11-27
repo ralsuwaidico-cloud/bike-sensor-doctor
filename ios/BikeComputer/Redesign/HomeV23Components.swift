@@ -678,6 +678,8 @@ struct CyMetricGrid: View {
     let tiles: [CyHomeMetric]
     var isLoading: Bool = false
     var style: CyMetricStyle = .rows
+    /// "See all" — opens the Key Metrics hub. nil = no control; the heading is exactly as approved.
+    var onSeeAll: (() -> Void)? = nil
     let onTile: (CyHomeMetric) -> Void
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -685,7 +687,24 @@ struct CyMetricGrid: View {
     var body: some View {
         let cols = typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: CySpace.s), GridItem(.flexible(), spacing: CySpace.s)]
         VStack(alignment: .leading, spacing: CySpace.m) {
-            Text("Key metrics").font(CyFont.title).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+            if let seeAll = onSeeAll {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Key metrics").font(CyFont.title).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: CySpace.s)
+                    Button(action: seeAll) {
+                        HStack(spacing: 3) {
+                            Text("See all").font(CyFont.caption)
+                            Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+                        }
+                        .foregroundStyle(theme.textSecondary).padding(.vertical, 6).padding(.leading, 12).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("See all key metrics")
+                    .accessibilityIdentifier("homeMetricsSeeAll")
+                }
+            } else {
+                Text("Key metrics").font(CyFont.title).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+            }
             if style == .rows { rows } else {
             LazyVGrid(columns: cols, spacing: CySpace.s) {
                 if isLoading {

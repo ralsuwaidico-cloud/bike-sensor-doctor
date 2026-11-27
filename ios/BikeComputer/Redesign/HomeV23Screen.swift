@@ -26,6 +26,8 @@ struct Home21Actions {
     var onTrendsInfo: () -> Void = {}
     var onGraphDay: (CyGraphDate, [CyTrendDetailRow]) -> Void = { _, _ in }
     var onMetric: (CyHomeMetric) -> Void = { _ in }
+    /// "See all" beside the Key metrics heading (owner, 27 Nov 2026). nil = the heading is drawn as before, without it.
+    var onSeeAllMetrics: (() -> Void)? = nil
 }
 
 /// What the host says about the Coach preview: which element it is and how it is announced.
@@ -68,7 +70,7 @@ struct Home21Content: View {
             CyTrendsGraph(ranges: data.graph, isLoading: isLoading, emptyText: data.graph.isEmpty ? (data.trendsEmpty ?? "Nothing recorded yet.") : nil,
                           isSample: showSampleTag, onInfo: actions.onTrendsInfo, onDay: actions.onGraphDay)
                 .id("trends")
-            CyMetricGrid(tiles: data.metrics, isLoading: isLoading, style: metricStyle, onTile: actions.onMetric)
+            CyMetricGrid(tiles: data.metrics, isLoading: isLoading, style: metricStyle, onSeeAll: actions.onSeeAllMetrics, onTile: actions.onMetric)
                 .id("metrics")
             if !data.requiredOpen && !isLoading { CySetupBanner(steps: data.steps, onStep: actions.onStep) }
         }

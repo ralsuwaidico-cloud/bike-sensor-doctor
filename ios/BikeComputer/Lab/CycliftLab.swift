@@ -112,7 +112,7 @@ struct LabChrome: ViewModifier {
 /// records; the app's own planner, session builder and Coach rules produce what is shown. Nothing is drawn by hand,
 /// nothing is real, and choosing one only rewrites Lab's own folder at the next launch.
 enum LabScenario: String, CaseIterable, Identifiable {
-    case normal, supersets, proposal, cycling, consistency, recoveryPartial, mixHybrid, mixRunStrength, mixEnduranceOnly, dayReview, dayFirst, newAthlete
+    case normal, supersets, proposal, cycling, consistency, recoveryPartial, mixHybrid, mixRunStrength, mixEnduranceOnly, dayReview, dayFirst, noRecords, newAthlete
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -127,6 +127,7 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .mixEnduranceOnly: return "Mix · endurance only"
         case .dayReview: return "Day · comparisons"
         case .dayFirst: return "Day · first sessions"
+        case .noRecords: return "Nothing recorded"
         case .newAthlete: return "New athlete"
         }
     }
@@ -143,6 +144,7 @@ enum LabScenario: String, CaseIterable, Identifiable {
         case .mixEnduranceOnly: return "The history athlete with road and gravel cycling only: no strength in the roster, plan or records."
         case .dayReview: return "The history athlete with loads that change from session to session and rides that carry power and cadence, so the Day page has something to compare."
         case .dayFirst: return "The same athlete with nothing recorded before this week: every session is a first, with no earlier record to compare."
+        case .noRecords: return "A hybrid athlete with a plan and nothing recorded: no rides, no strength sessions and no readings. Key Metrics shows its empty states."
         case .newAthlete: return "No athlete at all. Lab opens at onboarding."
         }
     }
@@ -207,6 +209,7 @@ enum LabDemoData {
         if env["LAB_DEMO_RECOVERY_PARTIAL"] == "1" { return .recoveryPartial }
         if env["LAB_DEMO_DAY"] == "1" { return .dayReview }
         if env["LAB_DEMO_DAY_FIRST"] == "1" { return .dayFirst }
+        if env["LAB_DEMO_NO_RECORDS"] == "1" { return .noRecords }
         if env["LAB_DEMO_MIX_HYBRID"] == "1" { return .mixHybrid }
         if env["LAB_DEMO_MIX_RUN_STRENGTH"] == "1" { return .mixRunStrength }
         if env["LAB_DEMO_MIX_ENDURANCE"] == "1" { return .mixEnduranceOnly }
@@ -387,6 +390,11 @@ enum LabDemoData {
             rides = rides.filter { ($0["start"] as? String ?? "") >= cut }
             strength = strength.filter { ($0["date"] as? String ?? "") >= cut }
             plan = plan.filter { ($0["date"] as? String ?? "") >= cut }
+        }
+        if scenario == .noRecords {
+            // nothing recorded at all, and so nothing in the plan is marked as done
+            rides = []; strength = []
+            plan = plan.map { var p = $0; p["done"] = false; return p }
         }
         if scenario == .mixEnduranceOnly {
             roster(["roadCycling", "gravel"]); profile["trainingMode"] = "cycling"

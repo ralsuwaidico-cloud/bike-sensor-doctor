@@ -11,6 +11,9 @@ enum HomeRoute: Hashable {
     case consistency                      // the Consistency Dashboard (23 Nov 2026) — the Home Consistency ring
     case trainingMix                      // the Training Mix dashboard (23 Nov 2026) — the second Home circle
     case recoveryDashboard                // the Recovery dashboard (23 Nov 2026) — the third Home circle; `.recovery` stays its detail page
+    case keyMetrics                       // the Key Metrics hub (27 Nov 2026) — Home › Key metrics › See all (redesigned app only)
+    case keyMetric(String)                // one metric's own page; the value is a KeyMetricID
+    case keyMetricsEdit                   // "Choose four for Home"
     case cycling
     case strength
     case day(Date)

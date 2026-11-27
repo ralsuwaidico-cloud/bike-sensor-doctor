@@ -123,7 +123,15 @@ struct HomeView: View {
             let count = data.graph.first(where: { $0.dates.contains(d) })?.dates.count ?? 7
             path.append(.day(HomeV23Builder.date(ofColumn: d.id, count: count, now: now, calendar: .current)))
         }
-        actions.onMetric = { m in if m.id == "ftp" { tab = 3 } else { path.append(.recovery) } }
+        // Key Metrics (owner, 27 Nov 2026, decision 5): the existing destinations stay until the replacement pages are
+        // verified — FTP opens Progress, the three health readings open the Recovery page. A row that had no destination
+        // before (one the athlete added to Home) opens its own page.
+        actions.onMetric = { m in
+            if m.id == "ftp" { tab = 3 }
+            else if HealthSample.Kind(rawValue: m.id) != nil { path.append(.recovery) }
+            else { path.append(.keyMetric(m.id)) }
+        }
+        actions.onSeeAllMetrics = { path.append(.keyMetrics) }      // the one authorised Home adjustment: "See all"
         let showLines = diag.unseenCrash != nil || h.caution != nil || (sync.state == .needsConfirmation && store.today?.kind.isRide == true)
         // The end-of-page padding uses the device's bottom inset, which the shell reads outside rendering and hands down
         // (ContentView). It must NOT be read from the window here. Lab runs 20–31: this function used to ask
@@ -208,6 +216,9 @@ struct HomeView: View {
         case .consistency: ConsistencyDashboardView(open: { path.append($0) })
         case .trainingMix: TrainingMixDashboardView(open: { path.append($0) })
         case .recoveryDashboard: RecoveryDashboardView(open: { path.append($0) })
+        case .keyMetrics: KeyMetricsHubView(open: { path.append($0) })
+        case .keyMetric(let id): KeyMetricDetailView(metric: KeyMetricID(rawValue: id) ?? .readiness, open: { path.append($0) })
+        case .keyMetricsEdit: KeyMetricsEditView()
         case .cycling: HomeCyclingSummaryView(perform: perform, open: { path.append($0) })
         case .strength: HomeStrengthSummaryView(perform: perform, open: { path.append($0) })
         case .day(let d):
