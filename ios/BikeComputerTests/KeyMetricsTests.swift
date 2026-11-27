@@ -144,4 +144,14 @@ final class KeyMetricsTests: XCTestCase {
         // days carry no list: each day is its own reading
         XCTAssertTrue(KeyMetricsModel.health(.hrv, log: l, enabled: [.hrv], period: 1, now: now, calendar: cal)!.points.allSatisfy { $0.records.isEmpty })
     }
+
+    func testTheCarouselPositionFollowsTheRowFromItsFirstCardToItsLast() {
+        XCTAssertEqual(KeyMetricsHub.dot(fraction: 0, count: 4), 0); XCTAssertEqual(KeyMetricsHub.dot(fraction: 1, count: 4), 3)
+        XCTAssertEqual(KeyMetricsHub.dot(fraction: 0.38, count: 4), 1); XCTAssertEqual(KeyMetricsHub.dot(fraction: 0.7, count: 4), 2)
+        XCTAssertEqual(KeyMetricsHub.dot(fraction: -0.3, count: 4), 0, "pulled past the start"); XCTAssertEqual(KeyMetricsHub.dot(fraction: 1.4, count: 4), 3, "pulled past the end")
+        XCTAssertEqual(KeyMetricsHub.dot(fraction: 0.5, count: 1), 0)
+        // every card has a short title, and the sixteen keep their full names for their own pages
+        for m in KeyMetricCategory.allCases.flatMap(\.metrics) { XCTAssertFalse(m.shortName.isEmpty); XCTAssertTrue(m.shortName.count <= m.name.count, m.rawValue) }
+        XCTAssertEqual(KeyMetricID.restingHR.shortName, "Resting HR"); XCTAssertEqual(KeyMetricID.restingHR.name, "Resting heart rate")
+    }
 }

@@ -46,6 +46,22 @@ enum KeyMetricID: String, CaseIterable, Identifiable {
         case .weight: return "Weight"
         }
     }
+    /// The short title on a hub card (owner, 27 Nov 2026, 15:26). The page itself keeps the full name.
+    var shortName: String {
+        switch self {
+        case .restingHR: return "Resting HR"
+        case .spo2: return "Blood oxygen"
+        case .sleepDuration: return "Sleep"
+        case .dailyEnergy: return "Energy"
+        case .steps: return "Steps"
+        case .hrZones: return "HR zones"
+        case .strength: return "Strength"
+        case .readiness: return "Readiness"
+        case .strain: return "Strain"
+        case .baselines: return "Baselines"
+        default: return name
+        }
+    }
     var icon: String {
         switch self {
         case .restingHR: return "heart.fill"
@@ -123,6 +139,9 @@ struct KeyMetricTile: Equatable, Identifiable {
     var unit: String
     /// Source and time, or the reason there is no value.
     var line: String
+    /// The one concise status on a hub card: where the value stands, or the short reason there is none. Sources and
+    /// detailed comparisons stay on the metric's own page.
+    var status: String = ""
     /// Strength progression only: the judged change against the previous session.
     var verdict: DayVerdict? = nil
     /// True when the metric has a value the athlete can put on Home.
@@ -145,6 +164,8 @@ struct KeyMetricsHub: Equatable {
     var home: [KeyMetricID]
     var homeIsDefault: Bool
     var hasAny: Bool { sections.contains { $0.tiles.contains { $0.value != nil } } }
+    /// The carousel's position dot for a scroll fraction (0 = start, 1 = end) over `count` cards.
+    static func dot(fraction: Double, count: Int) -> Int { count <= 1 ? 0 : min(count - 1, max(0, Int((min(max(fraction, 0), 1) * Double(count - 1)).rounded()))) }
     func tile(_ m: KeyMetricID) -> KeyMetricTile? { sections.flatMap(\.tiles).first { $0.metric == m } }
 }
 
@@ -503,13 +524,15 @@ extension Store {
     /// One tile of the hub. Reads only.
     func keyMetricTile(_ m: KeyMetricID, home: [KeyMetricID], now: Date = Date(), calendar cal: Calendar = .current) -> KeyMetricTile {
         let on = home.contains(m)
-        func none(_ line: String) -> KeyMetricTile { KeyMetricTile(metric: m, value: nil, unit: "", line: line, measurable: false, onHome: on) }
+        func none(_ line: String) -> KeyMetricTile { KeyMetricTile(metric: m, value: nil, unit: "", line: line, status: line, measurable: false, onHome: on) }
         if let k = m.healthKind {
             let r = RecoveryAnalysis.metric(k, log: recoveryLog, now: now, calendar: cal)
             guard let l = r.latest else { return none(enabledHealthReads.contains(k) ? "No reading yet" : "Apple Health not connected") }
             let p = KeyMetricsModel.parts(k, l.value)
             let f = DateFormatter(); f.calendar = cal; f.dateFormat = cal.isDate(l.date, inSameDayAs: now) ? "'Today' HH:mm" : "EEE d MMM"
-            return KeyMetricTile(metric: m, value: p.value, unit: p.unit, line: "\(f.string(from: l.date)) · \(l.source ?? "Apple Health")", measurable: true, onHome: on)
+            let status: String
+            switch r.standing { case .typical: status = "Inside your usual range"; case .lower: status = "Below your usual range"; case .higher: status = "Above your usual range"; case .noBaseline: status = "No usual range yet" }
+            return KeyMetricTile(metric: m, value: p.value, unit: p.unit, line: "\(f.string(from: l.date)) · \(l.source ?? "Apple Health")", status: status, measurable: true, onHome: on)
         }
         switch m {
         case .strength:
@@ -517,27 +540,27 @@ extension Store {
             guard s.hasAny, let c = s.comparison else { return none("No strength session") }
             let top = c.metrics.first { $0.id.hasSuffix("-load") }?.current
             let value = top ?? c.metrics.first { $0.id.hasSuffix("-reps") }?.current.map { "\($0) reps" }
-            return KeyMetricTile(metric: m, value: value, unit: s.name, line: c.previous == nil ? "One session so far" : c.change, verdict: c.verdict, measurable: value != nil, onHome: on)
+            return KeyMetricTile(metric: m, value: value, unit: s.name, line: c.previous == nil ? "One session so far" : c.change, status: c.previous == nil ? "\(s.name) · one session so far" : "\(s.name) · \(c.change.prefix(1).lowercased() + c.change.dropFirst())", verdict: c.verdict, measurable: value != nil, onHome: on)
         case .stressSoreness:
             let s = keyMetricsSoreness(now: now)
             guard let a = s.answers.first else { return none("No soreness answer yet") }
             let f = DateFormatter(); f.calendar = cal; f.dateFormat = "EEE d MMM"
-            return KeyMetricTile(metric: m, value: a.answer, unit: "", line: "Soreness · \(f.string(from: a.date)) review · stress not collected", measurable: true, onHome: on)
+            return KeyMetricTile(metric: m, value: a.answer, unit: "", line: "Soreness · \(f.string(from: a.date)) review · stress not collected", status: "Soreness, from your \(f.string(from: a.date)) review", measurable: true, onHome: on)
         case .baselines:
             let rows = keyMetricsBaselines(now: now, calendar: cal)
             let have = rows.filter { $0.trend.contains("your usual range") }.count
             guard rows.contains(where: { $0.latest != nil }) else { return none("No readings yet") }
-            return KeyMetricTile(metric: m, value: "\(have) of \(rows.count)", unit: "ranges", line: have == 0 ? "More readings needed" : "Sleep, resting HR and HRV", measurable: false, onHome: on)
+            return KeyMetricTile(metric: m, value: "\(have) of \(rows.count)", unit: "ranges", line: have == 0 ? "More readings needed" : "Sleep, resting HR and HRV", status: have == 0 ? "More readings needed" : "Sleep, resting HR and HRV", measurable: false, onHome: on)
         case .ftp:
             guard ftpIsKnown else { return none("Not set in Performance Settings") }
-            return KeyMetricTile(metric: m, value: "\(profile.ftpW)", unit: "W", line: profile.ftpLabel, measurable: true, onHome: on)
+            return KeyMetricTile(metric: m, value: "\(profile.ftpW)", unit: "W", line: profile.ftpLabel, status: profile.ftpLabel, measurable: true, onHome: on)
         case .weight:
             guard enabledHealthReads.contains(.weight), let l = RecoveryAnalysis.metric(.weight, log: recoveryLog, now: now, calendar: cal).latest else {
                 return none(enabledHealthReads.contains(.weight) ? "No reading yet" : "Not turned on in Connections")
             }
             let p = KeyMetricsModel.parts(.weight, l.value)
             let f = DateFormatter(); f.calendar = cal; f.dateFormat = "EEE d MMM"
-            return KeyMetricTile(metric: m, value: p.value, unit: p.unit, line: "\(f.string(from: l.date)) · \(l.source ?? "Apple Health")", measurable: true, onHome: on)
+            return KeyMetricTile(metric: m, value: p.value, unit: p.unit, line: "\(f.string(from: l.date)) · \(l.source ?? "Apple Health")", status: "\(f.string(from: l.date))", measurable: true, onHome: on)
         default:
             return none(m.unavailableLine ?? "Not available")
         }

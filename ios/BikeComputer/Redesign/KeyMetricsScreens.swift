@@ -20,10 +20,11 @@ struct KeyMetricsHubView: View {
         let _ = refresh            // re-read when the page comes back from "Choose four for Home"
         let h = store.keyMetricsHub()
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 22) {
                 homeCard(h)
                 if !h.hasAny { emptyCard }
-                ForEach(h.sections) { s in section(s) }
+                // one swipeable row per category (owner, 27 Nov 2026, 15:26) — about one and a half cards in view
+                ForEach(h.sections) { s in KeyMetricCarousel(section: s) { m in open(.keyMetric(m.rawValue)) } }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 130)
@@ -64,60 +65,109 @@ struct KeyMetricsHubView: View {
         .accessibilityIdentifier("kmHubEmpty")
     }
 
-    private func section(_ s: KeyMetricsHub.Section) -> some View {
-        // not a lazy grid: every tile exists from the start, so the page reads the same to assistive technology and to checks
-        let perRow = typeSize.isAccessibilitySize ? 1 : 2
-        let rows = stride(from: 0, to: s.tiles.count, by: perRow).map { Array(s.tiles[$0..<min($0 + perRow, s.tiles.count)]) }
-        let locked = s.category == .advanced
-        return VStack(alignment: .leading, spacing: 8) {
+}
+
+/// Where a carousel is: how far its row has been swiped, and how wide the row and its window are.
+private struct KeyMetricCarouselOffset: PreferenceKey {
+    static var defaultValue: [String: CGFloat] = [:]
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) { value.merge(nextValue()) { $1 } }
+}
+
+/// One category of the hub: a heading, four cards in a row that swipes sideways, and four small position dots.
+/// The row is not lazy — all four cards exist from the start — and it scrolls only sideways, so the page's own
+/// vertical scrolling is untouched.
+private struct KeyMetricCarousel: View {
+    @Environment(\.cyTheme) private var theme
+    @Environment(\.dynamicTypeSize) private var typeSize
+    let section: KeyMetricsHub.Section
+    var open: (KeyMetricID) -> Void
+    @State private var fraction: Double = 0
+
+    var body: some View {
+        let big = typeSize.isAccessibilitySize
+        let space = "kmCarousel-\(section.id)"
+        let dot = KeyMetricsHub.dot(fraction: fraction, count: section.tiles.count)
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Text(s.category.title).font(CyFont.headline).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+                Text(section.category.title).font(CyFont.headline).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 6)
-                Text(s.count).font(CyFont.caption).foregroundStyle(theme.textTertiary)
-                    .accessibilityIdentifier("kmCount-\(s.id)")
+                Text(section.count).font(CyFont.caption).foregroundStyle(theme.textTertiary)
+                    .accessibilityIdentifier("kmCount-\(section.id)")
             }
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                HStack(alignment: .top, spacing: 8) { ForEach(row) { t in tile(t) } }
-                    .fixedSize(horizontal: false, vertical: true)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 10) {
+                    ForEach(section.tiles) { t in
+                        card(t).containerRelativeFrame(.horizontal) { w, _ in big ? w * 0.86 : (w - 10) / 1.5 }
+                    }
+                }
+                .scrollTargetLayout()
+                .fixedSize(horizontal: false, vertical: true)
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: KeyMetricCarouselOffset.self, value: ["x": -g.frame(in: .named(space)).minX, "content": g.size.width])
+                })
             }
-            if locked {
-                Text("Readiness, strain and recovery-vs-strain are not calculated: Cyclift shows no score it cannot stand behind. Personal baselines lists the ranges that already exist.")
+            .coordinateSpace(name: space)
+            .contentMargins(.horizontal, 16, for: .scrollContent)
+            .scrollTargetBehavior(.viewAligned)
+            .background(GeometryReader { g in Color.clear.preference(key: KeyMetricCarouselOffset.self, value: ["window": g.size.width]) })
+            .onPreferenceChange(KeyMetricCarouselOffset.self) { v in
+                guard let x = v["x"], let content = v["content"], let window = v["window"] else { return }
+                let far = content + 32 - window          // the row's width with its two margins, less the window
+                let f = far > 1 ? Double((x + 16) / far) : 0
+                if abs(f - fraction) > 0.01 { fraction = f }
+            }
+            .padding(.horizontal, -16)                  // the row runs to the screen's edges; the heading keeps the page margin
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("\(section.category.title), four metrics, swipe sideways")
+            .accessibilityIdentifier(space)
+            HStack(spacing: 5) {
+                ForEach(0..<section.tiles.count, id: \.self) { i in
+                    Capsule().fill(i == dot ? theme.accent : theme.textTertiary.opacity(0.4)).frame(width: i == dot ? 14 : 5, height: 5)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .animation(.easeOut(duration: 0.18), value: dot)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(section.category.title), position")
+            .accessibilityValue("\(dot + 1) of \(section.tiles.count)")
+            .accessibilityIdentifier("kmDots-\(section.id)")
+            if section.category == .advanced {
+                Text("Readiness and strain are not calculated: Cyclift shows no score it cannot stand behind.")
                     .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("kmAdvancedNote")
             }
         }
-        .padding(.top, 4)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("kmSection-\(s.id)")
+        .accessibilityIdentifier("kmSection-\(section.id)")
     }
 
-    private func tile(_ t: KeyMetricTile) -> some View {
-        let lineColor: Color = t.verdict == .better ? theme.success : t.verdict == .worse ? theme.danger : theme.textTertiary
-        return Button { open(.keyMetric(t.metric.rawValue)) } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(t.metric.name).font(CyFont.caption).foregroundStyle(theme.textSecondary).lineLimit(2).minimumScaleFactor(0.85)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 2)
-                    Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(theme.textTertiary)
+    /// One card: icon, short title, the value with its unit, one concise status. The whole card is the button.
+    private func card(_ t: KeyMetricTile) -> some View {
+        let statusColor: Color = t.verdict == .better ? theme.success : t.verdict == .worse ? theme.danger : theme.textSecondary
+        // strength carries its unit in the value ("16 kg") and names its exercise in the status
+        let unit = t.metric == .strength ? "" : t.unit
+        return Button { open(t.metric) } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top) {
+                    Image(systemName: t.metric.icon).font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(t.value == nil ? theme.textTertiary : theme.textPrimary)
+                        .frame(width: 34, height: 34)
+                        .background(theme.surface2, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    Spacer(minLength: 4)
+                    if t.onHome { Image(systemName: "house.fill").font(.system(size: 11, weight: .semibold)).foregroundStyle(theme.accent).padding(.top, 2) }
                 }
-                Spacer(minLength: 0)
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(t.value ?? "—").font(CyFont.value).foregroundStyle(t.value == nil ? theme.textTertiary : theme.textPrimary)
-                    if t.value != nil, !t.unit.isEmpty { Text(t.unit).font(.caption2).foregroundStyle(theme.textSecondary) }
-                    Spacer(minLength: 0)
-                    if t.onHome {
-                        Text("ON HOME").font(.system(size: 8.5, weight: .heavy)).tracking(0.4).foregroundStyle(theme.accent)
-                            .padding(.horizontal, 5).padding(.vertical, 2)
-                            .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(theme.accent.opacity(0.45), lineWidth: 1))
-                            .fixedSize()
-                    }
+                Spacer(minLength: 16)
+                Text(t.metric.shortName).font(CyFont.footnote).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text(t.value ?? "—").font(CyFont.metric).foregroundStyle(t.value == nil ? theme.textTertiary : theme.textPrimary)
+                    if t.value != nil, !unit.isEmpty { Text(unit).font(CyFont.caption).foregroundStyle(theme.textSecondary) }
                 }
-                .lineLimit(1).minimumScaleFactor(0.6)
-                Text(t.line).font(.caption2).foregroundStyle(lineColor).lineLimit(2).minimumScaleFactor(0.85).fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1).minimumScaleFactor(0.6).padding(.top, 2)
+                Text(t.status).font(CyFont.caption).foregroundStyle(t.value == nil ? theme.textTertiary : statusColor).lineLimit(2).minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true).padding(.top, 4)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, minHeight: 92, maxHeight: .infinity, alignment: .leading)
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.surface))
             .overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: theme.borderWidth))
             .contentShape(Rectangle())
@@ -731,6 +781,9 @@ struct KeyMetricUnavailablePage: View {
 
 // MARK: - choose four for Home
 
+/// The athlete's Home metrics (owner, 27 Nov 2026, 15:26 — the same minimalist treatment as the hub). Four slots at the
+/// top show what is chosen; beneath, only metrics that have a value are offered, each one row with one tick; the rest
+/// are named in a single quiet line. What is stored, how it persists and the limit of four are unchanged.
 struct KeyMetricsEditView: View {
     @EnvironmentObject private var store: Store
     @Environment(\.cyTheme) private var theme
@@ -742,53 +795,81 @@ struct KeyMetricsEditView: View {
         let h = store.keyMetricsHub()
         let extras = KeyMetricsPrefs.extras.map { store.keyMetricTile($0, home: chosen) }
         KeyMetricPage(id: "keyMetricsEdit") {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Home shows up to four key metrics. Choose from the ones that have a value.").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                Text("\(chosen.count) of \(KeyMetricsPrefs.limit) chosen").font(CyFont.headline).foregroundStyle(theme.textPrimary)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("\(chosen.count) of \(KeyMetricsPrefs.limit) chosen").font(CyFont.title).foregroundStyle(theme.textPrimary)
                     .accessibilityIdentifier("kmEditCount")
-                Text("Your choice is kept with your Cyclift data, so it is in your backup and your export.").font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
-                if let n = note { Text(n).font(CyFont.caption).foregroundStyle(theme.warning).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("kmEditNote") }
+                slots
+                Text(note ?? "Tap a metric to add it to Home or take it off.").font(CyFont.footnote)
+                    .foregroundStyle(note == nil ? theme.textSecondary : theme.warning).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier(note == nil ? "kmEditHint" : "kmEditNote")
             }
-            ForEach(h.sections) { s in
-                group(s.category.title, s.tiles)
-            }
-            group("Also available for Home", extras)
+            ForEach(h.sections) { s in group(s.category.title, s.tiles, id: s.id) }
+            group("Also available", extras, id: "extras")
+            Text("Your choice is kept with your Cyclift data, so it is in your backup and your export.")
+                .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
         }
         .navigationTitle("Choose four for Home").navigationBarTitleDisplayMode(.inline)
         .onAppear { if !loaded { chosen = store.keyMetricsHomeChoice().ids; loaded = true } }
     }
 
-    private func group(_ title: String, _ tiles: [KeyMetricTile]) -> some View {
-        DashCard {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title.uppercased()).font(CyFont.overline).foregroundStyle(theme.textTertiary).padding(.bottom, 4)
-                ForEach(tiles) { t in row(t) }
+    /// The four places on Home, in order: a chosen metric's short name, or an empty place.
+    private var slots: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<max(KeyMetricsPrefs.limit, chosen.count), id: \.self) { i in
+                let m = i < chosen.count ? chosen[i] : nil
+                Text(m?.shortName ?? "Empty").font(CyFont.caption).foregroundStyle(m == nil ? theme.textTertiary : theme.textPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .padding(.horizontal, 6).frame(maxWidth: .infinity, minHeight: 36)
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(m == nil ? Color.clear : theme.selectedFill))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(theme.textTertiary.opacity(m == nil ? 0.5 : 0), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Home place \(i + 1)")
+                    .accessibilityValue(m?.name ?? "Empty")
+                    .accessibilityIdentifier("kmSlot-\(i)")
             }
         }
     }
+
+    private func group(_ title: String, _ tiles: [KeyMetricTile], id: String) -> some View {
+        let offered = tiles.filter { $0.measurable || chosen.contains($0.metric) }
+        let rest = tiles.filter { !($0.measurable || chosen.contains($0.metric)) }
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased()).font(CyFont.overline).foregroundStyle(theme.textTertiary).accessibilityAddTraits(.isHeader)
+            ForEach(offered) { t in row(t) }
+            if !rest.isEmpty {
+                Text("\(offered.isEmpty ? "Nothing to choose yet" : "No value yet") · \(rest.map(\.metric.shortName).joined(separator: ", "))")
+                    .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("kmNoValue-\(id)")
+            }
+        }
+        .padding(.top, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("kmGroup-\(id)")
+    }
     private func row(_ t: KeyMetricTile) -> some View {
         let on = chosen.contains(t.metric)
-        let can = t.measurable || on
+        let full = !on && chosen.count >= KeyMetricsPrefs.limit
+        let figure = t.value.map { t.metric == .strength ? "\($0) · \(t.unit)" : [$0, t.unit].filter { !$0.isEmpty }.joined(separator: " ") } ?? t.line
         return Button { toggle(t) } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: t.metric.icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(on ? theme.textPrimary : theme.textSecondary).frame(width: 24)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(t.metric.name).font(CyFont.label).foregroundStyle(can ? theme.textPrimary : theme.textTertiary)
-                    Text(t.value.map { [$0, t.unit].filter { !$0.isEmpty }.joined(separator: " ") } ?? t.line).font(CyFont.caption).foregroundStyle(theme.textTertiary).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(t.metric.name).font(CyFont.label).foregroundStyle(theme.textPrimary)
+                    Text(figure).font(CyFont.caption).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
                 }
                 Spacer(minLength: 6)
-                if can {
-                    Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.title3).foregroundStyle(on ? theme.accent : theme.textTertiary)
-                } else {
-                    Text(t.metric == .baselines ? "A list, not one value" : "No value").font(CyFont.caption).foregroundStyle(theme.textTertiary)
-                }
+                Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.title3).foregroundStyle(on ? theme.accent : theme.textTertiary)
             }
-            .frame(minHeight: CyHit.min).contentShape(Rectangle())
+            .padding(.horizontal, 14).frame(minHeight: 56)
+            .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(on ? theme.selectedFill : theme.surface))
+            .overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(on ? theme.accent.opacity(0.5) : theme.cardStroke, lineWidth: on ? 1 : theme.borderWidth))
+            .opacity(full ? 0.5 : 1)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!can)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(t.metric.name)
-        .accessibilityValue(can ? (on ? "On Home" : "Not on Home") : "Cannot be chosen: no value")
+        .accessibilityLabel("\(t.metric.name), \(figure)")
+        .accessibilityValue(on ? "On Home" : (full ? "Not on Home. Four are chosen" : "Not on Home"))
         .accessibilityAddTraits(on ? [.isButton, .isSelected] : [.isButton])
         .accessibilityIdentifier("kmPick-\(t.id)")
     }

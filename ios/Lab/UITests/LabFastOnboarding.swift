@@ -1524,11 +1524,30 @@ final class LabFastOnboarding: XCTestCase {
         }
     }
 
-    /// Key Metrics hub (owner's approved design direction, 27 Nov 2026, 11:40; FINAL VISUAL APPROVAL PENDING). "See all"
-    /// beside Home's Key metrics heading opens a hub of sixteen metrics in four categories; every tile opens its own page;
-    /// the pages with a source work on the athlete's records; the others say, in words, that there is nothing; the
-    /// athlete chooses the Home metrics; and Home's existing destinations are unchanged.
+    /// Key Metrics hub (design direction approved 27 Nov 2026, 11:40; refinement proposed 15:26 — four swipeable
+    /// carousels and a simpler "Choose four for Home"; FINAL VISUAL APPROVAL PENDING). "See all" on Home opens the hub;
+    /// each category is one row of four cards that swipes sideways with a position indicator; every card opens its own
+    /// page; a metric without a source shows a dash and never a figure; the athlete's Home choice changes Home and is
+    /// still there after the app is reopened. The metric pages themselves are unchanged and are checked, not re-captured.
+    ///
+    /// Rewritten for the refinement. Two earlier expectations no longer apply and are replaced, not weakened:
+    ///  · the hub's tiles were all on screen in a grid; now a card may be off to the side, so the check swipes its row first;
+    ///  · "Choose four" listed every metric and greyed out those without a value; it now offers only metrics that have a
+    ///    value and names the others in one line, so the check reads that line and confirms there is no row to press.
     func testKeyMetricsHub() {
+        let category = ["restingHR": "heart", "hrv": "heart", "spo2": "heart", "respiratory": "heart",
+                        "sleepDuration": "sleep", "sleepStages": "sleep", "dailyEnergy": "sleep", "stressSoreness": "sleep",
+                        "steps": "activity", "activeCalories": "activity", "hrZones": "activity", "strength": "activity",
+                        "readiness": "advanced", "strain": "advanced", "recoveryVsStrain": "advanced", "baselines": "advanced"]
+        let titles = ["restingHR": "Resting heart rate", "hrv": "HRV", "spo2": "Blood oxygen (SpO₂)", "respiratory": "Respiratory rate",
+                      "sleepDuration": "Sleep duration", "sleepStages": "Sleep stages", "dailyEnergy": "Daily energy", "stressSoreness": "Stress & soreness",
+                      "steps": "Daily steps", "activeCalories": "Active calories", "hrZones": "Heart rate zones", "strength": "Strength progression",
+                      "readiness": "Recovery readiness", "strain": "Training strain", "recoveryVsStrain": "Recovery vs. strain", "baselines": "Personal baselines"]
+        let sixteen = ["restingHR", "hrv", "spo2", "respiratory", "sleepDuration", "sleepStages", "dailyEnergy", "stressSoreness",
+                       "steps", "activeCalories", "hrZones", "strength", "readiness", "strain", "recoveryVsStrain", "baselines"]
+        let noSource = ["spo2": "Not collected yet", "respiratory": "Not collected yet", "sleepStages": "Not collected yet", "dailyEnergy": "Needs the journal",
+                        "steps": "Not collected yet", "activeCalories": "Daily total not collected yet", "hrZones": "Not collected yet",
+                        "readiness": "No score is calculated", "strain": "No score is calculated", "recoveryVsStrain": "No score is calculated"]
         func back(_ app: XCUIApplication) { app.navigationBars.buttons.element(boundBy: 0).tap(); Thread.sleep(forTimeInterval: 0.8) }
         func reveal(_ app: XCUIApplication, _ e: XCUIElement) {
             let screen = app.windows.firstMatch.frame
@@ -1536,10 +1555,17 @@ final class LabFastOnboarding: XCTestCase {
                 let f = e.frame
                 if e.exists && f.minY >= 190 && f.maxY <= screen.height - 190 { break }
                 let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.015, dy: 0.5))
-                from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: -260)), withVelocity: .slow, thenHoldForDuration: 0.2)
+                from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: f.minY < 190 && e.exists ? 220 : -220)), withVelocity: .slow, thenHoldForDuration: 0.2)
                 Thread.sleep(forTimeInterval: 0.3)
             }
         }
+        /// Swipes one category's row sideways: `left` brings later cards in.
+        func swipeRow(_ app: XCUIApplication, _ cat: String, left: Bool) {
+            let row = el(app, "kmCarousel-\(cat)")
+            let a = row.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.8 : 0.25, dy: 0.5)), b = row.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.25 : 0.8, dy: 0.5))
+            a.press(forDuration: 0.05, thenDragTo: b, withVelocity: .slow, thenHoldForDuration: 0.2); Thread.sleep(forTimeInterval: 0.5)
+        }
+        func dots(_ app: XCUIApplication, _ cat: String) -> String { el(app, "kmDots-\(cat)").value as? String ?? "" }
         func openHub(_ app: XCUIApplication, shotName: String? = nil) {
             let all = el(app, "homeMetricsSeeAll")
             XCTAssertTrue(all.waitForExistence(timeout: 8), "required: 'See all' beside Key metrics on Home")
@@ -1549,28 +1575,37 @@ final class LabFastOnboarding: XCTestCase {
             XCTAssertTrue(el(app, "keyMetricsHub").waitForExistence(timeout: 8), "required: 'See all' opens the Key Metrics hub")
             XCTAssertTrue(app.navigationBars["Key metrics"].firstMatch.waitForExistence(timeout: 4), "required: the hub is titled Key metrics")
         }
-        func openTile(_ app: XCUIApplication, _ id: String, title: String) {
-            press(app, "kmTile-\(id)")
-            XCTAssertTrue(el(app, "keyMetricPage-\(id)").waitForExistence(timeout: 8), "required: the \(id) tile opens its own page")
-            XCTAssertTrue(app.navigationBars[title].firstMatch.waitForExistence(timeout: 4), "required: the page is titled \(title)")
+        /// Brings a card fully onto the screen — down the page, then along its row — and opens it.
+        func openTile(_ app: XCUIApplication, _ id: String) {
+            let cat = category[id] ?? "", tile = el(app, "kmTile-\(id)"), width = app.windows.firstMatch.frame.width
+            XCTAssertTrue(tile.exists, "required: the \(id) card")
+            reveal(app, el(app, "kmCarousel-\(cat)"))
+            for _ in 0..<6 {
+                let f = tile.frame
+                if f.minX >= 0 && f.maxX <= width { break }
+                swipeRow(app, cat, left: f.maxX > width)
+            }
+            XCTAssertTrue(tile.frame.minX >= 0 && tile.frame.maxX <= width, "required: the \(id) card can be swiped fully into view")
+            tile.tap()
+            XCTAssertTrue(el(app, "keyMetricPage-\(id)").waitForExistence(timeout: 8), "required: the \(id) card opens its own page")
+            XCTAssertTrue(app.navigationBars[titles[id] ?? ""].firstMatch.waitForExistence(timeout: 4), "required: the page is titled \(titles[id] ?? "")")
         }
-        let sixteen = ["restingHR", "hrv", "spo2", "respiratory", "sleepDuration", "sleepStages", "dailyEnergy", "stressSoreness",
-                       "steps", "activeCalories", "hrZones", "strength", "readiness", "strain", "recoveryVsStrain", "baselines"]
-        let noSource = ["spo2": "Not collected yet", "respiratory": "Not collected yet", "sleepStages": "Not collected yet", "dailyEnergy": "Needs the journal",
-                        "steps": "Not collected yet", "activeCalories": "Daily total not collected yet", "hrZones": "Not collected yet",
-                        "readiness": "No score is calculated", "strain": "No score is calculated", "recoveryVsStrain": "No score is calculated"]
 
         // ---- 1. an athlete with readings and a strength history
         var app = launchHistory("LAB_DEMO_DAY")
-        // Home's existing destination is unchanged: the Resting HR row still opens the Recovery page
+        // the approved Home is unchanged: the Resting HR row still opens the Recovery page
         let rhrRow = el(app, "metricRow-restingHR")
         XCTAssertTrue(rhrRow.waitForExistence(timeout: 8), "required: the Resting HR row on Home")
         reveal(app, rhrRow); rhrRow.tap()
         XCTAssertTrue(el(app, "homeRecoveryPage").waitForExistence(timeout: 8), "required: the Resting HR row still opens the existing Recovery page")
         back(app)
-        openHub(app, shotName: "km2-00-home-see-all")
-        for id in sixteen { XCTAssertTrue(el(app, "kmTile-\(id)").exists, "required: the \(id) tile") }
-        for c in ["heart", "sleep", "activity", "advanced"] { XCTAssertTrue(el(app, "kmSection-\(c)").exists, "required: the \(c) category") }
+        openHub(app, shotName: "km3-00-home")
+        // four categories, exactly four cards each, each row at its first position
+        for c in ["heart", "sleep", "activity", "advanced"] {
+            XCTAssertTrue(el(app, "kmSection-\(c)").exists && el(app, "kmCarousel-\(c)").exists, "required: the \(c) category and its row")
+            XCTAssertEqual(category.filter { $0.value == c }.keys.filter { el(app, "kmTile-\($0)").exists }.count, 4, "required: exactly four cards in \(c)")
+            XCTAssertEqual(dots(app, c), "1 of 4", "required: the \(c) row starts at its first position")
+        }
         for (id, why) in noSource {
             let l = el(app, "kmTile-\(id)").label
             XCTAssertTrue(l.contains("no value") && l.contains(why), "required: \(id) has no value and says why (\(l))")
@@ -1578,111 +1613,78 @@ final class LabFastOnboarding: XCTestCase {
         for id in ["restingHR", "hrv", "sleepDuration", "strength", "baselines"] {
             XCTAssertFalse(el(app, "kmTile-\(id)").label.contains("no value"), "required: \(id) shows the athlete's own value")
         }
-        XCTAssertTrue(el(app, "kmTile-restingHR").label.contains("bpm") && el(app, "kmTile-restingHR").label.contains("Demo data"), "required: resting heart rate with its unit and source")
+        XCTAssertTrue(el(app, "kmTile-restingHR").label.contains("bpm"), "required: resting heart rate with its unit")
+        // about one and a half cards: the first is whole, the second is cut by the screen's edge, the third is beyond it
+        let width = app.windows.firstMatch.frame.width
+        let c0 = el(app, "kmTile-restingHR").frame, c1 = el(app, "kmTile-hrv").frame, c2 = el(app, "kmTile-spo2").frame
+        XCTAssertTrue(c0.minX >= 0 && c0.maxX < width, "required: the first card is whole")
+        XCTAssertTrue(c1.minX < width && c1.maxX > width, "required: the next card shows at the edge")
+        XCTAssertTrue(c2.minX >= width, "required: the third card is off to the side")
+        XCTAssertTrue(c0.height >= 44 && c0.width >= 44, "required: a card is an adequate tap target")
         XCTAssertEqual(text(app, "kmHomeList"), "Resting heart rate · HRV · Sleep duration · FTP", "required: the hub names what Home shows")
-        captureFullPage(app, "km2-01-hub", steps: 4); toTop(app)
+        captureFullPage(app, "km3-01-hub-start", steps: 3); toTop(app)
+        // swiping a row moves only that row, and its position indicator follows
+        let pageY = el(app, "kmCarousel-heart").frame.minY
+        swipeRow(app, "heart", left: true)
+        XCTAssertNotEqual(dots(app, "heart"), "1 of 4", "required: the position indicator moves with the row")
+        XCTAssertEqual(dots(app, "sleep"), "1 of 4", "required: swiping one row leaves the others where they were")
+        XCTAssertEqual(el(app, "kmCarousel-heart").frame.minY, pageY, accuracy: 2, "required: swiping sideways does not scroll the page")
+        app.settleForScreenshot(1); shot("km3-02-hub-one-row-swiped")
+        for c in ["heart", "sleep", "activity", "advanced"] {
+            reveal(app, el(app, "kmCarousel-\(c)"))
+            for _ in 0..<4 where dots(app, c) != "4 of 4" { swipeRow(app, c, left: true) }
+            XCTAssertEqual(dots(app, c), "4 of 4", "required: the \(c) row reaches its last position")
+        }
+        XCTAssertTrue(el(app, "kmTile-respiratory").frame.maxX <= width, "required: the last card is whole at the last position")
+        toTop(app); captureFullPage(app, "km3-03-hub-end", steps: 3); toTop(app)
 
-        // resting heart rate: latest, range, graph, a chosen day, 7 and 90 days
-        openTile(app, "restingHR", title: "Resting heart rate")
-        XCTAssertNotEqual(text(app, "kmLatestValue"), "—", "required: a latest reading")
-        XCTAssertTrue(text(app, "kmStanding").contains("your usual range"), "required: the reading is set against the athlete's usual range")
-        XCTAssertTrue(app.buttons["kmPoint-29"].firstMatch.exists, "required: thirty selectable days")
-        pick(app, "km", 28)
-        XCTAssertTrue(el(app, "kmInspection").waitForExistence(timeout: 4), "required: choosing a day shows its inspection card")
-        XCTAssertTrue(app.staticTexts["kmTooltip"].firstMatch.exists, "required: the chosen point is labelled")
-        captureFullPage(app, "km2-02-resting-hr", steps: 4); toTop(app)
-        press(app, "kmPeriod-7"); XCTAssertTrue(app.buttons["kmPoint-6"].firstMatch.exists && !app.buttons["kmPoint-7"].firstMatch.exists, "required: seven days"); app.settleForScreenshot(1); shot("km2-03-resting-hr-7-days")
-        press(app, "kmPeriod-90"); XCTAssertTrue(app.buttons["kmPoint-12"].firstMatch.exists && !app.buttons["kmPoint-13"].firstMatch.exists, "required: thirteen weeks")
-        XCTAssertTrue(text(app, "kmGraphCaption").contains("WEEKLY AVERAGES"), "required: the 90-day view is labelled as weekly averages")
-        app.settleForScreenshot(1); shot("km2-04-resting-hr-90-days")
-        // owner, 27 Nov 2026, 13:20: a weekly average can be inspected down to the stored readings it was taken from
-        pick(app, "km", 11)
-        XCTAssertTrue(el(app, "kmInspection").waitForExistence(timeout: 4), "required: choosing a week shows its inspection card")
-        XCTAssertTrue(app.staticTexts["kmWeekRecord-0"].firstMatch.waitForExistence(timeout: 4), "required: the week lists the readings behind its average")
-        captureFullPage(app, "km2-04b-resting-hr-week-records", steps: 2); toTop(app)
-        press(app, "kmSourcesToggle"); XCTAssertTrue(app.staticTexts["kmReading-0"].firstMatch.waitForExistence(timeout: 4), "required: the stored readings, each with its source")
-        app.settleForScreenshot(1); shot("km2-05-resting-hr-sources")
-        back(app)
-        openTile(app, "hrv", title: "HRV"); captureFullPage(app, "km2-06-hrv", steps: 3); back(app)
-        openTile(app, "sleepDuration", title: "Sleep duration"); captureFullPage(app, "km2-07-sleep-duration", steps: 3); back(app)
-
-        // strength progression: exercise by exercise, four figures, previous and current, the Day page's verdict
-        openTile(app, "strength", title: "Strength progression")
-        for k in ["load", "reps", "sets", "volume"] { XCTAssertTrue(el(app, "kmCompare-\(k)").waitForExistence(timeout: 4), "required: previous and current \(k)") }
-        let verdict = el(app, "kmCompareVerdict").value as? String ?? ""
-        XCTAssertTrue(["better", "worse", "same", "notComparable"].contains(verdict), "required: the comparison carries the Day page's verdict (\(verdict))")
-        XCTAssertTrue(app.buttons["kmExercise-0"].firstMatch.exists, "required: the exercise is chosen by the athlete")
-        captureFullPage(app, "km2-08-strength", steps: 4); toTop(app)
-        press(app, "kmMeasure-volume"); XCTAssertTrue(text(app, "kmGraphCaption").contains("volume"), "required: the graph follows the chosen figure")
-        pick(app, "km", 0); XCTAssertTrue(el(app, "kmInspection").waitForExistence(timeout: 4), "required: choosing a session shows it")
-        app.settleForScreenshot(1); shot("km2-09-strength-volume-session")
-        if app.buttons["kmExercise-1"].firstMatch.exists { app.buttons["kmExercise-1"].firstMatch.tap(); app.settleForScreenshot(1); shot("km2-10-strength-second-exercise") }
-        back(app)
-
-        // personal baselines: the three existing ranges; a range opens its metric
-        openTile(app, "baselines", title: "Personal baselines")
-        for k in ["sleep", "restingHR", "hrv"] { XCTAssertTrue(el(app, "kmBaseline-\(k)").exists, "required: the \(k) range") }
-        XCTAssertTrue(label(app, "kmInsight").contains("not a readiness or health score"), "required: the ranges are not turned into a score")
-        captureFullPage(app, "km2-11-baselines", steps: 2); toTop(app)
-        press(app, "kmBaseline-hrv"); XCTAssertTrue(el(app, "keyMetricPage-hrv").waitForExistence(timeout: 6), "required: a range opens its own metric")
-        back(app); back(app)
-
-        // soreness answers only; and two pages with no source
-        openTile(app, "stressSoreness", title: "Stress & soreness"); XCTAssertTrue(el(app, "kmStressNote").exists, "required: it says stress is not collected")
-        captureFullPage(app, "km2-12-stress-soreness", steps: 2); back(app)
-        openTile(app, "spo2", title: "Blood oxygen (SpO₂)")
-        XCTAssertEqual(text(app, "kmLatestValue"), "—", "required: no value, not zero")
-        XCTAssertTrue(text(app, "kmUnavailableText").contains("does not read blood oxygen"), "required: it says why")
-        captureFullPage(app, "km2-13-blood-oxygen", steps: 1); back(app)
-        openTile(app, "readiness", title: "Recovery readiness")
-        XCTAssertEqual(text(app, "kmLatestValue"), "—", "required: no score")
-        XCTAssertTrue(text(app, "kmUnavailableText").contains("does not calculate a readiness score"), "required: it says no score is calculated")
-        captureFullPage(app, "km2-14-recovery-readiness", steps: 1); back(app)
-        // every remaining tile opens its own page too, and a page without a source shows a dash — never a figure
-        let titles = ["respiratory": "Respiratory rate", "sleepStages": "Sleep stages", "dailyEnergy": "Daily energy", "steps": "Daily steps",
-                      "activeCalories": "Active calories", "hrZones": "Heart rate zones", "strain": "Training strain", "recoveryVsStrain": "Recovery vs. strain"]
-        for id in ["respiratory", "sleepStages", "dailyEnergy", "steps", "activeCalories", "hrZones", "strain", "recoveryVsStrain"] {
-            openTile(app, id, title: titles[id] ?? "")
-            XCTAssertEqual(text(app, "kmLatestValue"), "—", "required: \(id) shows no value")
-            XCTAssertFalse(text(app, "kmUnavailableText").isEmpty, "required: \(id) says why")
-            XCTAssertFalse(app.buttons["kmPoint-0"].firstMatch.exists, "required: \(id) draws no graph")
-            if id == "hrZones" {
-                XCTAssertTrue(text(app, "kmUnavailableText").contains("power zones instead"), "required: power zones are never shown as heart-rate zones")
-                app.settleForScreenshot(1); shot("km2-14b-heart-rate-zones")
+        // all sixteen destinations; a page without a source shows a dash and no graph
+        for id in sixteen {
+            openTile(app, id)
+            if noSource[id] != nil {
+                XCTAssertEqual(text(app, "kmLatestValue"), "—", "required: \(id) shows no value")
+                XCTAssertFalse(text(app, "kmUnavailableText").isEmpty, "required: \(id) says why")
+                XCTAssertFalse(app.buttons["kmPoint-0"].firstMatch.exists, "required: \(id) draws no graph")
             }
-            back(app)
+            if id == "restingHR" {       // the metric pages are unchanged: one is exercised to confirm it still works
+                XCTAssertTrue(text(app, "kmStanding").contains("your usual range"), "required: the reading is set against the usual range")
+                pick(app, "km", 28); XCTAssertTrue(el(app, "kmInspection").waitForExistence(timeout: 4), "required: choosing a day still shows its inspection card")
+                toTop(app); press(app, "kmPeriod-90"); pick(app, "km", 11)
+                XCTAssertTrue(app.staticTexts["kmWeekRecord-0"].firstMatch.waitForExistence(timeout: 4), "required: a chosen week still lists its readings")
+            }
+            if id == "strength" { XCTAssertTrue(el(app, "kmCompare-load").waitForExistence(timeout: 4), "required: previous and current are still shown") }
+            if id == "hrZones" { XCTAssertTrue(text(app, "kmUnavailableText").contains("power zones instead"), "required: power zones are never shown as heart-rate zones") }
+            back(app); toTop(app)
         }
 
         // choose four for Home
-        toTop(app); press(app, "kmEditHome")
+        press(app, "kmEditHome")
         XCTAssertTrue(el(app, "keyMetricsEdit").waitForExistence(timeout: 6), "required: Edit opens the chooser")
         XCTAssertEqual(text(app, "kmEditCount"), "4 of 4 chosen")
-        // FTP and Weight are extra options beside the sixteen; the demo athlete has no weight reading, so Weight has no value
-        XCTAssertTrue(el(app, "kmPick-ftp").exists && el(app, "kmPick-weight").exists, "required: FTP and Weight are offered for Home")
-        XCTAssertEqual(el(app, "kmPick-weight").value as? String, "Cannot be chosen: no value", "required: Weight without a reading cannot be chosen")
-        // Changed after check 78. These two lines read the row's system "enabled" flag and failed, although the screenshots
-        // of that run show both rows greyed out with "No value" and no tick box. The expectation was wrong, not the app:
-        // the row is one spoken element that states its condition in words, and that element does not carry the flag.
-        // The requirement is now checked by what the row says and, below, by what pressing it does.
-        XCTAssertEqual(el(app, "kmPick-spo2").value as? String, "Cannot be chosen: no value", "required: a metric without a value cannot be chosen")
-        XCTAssertEqual(el(app, "kmPick-readiness").value as? String, "Cannot be chosen: no value", "required: a score that is not calculated cannot be chosen")
-        captureFullPage(app, "km2-15-choose-four", steps: 3); toTop(app)
+        XCTAssertEqual(el(app, "kmSlot-3").value as? String, "FTP", "required: the four places show what is chosen")
+        for id in ["restingHR", "hrv", "sleepDuration", "strength", "ftp"] { XCTAssertTrue(el(app, "kmPick-\(id)").exists, "required: \(id) has a value and is offered") }
+        for id in ["spo2", "readiness", "weight", "baselines"] { XCTAssertFalse(el(app, "kmPick-\(id)").exists, "required: \(id) has no single value and is not offered") }
+        XCTAssertTrue(text(app, "kmNoValue-heart").contains("Blood oxygen"), "required: metrics without a value are named, not hidden")
+        XCTAssertTrue(text(app, "kmNoValue-advanced").contains("Readiness"), "required: the scores that are not calculated are named")
+        XCTAssertTrue(text(app, "kmNoValue-extras").contains("Weight"), "required: Weight is named as an option without a reading")
+        captureFullPage(app, "km3-04-choose-four", steps: 2); toTop(app)
         press(app, "kmPick-strength")
         XCTAssertTrue(app.staticTexts["kmEditNote"].firstMatch.waitForExistence(timeout: 4), "required: a fifth cannot be added")
         XCTAssertEqual(text(app, "kmEditCount"), "4 of 4 chosen")
+        toTop(app); app.settleForScreenshot(1); shot("km3-05-choose-four-fifth-refused")
         press(app, "kmPick-ftp"); XCTAssertEqual(text(app, "kmEditCount"), "3 of 4 chosen")
-        // with a place free, pressing a metric that has no value still adds nothing
-        press(app, "kmPick-spo2"); XCTAssertEqual(text(app, "kmEditCount"), "3 of 4 chosen", "required: pressing a metric without a value does not choose it")
-        press(app, "kmPick-readiness"); XCTAssertEqual(text(app, "kmEditCount"), "3 of 4 chosen", "required: pressing a score that is not calculated does not choose it")
+        XCTAssertEqual(el(app, "kmSlot-3").value as? String, "Empty", "required: an emptied place is shown as empty")
         press(app, "kmPick-strength"); XCTAssertEqual(text(app, "kmEditCount"), "4 of 4 chosen")
-        app.settleForScreenshot(1); shot("km2-16-choose-four-changed")
+        XCTAssertEqual(el(app, "kmSlot-3").value as? String, "Strength progression", "required: the new choice takes the free place")
+        toTop(app); captureFullPage(app, "km3-06-choose-four-changed", steps: 2)
         back(app)
         XCTAssertEqual(text(app, "kmHomeList"), "Resting heart rate · HRV · Sleep duration · Strength progression", "required: the hub shows the new choice")
+        toTop(app); app.settleForScreenshot(1); shot("km3-07-hub-after-choice")
         back(app)
         let strengthRow = el(app, "metricRow-strength")
         XCTAssertTrue(strengthRow.waitForExistence(timeout: 8), "required: Home shows the chosen metric")
         XCTAssertFalse(el(app, "metricRow-ftp").exists, "required: the metric that was unticked has left Home")
-        reveal(app, strengthRow); app.settleForScreenshot(1); shot("km2-17-home-after-choice")
+        reveal(app, strengthRow); app.settleForScreenshot(1); shot("km3-08-home-after-choice")
         strengthRow.tap()
         XCTAssertTrue(el(app, "keyMetricPage-strength").waitForExistence(timeout: 8), "required: the new Home row opens its own page")
         app.terminate()
@@ -1693,12 +1695,13 @@ final class LabFastOnboarding: XCTestCase {
         XCTAssertTrue(kept.waitForExistence(timeout: 8), "required: the chosen metric is still on Home after reopening the app")
         XCTAssertFalse(el(app, "metricRow-ftp").exists, "required: the unticked metric is still off Home after reopening the app")
         for id in ["restingHR", "hrv", "sleep"] { XCTAssertTrue(el(app, "metricRow-\(id)").exists, "required: \(id) is still on Home after reopening the app") }
-        reveal(app, kept); app.settleForScreenshot(1); shot("km2-17b-home-after-reopening")
+        reveal(app, kept); app.settleForScreenshot(1); shot("km3-09-home-after-reopening")
         openHub(app)
         XCTAssertEqual(text(app, "kmHomeList"), "Resting heart rate · HRV · Sleep duration · Strength progression", "required: the hub shows the same choice after reopening the app")
+        press(app, "kmEditHome"); XCTAssertEqual(el(app, "kmSlot-3").value as? String, "Strength progression", "required: the chooser shows the same choice after reopening the app")
         app.terminate()
 
-        // ---- 2. an athlete with nothing recorded: every tile a dash with its reason, never zero
+        // ---- 2. an athlete with nothing recorded: every card a dash with its reason, never zero
         app = launchHistory("LAB_DEMO_NO_RECORDS")
         openHub(app)
         XCTAssertTrue(el(app, "kmHubEmpty").exists, "required: the hub says there is nothing to show yet")
@@ -1706,18 +1709,11 @@ final class LabFastOnboarding: XCTestCase {
             let l = el(app, "kmTile-\(id)").label
             XCTAssertTrue(l.contains("no value"), "required: \(id) has no value (\(l))"); XCTAssertFalse(l.contains(", 0"), "required: \(id) is not shown as zero (\(l))")
         }
-        captureFullPage(app, "km2-18-hub-nothing-recorded", steps: 4); toTop(app)
-        openTile(app, "restingHR", title: "Resting heart rate")
-        XCTAssertEqual(text(app, "kmLatestValue"), "—"); XCTAssertTrue(el(app, "kmNoReadings").exists, "required: it says there are no readings")
-        captureFullPage(app, "km2-19-resting-hr-no-readings", steps: 4); back(app)
-        openTile(app, "strength", title: "Strength progression")
-        XCTAssertEqual(text(app, "kmLatestValue"), "—"); XCTAssertTrue(el(app, "kmNoReadings").exists, "required: it says there are no sessions")
-        captureFullPage(app, "km2-20-strength-no-sessions", steps: 1); back(app)
-        openTile(app, "baselines", title: "Personal baselines"); captureFullPage(app, "km2-21-baselines-none", steps: 1); back(app)
-        toTop(app); press(app, "kmEditHome")
-        // changed after check 78 for the same reason as above: what the row says, not the system flag
-        XCTAssertEqual(el(app, "kmPick-strength").value as? String, "Cannot be chosen: no value", "required: nothing without a value can be chosen")
-        captureFullPage(app, "km2-22-choose-four-nothing-recorded", steps: 4)
+        captureFullPage(app, "km3-10-hub-nothing-recorded", steps: 3); toTop(app)
+        press(app, "kmEditHome")
+        XCTAssertFalse(el(app, "kmPick-strength").exists, "required: nothing without a value is offered")
+        XCTAssertTrue(text(app, "kmNoValue-activity").contains("Strength"), "required: it is named as having no value yet")
+        captureFullPage(app, "km3-11-choose-four-nothing-recorded", steps: 2)
     }
 
     /// Training Mix for three different athletes (owner, 24 Nov 2026): the page follows the roster. Each is the history
