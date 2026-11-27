@@ -19,8 +19,9 @@ enum KeyMetricID: String, CaseIterable, Identifiable {
     case sleepDuration, sleepStages, dailyEnergy, stressSoreness
     case steps, activeCalories, hrZones, strength
     case readiness, strain, recoveryVsStrain, baselines
-    /// Not one of the sixteen: FTP stays in Performance Settings and is an optional Home metric (owner's decision 1).
-    case ftp
+    /// Not among the sixteen: FTP stays in Performance Settings and is an optional Home metric (owner's decision 1), and
+    /// so is Weight (owner, 27 Nov 2026, 13:20). Neither has a tile in the hub.
+    case ftp, weight
     var id: String { rawValue }
 
     var name: String {
@@ -42,6 +43,7 @@ enum KeyMetricID: String, CaseIterable, Identifiable {
         case .recoveryVsStrain: return "Recovery vs. strain"
         case .baselines: return "Personal baselines"
         case .ftp: return "FTP"
+        case .weight: return "Weight"
         }
     }
     var icon: String {
@@ -63,6 +65,7 @@ enum KeyMetricID: String, CaseIterable, Identifiable {
         case .recoveryVsStrain: return "arrow.left.arrow.right"
         case .baselines: return "ruler"
         case .ftp: return "bolt.fill"
+        case .weight: return "scalemass.fill"
         }
     }
     /// The Apple Health reading behind this metric, where the app already stores one.
@@ -145,22 +148,18 @@ struct KeyMetricsHub: Equatable {
     func tile(_ m: KeyMetricID) -> KeyMetricTile? { sections.flatMap(\.tiles).first { $0.metric == m } }
 }
 
-/// The athlete's own choice of Home metrics: a small file of its own, so no stored athlete record changes shape.
-/// No file = no choice made = Home shows exactly what it showed before.
+/// The athlete's own choice of Home metrics. It is kept in the athlete's settings (`AppSettings.homeMetrics`), so it is
+/// in the stored record itself: backup copies, export and updates carry it. nil = no choice made = Home shows exactly
+/// what it showed before.
 enum KeyMetricsPrefs {
-    static let fileName = "key-metrics-home.json"
     static let limit = 4
-    static func load(_ dir: URL) -> [KeyMetricID]? {
-        guard let d = try? Data(contentsOf: dir.appendingPathComponent(fileName)), let ids = try? JSONDecoder().decode([String].self, from: d) else { return nil }
+    /// Stored names as metrics: unknown names and repeats dropped, four at most, in the athlete's order.
+    static func clean(_ names: [String]) -> [KeyMetricID] {
         var seen = Set<KeyMetricID>()
-        return ids.compactMap { KeyMetricID(rawValue: $0) }.filter { seen.insert($0).inserted }.prefix(limit).map { $0 }
+        return names.compactMap { KeyMetricID(rawValue: $0) }.filter { seen.insert($0).inserted }.prefix(limit).map { $0 }
     }
-    /// false = it could not be stored, so nothing may be shown as chosen.
-    @discardableResult
-    static func save(_ ids: [KeyMetricID], dir: URL) -> Bool {
-        guard let d = try? JSONEncoder().encode(Array(ids.prefix(limit)).map(\.rawValue)) else { return false }
-        do { try d.write(to: dir.appendingPathComponent(fileName), options: .atomic); return true } catch { return false }
-    }
+    /// The extra Home options that are not among the sixteen (owner's decisions of 27 Nov 2026): FTP and Weight.
+    static let extras: [KeyMetricID] = [.ftp, .weight]
 }
 
 // MARK: - one health reading over time (resting heart rate, HRV, sleep duration)
@@ -181,6 +180,8 @@ struct KeyMetricPoint: Equatable, Identifiable {
     var short: String
     /// Against the athlete's current usual range; nil when there is no range or no reading.
     var standing: RecoveryMetric.Standing?
+    /// A week only: the stored readings the average was taken from, oldest first — so the average can be checked.
+    var records: [RecoveryEntry] = []
 }
 
 struct KeyMetricHealthDetail: Equatable {
@@ -322,7 +323,8 @@ enum KeyMetricsModel {
                 let r = RecoveryDashModel.reading(k, log, from: from, to: to)
                 points.append(KeyMetricPoint(id: i, start: from, value: r.value, count: r.count, source: r.source, date: r.date, isWeek: true,
                                              top: fmt("d", from, cal), bottom: fmt("MMM", from, cal),
-                                             title: "Week of \(ConsistencyModel.range(from, calendar: cal))", short: fmt("d MMM", from, cal), standing: nil))
+                                             title: "Week of \(ConsistencyModel.range(from, calendar: cal))", short: fmt("d MMM", from, cal), standing: nil,
+                                             records: xs.filter { $0.date >= from && $0.date < to }))
             }
         }
         let vs = points.compactMap(\.value)
@@ -332,7 +334,7 @@ enum KeyMetricsModel {
         switch period {
         case 0: caption = "\(k.title) · one reading a day · last 7 days"
         case 1: caption = "\(k.title) · one reading a day · \(fmt("d MMM", points.first!.start, cal)) – \(fmt("d MMM", points.last!.start, cal))"
-        default: caption = "\(k.title) · weekly average · last 13 weeks"
+        default: caption = "\(k.title) · WEEKLY AVERAGES · each point is the average of that week's readings · last 13 weeks"
         }
         // the standing line and the range
         var line = "No reading"
@@ -471,10 +473,18 @@ enum KeyMetricsModel {
 extension Store {
     /// The Home metrics as the hub and the chooser see them: the athlete's saved choice, else the metrics Home shows by default.
     func keyMetricsHomeChoice(now: Date = Date()) -> (ids: [KeyMetricID], isDefault: Bool) {
-        if let saved = KeyMetricsPrefs.load(dir) { return (saved, false) }
+        if let saved = settings.homeMetrics { return (KeyMetricsPrefs.clean(saved), false) }
+        // what Home shows without a choice: the three readings, Weight when a weight reading exists, FTP unless strength-only
         var ids: [KeyMetricID] = [.restingHR, .hrv, .sleepDuration]
+        if enabledHealthReads.contains(.weight), recoveryLog.entries(.weight).last != nil { ids.append(.weight) }
         if profile.trainingMode != .strength { ids.append(.ftp) }
         return (ids, true)
+    }
+    /// Stores the athlete's choice in their settings. false = it was not stored, so nothing may be shown as chosen.
+    @discardableResult
+    func setKeyMetricsHome(_ ids: [KeyMetricID]) -> Bool {
+        settings.homeMetrics = Array(ids.prefix(KeyMetricsPrefs.limit)).map(\.rawValue)
+        return lastSaveError == nil
     }
 
     func keyMetricsHealth(_ m: KeyMetricID, period: Int, now: Date = Date(), calendar cal: Calendar = .current) -> KeyMetricHealthDetail? {
@@ -521,6 +531,13 @@ extension Store {
         case .ftp:
             guard ftpIsKnown else { return none("Not set in Performance Settings") }
             return KeyMetricTile(metric: m, value: "\(profile.ftpW)", unit: "W", line: profile.ftpLabel, measurable: true, onHome: on)
+        case .weight:
+            guard enabledHealthReads.contains(.weight), let l = RecoveryAnalysis.metric(.weight, log: recoveryLog, now: now, calendar: cal).latest else {
+                return none(enabledHealthReads.contains(.weight) ? "No reading yet" : "Not turned on in Connections")
+            }
+            let p = KeyMetricsModel.parts(.weight, l.value)
+            let f = DateFormatter(); f.calendar = cal; f.dateFormat = "EEE d MMM"
+            return KeyMetricTile(metric: m, value: p.value, unit: p.unit, line: "\(f.string(from: l.date)) · \(l.source ?? "Apple Health")", measurable: true, onHome: on)
         default:
             return none(m.unavailableLine ?? "Not available")
         }
@@ -545,6 +562,10 @@ extension Store {
             case .restingHR: return defaults.first { $0.id == HealthSample.Kind.restingHR.rawValue } ?? HomeV23Builder.metric(.restingHR, nil)
             case .hrv: return defaults.first { $0.id == HealthSample.Kind.hrv.rawValue } ?? HomeV23Builder.metric(.hrv, nil)
             case .sleepDuration: return defaults.first { $0.id == HealthSample.Kind.sleep.rawValue } ?? HomeV23Builder.metric(.sleep, nil)
+            case .weight:
+                // the row Home already builds for a weight reading, unchanged; with no reading it is an empty row
+                return defaults.first { $0.id == HealthSample.Kind.weight.rawValue }
+                    ?? HomeV23Builder.metric(.weight, enabledHealthReads.contains(.weight) ? RecoveryAnalysis.metric(.weight, log: recoveryLog, now: now, calendar: cal) : nil)
             case .ftp:
                 return defaults.first { $0.id == "ftp" } ?? CyHomeMetric(id: "ftp", icon: "bolt.fill", name: "FTP", value: ftpIsKnown ? "\(profile.ftpW)" : nil, unit: "W", trend: nil, trendLevel: .neutral,
                                                                        explanation: "Functional threshold power sets your riding zones.", source: profile.ftpLabel, history: [], historyUnit: "W",

@@ -39,7 +39,7 @@ struct KeyMetricsHubView: View {
         DashCard {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("ON HOME · \(h.home.count) OF \(KeyMetricsPrefs.limit)").font(CyFont.overline).foregroundStyle(theme.textTertiary)
+                    Text(h.home.count <= KeyMetricsPrefs.limit ? "ON HOME · \(h.home.count) OF \(KeyMetricsPrefs.limit)" : "ON HOME · \(h.home.count)").font(CyFont.overline).foregroundStyle(theme.textTertiary)
                     Text(h.home.map(\.name).joined(separator: " · ")).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("kmHomeList")
                 }
@@ -276,7 +276,7 @@ struct KeyMetricHealthPage: View {
                 .font(.system(size: 10, weight: .medium)).foregroundStyle(theme.textSecondary)
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("kmLegend")
-                Text(period == 2 ? "Tap a point to inspect that week" : "Tap a point to inspect that day").font(CyFont.caption).foregroundStyle(theme.textTertiary)
+                Text(period == 2 ? "Tap a point to see that week's readings" : "Tap a point to inspect that day").font(CyFont.caption).foregroundStyle(theme.textTertiary)
             }
         }
         .accessibilityElement(children: .contain)
@@ -309,13 +309,26 @@ struct KeyMetricHealthPage: View {
     }
     private func inspection(_ p: KeyMetricPoint, _ d: KeyMetricHealthDetail) -> some View {
         let f = DateFormatter(); f.dateFormat = "HH:mm"
+        let wf = DateFormatter(); wf.dateFormat = "EEE d MMM, HH:mm"
         return DashCard {
             VStack(alignment: .leading, spacing: 8) {
                 Text(p.title).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("kmInspectionTitle")
                 if let v = p.value {
                     if p.isWeek {
-                        row(d.kind.title, "Average \(RecoveryAnalysis.valueText(d.kind, v))", "\(p.count) of 7 \(KeyMetricsModel.unitWord(d.kind, 7)) · \(p.source ?? "Apple Health")", id: "kmInspectionValue")
+                        row("Weekly average", RecoveryAnalysis.valueText(d.kind, v), "from \(p.count) of 7 \(KeyMetricsModel.unitWord(d.kind, 7)) · \(p.source ?? "Apple Health")", id: "kmInspectionValue")
+                        Text("THE READINGS BEHIND THIS AVERAGE").font(CyFont.overline).foregroundStyle(theme.textTertiary).padding(.top, 2)
+                        ForEach(Array(p.records.enumerated()), id: \.element.id) { k, e in
+                            (Text(wf.string(from: e.date)).foregroundColor(theme.textSecondary) + Text(" · \(RecoveryAnalysis.valueText(d.kind, e.value))").foregroundColor(theme.textPrimary)
+                             + Text(" · \(e.source ?? "Apple Health")").foregroundColor(theme.textSecondary))
+                                .font(CyFont.footnote).fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("kmWeekRecord-\(k)")
+                        }
+                        if p.count < 7 {
+                            Text("\(7 - p.count) day\(7 - p.count == 1 ? "" : "s") of this week \(7 - p.count == 1 ? "has" : "have") no reading and \(7 - p.count == 1 ? "is" : "are") not part of the average.")
+                                .font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("kmWeekMissing")
+                        }
                     } else {
                         row(d.kind.title, RecoveryAnalysis.valueText(d.kind, v), "Measured · \(p.source ?? "Apple Health")\(p.date.map { " · \(f.string(from: $0))" } ?? "")", id: "kmInspectionValue")
                         if let s = p.standing, let r = d.rangeText {
@@ -727,18 +740,19 @@ struct KeyMetricsEditView: View {
 
     var body: some View {
         let h = store.keyMetricsHub()
-        let ftp = store.keyMetricTile(.ftp, home: chosen)
+        let extras = KeyMetricsPrefs.extras.map { store.keyMetricTile($0, home: chosen) }
         KeyMetricPage(id: "keyMetricsEdit") {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Home shows up to four key metrics. Choose from the ones that have a value.").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                 Text("\(chosen.count) of \(KeyMetricsPrefs.limit) chosen").font(CyFont.headline).foregroundStyle(theme.textPrimary)
                     .accessibilityIdentifier("kmEditCount")
+                Text("Your choice is kept with your Cyclift data, so it is in your backup and your export.").font(CyFont.caption).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                 if let n = note { Text(n).font(CyFont.caption).foregroundStyle(theme.warning).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("kmEditNote") }
             }
             ForEach(h.sections) { s in
                 group(s.category.title, s.tiles)
             }
-            group("Performance Settings", [ftp])
+            group("Also available for Home", extras)
         }
         .navigationTitle("Choose four for Home").navigationBarTitleDisplayMode(.inline)
         .onAppear { if !loaded { chosen = store.keyMetricsHomeChoice().ids; loaded = true } }
@@ -784,7 +798,7 @@ struct KeyMetricsEditView: View {
         else if next.count >= KeyMetricsPrefs.limit { note = "Four are chosen. Untick one to choose another."; return }
         else { next.append(t.metric) }
         // shown as chosen only once it is stored
-        if KeyMetricsPrefs.save(next, dir: store.dir) { chosen = next; note = nil; store.objectWillChange.send() }
+        if store.setKeyMetricsHome(next) { chosen = store.keyMetricsHomeChoice().ids; note = nil }
         else { note = "Your choice could not be saved. Home is unchanged." }
     }
 }

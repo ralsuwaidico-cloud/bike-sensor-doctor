@@ -114,14 +114,34 @@ final class KeyMetricsTests: XCTestCase {
         XCTAssertTrue(KeyMetricsModel.soreness(rides: [], strength: [b], now: now, calendar: cal).answers.isEmpty)
     }
 
-    func testTheHomeChoiceIsStoredInItsOwnFileAndHoldsAtMostFour() {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("km-\(UUID().uuidString)")
-        try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        XCTAssertNil(KeyMetricsPrefs.load(dir), "no file = no choice made = Home keeps its defaults")
-        XCTAssertTrue(KeyMetricsPrefs.save([.hrv, .strength, .ftp, .restingHR, .sleepDuration], dir: dir))
-        XCTAssertEqual(KeyMetricsPrefs.load(dir), [.hrv, .strength, .ftp, .restingHR], "four at most, in the athlete's order")
-        try! Data("[\"hrv\",\"hrv\",\"nonsense\",\"ftp\"]".utf8).write(to: dir.appendingPathComponent(KeyMetricsPrefs.fileName))
-        XCTAssertEqual(KeyMetricsPrefs.load(dir), [.hrv, .ftp], "repeats and unknown names are dropped")
-        XCTAssertTrue(KeyMetricsPrefs.save([], dir: dir)); XCTAssertEqual(KeyMetricsPrefs.load(dir), [], "an emptied choice is still the athlete's choice")
+    func testTheHomeChoiceIsPartOfTheAthletesSettingsAndHoldsAtMostFour() {
+        XCTAssertEqual(KeyMetricsPrefs.clean(["hrv", "strength", "ftp", "restingHR", "sleepDuration"]), [.hrv, .strength, .ftp, .restingHR], "four at most, in the athlete's order")
+        XCTAssertEqual(KeyMetricsPrefs.clean(["hrv", "hrv", "nonsense", "weight"]), [.hrv, .weight], "repeats and unknown names are dropped; Weight is an option")
+        XCTAssertEqual(KeyMetricsPrefs.extras, [.ftp, .weight])
+        XCTAssertFalse(KeyMetricCategory.allCases.flatMap(\.metrics).contains(.weight), "Weight is not one of the sixteen")
+        // the choice is stored inside the settings, so whatever keeps the athlete's record keeps the choice: it survives
+        // being written and read back, and a record written before the field existed reads as "no choice made"
+        var s = AppSettings(); XCTAssertNil(s.homeMetrics, "no choice made = Home keeps its defaults")
+        s.homeMetrics = ["hrv", "strength", "weight", "ftp"]
+        let back = try! JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(s))
+        XCTAssertEqual(back.homeMetrics, ["hrv", "strength", "weight", "ftp"]); XCTAssertEqual(back, s)
+        let old = try! JSONDecoder().decode(AppSettings.self, from: Data("{\"units\":\"metric\",\"keepScreenOn\":true}".utf8))
+        XCTAssertNil(old.homeMetrics, "an earlier record has no choice and is read without loss")
+        s.homeMetrics = []
+        XCTAssertEqual(try! JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(s)).homeMetrics, [], "an emptied choice is still the athlete's choice")
+    }
+
+    func testAWeeklyAverageCarriesTheReadingsItWasTakenFrom() {
+        let l = log(.hrv, (0..<20).map { ($0, 50 + Double($0)) })
+        let w = KeyMetricsModel.health(.hrv, log: l, enabled: [.hrv], period: 2, now: now, calendar: cal)!
+        XCTAssertTrue(w.caption.contains("WEEKLY AVERAGES"), w.caption)
+        for p in w.points {
+            XCTAssertEqual(p.records.count, p.count)
+            if let v = p.value { XCTAssertEqual(v, p.records.map(\.value).reduce(0, +) / Double(p.records.count), accuracy: 0.0001, "the average is exactly the average of the listed readings") }
+            else { XCTAssertTrue(p.records.isEmpty) }
+        }
+        XCTAssertEqual(w.points.map(\.count).reduce(0, +), 20, "every stored reading is behind exactly one week")
+        // days carry no list: each day is its own reading
+        XCTAssertTrue(KeyMetricsModel.health(.hrv, log: l, enabled: [.hrv], period: 1, now: now, calendar: cal)!.points.allSatisfy { $0.records.isEmpty })
     }
 }

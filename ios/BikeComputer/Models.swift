@@ -708,6 +708,11 @@ struct AppSettings: Codable, Equatable {
     var rideDisplay: RideDisplay = .night
     /// Cyclift Watch (LILYGO) companion link on this phone (Connections › Cyclift Watch). Off until the athlete turns it on.
     var cyWatchEnabled = false
+    /// Key Metrics (owner, 27 Nov 2026): the athlete's own choice of Home metrics, as KeyMetricID names, in their order.
+    /// nil = no choice made — Home shows what it showed before. Additive and optional: absent in every earlier record,
+    /// and part of this record, so it is kept by the previous-copy backup, by export and across updates. An older
+    /// build does not know the key (see the build-216 downgrade risk): it would show Home's defaults.
+    var homeMetrics: [String]? = nil
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -734,6 +739,7 @@ struct AppSettings: Codable, Equatable {
         rideLayout = (try? c.decodeIfPresent(RideLayout.self, forKey: .rideLayout)) ?? .coach
         autoAdapt = (try? c.decodeIfPresent(Bool.self, forKey: .autoAdapt)) ?? true
         planChangesAsked = try? c.decodeIfPresent(Bool.self, forKey: .planChangesAsked)
+        homeMetrics = try? c.decodeIfPresent([String].self, forKey: .homeMetrics)
     }
 }
 

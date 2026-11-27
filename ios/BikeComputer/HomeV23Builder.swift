@@ -285,7 +285,7 @@ extension Store {
         }
         // Key Metrics (owner, 27 Nov 2026): once the athlete has chosen their own Home metrics, those are shown, in their
         // order. Without a saved choice the rows above are exactly what Home showed before.
-        if let chosen = KeyMetricsPrefs.load(dir) { metrics = keyMetricsHomeRows(chosen, defaults: metrics, now: now, calendar: cal) }
+        if let saved = settings.homeMetrics { let chosen = KeyMetricsPrefs.clean(saved); metrics = keyMetricsHomeRows(chosen, defaults: metrics, now: now, calendar: cal) }
         return Home21Data(
             dateLine: HomeDashboardModel.dateLine(now),
             name: profile.name.trimmingCharacters(in: .whitespaces),
