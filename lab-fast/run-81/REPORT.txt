@@ -1,0 +1,24 @@
+FAST focused Lab check — selected: LabFastOnboarding/testKeyMetricsHub
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 540ea9f7 · files changed since then: 4
+TIME setup: 13s
+  timing: SwiftCompile (5 tasks) | 100.197 seconds
+  timing: CompileAssetCatalogVariant (1 task) | 87.998 seconds
+  timing: SwiftDriver (16 tasks) | 25.057 seconds
+  timing: SwiftEmitModule (2 tasks) | 6.535 seconds
+  timing: Ld (18 tasks) | 5.700 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 1.653 seconds
+  timing: SwiftDriver Compilation (16 tasks) | 0.282 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.243 seconds
+  stages: packages at 203s · packages prepared at 252s · dependency graph at 252s · inputs at 252s · build description at 252s · first Swift step at 300s · first link at 303s · asset catalogue at 310s · finished at 412s
+  compiled in this run: 13 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 413s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 23s
+Test Case '-[CycliftLabUITests.LabFastOnboarding testKeyMetricsHub]' passed (2977.660 seconds).
+RESULT selected screen checks: ok
+TIME tests: 3075s
+TIME total on the Mac: 3529s
+commit 547737cdc293aa8b23877541c2a62449d4869e85  branch ios/lab
