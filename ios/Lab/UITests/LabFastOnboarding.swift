@@ -1578,6 +1578,64 @@ final class LabFastOnboarding: XCTestCase {
         }
     }
 
+    /// CAPTURE ONLY (Home review, the Strength card, 28 Nov 2026): what the Strength card on Home opens today, for the
+    /// owner's review. No app code is changed. Required: the card exists, opens the Strength summary, the three periods
+    /// can be chosen, a workout's exercises expand, and a recent workout opens its log. Everything else is captured as found.
+    func testCaptureHomeStrength() {
+        func openCard(_ app: XCUIApplication, _ file: String) -> Bool {
+            let card = el(app, "sportCard-strength")
+            guard card.waitForExistence(timeout: 8) else { shot("\(file)-home-no-card"); return false }
+            for _ in 0..<8 where !card.isHittable { app.swipeUp(velocity: .slow) }
+            shot("\(file)-home"); card.tap()
+            let ok = el(app, "homeStrengthSummary").waitForExistence(timeout: 8)
+            Thread.sleep(forTimeInterval: 1.2)
+            return ok
+        }
+        func back(_ app: XCUIApplication) { app.navigationBars.buttons.element(boundBy: 0).tap(); Thread.sleep(forTimeInterval: 0.8) }
+        var app = launchHistory("LAB_DEMO_DAY")
+        XCTAssertTrue(openCard(app, "str-0"), "required: the Strength card opens the Strength summary")
+        captureFullPage(app, "str-1-four-weeks", steps: 5)
+        for (title, file) in [("This week", "str-2-this-week"), ("All", "str-3-all")] {
+            toTop(app)
+            let seg = el(app, "strengthPeriod").buttons[title].firstMatch
+            XCTAssertTrue(seg.waitForExistence(timeout: 6), "required: the period '\(title)'")
+            seg.tap(); Thread.sleep(forTimeInterval: 0.8)
+            captureFullPage(app, file, steps: 5)
+        }
+        toTop(app)
+        let action = el(app, "strengthNext-action")
+        if action.waitForExistence(timeout: 3) {
+            for _ in 0..<6 where !action.isHittable { app.swipeUp(velocity: .slow) }
+            shot("str-4-next-workout-row")
+            let l = action.label.lowercased()
+            if action.isHittable && !l.contains("start") && !l.contains("resume") && !l.contains("continue") {
+                action.tap(); Thread.sleep(forTimeInterval: 1.2); shot("str-5-next-workout-opened")
+                let done = app.buttons["Done"].firstMatch
+                if done.waitForExistence(timeout: 4) { done.tap(); Thread.sleep(forTimeInterval: 1.0) }
+            }
+        }
+        XCTAssertTrue(el(app, "strengthLogExpand-0").waitForExistence(timeout: 6), "required: a recent workout with exercises")
+        press(app, "strengthLogExpand-0"); Thread.sleep(forTimeInterval: 0.6)
+        XCTAssertTrue(el(app, "strengthLogExercises-0").waitForExistence(timeout: 4), "required: the exercises expand in place")
+        toTop(app); captureFullPage(app, "str-6-exercises-expanded", steps: 6)
+        toTop(app)
+        press(app, "strengthLog-0"); Thread.sleep(forTimeInterval: 1.2)
+        XCTAssertFalse(el(app, "strengthPeriod").isHittable, "required: the recent workout opens its own page")
+        captureFullPage(app, "str-7-workout-log", steps: 7)
+        back(app)
+        XCTAssertTrue(el(app, "homeStrengthSummary").waitForExistence(timeout: 6), "required: Back returns to the Strength summary")
+        app.terminate()
+        // other athletes: captured as found
+        for (env, file, log) in [("LAB_DEMO_SUPERSETS", "str-8-supersets", true), ("LAB_DEMO_NO_RECORDS", "str-9-nothing-recorded", false), ("LAB_DEMO_MIX_RUN_STRENGTH", "str-10-runner-strength", false)] {
+            app = launchHistory(env)
+            if openCard(app, file) {
+                captureFullPage(app, file, steps: 4)
+                if log, el(app, "strengthLog-0").exists { toTop(app); press(app, "strengthLog-0"); Thread.sleep(forTimeInterval: 1.2); captureFullPage(app, file + "-log", steps: 7) }
+            }
+            app.terminate()
+        }
+    }
+
     /// Key Metrics hub (design direction approved 27 Nov 2026, 11:40; refinement proposed 15:26 — four swipeable
     /// carousels and a simpler "Choose four for Home"; FINAL VISUAL APPROVAL PENDING). "See all" on Home opens the hub;
     /// each category is one row of four cards that swipes sideways with a position indicator; every card opens its own
