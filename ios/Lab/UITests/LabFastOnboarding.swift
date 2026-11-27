@@ -1638,13 +1638,20 @@ final class LabFastOnboarding: XCTestCase {
         toTop(app); press(app, "kmEditHome")
         XCTAssertTrue(el(app, "keyMetricsEdit").waitForExistence(timeout: 6), "required: Edit opens the chooser")
         XCTAssertEqual(text(app, "kmEditCount"), "4 of 4 chosen")
-        XCTAssertFalse(el(app, "kmPick-spo2").isEnabled, "required: a metric without a value cannot be chosen")
-        XCTAssertFalse(el(app, "kmPick-readiness").isEnabled, "required: a score that is not calculated cannot be chosen")
+        // Changed after check 78. These two lines read the row's system "enabled" flag and failed, although the screenshots
+        // of that run show both rows greyed out with "No value" and no tick box. The expectation was wrong, not the app:
+        // the row is one spoken element that states its condition in words, and that element does not carry the flag.
+        // The requirement is now checked by what the row says and, below, by what pressing it does.
+        XCTAssertEqual(el(app, "kmPick-spo2").value as? String, "Cannot be chosen: no value", "required: a metric without a value cannot be chosen")
+        XCTAssertEqual(el(app, "kmPick-readiness").value as? String, "Cannot be chosen: no value", "required: a score that is not calculated cannot be chosen")
         captureFullPage(app, "km2-15-choose-four", steps: 3); toTop(app)
         press(app, "kmPick-strength")
         XCTAssertTrue(app.staticTexts["kmEditNote"].firstMatch.waitForExistence(timeout: 4), "required: a fifth cannot be added")
         XCTAssertEqual(text(app, "kmEditCount"), "4 of 4 chosen")
         press(app, "kmPick-ftp"); XCTAssertEqual(text(app, "kmEditCount"), "3 of 4 chosen")
+        // with a place free, pressing a metric that has no value still adds nothing
+        press(app, "kmPick-spo2"); XCTAssertEqual(text(app, "kmEditCount"), "3 of 4 chosen", "required: pressing a metric without a value does not choose it")
+        press(app, "kmPick-readiness"); XCTAssertEqual(text(app, "kmEditCount"), "3 of 4 chosen", "required: pressing a score that is not calculated does not choose it")
         press(app, "kmPick-strength"); XCTAssertEqual(text(app, "kmEditCount"), "4 of 4 chosen")
         app.settleForScreenshot(1); shot("km2-16-choose-four-changed")
         back(app)
@@ -1669,14 +1676,15 @@ final class LabFastOnboarding: XCTestCase {
         captureFullPage(app, "km2-18-hub-nothing-recorded", steps: 4); toTop(app)
         openTile(app, "restingHR", title: "Resting heart rate")
         XCTAssertEqual(text(app, "kmLatestValue"), "—"); XCTAssertTrue(el(app, "kmNoReadings").exists, "required: it says there are no readings")
-        captureFullPage(app, "km2-19-resting-hr-no-readings", steps: 2); back(app)
+        captureFullPage(app, "km2-19-resting-hr-no-readings", steps: 4); back(app)
         openTile(app, "strength", title: "Strength progression")
         XCTAssertEqual(text(app, "kmLatestValue"), "—"); XCTAssertTrue(el(app, "kmNoReadings").exists, "required: it says there are no sessions")
         captureFullPage(app, "km2-20-strength-no-sessions", steps: 1); back(app)
         openTile(app, "baselines", title: "Personal baselines"); captureFullPage(app, "km2-21-baselines-none", steps: 1); back(app)
         toTop(app); press(app, "kmEditHome")
-        XCTAssertFalse(el(app, "kmPick-strength").isEnabled, "required: nothing without a value can be chosen")
-        captureFullPage(app, "km2-22-choose-four-nothing-recorded", steps: 2)
+        // changed after check 78 for the same reason as above: what the row says, not the system flag
+        XCTAssertEqual(el(app, "kmPick-strength").value as? String, "Cannot be chosen: no value", "required: nothing without a value can be chosen")
+        captureFullPage(app, "km2-22-choose-four-nothing-recorded", steps: 4)
     }
 
     /// Training Mix for three different athletes (owner, 24 Nov 2026): the page follows the roster. Each is the history
