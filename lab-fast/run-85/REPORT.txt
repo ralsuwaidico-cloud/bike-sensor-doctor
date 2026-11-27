@@ -1,0 +1,27 @@
+FAST focused Lab check — selected: LabFastOnboarding/testCaptureHomeStrength
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 9b5f1f7f · files changed since then: 1
+TIME setup: 13s
+  timing: CompileAssetCatalogVariant (1 task) | 163.712 seconds
+  timing: SwiftEmitModule (2 tasks) | 134.292 seconds
+  timing: SwiftCompile (2 tasks) | 20.166 seconds
+  timing: Ld (18 tasks) | 18.369 seconds
+  timing: SwiftDriver (2 tasks) | 14.140 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 4.641 seconds
+  timing: CopySwiftLibs (2 tasks) | 1.543 seconds
+  timing: ConstructStubExecutorLinkFileList (1 task) | 0.851 seconds
+  stages: packages at 135s · packages prepared at 179s · dependency graph at 179s · inputs at 179s · build description at 179s · first link at 184s · asset catalogue at 184s · first Swift step at 348s · finished at 362s
+  compiled in this run: 5 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 364s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 13s
+Lab/UITests/LabFastOnboarding.swift:1625: error: -[CycliftLabUITests.LabFastOnboarding testCaptureHomeStrength] : XCTAssertTrue failed - required: a recent workout with exercises
+Lab/UITests/LabFastOnboarding.swift:1627: error: -[CycliftLabUITests.LabFastOnboarding testCaptureHomeStrength] : XCTAssertTrue failed - required: the exercises expand in place
+Lab/UITests/LabFastOnboarding.swift:955: error: -[CycliftLabUITests.LabFastOnboarding testCaptureHomeStrength] : XCTAssertTrue failed - required: strengthLogExpand-0
+Test Case '-[CycliftLabUITests.LabFastOnboarding testCaptureHomeStrength]' failed (865.142 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 994s
+TIME total on the Mac: 1393s
+commit 0adb50884dadf3a6a6289289990f7717d1309884  branch ios/lab
