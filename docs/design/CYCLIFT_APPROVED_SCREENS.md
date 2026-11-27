@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 26 Nov 2026, 03:15 (Dubai) · Screens recorded: 16
+Last updated: 27 Nov 2026, 12:10 (Dubai) · Screens recorded: 16
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -121,7 +121,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 13 | APP-05 | Home › Daily Training Overview (Day page) | YES | YES — redesigned app only | YES — Cyclift Lab | YES — functional, Cyclift Lab (Obsidian, iPhone 15 Pro); visual review pending (later rounds: see the screen's status table) | NO |
 | 14 | APP-06 | Home › Sleep & Wellness | DIRECTION: YES (25 Nov 2026, 20:11). REFINED SCREENS: NO — awaiting visual approval | NO | NO | NO | NO |
 | 15 | APP-07 | Home › Key Metrics › Resting Heart Rate — UNDER REVIEW | NO — proposal awaiting the owner's visual decision | NO | NO | EXISTING PAGE CAPTURED ONLY | NO |
-| 16 | APP-08 | Key Metrics hub — four categories, sixteen metrics — PROPOSAL | NO — proposal awaiting the owner's visual decision | NO | NO | NO | NO |
+| 16 | APP-08 | Key Metrics hub — four categories, sixteen metrics — DESIGN DIRECTION APPROVED, FINAL VISUAL APPROVAL PENDING | DIRECTION APPROVED 27 Nov 2026 — final visual approval pending | IN PROGRESS — Cyclift Lab | NO | NO | NO |
 
 ---
 
@@ -1436,11 +1436,11 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ---
 
-## Screen 16 — Key Metrics hub — four categories, sixteen metrics — PROPOSAL (APP-08)
+## Screen 16 — Key Metrics hub — four categories, sixteen metrics — DESIGN DIRECTION APPROVED, FINAL VISUAL APPROVAL PENDING (APP-08)
 
 - **Navigation location:** Main app · Home › Key metrics. A hub of 16 metrics in four categories, each tile opening its own detail screen; Home keeps four compact, customizable Key Metrics.
-- **Approval date:** NOT APPROVED. Design direction given by the owner on 26 Nov 2026 (02:33); first deliverable (hub, one detail screen per category, empty states) presented as mockups; awaiting the owner's visual decision. Nothing is implemented.
-- **Approval status:** PROPOSAL — NOT APPROVED, NOT IMPLEMENTED. Every proposed screen is a design mockup with illustrative values, not a simulator screenshot. No approved screen and no production screen has been changed.
+- **Approval date:** DESIGN DIRECTION APPROVED by the owner on 27 Nov 2026 (11:40): the hub and the consistent detail-screen pattern, with eight decisions. FINAL VISUAL APPROVAL IS PENDING and waits for full-page simulator screenshots of the implementation.
+- **Approval status:** DESIGN DIRECTION APPROVED · IMPLEMENTATION IN CYCLIFT LAB AUTHORISED · FINAL VISUAL APPROVAL PENDING. The images below are still design mockups with illustrative values, not simulator screenshots. Production is unchanged; no TestFlight upload.
 - **Original design reference and source:** Owner's direction of 26 Nov 2026 (02:33). Visual language: the approved Obsidian dashboards (Consistency, Training Mix) and bottom dock. The Resting Heart Rate proposal (APP-07) is the pattern for a Heart & recovery detail screen.
 - **Implementation commit:** None. No app code changed.
 
@@ -1461,6 +1461,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Mandatory functionality and dependencies
 
+- OWNER'S DECISIONS (27 Nov 2026, 11:40). 1 FTP: stays in Performance Settings and is an optional Home metric; existing FTP functionality is not removed and FTP does not replace one of the 16. 2 HUB NAVIGATION: a subtle 'See all' control beside the approved Home 'Key metrics' heading — the ONLY Home layout adjustment authorised. 3 PERSONAL BASELINES: activated as a dashboard of the existing sleep, resting-HR and HRV personal ranges; no invented score, no medical interpretation. 4 STRENGTH PROGRESSION: exercise-specific; top load, reps, sets and volume with previous and current values and the approved green / red / neutral rules. 5 DEDICATED PAGES: each metric opens its own functional dashboard; unnecessary links to other features removed; existing navigation preserved until replacement destinations are verified. 6 HOME PERSONALISATION: the athlete selects four Home metrics from the available measurable metrics, with FTP as an additional eligible option; existing selections preserved, sensible defaults. 7 DATA AVAILABILITY: build on actual available measurements first; other metrics show honest unavailable states; no readiness, strain or health score is invented. 8 PRIVACY: no additional Apple Health permission is requested and no new data collection is activated without separate approval. The four categories and their 16 metrics stay exactly as proposed.
 - OWNER'S REQUIREMENTS (26 Nov 2026, 02:33): four compact, customizable Key Metrics on Home without overcrowding or redesigning the approved Home; all 16 metrics in four clearly separated categories; every tile clickable with a dedicated detail screen and no unnecessary links to unrelated features; one consistent dashboard design; colour only where a favourable or unfavourable reading is justified; missing information never shown as zero; reuse existing HealthKit readings, strength history, charts, Coach components and approved navigation; no fabricated measurements; no unvalidated scores or medical interpretations — Advanced metrics stay explicitly unavailable until researched, defined and approved; approved Resting HR, HRV, Sleep and other directions stay intact unless a specific change is approved; Obsidian visual language and bottom dock preserved.
 - WHAT CYCLIFT CAN SUPPLY TODAY (code audit, app commit e59b21ed). AVAILABLE NOW: Resting Heart Rate, HRV and Sleep Duration (one Apple Health reading a day with source and time, kept 90 days, own usual range from the previous 28 days); Strength Progression (recorded strength history and the approved Day-page comparison rules); Heart Rate Zones (time in zone is stored per recorded ride only — not for other activities and not as a daily total). PARTLY: Stress & Soreness (soreness exists only as an answer in a session review; stress is not collected). NOT COLLECTED — NEW WORK AND NEW APPLE HEALTH PERMISSIONS: Blood Oxygen, Respiratory Rate, Daily Steps, daily Active Calories (energy is read per imported workout only), Sleep Stages (only total time asleep is kept). WAITS FOR THE SLEEP & WELLNESS JOURNAL (APP-06, not built): Daily Energy, Stress. NOT DEFINED: all four Advanced insights.
 - ADVANCED INSIGHTS stay unavailable: no Recovery Readiness, Training Strain or Recovery vs. Strain figure is calculated or shown. This keeps the standing rule that no synthetic recovery percentage is created.
@@ -1473,14 +1474,14 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | Stage | State | Evidence |
 |---|---|---|
-| Approved design | NO — proposal awaiting the owner's visual decision | Mockups presented 26 Nov 2026. |
-| Implemented in code | NO | Not started; waits for approval. |
+| Approved design | DIRECTION APPROVED 27 Nov 2026 — final visual approval pending | Mockups presented 26 Nov 2026; direction approved with eight decisions. |
+| Implemented in code | IN PROGRESS — Cyclift Lab | Authorised 27 Nov 2026. |
 | Compiled | NO |  |
 | Simulator-verified | NO | Only the two 'current' images are simulator screenshots (focused check 77, run 45653454881, commit e59b21ed). |
 | Physically verified on iPhone | NO |  |
 
-- **Visual verification:** NOT APPROVED. Comparison and mockups presented for the owner's decision.
-- **Functional verification:** None — not implemented.
+- **Visual verification:** Direction approved; FINAL VISUAL APPROVAL PENDING on simulator screenshots.
+- **Functional verification:** None yet — implementation in progress.
 
 ### Remaining work or limitations
 
@@ -1502,4 +1503,5 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | When | Decision | State |
 |---|---|---|
-| 26 Nov 2026, 02:33 | Key Metrics design direction: a hub with four categories of four metrics each (Heart & Recovery, Sleep & Wellness, Activity & Performance, Advanced Insights); four compact customizable Key Metrics on Home; every tile clickable with a dedicated, consistent detail screen; colour only where justified; missing never zero; reuse existing readings and components; no unvalidated scores or medical interpretation; Advanced metrics explicitly unavailable until researched, defined and approved; approved directions kept intact. First deliverable: an iPhone 15 Pro design comparison of the hub and one detail screen per category with empty states, recorded as a proposal, with no change to approved production screens before the owner's visual decision. | IN FORCE — proposal presented, awaiting decision |
+| 26 Nov 2026, 02:33 | Key Metrics design direction: a hub with four categories of four metrics each (Heart & Recovery, Sleep & Wellness, Activity & Performance, Advanced Insights); four compact customizable Key Metrics on Home; every tile clickable with a dedicated, consistent detail screen; colour only where justified; missing never zero; reuse existing readings and components; no unvalidated scores or medical interpretation; Advanced metrics explicitly unavailable until researched, defined and approved; approved directions kept intact. First deliverable: an iPhone 15 Pro design comparison of the hub and one detail screen per category with empty states, recorded as a proposal, with no change to approved production screens before the owner's visual decision. | IN FORCE |
+| 27 Nov 2026, 11:40 | Key Metrics hub design direction and the consistent detail-screen pattern APPROVED with eight decisions (FTP optional on Home; a 'See all' control as the only Home adjustment; Personal Baselines activated from existing ranges; exercise-specific Strength Progression; dedicated pages without unnecessary links, existing navigation kept until replacements are verified; four selectable Home metrics; honest unavailable states; no new Apple Health permissions). Implement the hub and the currently supported metric pages in Cyclift Lab; provide full-page iPhone 15 Pro simulator screenshots before final visual approval. No production change and no TestFlight upload without approval. | IN FORCE — implementation and final visual approval pending |
