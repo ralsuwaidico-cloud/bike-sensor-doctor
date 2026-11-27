@@ -1582,12 +1582,20 @@ final class LabFastOnboarding: XCTestCase {
     /// owner's review. No app code is changed. Required: the card exists, opens the Strength summary, the three periods
     /// can be chosen, a workout's exercises expand, and a recent workout opens its log. Everything else is captured as found.
     func testCaptureHomeStrength() {
+        var firstTapMisses = 0
         func openCard(_ app: XCUIApplication, _ file: String) -> Bool {
             let card = el(app, "sportCard-strength")
             guard card.waitForExistence(timeout: 8) else { shot("\(file)-home-no-card"); return false }
             for _ in 0..<8 where !card.isHittable { app.swipeUp(velocity: .slow) }
             shot("\(file)-home"); card.tap()
-            let ok = el(app, "homeStrengthSummary").waitForExistence(timeout: 8)
+            var ok = el(app, "homeStrengthSummary").waitForExistence(timeout: 8)
+            // Check 84: the first tap on the card was delivered and Home stayed where it was (cause not established:
+            // a slow simulator or a real first-tap defect). This is a capture check, so it does NOT hide that: it
+            // records the event with its own screenshot and tries once more, so the page can still be captured.
+            if !ok {
+                shot("\(file)-FIRST-TAP-DID-NOT-OPEN"); firstTapMisses += 1
+                card.tap(); ok = el(app, "homeStrengthSummary").waitForExistence(timeout: 8)
+            }
             Thread.sleep(forTimeInterval: 1.2)
             return ok
         }
@@ -1634,6 +1642,7 @@ final class LabFastOnboarding: XCTestCase {
             }
             app.terminate()
         }
+        XCTAssertEqual(firstTapMisses, 0, "recorded, not hidden: the Strength card did not open at the first tap \(firstTapMisses) time(s) in this run")
     }
 
     /// Key Metrics hub (design direction approved 27 Nov 2026, 11:40; refinement proposed 15:26 — four swipeable
