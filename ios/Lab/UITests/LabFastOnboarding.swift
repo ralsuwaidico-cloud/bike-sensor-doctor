@@ -1578,6 +1578,27 @@ final class LabFastOnboarding: XCTestCase {
         }
     }
 
+    /// INVESTIGATION (28 Nov 2026): in check 84 the first tap on Home's Strength card was delivered and the page did not
+    /// open. This probe repeats exactly that step on a freshly launched app, eight times, and reports how often the first
+    /// tap fails and whether a second tap then works. It changes nothing and proves no cause: it measures how often.
+    func testProbeFirstTapOnStrengthCard() {
+        var misses: [Int] = [], secondAlsoFailed: [Int] = []
+        for i in 1...8 {
+            let app = launchHistory("LAB_DEMO_DAY")
+            let card = el(app, "sportCard-strength")
+            XCTAssertTrue(card.waitForExistence(timeout: 8), "required: the Strength card (launch \(i))")
+            let hittable = card.isHittable
+            card.tap()
+            if !el(app, "homeStrengthSummary").waitForExistence(timeout: 8) {
+                misses.append(i); shot("probe-\(i)-first-tap-missed-hittable-\(hittable)")
+                card.tap()
+                if !el(app, "homeStrengthSummary").waitForExistence(timeout: 8) { secondAlsoFailed.append(i); shot("probe-\(i)-second-tap-missed") }
+            }
+            app.terminate()
+        }
+        XCTAssertTrue(misses.isEmpty, "first tap did not open the Strength summary on launches \(misses) of 8; second tap also failed on \(secondAlsoFailed)")
+    }
+
     /// CAPTURE ONLY (Home review, the Strength card, 28 Nov 2026): what the Strength card on Home opens today, for the
     /// owner's review. No app code is changed. Required: the card exists, opens the Strength summary, the three periods
     /// can be chosen, a workout's exercises expand, and a recent workout opens its log. Everything else is captured as found.
