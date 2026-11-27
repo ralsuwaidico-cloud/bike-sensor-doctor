@@ -1,0 +1,25 @@
+FAST focused Lab check — selected: LabFastOnboarding/testCaptureHomeEndurance
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 547737cd · files changed since then: 1
+TIME setup: 14s
+  timing: CompileAssetCatalogVariant (1 task) | 116.108 seconds
+  timing: SwiftCompile (4 tasks) | 44.635 seconds
+  timing: SwiftDriver (16 tasks) | 30.248 seconds
+  timing: SwiftEmitModule (2 tasks) | 11.112 seconds
+  timing: Ld (18 tasks) | 10.133 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 4.946 seconds
+  timing: CopySwiftLibs (2 tasks) | 2.258 seconds
+  timing: Copy (15 tasks) | 0.746 seconds
+  stages: packages at 103s · packages prepared at 250s · dependency graph at 250s · inputs at 251s · build description at 251s · first Swift step at 263s · first link at 267s · asset catalogue at 275s · finished at 401s
+  compiled in this run: 9 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 403s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 12s
+Lab/UITests/LabFastOnboarding.swift:969: error: -[CycliftLabUITests.LabFastOnboarding testCaptureHomeEndurance] : Failed to not hittable: Button, {{30.0, 574.0}, {333.0, 44.0}}, identifier: 'cyclingRide-0', label: 'Mon 23 Nov · Ride, 30 min · 12.0 km · unplanned'
+Test Case '-[CycliftLabUITests.LabFastOnboarding testCaptureHomeEndurance]' failed (1275.366 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 1430s
+TIME total on the Mac: 1862s
+commit 063a115ca86a6a509c702ce6366a1e59572e11b1  branch ios/lab
