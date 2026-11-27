@@ -1622,14 +1622,21 @@ final class LabFastOnboarding: XCTestCase {
                 if done.waitForExistence(timeout: 4) { done.tap(); Thread.sleep(forTimeInterval: 1.0) }
             }
         }
-        XCTAssertTrue(el(app, "strengthLogExpand-0").waitForExistence(timeout: 6), "required: a recent workout with exercises")
-        press(app, "strengthLogExpand-0"); Thread.sleep(forTimeInterval: 0.6)
-        XCTAssertTrue(el(app, "strengthLogExercises-0").waitForExistence(timeout: 4), "required: the exercises expand in place")
-        toTop(app); captureFullPage(app, "str-6-exercises-expanded", steps: 6)
+        // Corrected after check 85: the check asked for the exercises of the FIRST workout in the list, but that record
+        // holds no exercises (a quick log), so it has no exercise list to open. The check now takes the first workout
+        // that does have one, and opens that workout's log; the record without exercises is captured separately.
+        var k = -1
+        for j in 0..<6 where k < 0 { if el(app, "strengthLogExpand-\(j)").exists { k = j } }
+        XCTAssertTrue(k >= 0, "required: a recent workout with exercises")
+        press(app, "strengthLogExpand-\(k)"); Thread.sleep(forTimeInterval: 0.6)
+        XCTAssertTrue(el(app, "strengthLogExercises-\(k)").waitForExistence(timeout: 4), "required: the exercises expand in place")
+        toTop(app); captureFullPage(app, "str-6-exercises-expanded", steps: 4)
         toTop(app)
-        press(app, "strengthLog-0"); Thread.sleep(forTimeInterval: 1.2)
+        press(app, "strengthLog-\(k)"); Thread.sleep(forTimeInterval: 1.2)
         XCTAssertFalse(el(app, "strengthPeriod").isHittable, "required: the recent workout opens its own page")
         captureFullPage(app, "str-7-workout-log", steps: 7)
+        back(app); XCTAssertTrue(el(app, "homeStrengthSummary").waitForExistence(timeout: 6), "required: Back returns to the Strength summary")
+        if k > 0 { toTop(app); press(app, "strengthLog-0"); Thread.sleep(forTimeInterval: 1.2); captureFullPage(app, "str-7b-record-without-exercises", steps: 2) }
         back(app)
         XCTAssertTrue(el(app, "homeStrengthSummary").waitForExistence(timeout: 6), "required: Back returns to the Strength summary")
         app.terminate()
@@ -1638,7 +1645,7 @@ final class LabFastOnboarding: XCTestCase {
             app = launchHistory(env)
             if openCard(app, file) {
                 captureFullPage(app, file, steps: 4)
-                if log, el(app, "strengthLog-0").exists { toTop(app); press(app, "strengthLog-0"); Thread.sleep(forTimeInterval: 1.2); captureFullPage(app, file + "-log", steps: 7) }
+                if log, el(app, "strengthLog-1").exists { toTop(app); press(app, "strengthLog-1"); Thread.sleep(forTimeInterval: 1.2); captureFullPage(app, file + "-log", steps: 7) }
             }
             app.terminate()
         }
