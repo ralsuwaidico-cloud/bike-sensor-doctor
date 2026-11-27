@@ -1,0 +1,24 @@
+FAST focused Lab check — selected: LabFastOnboarding/testProbeFirstTapOnStrengthCard
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from 984866fd · files changed since then: 1
+TIME setup: 14s
+  timing: CompileAssetCatalogVariant (1 task) | 144.425 seconds
+  timing: Ld (18 tasks) | 7.305 seconds
+  timing: SwiftEmitModule (2 tasks) | 5.800 seconds
+  timing: SwiftCompile (2 tasks) | 5.525 seconds
+  timing: SwiftDriver (2 tasks) | 3.893 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.114 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.733 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.134 seconds
+  stages: packages at 211s · packages prepared at 247s · dependency graph at 247s · inputs at 248s · build description at 248s · first link at 258s · asset catalogue at 258s · first Swift step at 403s · finished at 407s
+  compiled in this run: 5 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 408s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 17s
+Test Case '-[CycliftLabUITests.LabFastOnboarding testProbeFirstTapOnStrengthCard]' passed (240.822 seconds).
+RESULT selected screen checks: ok
+TIME tests: 338s
+TIME total on the Mac: 779s
+commit ab4a36fa90ff613a86b2b27b0e6b9b43890e41e7  branch ios/lab

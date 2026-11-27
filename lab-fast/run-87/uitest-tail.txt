@@ -1,0 +1,190 @@
+    t =      nans Interface orientation changed to Portrait
+Test Case '-[CycliftLabUITests.LabFastOnboarding testProbeFirstTapOnStrengthCard]' started.
+    t =     0.00s Start Test at 2026-11-27 23:05:52.711
+    t =     2.12s Set Up
+    t =     2.14s Open com.ralsuwaidico.cycliftlab
+    t =     2.14s     Launch com.ralsuwaidico.cycliftlab
+    t =    23.09s         Setting up automation session
+    t =    32.65s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    60.03s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    61.09s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    61.09s         Checking existence of `"homeGreeting" Any`
+    t =    61.68s Find the "homeGreeting" Any
+    t =    62.03s Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =    62.43s Waiting 8.0s for "sportCard-strength" Any to exist
+    t =    63.49s     Checking `Expect predicate `existsNoRetry == 1` for object "sportCard-strength" Any`
+    t =    63.49s         Checking existence of `"sportCard-strength" Any`
+    t =    65.29s Find the "sportCard-strength" Any
+    t =    68.14s Tap "sportCard-strength" Button
+    t =    68.14s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    68.17s     Find the "sportCard-strength" Button
+    t =    69.25s     Check for interrupting elements affecting "sportCard-strength" Button
+    t =    71.38s     Synthesize event
+    t =    72.74s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    74.23s Waiting 8.0s for "homeStrengthSummary" Any to exist
+    t =    75.26s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =    75.26s         Checking existence of `"homeStrengthSummary" Any`
+    t =    75.68s Terminate com.ralsuwaidico.cycliftlab:16811
+    t =    76.78s Open com.ralsuwaidico.cycliftlab
+    t =    76.78s     Launch com.ralsuwaidico.cycliftlab
+    t =    78.17s         Setting up automation session
+    t =    82.66s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    90.96s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    92.01s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    92.01s         Checking existence of `"homeGreeting" Any`
+    t =    92.98s Find the "homeGreeting" Any
+    t =    93.97s Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =    94.58s Waiting 8.0s for "sportCard-strength" Any to exist
+    t =    95.60s     Checking `Expect predicate `existsNoRetry == 1` for object "sportCard-strength" Any`
+    t =    95.60s         Checking existence of `"sportCard-strength" Any`
+    t =    96.81s Find the "sportCard-strength" Any
+    t =    98.84s Tap "sportCard-strength" Button
+    t =    98.84s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =    98.85s     Find the "sportCard-strength" Button
+    t =   100.08s     Check for interrupting elements affecting "sportCard-strength" Button
+    t =   100.73s     Synthesize event
+    t =   101.04s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   102.24s Waiting 8.0s for "homeStrengthSummary" Any to exist
+    t =   103.27s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   103.27s         Checking existence of `"homeStrengthSummary" Any`
+    t =   103.71s Terminate com.ralsuwaidico.cycliftlab:19118
+    t =   104.74s Open com.ralsuwaidico.cycliftlab
+    t =   104.74s     Launch com.ralsuwaidico.cycliftlab
+    t =   105.82s         Setting up automation session
+    t =   111.08s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   116.98s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   118.04s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   118.04s         Checking existence of `"homeGreeting" Any`
+    t =   118.93s Find the "homeGreeting" Any
+    t =   119.23s Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =   119.52s Waiting 8.0s for "sportCard-strength" Any to exist
+    t =   120.57s     Checking `Expect predicate `existsNoRetry == 1` for object "sportCard-strength" Any`
+    t =   120.57s         Checking existence of `"sportCard-strength" Any`
+    t =   121.56s Find the "sportCard-strength" Any
+    t =   123.91s Tap "sportCard-strength" Button
+    t =   123.91s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   124.35s     Find the "sportCard-strength" Button
+    t =   125.14s     Check for interrupting elements affecting "sportCard-strength" Button
+    t =   126.18s     Synthesize event
+    t =   126.51s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   127.88s Waiting 8.0s for "homeStrengthSummary" Any to exist
+    t =   128.92s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   128.93s         Checking existence of `"homeStrengthSummary" Any`
+    t =   129.45s Terminate com.ralsuwaidico.cycliftlab:19816
+    t =   130.51s Open com.ralsuwaidico.cycliftlab
+    t =   130.51s     Launch com.ralsuwaidico.cycliftlab
+    t =   132.08s         Setting up automation session
+    t =   135.07s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   140.17s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   141.20s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   141.20s         Checking existence of `"homeGreeting" Any`
+    t =   141.55s Find the "homeGreeting" Any
+    t =   141.79s Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =   141.81s Waiting 8.0s for "sportCard-strength" Any to exist
+    t =   142.87s     Checking `Expect predicate `existsNoRetry == 1` for object "sportCard-strength" Any`
+    t =   142.87s         Checking existence of `"sportCard-strength" Any`
+    t =   144.04s Find the "sportCard-strength" Any
+    t =   145.60s Tap "sportCard-strength" Button
+    t =   145.60s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   145.61s     Find the "sportCard-strength" Button
+    t =   146.19s     Check for interrupting elements affecting "sportCard-strength" Button
+    t =   147.22s     Synthesize event
+    t =   147.55s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   148.00s Waiting 8.0s for "homeStrengthSummary" Any to exist
+    t =   149.07s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   149.07s         Checking existence of `"homeStrengthSummary" Any`
+    t =   149.68s Terminate com.ralsuwaidico.cycliftlab:20770
+    t =   150.75s Open com.ralsuwaidico.cycliftlab
+    t =   150.75s     Launch com.ralsuwaidico.cycliftlab
+    t =   153.10s         Setting up automation session
+    t =   156.39s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   161.82s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   162.88s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   162.88s         Checking existence of `"homeGreeting" Any`
+    t =   163.46s Find the "homeGreeting" Any
+    t =   163.71s Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =   163.95s Waiting 8.0s for "sportCard-strength" Any to exist
+    t =   165.00s     Checking `Expect predicate `existsNoRetry == 1` for object "sportCard-strength" Any`
+    t =   165.00s         Checking existence of `"sportCard-strength" Any`
+    t =   165.74s Find the "sportCard-strength" Any
+    t =   167.47s Tap "sportCard-strength" Button
+    t =   167.47s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   167.47s     Find the "sportCard-strength" Button
+    t =   167.98s     Check for interrupting elements affecting "sportCard-strength" Button
+    t =   168.58s     Synthesize event
+    t =   168.88s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   170.33s Waiting 8.0s for "homeStrengthSummary" Any to exist
+    t =   171.39s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   171.39s         Checking existence of `"homeStrengthSummary" Any`
+    t =   171.60s Terminate com.ralsuwaidico.cycliftlab:21704
+    t =   172.69s Open com.ralsuwaidico.cycliftlab
+    t =   172.69s     Launch com.ralsuwaidico.cycliftlab
+    t =   173.61s         Setting up automation session
+    t =   176.99s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   183.12s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   184.18s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   184.18s         Checking existence of `"homeGreeting" Any`
+    t =   184.61s Find the "homeGreeting" Any
+    t =   184.83s Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =   185.04s Waiting 8.0s for "sportCard-strength" Any to exist
+    t =   186.07s     Checking `Expect predicate `existsNoRetry == 1` for object "sportCard-strength" Any`
+    t =   186.07s         Checking existence of `"sportCard-strength" Any`
+    t =   187.03s Find the "sportCard-strength" Any
+    t =   188.77s Tap "sportCard-strength" Button
+    t =   188.77s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   188.78s     Find the "sportCard-strength" Button
+    t =   189.56s     Check for interrupting elements affecting "sportCard-strength" Button
+    t =   190.15s     Synthesize event
+    t =   190.46s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   191.42s Waiting 8.0s for "homeStrengthSummary" Any to exist
+    t =   192.45s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   192.45s         Checking existence of `"homeStrengthSummary" Any`
+    t =   193.04s Terminate com.ralsuwaidico.cycliftlab:22644
+    t =   194.05s Open com.ralsuwaidico.cycliftlab
+    t =   194.05s     Launch com.ralsuwaidico.cycliftlab
+    t =   195.69s         Setting up automation session
+    t =   198.98s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   205.21s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   206.25s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   206.25s         Checking existence of `"homeGreeting" Any`
+    t =   206.66s Find the "homeGreeting" Any
+    t =   207.27s Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =   207.31s Waiting 8.0s for "sportCard-strength" Any to exist
+    t =   208.35s     Checking `Expect predicate `existsNoRetry == 1` for object "sportCard-strength" Any`
+    t =   208.35s         Checking existence of `"sportCard-strength" Any`
+    t =   210.74s Find the "sportCard-strength" Any
+    t =   212.53s Tap "sportCard-strength" Button
+    t =   212.53s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   212.65s     Find the "sportCard-strength" Button
+    t =   214.93s     Check for interrupting elements affecting "sportCard-strength" Button
+    t =   216.36s     Synthesize event
+    t =   216.68s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   218.73s Waiting 8.0s for "homeStrengthSummary" Any to exist
+    t =   219.78s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   219.78s         Checking existence of `"homeStrengthSummary" Any`
+    t =   220.34s Terminate com.ralsuwaidico.cycliftlab:23555
+    t =   221.36s Open com.ralsuwaidico.cycliftlab
+    t =   221.36s     Launch com.ralsuwaidico.cycliftlab
+    t =   222.44s         Setting up automation session
+    t =   225.65s         Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   230.73s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   231.78s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   231.79s         Checking existence of `"homeGreeting" Any`
+    t =   232.15s Find the "homeGreeting" Any
+    t =   232.41s Checking existence of `"CYCLIFT LAB · DEMO DATA" StaticText`
+    t =   232.72s Waiting 8.0s for "sportCard-strength" Any to exist
+    t =   233.73s     Checking `Expect predicate `existsNoRetry == 1` for object "sportCard-strength" Any`
+    t =   233.73s         Checking existence of `"sportCard-strength" Any`
+    t =   234.51s Find the "sportCard-strength" Any
+    t =   235.71s Tap "sportCard-strength" Button
+    t =   235.71s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   235.71s     Find the "sportCard-strength" Button
+    t =   236.34s     Check for interrupting elements affecting "sportCard-strength" Button
+    t =   236.90s     Synthesize event
+    t =   237.20s     Wait for com.ralsuwaidico.cycliftlab to idle
+    t =   238.21s Waiting 8.0s for "homeStrengthSummary" Any to exist
+    t =   239.26s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   239.26s         Checking existence of `"homeStrengthSummary" Any`
+    t =   239.45s Terminate com.ralsuwaidico.cycliftlab:24671
+    t =   240.47s Tear Down
+Test Case '-[CycliftLabUITests.LabFastOnboarding testProbeFirstTapOnStrengthCard]' passed (240.822 seconds).
