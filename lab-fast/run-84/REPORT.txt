@@ -1,0 +1,27 @@
+FAST focused Lab check — selected: LabFastOnboarding/testCaptureHomeStrength
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from ee8c19fc · files changed since then: 1
+TIME setup: 13s
+  timing: CompileAssetCatalogVariant (1 task) | 80.796 seconds
+  timing: SwiftEmitModule (2 tasks) | 8.123 seconds
+  timing: Ld (18 tasks) | 7.430 seconds
+  timing: SwiftCompile (2 tasks) | 5.803 seconds
+  timing: SwiftDriver (2 tasks) | 5.364 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.126 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.809 seconds
+  timing: ProcessInfoPlistFile (3 tasks) | 0.304 seconds
+  stages: packages at 217s · packages prepared at 270s · dependency graph at 270s · inputs at 270s · build description at 270s · first link at 287s · asset catalogue at 287s · first Swift step at 368s · finished at 372s
+  compiled in this run: 5 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 373s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 19s
+Lab/UITests/LabFastOnboarding.swift:1596: error: -[CycliftLabUITests.LabFastOnboarding testCaptureHomeStrength] : XCTAssertTrue failed - required: the Strength card opens the Strength summary
+Lab/UITests/LabFastOnboarding.swift:1601: error: -[CycliftLabUITests.LabFastOnboarding testCaptureHomeStrength] : XCTAssertTrue failed - required: the period 'This week'
+Lab/UITests/LabFastOnboarding.swift:1602: error: -[CycliftLabUITests.LabFastOnboarding testCaptureHomeStrength] : Failed to tap "This week" Button: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"strengthPeriod" IN identifiers'`, given input App element pid: 13141
+Test Case '-[CycliftLabUITests.LabFastOnboarding testCaptureHomeStrength]' failed (224.473 seconds).
+RESULT selected screen checks: FAILED
+TIME tests: 391s
+TIME total on the Mac: 800s
+commit 9b5f1f7fb0e81e5c365533bf8331504b40e7f115  branch ios/lab
