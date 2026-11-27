@@ -4,7 +4,7 @@
 # decision — a revision is appended to `history` and the earlier one is kept as superseded.
 # Status words are never interchangeable: approved / implemented / compiled / simulator-verified / physically verified.
 
-UPDATED = "27 Nov 2026, 19:40 (Dubai)"
+UPDATED = "27 Nov 2026, 20:45 (Dubai)"
 
 # Approved product direction (owner, 21 Nov 2026): five separate facts per sport. Change a cell only when the thing works.
 CAPABILITY = [
@@ -1452,5 +1452,32 @@ SCREENS = [
                  ("27 Nov 2026, 13:20", "Further decisions: Weight as an optional Home metric alongside FTP; the Home selection in backup, restore and export and preserved during updates; Heart rate zones unavailable until real heart-rate-zone calculations exist, power zones never substituted; 90-day weekly averages kept, clearly labelled, with the underlying records open to inspection. Verify that all 16 tiles open their correct pages, the supported graphs are interactive, the four Home selections persist and unavailable metrics never show invented values; send the complete screenshots. Do not lock the UI or proceed to the next screen before the owner's review. Production and TestFlight unchanged.", "IN FORCE — implemented, awaiting the owner's visual review"),
                  ("27 Nov 2026, 15:26", "Redesign the Key Metrics hub to feel cleaner, more elegant and less crowded: four horizontal swipeable carousels, one per category, about one and a half cards visible, each card with icon, short title, prominent value with unit and one concise status, the whole card clickable, a dash and a short truthful explanation without data, exactly four per category, subtle position indicators, horizontal swiping not interfering with vertical scrolling. The same minimalist treatment for 'Choose four for Home' without changing selection persistence or the maximum of four. The 16 metrics, categories, data sources, metric pages, graphs, Coach explanations, Home selections and functionality unchanged; the approved Home layout and the metric detail screens not modified. Capture complete before/after iPhone 15 Pro screenshots including carousel positions; test all sixteen destinations and selection persistence. Record as a proposed refinement; not approved until the owner reviews the screenshots.", "IN FORCE — approved 19:22"),
                  ("27 Nov 2026, 19:22", "APPROVED AND LOCKED: the Key Metrics hub and 'Choose four for Home' as shown in focused check 81 (app code 22d7cc15). The approved design and functionality are to be preserved; the report and PDF carry the approved screenshots, interactions and remaining verification items. Next: the next unreviewed Home interaction, comparison first; no approved screen, production or TestFlight change.", "IN FORCE")],
+    ),
+    dict(
+        number=17, id="APP-09", name="Home › Endurance card › Cycling summary — UNDER REVIEW",
+        location="Main app · Home › the Endurance card (item 5 of the Home review). It opens the page titled 'Cycling summary'. The Strength card (item 6) opens a sister page and is reviewed next.",
+        approved_on="NOT APPROVED. Comparison presented to the owner on 27 Nov 2026; awaiting his review. Nothing is modified.",
+        status="UNDER REVIEW — COMPARISON PRESENTED, NOTHING CHANGED. The images are simulator screenshots of the page as it exists today (capture check 83). No proposal has been drawn.",
+        reference="No approved design of this page exists. The only earlier note is the unapproved Home v2 prototype screen map, which sent the Endurance card to Progress › Cycling.",
+        wording=[("Existing page", "Title 'Cycling summary'. Period: This week | 4 weeks | All (opens on 4 weeks). Tiles: Rides, Time, Distance, Avg power, Avg heart rate, Avg cadence — 'recorded' / 'rides that measured it' with a 'Measured' mark, or a dash with 'not measured in this period' and 'Needs data'. 'NEXT PLANNED RIDE' with 'View workout' — or 'No ride planned from today — the Plan tab shows the week.' 'RECENT RIDES', unplanned rides marked. Footer: 'Weekly power, heart-rate and cadence trends and time in zones are in the Progress tab. Nothing here is estimated.' Empty: 'No rides recorded'.")],
+        design=["EXISTING: a period selector, six tiles in two columns, the next planned ride card, a list of recent rides, a footnote. No graph, no selectable point, no inspection card, no Coach note."],
+        mandatory=["AUDIT (code and check 83). CONTROLS: Back; the three periods; 'View workout' (opens the session sheet with Move to today, Skip, why this session, steps and target zone; for a ride planned today the same place holds the start action — not exercised); each recent ride → its ride record. DATA: recorded and imported rides; averages are taken only over rides that measured the value; nothing is estimated. The Home card and the 'This week' page agree (1 h 33 min, 43.0 km, 2 rides).",
+                   "MISSING OR INCONSISTENT, for the owner's decision: (1) no graph, selection or Coach note, unlike the approved dashboards; trends are only referred to Progress. (2) The card is named Endurance but the page is cycling only and titled 'Cycling summary'; the approved Training Mix places running and swimming in Endurance too. (3) A running-and-strength athlete has no Endurance card on Home at all (INT-01). (4) The empty state says 'start one from the Ride tab or the Training Hub' — the redesigned dock has no Ride tab. (5) Overlap with the approved Key Metrics and Day pages is undecided.",
+                   "NESTED SCREEN STILL TO REVIEW — the ride record. Seen in check 83: its 'RECORDS · 41 RIDES ON RECORD' card says 'No records yet: this is your first ride on record.', and the graph's selector labels break mid-word ('Po wer', 'Ca- dence', 'Spe ed'). Not changed.",
+                   "The page's code has not changed since 10 Nov 2026, so previous and current are one design."],
+        rejected=[],
+        commits="None for this page. Capture-only check: ef4d3a5a, corrected 67f3ca16 (no app code changed).",
+        stages=[("Approved design", "NO — comparison awaiting the owner's review", "Presented 27 Nov 2026."),
+                ("Implemented in code", "EXISTING PAGE ONLY", "Unchanged since 10 Nov 2026."),
+                ("Compiled", "YES — Cyclift Lab", "Check 83."),
+                ("Simulator-verified", "EXISTING PAGE CAPTURED ONLY", "Focused check 83, run 46030152050, request commit ee8c19fc, PASSED: the card opens the page, the three periods can be chosen, a recent ride opens its record and Back returns. Check 82 (run 46024788745) failed on an error in the check itself — it swiped the session sheet instead of pressing Done, leaving it open — corrected with the reason written in the check."),
+                ("Physically verified on iPhone", "NO", "")],
+        visual_verification="NOT APPROVED. Comparison presented for the owner's review.",
+        functional_verification="Capture only (check 83).",
+        remaining=["Owner's review of the comparison and his direction for this page.", "Then the Strength card (item 6)."],
+        images=[("H09_end_1_reference_previous_current.png", "COMPARISON. 1: no approved reference. 2: previous (Lab run 34, first screen only). 3: current — the card on the approved Home and the complete Cycling summary (check 83, simulator)."),
+                ("H09_end_2_states.png", "CURRENT, SIMULATOR, check 83. This week; All; the next planned ride row; 'View workout' opened."),
+                ("H09_end_3_record_other_athletes.png", "CURRENT, SIMULATOR, check 83. A recent ride's record; an athlete with nothing recorded (Home and page); a running-and-strength athlete's Home, which has no Endurance card.")],
+        history=[("27 Nov 2026, 19:22", "Proceed to the next unreviewed Home interaction: first present the approved reference (if one exists), previous implementation and current implementation as complete iPhone 15 Pro screenshots with all relevant interaction states, and identify missing functionality. Do not modify the screen before the owner reviews its comparison; no change to approved screens, production or TestFlight.", "IN FORCE — presented, awaiting review")],
     ),
 ]
