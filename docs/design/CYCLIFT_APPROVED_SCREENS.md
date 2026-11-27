@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 28 Nov 2026, 03:15 (Dubai) · Screens recorded: 17
+Last updated: 28 Nov 2026, 05:00 (Dubai) · Screens recorded: 18
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -123,6 +123,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 15 | APP-07 | Home › Key Metrics › Resting Heart Rate — UNDER REVIEW | NO — proposal awaiting the owner's visual decision | NO | NO | EXISTING PAGE CAPTURED ONLY | NO |
 | 16 | APP-08 | Key Metrics hub and Choose four for Home | YES | YES — redesigned app (Cyclift Lab) | YES — Cyclift Lab | YES — visual and functional, Cyclift Lab (Obsidian, iPhone 15 Pro); focused check only (later rounds: see the screen's status table) | NO |
 | 17 | APP-09 | Home › Endurance card › Endurance Performance (today: Cycling summary) — UI DESIGN APPROVED · NOT IMPLEMENTED | YES — UI design (mockups) | NO — the existing Cycling summary is still the page | NO (approved design); existing page: yes | NO (approved design); existing page captured only | NO |
+| 18 | APP-10 | Home › Strength card › Strength summary — UNDER REVIEW | NO — existing page under review | EXISTING PAGE ONLY | YES — Cyclift Lab | EXISTING PAGE CAPTURED ONLY | NO |
 
 ---
 
@@ -1612,3 +1613,63 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 | 27 Nov 2026, 22:06 | 'Endurance Performance v1.0 — UI redesign instructions': rename the destination to Endurance Performance; an endurance-first, activity-second multisport dashboard answering 'Am I improving?', 'What is contributing?', 'What should I train next, and why?'; page order header and period → overall endurance performance → overall analysis → one compact Coach insight → dynamic activity cards from the roster → expandable advanced analytics → next planned activity → recent recordings; one reusable activity card; seven measurement states, missing never zero, no fictional trends, no unvalidated load or fitness scores, no FTP inferred from insufficient data, incompatible sports never compared; existing functionality preserved; three alternatives (A performance-first, B Coach-first, C balanced — preferred start, none approved) across five scenarios; a data-availability audit before any new calculation; three phases. A design exploration and feasibility audit only: no production change, no unvalidated calculation, nothing approved, locked or merged; Home, the navigation bar, Training Hub, Plan, Progress and onboarding untouched. Stop at the approval gate. | IN FORCE — exploration presented; Option C then selected |
 | 28 Nov 2026, 01:18 | OPTION C — BALANCED SELECTED as the design direction; Options A and B not to be developed further. Revision 1.1 before final approval: a self-contained page with no buttons or cards redirecting to Training Mix, Consistency, Key Metrics, Recovery, Progress or Training Hub; every component is a final figure, an in-page expansion, or a separately proposed and approved new screen; shared calculations and data sources with independent presentation, endurance-specific scope identified, no separate calculation engines; Option C's structure kept; duplication between the graph selector and the expandable sections removed (graph = historical trend, sections = breakdown); the overall section must communicate development, not only duration — Fitness and Training load kept in the inventory but no figure shown until validated; separate proposals for the comparable-effort methodology and for dated FTP history storage, neither implemented nor authorised; periods This week, 4 weeks, 12 weeks, 1 year, All, with recovery graphs reflecting the actual 90-day coverage; multisport cards kept, non-cycling recording / import / scheduling and the missing Home Endurance card for runners recorded as separate dependencies, Home not modified; Back, the dock, Next planned activity / View workout and opening a recording preserved; Show all recordings preferably expands in the page. No production change, nothing locked. Standing principle: share the data and calculations, not unnecessary screen navigation. | IN FORCE — approved 01:27 |
 | 28 Nov 2026, 01:27 | FINAL UI APPROVAL: Option C Revision 1.1 is approved and locked as the official Endurance Performance UI design, subject to eight refinements (endurance-only plan completion; Consistency as the second graph view; the comparable-effort methodology as an initial candidate for testing and validation only; the FTP history storage feasibility and compatibility review authorised with no storage change yet; the activity colours; long recording lists grouped by month in the page; all analytical components self-contained; a shorter Endurance Development card with the methodology behind its information control). Governance: update the Approved Screens Report, design registry and development tracker; preserve the approved screenshots and consolidated documentation; record outstanding calculation, storage, sensor and multisport requirements separately; UI approval is not approval of unvalidated calculations or production implementation; previously approved screens preserved; production and TestFlight unchanged. Next review: Home → Strength card, existing functionality first, stop at the review gate. | IN FORCE |
+
+---
+
+## Screen 18 — Home › Strength card › Strength summary — UNDER REVIEW (APP-10)
+
+- **Navigation location:** Main app · Home › the Strength card (item 6 of the Home review). It opens the page titled 'Strength summary'.
+- **Approval date:** NOT APPROVED. Review of the existing page presented 28 Nov 2026; at the review gate. Nothing is redesigned or modified.
+- **Approval status:** UNDER REVIEW — EXISTING PAGE PRESENTED, NOTHING CHANGED. The images are simulator screenshots of the page as it exists today (capture check 86). No design is proposed. Full review: docs/design/proposals/strength-card-review/Cyclift_Strength_Card_Existing_Page_Review.pdf.
+- **Original design reference and source:** No approved design of this page exists. The only earlier note is the unapproved Home v2 prototype screen map, which sent the Strength card to Progress › Strength. No earlier capture of the page is held; its code is unchanged since the 10 Nov 2026 baseline.
+- **Implementation commit:** None for this page. Capture-only check: 64e2d494, 8e21df76, 26d4f8d2 (no app code changed).
+
+### Exact approved wording
+
+- **Existing page:** Title 'Strength summary'. Period: This week | 4 weeks | All (opens on 4 weeks). Tiles: Sessions ('logged'), Time ('recorded duration' or 'duration not recorded · Needs data'). 'NEXT PLANNED WORKOUT' with the planned exercises as sets × reps and a Start or View workout button. 'RECENT WORKOUTS', each with 'n exercises' to expand. Footer: 'Personal records, top-set trends and muscle-group coverage are in the Progress tab. Only logged sets are shown.' Empty: 'No strength session logged'.
+
+### Approved layout, visual elements and interactions
+
+- EXISTING: a period selector, two tiles, the next planned workout card, a list of recent workouts each expandable to its exercise lines, a footnote. No graph, no selectable history, no progression figure, no Coach note.
+
+### Mandatory functionality and dependencies
+
+- CONTROLS AND NESTED VIEWS (check 86): Back; three periods; next planned workout (Start for a workout planned today — seen, not pressed; View workout for a later day — not seen); recent workout → its workout log (Edit, Delete; per-exercise sets, a small trend with 'Progressing' / 'Steady' / 'fell', volume, movements trained); 'n exercises' expands in place — the only expandable section; a record without exercises opens a 'needs review' page (Keep it, Delete, Add exercises).
+- MEASUREMENTS AVAILABLE: per session — date, duration, focus, overall effort, notes, source, link to the planned workout; per exercise (detailed logs) — movement pattern, superset group, rest, notes; per set — reps, weight or bodyweight, one-sided, set effort, done, plus skipped, timed, added-weight and assisted sets. ALREADY CALCULATED ELSEWHERE: top load, reps, sets and volume with previous against current (Day page, Key Metrics); per-exercise trend (workout log); personal records, top-set trends, movement coverage and weekly sets (Progress); planned against completed. NOT AVAILABLE: a strength score or training load; muscle-level volume (exercises carry a movement pattern, not muscles); tempo, bar speed, heart rate during lifting. An estimated one-rep maximum exists in the code for planning; whether it is validated for display is not established.
+- DEFECTS AND GAPS SEEN: an empty record (saved with no completed set) counts as a session here (1 this week) while the Home card reads '0 / 2 sessions' — different measures, not explained on the page; that record shows 'duration not recorded' though the demo record holds one minute (cause not established); every demo workout reads 'unplanned' although planned sessions exist on those days (cause not established); workout-log trend lines are red even beside 'Progressing'; the workout log is drawn on pure black, not the Obsidian page colour; the footnote points to the Progress tab for analytics.
+- FIRST TAP: in check 84 the first tap on the Strength card did not open the page; it opened at the first tap in checks 85 and 86. Cause not established (slow simulator or a real first-tap defect).
+
+### Explicitly rejected alternatives
+
+
+### Status
+
+| Stage | State | Evidence |
+|---|---|---|
+| Approved design | NO — existing page under review | Presented 28 Nov 2026. |
+| Implemented in code | EXISTING PAGE ONLY | Unchanged since the 10 Nov 2026 baseline. |
+| Compiled | YES — Cyclift Lab | Check 86. |
+| Simulator-verified | EXISTING PAGE CAPTURED ONLY | Focused check 86, run 46075621105, request commit 984866fd, PASSED: the card opens the page, the three periods can be chosen, a workout's exercises expand in place, a workout opens its log and Back returns. Check 84 (run 46070572765) FAILED: the card did not open at the first tap. Check 85 (run 46072617517) FAILED on an error in the check itself: it asked for the exercises of a record that has none; corrected with the reason written in the check. |
+| Physically verified on iPhone | NO |  |
+
+- **Visual verification:** NOT APPROVED. Existing page presented for the owner's review.
+- **Functional verification:** Capture only (check 86).
+
+### Remaining work or limitations
+
+- Owner's review of the existing page; agreement on missing performance analytics and a design direction. No redesign before that.
+- Not captured: 'View workout' for a later day, the editor, the delete confirmation, larger text, other themes.
+- Open questions: the empty record counted as a session; 'unplanned' on every demo workout; the first-tap event of check 84.
+
+### Images
+
+- `assets/H10_str_1_reference_previous_current.png` — COMPARISON. 1: no approved reference. 3: current — the card on the approved Home and the complete Strength summary (check 86, simulator). No previous capture is held.
+- `assets/H10_str_2_states.png` — CURRENT, SIMULATOR, check 86. This week; All; a workout's exercises expanded; the next planned workout.
+- `assets/H10_str_3_nested_views.png` — CURRENT, SIMULATOR, check 86. A workout log; a record without exercises (needs review); the superset athlete's summary and workout log.
+- `assets/H10_str_4_other_athletes.png` — CURRENT, SIMULATOR, check 86. An athlete with nothing recorded (Home and page); a running-and-strength athlete (Home and page).
+
+### Decision history
+
+| When | Decision | State |
+|---|---|---|
+| 28 Nov 2026, 01:27 | Next review: Home → Strength card. Before any redesign: any previously approved reference, the previous design, the current approved Home showing the card, the complete current destination page, all expandable sections, all buttons and nested views, a complete inventory of existing functionality and available strength measurements, and known defects, unsupported features or missing data — as iPhone 15 Pro simulator screenshots in Obsidian, in the same side-by-side format as the Endurance card review. No redesign or modification yet. Stop at the review gate. | IN FORCE — presented, at the review gate |
