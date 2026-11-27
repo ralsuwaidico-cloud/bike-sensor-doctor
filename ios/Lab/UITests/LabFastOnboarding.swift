@@ -1524,6 +1524,56 @@ final class LabFastOnboarding: XCTestCase {
         }
     }
 
+    /// CAPTURE ONLY (Home review, the Endurance card, 27 Nov 2026): what the Endurance card on Home opens today, for the
+    /// owner's comparison. No app code is changed. Required: the card exists, opens the Cycling summary, the three
+    /// periods can be chosen, and a recent ride opens its record. Everything else is captured as found.
+    func testCaptureHomeEndurance() {
+        func openCard(_ app: XCUIApplication, _ file: String) -> Bool {
+            let card = el(app, "sportCard-endurance")
+            guard card.waitForExistence(timeout: 8) else { shot("\(file)-home-no-card"); return false }
+            for _ in 0..<8 where !card.isHittable { app.swipeUp(velocity: .slow) }
+            shot("\(file)-home"); card.tap()
+            return el(app, "homeCyclingSummary").waitForExistence(timeout: 8)
+        }
+        func back(_ app: XCUIApplication) { app.navigationBars.buttons.element(boundBy: 0).tap(); Thread.sleep(forTimeInterval: 0.8) }
+        var app = launchHistory()
+        XCTAssertTrue(openCard(app, "end-0"), "required: the Endurance card opens the Cycling summary")
+        captureFullPage(app, "end-1-four-weeks", steps: 5)
+        for (title, file) in [("This week", "end-2-this-week"), ("All", "end-3-all")] {
+            toTop(app)
+            let seg = el(app, "cyclingPeriod").buttons[title].firstMatch
+            XCTAssertTrue(seg.waitForExistence(timeout: 6), "required: the period '\(title)'")
+            seg.tap(); Thread.sleep(forTimeInterval: 0.8)
+            captureFullPage(app, file, steps: 5)
+        }
+        toTop(app)
+        let action = el(app, "cyclingNext-action")
+        if action.waitForExistence(timeout: 3) {
+            for _ in 0..<6 where !action.isHittable { app.swipeUp(velocity: .slow) }
+            shot("end-4-next-ride-row")
+            let l = action.label.lowercased()
+            if action.isHittable && !l.contains("start") && !l.contains("resume") && !l.contains("continue") {
+                action.tap(); Thread.sleep(forTimeInterval: 1.2); shot("end-5-next-ride-opened")
+                app.swipeDown(velocity: .fast); Thread.sleep(forTimeInterval: 0.8)
+                if !el(app, "homeCyclingSummary").isHittable && app.navigationBars.buttons.count > 0 { back(app) }
+            }
+        }
+        let ride = el(app, "cyclingRide-0")
+        XCTAssertTrue(ride.waitForExistence(timeout: 6), "required: a recent ride row")
+        press(app, "cyclingRide-0"); Thread.sleep(forTimeInterval: 1.2)
+        XCTAssertFalse(el(app, "cyclingPeriod").isHittable, "required: the recent ride opens its own page")
+        captureFullPage(app, "end-6-ride-record", steps: 6)
+        back(app)
+        XCTAssertTrue(el(app, "homeCyclingSummary").waitForExistence(timeout: 6), "required: Back returns to the Cycling summary")
+        app.terminate()
+        // an athlete with nothing recorded, and a running-and-strength athlete: captured as found
+        for (env, file) in [("LAB_DEMO_NO_RECORDS", "end-7-nothing-recorded"), ("LAB_DEMO_MIX_RUN_STRENGTH", "end-8-runner")] {
+            app = launchHistory(env)
+            if openCard(app, file) { captureFullPage(app, file, steps: 3) }
+            app.terminate()
+        }
+    }
+
     /// Key Metrics hub (design direction approved 27 Nov 2026, 11:40; refinement proposed 15:26 — four swipeable
     /// carousels and a simpler "Choose four for Home"; FINAL VISUAL APPROVAL PENDING). "See all" on Home opens the hub;
     /// each category is one row of four cards that swipes sideways with a position indicator; every card opens its own
