@@ -1,6 +1,6 @@
 # Cyclift Lab — feature tracker (redesign in the shared app)
 
-**Version:** 0.4 · 18 Nov 2026 · Level 3 · Status: Current Draft, kept short on purpose.
+**Version:** 0.5 · 28 Nov 2026 (section 9 added; sections 1–8 are as of 18 Nov 2026 and have not been re-audited) · Level 3 · Status: Current Draft, kept short on purpose.
 One codebase: every item below is shared code behind the redesign switch (on in Cyclift Lab; on in the main app only in controlled CI; off in production).
 Evidence words: **compiled** = built in CI · **ran** = seen running in the iOS simulator (run named) · **visually compared** = screenshot set beside its reference · nothing here is physical-device tested, and nothing is visually approved by the owner unless it says so.
 Governing instructions: Master Project Instructions v3.0. The repository has no CLAUDE.md.
@@ -110,3 +110,22 @@ Owner's iPhone review of build 4 (18 Nov 2026, physical device). Corrections are
 | 5 | Progress must have its full structure | v2.3 sections on real records (74daaeb9, seen in Lab 39); Next evolution and the Evolution timeline still absent — stage criteria not approved | Lab 39 |
 
 No further TestFlight upload without separate authorization.
+
+
+## 9. Home destination pages — design decisions since 23 Nov 2026
+
+The authoritative record of each screen's approval, evidence and remaining work is `docs/design/CYCLIFT_APPROVED_SCREENS.md`. This table tracks development state only.
+
+| Destination | Design state | Development state on 28 Nov 2026 | Next action |
+|---|---|---|---|
+| Consistency Dashboard (APP-02) | Approved and locked 23 Nov | Built in Lab; focused check 61 | Accessibility, main app, regression, device |
+| Training Mix Dashboard (APP-03) | Approved and locked 24 Nov | Built in Lab; focused check 68 | Same |
+| Recovery Dashboard (APP-04) | Direction accepted; final approval pending | Built in Lab; focused check 66 | Owner's final approval |
+| Day page (APP-05) | Approved and locked 25 Nov | Built in Lab; focused check 76 | Accessibility, main app, regression, device |
+| Sleep & Wellness (APP-06) | Direction approved; refined mockups awaiting approval | Not built | Owner's visual approval |
+| Resting Heart Rate page (APP-07) | Under review | Not built | Owner's decision |
+| Key Metrics hub and Choose four for Home (APP-08) | Approved and locked 27 Nov | Built in Lab; focused checks 80 and 81 (app code 22d7cc15) | Accessibility, main app, regression, device |
+| Endurance Performance (APP-09) | **UI design approved and locked 28 Nov** (Option C Revision 1.1, mockups) | **Not built.** The existing "Cycling summary" is still the page | Implementation in Lab when requested; comparable-effort validation; FTP history feasibility review (authorised, no storage change) |
+| Strength card destination | Under review from 28 Nov | Existing "Strength summary" page; capture check 84 | Owner's review of existing functionality |
+
+Outstanding Endurance Performance requirements (calculations, storage, sensors, multisport) are listed in `product/endurance/ENDURANCE_PERFORMANCE_V1_APPROVED_DESIGN_AND_REQUIREMENTS.md`. None is approved for implementation by the UI approval.
