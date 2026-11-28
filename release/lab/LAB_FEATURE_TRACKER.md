@@ -1,6 +1,6 @@
 # Cyclift Lab — feature tracker (redesign in the shared app)
 
-**Version:** 0.7 · 28 Nov 2026 (section 9 added; sections 1–8 are as of 18 Nov 2026 and have not been re-audited) · Level 3 · Status: Current Draft, kept short on purpose.
+**Version:** 0.8 · 28 Nov 2026 (section 9 added and updated; sections 1–8 are as of 18 Nov 2026 and have not been re-audited) · Level 3 · Status: Current Draft, kept short on purpose.
 One codebase: every item below is shared code behind the redesign switch (on in Cyclift Lab; on in the main app only in controlled CI; off in production).
 Evidence words: **compiled** = built in CI · **ran** = seen running in the iOS simulator (run named) · **visually compared** = screenshot set beside its reference · nothing here is physical-device tested, and nothing is visually approved by the owner unless it says so.
 Governing instructions: Master Project Instructions v3.0. The repository has no CLAUDE.md.
@@ -114,7 +114,7 @@ No further TestFlight upload without separate authorization.
 
 ## 9. Home destination pages — design decisions since 23 Nov 2026
 
-The authoritative record of each screen's approval, evidence and remaining work is `docs/design/CYCLIFT_APPROVED_SCREENS.md`. This table tracks development state only.
+The authoritative record of each screen's approval, evidence and remaining work is `docs/design/CYCLIFT_APPROVED_SCREENS.md`. This table tracks development state only. From 28 Nov 2026 (11:47) UI/UX approval and functional development are tracked apart: every screen's UI/UX status is in `docs/design/CYCLIFT_UIUX_APPROVAL_TRACKER.md`, and functional requirements are in `release/FUNCTIONAL_DEVELOPMENT_BACKLOG.md`.
 
 | Destination | Design state | Development state on 28 Nov 2026 | Next action |
 |---|---|---|---|
@@ -126,6 +126,6 @@ The authoritative record of each screen's approval, evidence and remaining work 
 | Resting Heart Rate page (APP-07) | Under review | Not built | Owner's decision |
 | Key Metrics hub and Choose four for Home (APP-08) | Approved and locked 27 Nov | Built in Lab; focused checks 80 and 81 (app code 22d7cc15) | Accessibility, main app, regression, device |
 | Endurance Performance (APP-09) | **UI design approved and locked 28 Nov** (Option C Revision 1.1, mockups) | **Not built.** The existing "Cycling summary" is still the page | Implementation in Lab when requested; comparable-effort validation; FTP history feasibility review (authorised, no storage change) |
-| Strength Performance (APP-10) | Balanced direction accepted 28 Nov; **Revision 1.1 presented for final UI review (mockups); not approved** | **Not built.** The existing "Strength summary" is still the page (check 86) | Owner's final UI review; plan-matching, muscle-mapping, overload and volume methodologies are proposals only; first-tap issue open |
+| Strength Performance (APP-10) | **UI/UX approved and locked 28 Nov, 11:47** (Revision 1.1 with nine minor refinements, mockups) | **Not built.** The existing "Strength summary" is still the page (check 86) | Implementation in Lab when requested. Methodologies are in `release/FUNCTIONAL_DEVELOPMENT_BACKLOG.md`; first-tap issue open |
 
 Outstanding Endurance Performance requirements (calculations, storage, sensors, multisport) are listed in `product/endurance/ENDURANCE_PERFORMANCE_V1_APPROVED_DESIGN_AND_REQUIREMENTS.md`. None is approved for implementation by the UI approval.
