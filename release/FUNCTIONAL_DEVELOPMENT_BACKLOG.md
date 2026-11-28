@@ -1,6 +1,6 @@
 # Cyclift — functional development backlog
 
-**Version:** 0.1 · 28 Nov 2026, 12:45 (Dubai) · Level 2 · Status: Current.
+**Version:** 0.2 · 28 Nov 2026, 14:00 (Dubai) · Level 2 · Status: Current.
 Created by the owner's decision of 28 Nov 2026, 11:47 (`decisions/2026-11-28_uiux-first-workflow-and-strength-performance-approval.md`): UI/UX approval and functional development are tracked apart. UI/UX status lives in `docs/design/CYCLIFT_UIUX_APPROVAL_TRACKER.md`.
 
 **Nothing in this backlog is approved for implementation, and nothing in it is finalised.** A method listed as a "candidate" is a proposal kept for the functionality phase. No item here may be presented in the app as working until it has been built, validated and verified.
@@ -52,6 +52,20 @@ Full text: `docs/design/CYCLIFT_APPROVED_SCREENS.md`.
 | Persistence changes made during onboarding work | Additive only; compatibility assessment outstanding |
 | Coach: AI conversation, fueling guidance, extended policy vocabulary | Not authorised / not reviewed |
 | Arabic localisation; data import and recovery | Not started |
+
+## 3a. Recovery Dashboard and Sleep & Wellness — recorded with Review Package 1 (28 Nov 2026)
+
+| Item | State |
+|---|---|
+| Journal store: morning and evening entries per day, each answer optional, with its entry time and "entered by you" | Not built |
+| Energy, headache, stress, soreness, water, caffeine as daily entries; bedtime, wake time, interruptions | Not built. Apple Health sleep timing is not read today; a new permission is not authorised |
+| Edit, delete one entry, delete the whole journal, export | Not built |
+| Manual and measured sleep kept side by side with source and time | Not built |
+| Association rules behind the Coach card (minimum seven paired days, tentative wording) | Not defined |
+| Usual-range rule applied to entered values (normalised view) | Not defined. The rule exists only for measured readings |
+| Urgent-care wording and trigger; whether other symptoms get the same handling | Owner's decision at UI review; wording then to be reviewed |
+| Retiring the older Recovery page; where "Today — Train as planned" goes, if anywhere | Owner's decision in Review Package 1 |
+| Re-capture of the Recovery "no readings" state on the corrected build | Outstanding verification |
 
 ## 4. Release blockers and verification — unchanged
 

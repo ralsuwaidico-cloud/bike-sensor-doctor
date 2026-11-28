@@ -1,6 +1,6 @@
 # Cyclift — UI/UX approval tracker and application screen inventory
 
-Updated: 28 Nov 2026, 12:45 (Dubai) · Audit requested by the owner 28 Nov 2026, 11:49 · Level 2 (tracker)
+Updated: 28 Nov 2026, 14:00 (Dubai) · Audit requested by the owner 28 Nov 2026, 11:49 · Level 2 (tracker)
 
 ## How to read this
 
@@ -26,6 +26,32 @@ Two judgements behind these figures:
 
 - Area-level approvals given on 12–15 Nov, before the screen-by-screen workflow began (Training Hub v1.4 design baseline, Plan Direction B, Progress compact hero, Profile six-section architecture), are recorded here as 'Direction approved': no screen in those areas has been individually approved and locked, and several built screens differ from their sheets. If the owner treats the Training Hub v1.4 baseline as final, its 8 rows move to approved and the overall figure becomes 33 of 80 (41%).
 - Navigation v1.2 rev 1.1 was approved on 15 Nov and kept unchanged by the Home lock, so it is counted as approved; the final Train emblem choice is still open.
+
+## Owner's decisions on this audit (28 Nov 2026, 12:38)
+
+- The audit is accepted as the current progress reference. This is the one consolidated master approval tracker; counts are updated after each completed review package.
+- Training Hub v1.4 remains the accepted design direction; final visual approval happens in its review package. Its screens are not marked approved on the area-level approval alone.
+- Health Check stays outside onboarding and is reviewed separately (Package 11).
+- Image compression in the Approved Screens Report PDF is authorised; originals are preserved.
+- Previously unidentified screens are recorded here as they are found.
+
+## Review packages, in the owner's order
+
+| # | Package | State |
+|---|---|---|
+| 1 | Recovery Dashboard (APP-04) and Sleep & Wellness (APP-06) | **Presented 28 Nov 2026 — awaiting the owner's selection.** `docs/design/proposals/review-package-1-recovery-sleep/` |
+| 2 | Onboarding closure: Athletic Roster, Activity Library, Build Your Week, Equipment sheet | Not started |
+| 3 | Coach: timeline, conversation, decision sheets, training proposals, explanation and approval | Not started |
+| 4 | Metric detail pages: Resting HR, HRV, FTP, the rest; one reusable template | Not started |
+| 5 | Workout and session details: ride record, workout log, planned-session view | Not started |
+| 6 | Remaining Home items: Trends interactions, Weekly overview, conditional states, Train emblem | Not started |
+| 7 | Plan | Not started |
+| 8 | Progress (purpose and duplication first) | Not started |
+| 9 | Training Hub (v1.4 baseline against current screens) | Not started |
+| 10 | Profile and settings | Not started |
+| 11 | Remaining screens: Health Check, wearable interfaces, others | Not started |
+
+Screens found since the audit: the Sleep & Wellness daily journal (Morning, Evening, concerning-headache state) and the All measures view with its normalised mode. All are part of APP-06 and reviewed with it; they are not counted as separate rows until the owner decides.
 
 ## Master table
 
@@ -214,7 +240,7 @@ The approved onboarding is Welcome plus seven pages (design phase closed by the 
 
 - [ ] One consolidated reference of every approved board, built from the design register.
 
-**Recommended next screen: Home › Sleep row → Sleep & Wellness (APP-06)**, with the Recovery Dashboard (APP-04) decision taken in the same sitting.
+**In review now: Package 1 — Recovery Dashboard (APP-04) and Sleep & Wellness (APP-06).**
 
 ## References to approved boards and versions
 

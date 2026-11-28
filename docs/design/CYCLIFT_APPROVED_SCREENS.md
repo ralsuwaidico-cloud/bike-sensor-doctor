@@ -1,6 +1,6 @@
 # Cyclift — Approved Screens Report
 
-Last updated: 28 Nov 2026, 12:45 (Dubai) · Screens recorded: 18
+Last updated: 28 Nov 2026, 14:00 (Dubai) · Screens recorded: 18
 
 This is the cumulative record of every UI/UX decision the owner has approved. The latest explicitly approved decision for a screen is the source of truth. Older designs, provisional sketches, newer unapproved implementations and screenshots that merely passed a check never replace it. An earlier decision is never altered: a revision is added to the screen's history and the earlier one is kept as superseded.
 
@@ -1166,6 +1166,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Remaining work or limitations
 
+- REVIEW PACKAGE 1 (28 Nov 2026) — RECOMMENDED, awaiting the owner: approve dashboard v2 (check 66) as final with the one-line floating label; remove the two links to the older Recovery page and retire that page (its 'Today — Train as planned' line would then be shown nowhere — the owner's decision). No drawing of a Recovery page was ever made; no picture of the Home v2 prototype's recovery sheet was found.
 - Owner's final approval of the refinements.
 - For the owner's decision: the floating label is now one line (value and day or week); the source, the time and the number of readings moved to the inspection card directly below. In a closely packed zigzag line the label, kept at its point, can cover a neighbouring point.
 - The Lab one-source athlete now has six sleep readings (was ten) so that the 'No usual range yet' state can be seen.
@@ -1175,6 +1176,9 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Images
 
+- `assets/H04_p1_1_versions.png` — REVIEW PACKAGE 1 (28 Nov 2026) — FOR THE OWNER'S DECISION, NOT APPROVED. Every Recovery version as complete pages: the older Recovery page (check 88), dashboard v1 (check 64, direction accepted), dashboard v2 (check 66, recommended).
+- `assets/H04_p1_2_corrections_label.png` — REVIEW PACKAGE 1 — first screens before and after, the two-line and one-line floating label, the one-source state, the no-readings state.
+- `assets/H04_H06_p1_together.png` — REVIEW PACKAGE 1 — Home, Recovery Dashboard, Sleep & Wellness (mockup) and the older Recovery page side by side.
 - `assets/H04_r2_recovery_before_after.png` — REFINEMENTS FOR APPROVAL — NOT YET APPROVED. Complete pages before (check 64) and after (check 66), Weeks and Days. The two were captured a day apart, so the demo readings shown for a given day differ.
 - `assets/H04_r2_recovery_baseline_states.png` — REFINEMENTS FOR APPROVAL. Left: 'your usual range' with the readings it rests on. Right: six sleep readings — 'No usual range yet' (check 65).
 - `assets/H04_r2_rec-1-weeks.png` — AS REFINED — complete page, Weeks (check 66).
@@ -1191,6 +1195,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | When | Decision | State |
 |---|---|---|
+| 28 Nov 2026, 12:38 | 'Remaining UI/UX Review Workflow': the audit is accepted as the progress reference; every remaining screen is reviewed by the standard comparison method (approved reference, all earlier versions, current working screen, recommended existing version, necessary refinements; historical designs recovered, never recreated; no new alternatives unless existing ones are materially inadequate); eleven review packages in a fixed order; Package 1 is Recovery Dashboard and Sleep & Wellness, presented together. Stop after the boards and recommendations. | IN FORCE — Package 1 presented, awaiting the owner's selection |
 | 24 Nov 2026, 10:22 | Design direction ACCEPTED; final approval pending corrections: label the date of the latest readings in the header and keep averages and the chosen period in the inspection card; audit the personal baseline behind 'Inside your usual range' and show it only when a real, sufficiently supported baseline exists; anchor the floating labels to the chosen point by the approved Consistency placement rules. No redesign. | IN FORCE |
 | 23 Nov 2026, 19:55 | Shared design direction approved: Recovery built on the approved Consistency Dashboard design system — compact summary of available observations, Weeks / Days, one selectable metric on its own scale with a floating label, inspection card, one Coach card, recovery measure rows, expandable sources; no synthetic recovery score, no diagnosis. Implementation and final visual sign-off pending. | IN FORCE |
 
@@ -1357,12 +1362,16 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 ### Remaining work or limitations
 
+- REVIEW PACKAGE 1 (28 Nov 2026) — RECOMMENDED, awaiting the owner: the refined mockups of 25 Nov as the base, completed by the five new views (30 days, 90 days, All measures, normalised view, Readings and sources). Still the owner's to settle: the urgent-care wording and whether other symptoms get the same handling. Current destination of the Sleep row captured in check 88 (run 46122974856, request commit 0f5ea21b, passed): it opens the older Recovery page.
 - Owner's visual decision on the mockups and the open decisions listed above.
 - The 'existing' column shows the Recovery page from an older main-app run on a small iPhone with no readings; a current Cyclift Lab screenshot of that page will be taken as the 'before' when implementation is authorised.
 - 30- and 90-day views, the 'More' measures, the normalised view and the sources panel are described but not drawn.
 
 ### Images
 
+- `assets/H06_p1_1_versions.png` — REVIEW PACKAGE 1 (28 Nov 2026) — FOR THE OWNER'S DECISION, NOT APPROVED. Home's Sleep row and its destination today (older Recovery page, check 88), the first mockup (direction approved), the refined mockups (recommended base).
+- `assets/H06_p1_2_journal.png` — REVIEW PACKAGE 1 — the daily journal, first and refined mockups, and the concerning-headache state.
+- `assets/H06_p1_3_new_views.png` — REVIEW PACKAGE 1 — PROPOSED DESIGN MOCKUPS drawn new for this review, illustrative data, not implemented: 30 days, 90 days, All measures on their own scales, the normalised view against the athlete's usual range, Readings and sources opened.
 - `assets/H06_r2_sleep_refined_mockups.png` — REFINED DESIGN MOCKUPS — NOT SIMULATOR SCREENSHOTS, NOT IMPLEMENTED, AWAITING VISUAL APPROVAL. Default dashboard; Morning journal; Evening journal; graph inspection; no data; a concerning headache reported. Illustrative values.
 - `assets/H06_sleep_three_columns.png` — COMPARISON BOARD. Left: the owner's requirements. Middle: the existing destination (Recovery page; main-app run 241, older commit, small iPhone, no readings). Right: DESIGN MOCKUP of the proposed default dashboard — not implemented, not approved.
 - `assets/H06_sleep_proposed_mockups.png` — FIRST MOCKUPS — direction approved from these (25 Nov 20:11), superseded by the refined set. Default dashboard with a week recorded; Morning journal; Evening journal; a selected point with its inspection card; nothing recorded. Illustrative values.
@@ -1371,6 +1380,7 @@ Decided by the owner; requirements, not implemented features. Each is taken up w
 
 | When | Decision | State |
 |---|---|---|
+| 28 Nov 2026, 12:38 | 'Remaining UI/UX Review Workflow': the audit is accepted as the progress reference; every remaining screen is reviewed by the standard comparison method (approved reference, all earlier versions, current working screen, recommended existing version, necessary refinements; historical designs recovered, never recreated; no new alternatives unless existing ones are materially inadequate); eleven review packages in a fixed order; Package 1 is Recovery Dashboard and Sleep & Wellness, presented together. Stop after the boards and recommendations. | IN FORCE — Package 1 presented, awaiting the owner's selection |
 | 25 Nov 2026, 20:11 | OVERALL UI/UX DIRECTION APPROVED subject to ten refinements: structure kept; clickable Morning / Evening entries with Saved, Not started or Partially completed; at most two measures by default with filters and an expanded view; manual entries stored securely in the existing profile with edit, individual and full deletion, and backup / export where supported; manual and measured sleep both preserved with source and timestamp; at least seven days of paired observations before a tentative association, never causation or diagnosis; urgent-care guidance for concerning headache symptoms; existing Recovery and Health measurements reused; completion indicators but no wellness score; Obsidian and the dock preserved. Refined default, Morning, Evening, inspection and no-data screens to be prepared for visual approval before implementation. Other approved screens not to be modified. | IN FORCE — refined mockups presented, awaiting visual approval |
 | 25 Nov 2026, 19:21 | Next screen: Home → Sleep. Full design direction for a Sleep & Wellness dashboard given (graph, daily journal, sources, Coach insights, relationship to training, safety and privacy, visual design, workflow). Review before building: three-column comparison and mockups of five states; wait for visual approval before implementing; approved screens not to be changed; every approved decision to be recorded in this report. | IN FORCE |
 

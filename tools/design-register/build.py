@@ -123,12 +123,25 @@ def stage_table(s, width):
                            ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]))
     return t
 
+CACHE = os.path.join(os.path.expanduser("~"), ".cyclift-report-cache")
+
+def reduced(fname):
+    """A reduced copy for the PDF only (owner, 28 Nov 2026: compression authorised provided screenshots stay readable
+    and the full-resolution originals are preserved). The originals in assets/ are never touched."""
+    p = os.path.join(ASSETS, fname); os.makedirs(CACHE, exist_ok=True)
+    q = os.path.join(CACHE, os.path.splitext(fname)[0] + "_%d.jpg" % int(os.path.getmtime(p)))
+    if not os.path.exists(q):
+        im = PILImage.open(p).convert("RGB")
+        if im.width > 3200: im = im.resize((3200, round(im.height * 3200 / im.width)), PILImage.LANCZOS)
+        im.save(q, "JPEG", quality=84, optimize=True)
+    return q
+
 def picture(fname, max_w, max_h):
     p = os.path.join(ASSETS, fname); w, h = PILImage.open(p).size
-    k = min(max_w / w, max_h / h); return Image(p, width=w * k, height=h * k)
+    k = min(max_w / w, max_h / h); return Image(reduced(fname), width=w * k, height=h * k)
 
 def image_row(images, width, max_h):
-    """Images side by side at one scale, captions underneath. The original pixels are embedded; nothing is redrawn."""
+    """Images side by side at one scale, captions underneath. Reduced copies are embedded in the PDF (see reduced()); the originals stay in assets/. Nothing is redrawn."""
     n = len(images); gap = 6 * mm
     col = (width - gap * (n - 1)) / n if n > 1 else width * 0.55
     pics = [picture(f, col, max_h) for f, _ in images]
