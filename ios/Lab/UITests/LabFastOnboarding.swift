@@ -1578,6 +1578,24 @@ final class LabFastOnboarding: XCTestCase {
         }
     }
 
+    /// CAPTURE ONLY (Home review, the Sleep row, 28 Nov 2026): what the Sleep row on Home opens today, for the owner's
+    /// review. No app code is changed. Required: the row exists and opens a page; everything else is captured as found.
+    func testCaptureHomeSleepRow() {
+        for (env, file) in [("", "slp-1-readings"), ("LAB_DEMO_RECOVERY_PARTIAL", "slp-2-one-source"), ("LAB_DEMO_NO_RECORDS", "slp-3-nothing-recorded")] {
+            let app = env.isEmpty ? launchHistory() : launchHistory(env)
+            let row = el(app, "sleepBar")
+            XCTAssertTrue(row.waitForExistence(timeout: 8), "required: the Sleep row on Home (\(file))")
+            for _ in 0..<8 where !row.isHittable { app.swipeUp(velocity: .slow) }
+            shot("\(file)-home"); row.tap()
+            XCTAssertTrue(el(app, "homeRecoveryPage").waitForExistence(timeout: 8), "required: the Sleep row opens a page (\(file))")
+            Thread.sleep(forTimeInterval: 1.2)
+            captureFullPage(app, file, steps: 6)
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            XCTAssertTrue(row.waitForExistence(timeout: 6), "required: Back returns to Home (\(file))")
+            app.terminate()
+        }
+    }
+
     /// INVESTIGATION (28 Nov 2026): in check 84 the first tap on Home's Strength card was delivered and the page did not
     /// open. This probe repeats exactly that step on a freshly launched app, eight times, and reports how often the first
     /// tap fails and whether a second tap then works. It changes nothing and proves no cause: it measures how often.
