@@ -1,0 +1,24 @@
+FAST focused Lab check — selected: LabFastOnboarding/testCaptureHomeSleepRow
+DEVICE: iPhone 15 Pro
+BUILD MODE: kept build from ab4a36fa · files changed since then: 1
+TIME setup: 38s
+  timing: CompileAssetCatalogVariant (1 task) | 66.570 seconds
+  timing: SwiftDriver (16 tasks) | 30.271 seconds
+  timing: Ld (18 tasks) | 10.230 seconds
+  timing: SwiftEmitModule (2 tasks) | 8.323 seconds
+  timing: SwiftCompile (2 tasks) | 5.842 seconds
+  timing: ExtractAppIntentsMetadata (16 tasks) | 2.374 seconds
+  timing: CopySwiftLibs (2 tasks) | 0.920 seconds
+  timing: GenerateAssetSymbols (1 task) | 0.433 seconds
+  stages: packages at 176s · packages prepared at 259s · dependency graph at 259s · inputs at 260s · build description at 260s · first Swift step at 273s · first link at 277s · asset catalogue at 285s · finished at 356s
+  compiled in this run: 5 Swift compile step(s)
+RESULT build (app + screen checks, once): ok
+TIME build: 357s
+  ok   app identity is the Lab's own
+  ok   no production keys, Bluetooth, location or background modes in the built app
+TIME waiting for the simulator after the build: 11s
+Test Case '-[CycliftLabUITests.LabFastOnboarding testCaptureHomeSleepRow]' passed (302.853 seconds).
+RESULT selected screen checks: ok
+TIME tests: 370s
+TIME total on the Mac: 780s
+commit 0f5ea21bc53041c8f3f0fef8611010ba293733d7  branch ios/lab
